@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useEffect, useState } from 'react';
 import {
   ARENA_MATERIALS,
@@ -69,7 +70,7 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
     trainingCost = ARENA_TRAINING_COST[rank];
   const portrait = (d: Dino | undefined, side: 'player' | 'enemy', hp: number, maxHp: number) => (
     <section className={`duel-fighter ${side} ${frame?.actor === side && !ready ? 'attacking' : ''}`} key={side + step}>
-      <span className="duel-fighter-tag">{side === 'player' ? 'Tu' : 'Adversar'}</span>
+      <span className="duel-fighter-tag">{t(side === 'player' ? 'Tu' : 'Adversar')}</span>
       <div className="duel-portrait">
         <span className="duel-pedestal" aria-hidden="true" />
         {d ? (
@@ -78,13 +79,16 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
           <span className="duel-empty">?</span>
         )}
       </div>
-      <strong>{d ? (d.nickname ?? speciesOf(d.species).name) : 'Alege un luptător'}</strong>
+      <strong>{t(d ? (d.nickname ?? speciesOf(d.species).name) : 'Alege un luptător')}</strong>
       {d && (
         <span className="duel-fighter-meta">
-          <b>Nv. {d.level}</b>
+          <b>
+            {t('Nv. ')}
+            {d.level}
+          </b>
           {speciesOf(d.species).elements.map((e) => (
-            <span key={e} title={ELEMENTS[e].name}>
-              {ELEMENTS[e].icon}
+            <span key={e} title={t(ELEMENTS[e].name)}>
+              {t(ELEMENTS[e].icon)}
             </span>
           ))}
         </span>
@@ -92,7 +96,7 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
       <div
         className="duel-health"
         role="progressbar"
-        aria-label={side === 'player' ? 'Viața luptătorului' : 'Viața adversarului'}
+        aria-label={t(side === 'player' ? 'Viața luptătorului' : 'Viața adversarului')}
         aria-valuenow={hp}
         aria-valuemin={0}
         aria-valuemax={maxHp}
@@ -103,8 +107,8 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
         </small>
       </div>
       {d && (
-        <small className="duel-ability" title={arenaAbility(d.species).description}>
-          ✦ {arenaAbility(d.species).name}
+        <small className="duel-ability" title={t(arenaAbility(d.species).description)}>
+          ✦ {t(arenaAbility(d.species).name)}
         </small>
       )}
     </section>
@@ -122,19 +126,19 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
         : '= Elemente echilibrate';
   return (
     <div className="arena">
-      <nav className="arena-top" aria-label="Arena">
+      <nav className="arena-top" aria-label={t('Arena')}>
         <div className="arena-tabs">
           <button className={view === 'duel' ? 'on' : ''} onClick={() => setView('duel')}>
-            ⚔ Dueluri
+            {t('⚔ Dueluri')}
           </button>
           <button className={view === 'training' ? 'on' : ''} onClick={() => setView('training')}>
-            ✦ Abilitate
+            {t('✦ Abilitate')}
           </button>
         </div>
-        <span className="arena-pill" title="Adversari noi">
-          ⏱ {formatTime(nextExpeditionReset(now) - now)}
+        <span className="arena-pill" title={t('Adversari noi')}>
+          ⏱ {t(formatTime(nextExpeditionReset(now) - now))}
         </span>
-        <span className="arena-pill medals" title="Medalii de arenă">
+        <span className="arena-pill medals" title={t('Medalii de arenă')}>
           🏅 {state.medals ?? 0}
         </span>
       </nav>
@@ -153,10 +157,13 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
                     aria-pressed={challenge.id === c.id}
                     onClick={() => setChallenge(c.id)}
                   >
-                    <span className="duel-challenge-icon">{c.claimed ? '✓' : ELEMENTS[el].icon}</span>
+                    <span className="duel-challenge-icon">{t(c.claimed ? '✓' : ELEMENTS[el].icon)}</span>
                     <span className="duel-challenge-copy">
-                      <strong>{tiers[c.tier]}</strong>
-                      <small>Nv. {c.level}</small>
+                      <strong>{t(tiers[c.tier])}</strong>
+                      <small>
+                        {t('Nv. ')}
+                        {c.level}
+                      </small>
                     </span>
                     <b>🏅 {c.medals}</b>
                   </button>
@@ -166,14 +173,14 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
             <div className={`duel-stage ${ready ? (duel?.won ? 'victory' : 'defeat') : ''}`}>
               {portrait(fighter, 'player', playerHp, maxPlayerHp)}
               <div className="duel-versus">
-                <b>{ready ? (duel?.won ? '✓' : '✕') : 'VS'}</b>
+                <b>{t(ready ? (duel?.won ? '✓' : '✕') : 'VS')}</b>
               </div>
               {portrait(enemy, 'enemy', enemyHp, maxEnemyHp)}
               <div
                 className={`duel-commentary ${!active && advantage > 1 ? 'good' : !active && advantage < 1 ? 'bad' : ''}`}
                 aria-live="polite"
               >
-                {commentary}
+                {t(commentary)}
               </div>
             </div>
           </div>
@@ -183,38 +190,41 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
                 {!ready ? (
                   <>
                     <span className="duel-result-icon">⚔</span>
-                    <strong>Duel în desfășurare</strong>
+                    <strong>{t('Duel în desfășurare')}</strong>
                     <Progress value={step / (duel?.frames.length ?? 1)} />
                     <button
                       className="arena-ghost"
                       onClick={() => run({ type: 'skipDuelAnimation', buildingId: building.id })}
                     >
-                      Sari animația →
+                      {t('Sari animația →')}
                     </button>
                   </>
                 ) : (
                   <>
-                    <span className="duel-result-icon">{duel?.won ? '🏆' : '💤'}</span>
-                    <strong>{duel?.won ? 'Victorie!' : 'Înfrângere'}</strong>
+                    <span className="duel-result-icon">{t(duel?.won ? '🏆' : '💤')}</span>
+                    <strong>{t(duel?.won ? 'Victorie!' : 'Înfrângere')}</strong>
                     {duel?.won && (
                       <span className="arena-rewards">
                         <span>🪙 {duel.gold}</span>
                         <span>🏅 {duel.medals}</span>
                       </span>
                     )}
-                    <small>⏳ Odihnă {formatTime(ARENA_RECOVERY_MS[duel?.won ? 'win' : 'loss'])}</small>
+                    <small>
+                      {t('⏳ Odihnă ')}
+                      {t(formatTime(ARENA_RECOVERY_MS[duel?.won ? 'win' : 'loss']))}
+                    </small>
                     <button
                       className="button arena-primary"
                       onClick={() => run({ type: 'claimAdventure', buildingId: building.id })}
                     >
-                      {duel?.won ? 'Adună recompensa' : 'Înapoi'}
+                      {t(duel?.won ? 'Adună recompensa' : 'Înapoi')}
                     </button>
                   </>
                 )}
               </div>
             ) : (
               <>
-                <h3 className="arena-heading">Luptătorul</h3>
+                <h3 className="arena-heading">{t('Luptătorul')}</h3>
                 <div className="duel-roster">
                   {state.dinos.map((d) => {
                     const s = speciesOf(d.species);
@@ -226,13 +236,13 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
                         style={{ '--el': ELEMENTS[s.elements[0]].color } as React.CSSProperties}
                         aria-pressed={fighterId === d.id}
                         disabled={unavailable}
-                        title={
+                        title={t(
                           isRecovering(d, now)
                             ? `Odihnă ${formatTime(d.recoveryUntil! - now)}`
                             : unavailable
                               ? 'Ocupat'
-                              : (d.nickname ?? s.name)
-                        }
+                              : (d.nickname ?? s.name),
+                        )}
                         onClick={() => setFighter(d.id)}
                       >
                         <DinoThumb species={d.species} stage={stageForLevel(d.level)} tight />
@@ -243,10 +253,13 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
                   })}
                 </div>
                 {fighter && (
-                  <div className="duel-ability-summary" title={arenaAbility(fighter.species).description}>
+                  <div className="duel-ability-summary" title={t(arenaAbility(fighter.species).description)}>
                     <span>✦</span>
-                    <strong>{arenaAbility(fighter.species).name}</strong>
-                    <small>Rang {rank + 1}</small>
+                    <strong>{t(arenaAbility(fighter.species).name)}</strong>
+                    <small>
+                      {t('Rang ')}
+                      {rank + 1}
+                    </small>
                   </div>
                 )}
                 <div className="duel-entry">
@@ -254,8 +267,8 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
                     <span>🪙 {challenge.gold}</span>
                     <span>🏅 {challenge.medals}</span>
                     {Object.entries(ARENA_MATERIALS[challenge.tier]).map(([k, n]) => (
-                      <span key={k} className="material" title={MATERIALS[k as MaterialId].name}>
-                        {MATERIALS[k as MaterialId].icon} {n}
+                      <span key={k} className="material" title={t(MATERIALS[k as MaterialId].name)}>
+                        {t(MATERIALS[k as MaterialId].icon)} {n}
                       </span>
                     ))}
                   </span>
@@ -273,11 +286,11 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
                       })
                     }
                   >
-                    <span>{challenge.claimed ? '✓ Învins azi' : '⚔ Luptă'}</span>
+                    <span>{t(challenge.claimed ? '✓ Învins azi' : '⚔ Luptă')}</span>
                     <span className="arena-cost">🍖 {challenge.cost}</span>
                   </button>
                   {!challenge.claimed && (busy || state.food < challenge.cost) && (
-                    <small className="duel-hint">{busy ? 'Alege un luptător liber' : 'Hrană insuficientă'}</small>
+                    <small className="duel-hint">{t(busy ? 'Alege un luptător liber' : 'Hrană insuficientă')}</small>
                   )}
                 </div>
               </>
@@ -295,23 +308,24 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
               <div className="duel-training-copy">
                 <select
                   className="arena-select"
-                  aria-label="Luptător pentru antrenament"
+                  aria-label={t('Luptător pentru antrenament')}
                   value={fighterId ?? ''}
                   disabled={!!active}
                   onChange={(e) => setFighter(e.target.value)}
                 >
                   {state.dinos.map((d) => (
                     <option key={d.id} value={d.id}>
-                      {d.nickname ?? speciesOf(d.species).name} · Nv. {d.level}
+                      {t(d.nickname ?? speciesOf(d.species).name)} {t('· Nv. ')}
+                      {d.level}
                     </option>
                   ))}
                 </select>
-                <h3>✦ {arenaAbility(fighter.species).name}</h3>
-                <p>{arenaAbility(fighter.species).description}</p>
+                <h3>✦ {t(arenaAbility(fighter.species).name)}</h3>
+                <p>{t(arenaAbility(fighter.species).description)}</p>
                 <div className="duel-training-ranks">
                   {[0, 1, 2, 3].map((r) => (
                     <span key={r} className={rank >= r ? 'done' : ''}>
-                      {rank >= r ? '✦' : r + 1}
+                      {t(rank >= r ? '✦' : r + 1)}
                     </span>
                   ))}
                   <b>+{rank * 15}%</b>
@@ -321,35 +335,42 @@ export function ArenaPanel({ game, building }: { game: Game; building: Building 
                   disabled={!!active || trainingCost === undefined || (state.medals ?? 0) < trainingCost}
                   onClick={() => run({ type: 'trainArenaAbility', dinoId: fighter.id })}
                 >
-                  {trainingCost === undefined ? (
-                    'Rang maxim'
-                  ) : (
-                    <>
-                      <span>Îmbunătățește</span>
-                      <span className="arena-cost">🏅 {trainingCost}</span>
-                    </>
+                  {t(
+                    trainingCost === undefined ? (
+                      'Rang maxim'
+                    ) : (
+                      <>
+                        <span>{t('Îmbunătățește')}</span>
+                        <span className="arena-cost">🏅 {trainingCost}</span>
+                      </>
+                    ),
                   )}
                 </button>
                 {trainingCost !== undefined && !active && (state.medals ?? 0) < trainingCost && (
                   <p className="duel-training-need">
-                    <strong>Îți lipsesc 🏅 {trainingCost - (state.medals ?? 0)}</strong>
-                    <small>Câștigă dueluri în tab-ul Dueluri: 🏅 5 · 10 · 18, fiecare adversar o dată pe zi</small>
+                    <strong>
+                      {t('Îți lipsesc 🏅 ')}
+                      {trainingCost - (state.medals ?? 0)}
+                    </strong>
+                    <small>
+                      {t('Câștigă dueluri în tab-ul Dueluri: 🏅 5 · 10 · 18, fiecare adversar o dată pe zi')}
+                    </small>
                   </p>
                 )}
                 {active && (
                   <p className="duel-training-need">
-                    <small>Arena e ocupată: antrenamentul merge după ce se termină duelul</small>
+                    <small>{t('Arena e ocupată: antrenamentul merge după ce se termină duelul')}</small>
                   </p>
                 )}
               </div>
             </div>
           ) : (
-            <p className="duel-hint">Nu ai încă dinozauri.</p>
+            <p className="duel-hint">{t('Nu ai încă dinozauri.')}</p>
           )}
         </section>
       )}
       <details className="duel-elements-help">
-        <summary>? Avantaje de element</summary>
+        <summary>{t('? Avantaje de element')}</summary>
         <div>
           {[...ELEMENT_IDS, ELEMENT_IDS[0]].map((e, i) => (
             <span key={i}>

@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 // Ecranul de încărcare al lumii: la prima vizită (sau după o versiune nouă) acoperă tot până când insulele,
 // clădirile și dinozaurii animați sunt gata, apoi dispare lin. Când fișierele sunt deja în cache (F5), nu apare
 // deloc: lumea se vede direct, iar dinozaurii intră cu fade. Decizia o ia scriptul din index.html (clasa `warm`).
@@ -56,8 +57,8 @@ export function WorldLoader({ done, total, ready }: { done: number; total: numbe
       onTransitionEnd={(e) => e.target === e.currentTarget && phase === 'leaving' && setPhase('gone')}
     >
       <div className="world-loader-card">
-        <h1 className="world-loader-title">Dino World</h1>
-        <p className="world-loader-text">Se încarcă lumea…</p>
+        <h1 className="world-loader-title">{t('Dino World')}</h1>
+        <p className="world-loader-text">{t('Se încarcă lumea…')}</p>
         <div className="world-loader-bar" aria-hidden="true">
           <span style={{ transform: `scaleX(${pct / 100})` }} />
         </div>

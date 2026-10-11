@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 // Sărbătoarea de nivel nou: o clădire sau un dinozaur crește. Apare scurt peste tot, nu blochează nimic.
 
 import { useEffect, type CSSProperties, type ReactNode } from 'react';
@@ -48,7 +49,7 @@ export function LevelUp({
     if (b.kind === 'habitat') {
       const el = ELEMENTS[b.element ?? 'fire'];
       name = `Lumea de ${el.name}`;
-      art = <span className="levelup-icon">{el.icon}</span>;
+      art = <span className="levelup-icon">{t(el.icon)}</span>;
       perk = `🦖 ${habitatCapacity(b)} locuri`;
     } else {
       name = BUILDINGS[b.kind].name;
@@ -70,11 +71,11 @@ export function LevelUp({
       <div className="levelup-card">
         <div className="levelup-art">{art}</div>
         <span className="levelup-badge">
-          <small>Nivel</small>
+          <small>{t('Nivel')}</small>
           <strong>{e.level}</strong>
         </span>
-        <h2>{name}</h2>
-        {perk && <p>{perk}</p>}
+        <h2>{t(name)}</h2>
+        {t(perk && <p>{t(perk)}</p>)}
       </div>
     </div>
   );

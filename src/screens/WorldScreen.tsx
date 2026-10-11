@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../i18n';
 // Lumea: insula pictată, cu clădirile pe parcelele ei. Tragi ca să muți camera, rotița/ciupitul fac zoom.
 // Atingi o clădire ca s-o deschizi; în modul „plasare” atingi o parcelă liberă (marcată) ca să construiești.
 
@@ -124,6 +125,7 @@ export function WorldScreen({
   const herdHost = useRef<HTMLDivElement>(null);
   const herd = useRef<Herd | null>(null);
   const [liveDinos, setLiveDinos] = useState<Set<string>>(() => new Set());
+  const [failedDinos, setFailedDinos] = useState<Set<string>>(() => new Set());
   // loading: se încarcă (pe insule apar ouă care pulsează); ready: animați; off: fără WebGL, miniaturi statice
   const [herdStatus, setHerdStatus] = useState<'loading' | 'ready' | 'off'>('loading');
   const herdReady = herdStatus === 'ready';
@@ -139,7 +141,17 @@ export function WorldScreen({
         if (!alive) return;
         createHerd(herdHost.current!, {
           camera: () => ({ ...cameraRef.current, originX: VIEW.x, originY: VIEW.y }),
-          onLive: (ids) => alive && setLiveDinos(ids),
+          onLive: (ids) => {
+            if (!alive) return;
+            setLiveDinos(ids);
+            setFailedDinos((failed) => {
+              if (![...ids].some((id) => failed.has(id))) return failed;
+              return new Set([...failed].filter((id) => !ids.has(id)));
+            });
+          },
+          onFailure: (id) => {
+            if (alive) setFailedDinos((failed) => new Set([...failed, id]));
+          },
         })
           .then((h) => {
             if (!alive) return h.dispose();
@@ -154,6 +166,8 @@ export function WorldScreen({
       cancelAnimationFrame(start);
       created?.dispose();
       herd.current = null;
+      setLiveDinos(new Set());
+      setFailedDinos(new Set());
       setHerdStatus('loading');
     };
   }, [needHerd]);
@@ -501,7 +515,7 @@ export function WorldScreen({
               ref={mainSurface}
               role="button"
               tabIndex={0}
-              aria-label="Insula principală: apropie camera"
+              aria-label={t('Insula principală: apropie camera')}
               onClick={() => !placement && focus('main')}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -550,7 +564,7 @@ export function WorldScreen({
                         visual={movingBuilding ? visualOf(movingBuilding, state, now) : visualOfPlacement(placement)}
                       />
                       <text className="free-building-status" textAnchor="middle" y={80}>
-                        {previewError ? 'Loc indisponibil' : 'Plasează aici'}
+                        {t(previewError ? 'Loc indisponibil' : 'Plasează aici')}
                       </text>
                     </g>
                   )}
@@ -579,7 +593,7 @@ export function WorldScreen({
                   strokeWidth={3}
                 />
                 <text className="island-title" textAnchor="middle" y={10}>
-                  Insula expediției
+                  {t('Insula expediției')}
                 </text>
               </g>
             </g>
@@ -591,6 +605,7 @@ export function WorldScreen({
             {...w}
             detail={near(w.x, w.y, 1100, 734, 1728)}
             live={herdStatus === 'off' ? null : liveDinos}
+            failed={failedDinos}
             state={state}
             now={now}
             onDino={onDino}
@@ -613,26 +628,30 @@ export function WorldScreen({
       {placement && (
         <div className="placement-bar">
           <span>
-            {freeMode
-              ? 'Trage clădirea sau atinge un loc pe insulă: '
-              : free.length
-                ? 'Alege o parcelă pentru '
-                : 'Nu mai sunt parcele libere pentru '}
+            {t(
+              freeMode
+                ? 'Trage clădirea sau atinge un loc pe insulă: '
+                : free.length
+                  ? 'Alege o parcelă pentru '
+                  : 'Nu mai sunt parcele libere pentru ',
+            )}
             <strong>
-              {placement.moving
-                ? BUILDINGS[placement.kind].name.toLowerCase()
-                : placement.element
-                  ? `habitat de ${ELEMENTS[placement.element].name.toLowerCase()}`
-                  : BUILDINGS[placement.kind].name.toLowerCase()}
+              {t(
+                placement.moving
+                  ? BUILDINGS[placement.kind].name.toLowerCase()
+                  : placement.element
+                    ? `habitat de ${ELEMENTS[placement.element].name.toLowerCase()}`
+                    : BUILDINGS[placement.kind].name.toLowerCase(),
+              )}
             </strong>
           </span>
           {freeMode && preview && (
             <button className="button small" disabled={!!previewError} onClick={() => onPlacePosition(preview)}>
-              {movingBuilding ? 'Plasează aici' : 'Construiește aici'}
+              {t(movingBuilding ? 'Plasează aici' : 'Construiește aici')}
             </button>
           )}
           <button className="button small ghost" onClick={onCancelPlace}>
-            Anulează
+            {t('Anulează')}
           </button>
         </div>
       )}
@@ -640,36 +659,44 @@ export function WorldScreen({
         <aside className="focused-habitat main-island-actions">
           <button
             className="focus-close"
-            aria-label="Închide detaliile insulei principale"
+            aria-label={t('Închide detaliile insulei principale')}
             onClick={() => setFocusedId(null)}
           >
             ×
           </button>
-          <strong>Insula expediției</strong>
-          <span>Clădiri · Arenă · Expediții</span>
+          <strong>{t('Insula expediției')}</strong>
+          <span>{t('Clădiri · Arenă · Expediții')}</span>
           {ordered.map((b) => (
             <button key={b.id} className="button small" onClick={() => onOpen(b)}>
-              {BUILDINGS[b.kind].name}
+              {t(BUILDINGS[b.kind].name)}
             </button>
           ))}
         </aside>
       )}
       {focusedWorld && !placement && (
         <aside className="focused-habitat">
-          <button className="focus-close" aria-label="Închide detaliile insulei" onClick={() => setFocusedId(null)}>
+          <button
+            className="focus-close"
+            aria-label={t('Închide detaliile insulei')}
+            onClick={() => setFocusedId(null)}
+          >
             ×
           </button>
           <strong>
-            {ELEMENTS[focusedWorld.element].icon} {HABITAT_ISLANDS[focusedWorld.element].name}
+            {t(ELEMENTS[focusedWorld.element].icon)} {t(HABITAT_ISLANDS[focusedWorld.element].name)}
           </strong>
           <span>
-            {focusedWorld.buildings.length
-              ? `${focusedWorld.buildings.reduce((n, b) => n + residents(state, b.id).length, 0)}/${focusedWorld.buildings.reduce((n, b) => n + habitatCapacity(b), 0)} locuitori`
-              : 'Lume blocată · cumpără deblocarea în aur'}
+            {t(
+              focusedWorld.buildings.length
+                ? `${focusedWorld.buildings.reduce((n, b) => n + residents(state, b.id).length, 0)}/${focusedWorld.buildings.reduce((n, b) => n + habitatCapacity(b), 0)} locuitori`
+                : 'Lume blocată · cumpără deblocarea în aur',
+            )}
           </span>
           {focusedWorld.buildings.map((b, i) => (
             <button key={b.id} className="button small" onClick={() => onOpen(b)}>
-              {focusedWorld.buildings.length > 1 ? `Zonă ${i + 1} · ` : ''}Nivel {b.level} · Gestionează lumea
+              {t(focusedWorld.buildings.length > 1 ? `Zonă ${i + 1} · ` : '')}
+              {t('Nivel ')}
+              {b.level} {t('· Gestionează lumea')}
             </button>
           ))}
           {!focusedWorld.buildings.length && (
@@ -679,7 +706,8 @@ export function WorldScreen({
               disabled={state.gold < WORLD_UNLOCK_COST[focusedWorld.element]}
               onClick={() => onUnlock(focusedWorld.element)}
             >
-              🔓 Deblochează lumea · 🪙 {formatNumber(WORLD_UNLOCK_COST[focusedWorld.element])}
+              {t('🔓 Deblochează lumea · 🪙 ')}
+              {t(formatNumber(WORLD_UNLOCK_COST[focusedWorld.element]))}
             </button>
           )}
           {!focusedWorld.buildings.length && <WorldPreview state={state} element={focusedWorld.element} />}
@@ -692,15 +720,17 @@ export function WorldScreen({
         </aside>
       )}
       <p className="world-hint">
-        {TOUCH
-          ? 'Trage cu degetul · Ciupește pentru zoom · Atinge o insulă'
-          : 'Trage pentru a explora · Scroll pentru zoom · Atinge o insulă pentru a te apropia'}
+        {t(
+          TOUCH
+            ? 'Trage cu degetul · Ciupește pentru zoom · Atinge o insulă'
+            : 'Trage pentru a explora · Scroll pentru zoom · Atinge o insulă pentru a te apropia',
+        )}
       </p>
       <div className="zoom-buttons">
-        <button className="round-button" onClick={() => zoomCenter(1.25)} aria-label="Apropie">
+        <button className="round-button" onClick={() => zoomCenter(1.25)} aria-label={t('Apropie')}>
           +
         </button>
-        <button className="round-button" onClick={() => zoomCenter(0.8)} aria-label="Depărtează">
+        <button className="round-button" onClick={() => zoomCenter(0.8)} aria-label={t('Depărtează')}>
           −
         </button>
       </div>
@@ -771,7 +801,7 @@ function SlotMarker({ slot, placement, onPick }: { slot: string; placement: Plac
       data-slot={slot}
       role="button"
       tabIndex={0}
-      aria-label="Alege acest loc"
+      aria-label={t('Alege acest loc')}
       transform={slotTransform(slot)}
       onClick={onPick}
       onKeyDown={(e) => {
@@ -867,7 +897,7 @@ function mapDinoSize(level: number) {
   return MAP_DINO_SIZE * (1 + 0.05 * (level - stage.minLevel));
 }
 
-const DinoSprite = memo(function DinoSprite({
+export const DinoSprite = memo(function DinoSprite({
   species,
   level = 10,
   dinoId,
@@ -878,6 +908,7 @@ const DinoSprite = memo(function DinoSprite({
   delay,
   animated = false,
   live = false,
+  failed = false,
 }: {
   species: string;
   level?: number;
@@ -891,12 +922,17 @@ const DinoSprite = memo(function DinoSprite({
   animated?: boolean;
   /** Turma l-a încărcat și îl desenează. */
   live?: boolean;
+  /** Static artwork is a fallback only after animation loading fails. */
+  failed?: boolean;
 }) {
+  useLanguage();
   const stage = stageForLevel(level);
+  const drawnByHerd = animated && live;
+  const showFallback = !drawnByHerd && (!animated || failed);
   const url = useThumbnail(
     useMemo(() => recipeFor(species, stage), [species, stage]),
     512,
-    !animated,
+    showFallback,
   );
   // miniatura statică (fără WebGL) are aceeași mărime ca dinozaurul animat
   const size = 112 * (mapDinoSize(level) / MAP_DINO_SIZE);
@@ -906,7 +942,7 @@ const DinoSprite = memo(function DinoSprite({
       data-dino-id={dinoId}
       role={onOpen ? 'button' : undefined}
       tabIndex={onOpen ? 0 : undefined}
-      aria-label={onOpen ? `Deschide scena: ${species}` : undefined}
+      aria-label={t(onOpen ? `Deschide scena: ${species}` : undefined)}
       transform={`translate(${x},${y})`}
       onClick={
         onOpen
@@ -928,18 +964,22 @@ const DinoSprite = memo(function DinoSprite({
           : undefined
       }
     >
-      {animated && <rect x={-50} y={-70} width={100} height={80} fill="transparent" />}
-      {!animated && url && (
-        <g className="dino-idle" style={{ animationDelay: `${delay}s` }}>
-          <DetailImage
-            href={url}
-            x={-size / 2}
-            y={-size + 14}
-            width={size}
-            height={size}
-            transform={flip ? 'scale(-1,1)' : undefined}
-          />
-        </g>
+      {drawnByHerd && <rect x={-50} y={-70} width={100} height={80} fill="transparent" />}
+      {t(
+        showFallback && url && (
+          <g className="dino-fallback">
+            <g className="dino-idle" style={{ animationDelay: `${delay}s` }}>
+              <DetailImage
+                href={url}
+                x={-size / 2}
+                y={-size + 14}
+                width={size}
+                height={size}
+                transform={flip ? 'scale(-1,1)' : undefined}
+              />
+            </g>
+          </g>
+        ),
       )}
     </g>
   );
@@ -1052,7 +1092,7 @@ function Bubble({
           strokeWidth={2}
         />
         <text x={0} y={5} textAnchor="middle" fontSize={15} fontWeight={800} fill="#3e2723">
-          {c.icon} {c.text}
+          {t(c.icon)} {t(c.text)}
         </text>
       </g>
     </g>
@@ -1134,7 +1174,7 @@ function WorldLock({ element }: { element: ElementId }) {
         <path d="M-7,39 L-12,66 H12 L7,39" fill="#674921" />
         <rect x={-110} y={120} width={220} height={47} rx={20} fill="#243b37" stroke="#d4b475" strokeWidth={3} />
         <text y={152} textAnchor="middle" fill="#ffdd83" fontSize={25} fontWeight={800}>
-          🪙 {formatNumber(WORLD_UNLOCK_COST[element])}
+          🪙 {t(formatNumber(WORLD_UNLOCK_COST[element]))}
         </text>
       </g>
     </g>
@@ -1179,6 +1219,7 @@ function HabitatIsland({
   onCollect,
   detail,
   live,
+  failed,
 }: {
   element: ElementId;
   buildings: Building[];
@@ -1187,6 +1228,7 @@ function HabitatIsland({
   detail: boolean;
   /** Dinozaurii animați deja de turmă (canvasul de peste hartă); null = fără turmă, miniaturi statice. */
   live: Set<string> | null;
+  failed: Set<string>;
   state: GameState;
   now: number;
   onOpen: () => void;
@@ -1214,7 +1256,7 @@ function HabitatIsland({
           onKeyDown={activate}
           role="button"
           tabIndex={0}
-          aria-label={`${island.name}: apropie camera`}
+          aria-label={t(`${island.name}: apropie camera`)}
         >
           <IslandShadow href={island.shadow} width={1100} height={734} />
           {building ? (
@@ -1245,6 +1287,7 @@ function HabitatIsland({
                 delay={i * 0.4}
                 animated={!!live}
                 live={!!live?.has(d.id)}
+                failed={failed.has(d.id)}
               />
             </g>
           ))}
@@ -1252,12 +1295,14 @@ function HabitatIsland({
           <g transform="translate(550,680)">
             <rect x={-290} y={-35} width={580} height={92} rx={22} fill="#233729" stroke="#d6b970" strokeWidth={3} />
             <text className="island-title" textAnchor="middle" y={0}>
-              {ELEMENTS[element].icon} {island.name}
+              {t(ELEMENTS[element].icon)} {t(island.name)}
             </text>
             <text textAnchor="middle" y={33} fill="#e9e7c9" fontSize={22}>
-              {building
-                ? `${dinos.length}/${capacity} locuitori · ${buildings.length > 1 ? `${buildings.length} habitate` : `Nivel ${building.level}`} · Apropie →`
-                : `🔒 Lume blocată · ${formatNumber(WORLD_UNLOCK_COST[element])} aur`}
+              {t(
+                building
+                  ? `${dinos.length}/${capacity} locuitori · ${buildings.length > 1 ? `${buildings.length} habitate` : `Nivel ${building.level}`} · Apropie →`
+                  : `🔒 Lume blocată · ${formatNumber(WORLD_UNLOCK_COST[element])} aur`,
+              )}
             </text>
           </g>
         </g>
@@ -1266,7 +1311,7 @@ function HabitatIsland({
             className="island-gold"
             role="button"
             tabIndex={0}
-            aria-label={`Strânge ${gold} aur`}
+            aria-label={t(`Strânge ${gold} aur`)}
             transform="translate(800,110)"
             onClick={onCollect}
             onKeyDown={(e) => {
@@ -1278,7 +1323,7 @@ function HabitatIsland({
           >
             <rect x={-95} y={-28} width={190} height={56} rx={28} fill="#ffda71" stroke="#845727" strokeWidth={3} />
             <text y={9} textAnchor="middle" fontSize={25} fontWeight={800} fill="#4a3216">
-              🪙 {formatNumber(gold)}
+              🪙 {t(formatNumber(gold))}
             </text>
           </g>
         )}

@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 // Rezumatul la revenire: după o pauză (la deschiderea jocului sau la întoarcerea în tab), ce s-a terminat cât ai
 // lipsit, cu acces direct la fiecare și „Strânge tot” pentru aur și recolte.
 
@@ -80,19 +81,23 @@ export function Welcome({
       <section
         className="reward-card welcome-card"
         role="dialog"
-        aria-label="Bine ai revenit"
+        aria-label={t('Bine ai revenit')}
         onClick={(e) => e.stopPropagation()}
       >
         <span className="reward-burst" aria-hidden="true">
           🦖
         </span>
-        <h2>Bine ai revenit!</h2>
-        <p className="welcome-away">Ai lipsit {formatTime(away)}. Între timp:</p>
+        <h2>{t('Bine ai revenit!')}</h2>
+        <p className="welcome-away">
+          {t('Ai lipsit ')}
+          {t(formatTime(away))}
+          {t('. Între timp:')}
+        </p>
         <ul className="welcome-list">
           {list.map((r) => (
             <li key={r.text}>
-              <b aria-hidden="true">{r.icon}</b>
-              <span>{r.text}</span>
+              <b aria-hidden="true">{t(r.icon)}</b>
+              <span>{t(r.text)}</span>
               {r.go && (
                 <button
                   className="button small ghost"
@@ -101,7 +106,7 @@ export function Welcome({
                     nav(r.go!);
                   }}
                 >
-                  Du-mă →
+                  {t('Du-mă →')}
                 </button>
               )}
             </li>
@@ -109,7 +114,7 @@ export function Welcome({
         </ul>
         <div className="welcome-buttons">
           <button className="button ghost" onClick={close}>
-            Mai târziu
+            {t('Mai târziu')}
           </button>
           {(gold > 0 || crops > 0) && (
             <button
@@ -120,7 +125,7 @@ export function Welcome({
                 close();
               }}
             >
-              Strânge tot
+              {t('Strânge tot')}
             </button>
           )}
         </div>

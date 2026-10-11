@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 // Pe hartă: obiectivul curent (următorul pas, cu recompensa lui) și fereastra de recompensă după acțiunile mari.
 
 import { useState } from 'react';
@@ -6,6 +7,7 @@ import {
   MATERIALS,
   currentGoal,
   farmPlots,
+  habitatCapacity,
   residents,
   type BuildingKind,
   type GameState,
@@ -33,6 +35,15 @@ export function goalTarget(goal: Goal, s: GameState, now: number): NavTarget | u
   switch (goal.id) {
     case 'world':
       return { to: 'island', element: 'fire', spot: 'unlock-fire' };
+    case 'gold1':
+      return home && { to: 'building', kind: 'habitat', id: home.id, spot: 'collect' };
+    case 'habitat2':
+      if (home && residents(s, home.id).length < habitatCapacity(home)) {
+        return s.eggs.length
+          ? open('hatchery', 'hatch')
+          : { to: 'shop', tab: 'eggs', spot: `egg-${home.element ?? 'fire'}` };
+      }
+      return home && { to: 'building', kind: 'habitat', id: home.id, spot: 'upgrade' };
     case 'feed1':
     case 'feed':
       return feed;
@@ -90,7 +101,7 @@ export function RewardChips({ reward }: { reward: Reward }) {
         .filter(([, n]) => n > 0)
         .map(([icon, n]) => (
           <span key={icon}>
-            {icon} {n}
+            {t(icon)} {n}
           </span>
         ))}
     </span>
@@ -112,35 +123,35 @@ export function GoalCard({ state, now, onClaim }: { state: GameState; now: numbe
         className={`goal-pill ${done ? 'done' : ''}`}
         data-tour="goal-pill"
         onClick={() => setOpen(true)}
-        aria-label="Arată obiectivul"
+        aria-label={t('Arată obiectivul')}
       >
-        {goal.icon}
+        {t(goal.icon)}
         {done && <i aria-hidden="true" />}
       </button>
     );
   return (
-    <aside className={`goal-card ${done ? 'done' : ''} ${intro >= 0 ? 'intro' : ''}`} aria-label="Obiectiv">
-      <button className="goal-hide" onClick={() => setOpen(false)} aria-label="Ascunde obiectivul">
+    <aside className={`goal-card ${done ? 'done' : ''} ${intro >= 0 ? 'intro' : ''}`} aria-label={t('Obiectiv')}>
+      <button className="goal-hide" onClick={() => setOpen(false)} aria-label={t('Ascunde obiectivul')}>
         –
       </button>
       <span className="goal-icon" aria-hidden="true">
-        {goal.icon}
+        {t(goal.icon)}
       </span>
       <div className="goal-copy">
         <small>
-          {intro >= 0 ? `Primii pași · ${intro + 1}/${INTRO.length}` : `Obiectiv ${index + 1}/${GOALS.length}`}
+          {t(intro >= 0 ? `Primii pași · ${intro + 1}/${INTRO.length}` : `Obiectiv ${index + 1}/${GOALS.length}`)}
         </small>
-        <strong>{goal.title}</strong>
-        {done ? <RewardChips reward={goal.reward} /> : <span className="goal-hint">{goal.hint}</span>}
+        <strong>{t(goal.title)}</strong>
+        {done ? <RewardChips reward={goal.reward} /> : <span className="goal-hint">{t(goal.hint)}</span>}
         {target && (
           <button className="goal-go" data-tour="goal-go" onClick={() => nav(target)}>
-            Du-mă acolo →
+            {t('Du-mă acolo →')}
           </button>
         )}
       </div>
       {done ? (
         <button className="button goal-claim" data-tour="goal-claim" onClick={() => onClaim(goal.id)}>
-          Ia
+          {t('Ia')}
         </button>
       ) : (
         <span className="goal-reward">
@@ -154,22 +165,22 @@ export function GoalCard({ state, now, onClaim }: { state: GameState; now: numbe
 export function RewardWindow({ popup, onClose }: { popup: RewardPopup; onClose: () => void }) {
   return (
     <div className="reward-backdrop" onClick={onClose}>
-      <section className="reward-card" role="dialog" aria-label={popup.title} onClick={(e) => e.stopPropagation()}>
+      <section className="reward-card" role="dialog" aria-label={t(popup.title)} onClick={(e) => e.stopPropagation()}>
         <span className="reward-burst" aria-hidden="true">
-          {popup.icon}
+          {t(popup.icon)}
         </span>
-        <h2>{popup.title}</h2>
+        <h2>{t(popup.title)}</h2>
         <div className="reward-lines">
           {popup.lines.map((l, i) => (
             <span key={i} className="reward-line" style={{ animationDelay: `${0.1 + i * 0.07}s` }}>
-              <b aria-hidden="true">{l.icon}</b>
-              <strong>{l.value}</strong>
-              <small>{l.label}</small>
+              <b aria-hidden="true">{t(l.icon)}</b>
+              <strong>{t(l.value)}</strong>
+              <small>{t(l.label)}</small>
             </span>
           ))}
         </div>
         <button className="button reward-ok" onClick={onClose} autoFocus>
-          Super!
+          {t('Super!')}
         </button>
       </section>
     </div>

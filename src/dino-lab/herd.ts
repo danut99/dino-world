@@ -7,6 +7,7 @@
 
 import { DINO_BASE, loadRig, loadRuntime } from './runtime';
 import { rigSkeleton, type DinoRecipe } from './engine';
+import { atlasPageNames } from './atlas-pages';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
@@ -60,6 +61,7 @@ interface Options {
   camera: () => HerdCamera;
   /** Ce dinozauri se văd animat (restul rămân miniaturi statice). */
   onLive: (ids: Set<string>) => void;
+  onFailure?: (id: string) => void;
 }
 
 // ---------- resursele unui schelet (o dată) și ale unei rețete (o dată pe specie și vârstă) ----------
@@ -86,14 +88,14 @@ function loadRigAssets(rigId: string): Promise<RigAssets> {
         }),
       ]);
       // paginile atlasului: liniile fără indentare care sunt nume de fișiere
-      const pages = atlasText.split('\n').filter((l) => /^[^\s].*\.(webp|png)$/.test(l));
+      const pages = atlasPageNames(atlasText);
       const images = new Map<string, HTMLImageElement>();
       await Promise.all(
         pages.map(async (file) => {
           const img = new Image();
           img.src = dir + file;
-          await img.decode().catch(() => undefined);
-          if (img.naturalWidth) images.set(file, img);
+          await img.decode();
+          images.set(file, img);
         }),
       );
       return { body: rig.body, json, atlasText, images };
@@ -179,10 +181,11 @@ export async function createHerd(host: HTMLElement, opts: Options): Promise<Herd
     let p = recipes.get(key);
     if (!p) {
       p = loadRigAssets(recipe.base.rig).then(({ body, json, atlasText, images }) => {
-        const atlas = new spine.TextureAtlas(
-          atlasText,
-          (file: string) => new spine.webgl.GLTexture(context, images.get(file)),
-        );
+        const atlas = new spine.TextureAtlas(atlasText, (file: string) => {
+          const image = images.get(file);
+          if (!image) throw new Error(`Missing dinosaur texture: ${recipe.base.rig}/${file}`);
+          return new spine.webgl.GLTexture(context, image);
+        });
         const reader = new spine.SkeletonJson(new spine.AtlasAttachmentLoader(atlas));
         // pe hartă dinozaurii sunt mici: deformările la 15 cadre pe secundă ajung (jumătate din calcul)
         reader.pcaStep = 4;
@@ -325,7 +328,9 @@ export async function createHerd(host: HTMLElement, opts: Options): Promise<Herd
       state.update(Math.random() * 3);
       dinos.set(m.id, d);
       live();
-    } catch {
+    } catch (error) {
+      console.warn(`Could not animate dinosaur ${m.id} (${m.recipe.base.rig}).`, error);
+      if (!disposed && pending.has(m.id)) opts.onFailure?.(m.id);
       // rămâne miniatura statică
     } finally {
       pending.delete(m.id);

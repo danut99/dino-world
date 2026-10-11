@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 // Ce câștigi deblocând o lume: speciile care trăiesc acolo (din ou sau din Bârlog), oul ei și locurile.
 
 import {
@@ -18,23 +19,23 @@ export function WorldPreview({ state, element, compact }: { state: GameState; el
   );
   return (
     <div className={`world-preview ${compact ? 'compact' : ''}`}>
-      <small className="world-preview-title">Aici descoperi</small>
+      <small className="world-preview-title">{t('Aici descoperi')}</small>
       <ul>
         {species.map((s) => {
           const parents = DEN_RECIPES[s.id];
           return (
             <li
               key={s.id}
-              title={
+              title={t(
                 parents
                   ? `${s.name} · din Bârlog: ${parents.map((p) => speciesOf(p).name).join(' + ')}`
-                  : `${s.name} · din oul lumii`
-              }
+                  : `${s.name} · din oul lumii`,
+              )}
             >
               <DinoThumb species={s.id} className="small" lazy />
               <span>
-                <strong>{state.discovered.includes(s.id) || !parents ? s.name : '???'}</strong>
-                {!compact && <small>{parents ? '💞 din Bârlog' : '🥚 din ou'}</small>}
+                <strong>{t(state.discovered.includes(s.id) || !parents ? s.name : '???')}</strong>
+                {!compact && <small>{t(parents ? '💞 din Bârlog' : '🥚 din ou')}</small>}
               </span>
             </li>
           );
@@ -42,9 +43,13 @@ export function WorldPreview({ state, element, compact }: { state: GameState; el
       </ul>
       {!compact && (
         <p className="world-preview-facts">
-          <span>🥚 Ou nou · 🪙 {formatNumber(HABITAT_EGG_PRICE[element])}</span>
           <span>
-            🦖 {HABITAT_CAPACITY[element][0]} locuri, până la {HABITAT_CAPACITY[element].at(-1)}
+            {t('🥚 Ou nou · 🪙 ')}
+            {t(formatNumber(HABITAT_EGG_PRICE[element]))}
+          </span>
+          <span>
+            🦖 {HABITAT_CAPACITY[element][0]} {t('locuri, până la ')}
+            {HABITAT_CAPACITY[element].at(-1)}
           </span>
         </p>
       )}

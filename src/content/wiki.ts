@@ -4,6 +4,7 @@
 // obiectele se generează din catalog. Id-urile articolelor sunt folosite și din joc („Du-mă acolo”): nu le
 // redenumi ('first-steps', 'saving', `building-${kind}`, `world-${element}` …).
 
+import { t, getLanguage } from '../i18n';
 import {
   SPECIES,
   ELEMENTS,
@@ -820,38 +821,60 @@ export const normalizeWikiText = (value: string) =>
     .toLocaleLowerCase('ro-RO');
 
 /** Tot textul fiecărui articol (titlu, rezumat, secțiuni, tabele), normalizat o singură dată. */
-const searchable = new Map(
+const articleText = new Map(
   WIKI_ARTICLES.map((a) => [
     a.id,
-    normalizeWikiText(
-      [
-        a.title,
-        a.summary,
-        WIKI_CATEGORIES.find((c) => c.id === a.category)?.name,
-        ...a.sections.flatMap((s) => [
-          s.title,
-          ...(s.paragraphs ?? []),
-          ...(s.steps ?? []),
-          ...(s.table?.rows.flat() ?? []),
-        ]),
-      ].join(' '),
-    ),
+    [
+      a.title,
+      a.summary,
+      WIKI_CATEGORIES.find((c) => c.id === a.category)?.name,
+      ...a.sections.flatMap((s) => [
+        s.title,
+        ...(s.paragraphs ?? []),
+        ...(s.steps ?? []),
+        ...(s.table?.rows.flat() ?? []),
+      ]),
+    ]
+      .filter((text): text is string => text !== undefined)
+      .join('\n'),
   ]),
 );
 
+const searchIndexes = new Map<string, Map<string, string>>();
+function searchIndex() {
+  const language = getLanguage();
+  if (!searchIndexes.has(language)) {
+    searchIndexes.set(
+      language,
+      new Map(
+        WIKI_ARTICLES.map((article) => {
+          const original = articleText.get(article.id)!;
+          const localized = original
+            .split('\n')
+            .map((text) => t(text))
+            .join(' ');
+          return [article.id, normalizeWikiText(original + ' ' + localized)];
+        }),
+      ),
+    );
+  }
+  return searchIndexes.get(language)!;
+}
+
 /** Articolele care conțin toate cuvintele căutate; cele cu potriviri în titlu primele. */
 export function searchWiki(query: string, category: WikiCategory | 'all' = 'all') {
+  const searchable = searchIndex();
   const words = normalizeWikiText(query.trim()).split(/\s+/).filter(Boolean);
   const relevance = (article: WikiArticle) => {
-    const title = normalizeWikiText(article.title);
+    const titles = [normalizeWikiText(t(article.title)), normalizeWikiText(article.title)];
     const phrase = words.join(' ');
     return !phrase
       ? 0
-      : title === phrase
+      : titles.includes(phrase)
         ? 3
-        : title.includes(phrase)
+        : titles.some((title) => title.includes(phrase))
           ? 2
-          : words.every((word) => title.includes(word))
+          : titles.some((title) => words.every((word) => title.includes(word)))
             ? 1
             : 0;
   };

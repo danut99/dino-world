@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 // <DinoView recipe={...} />: un dinozaur animat, după rețetă. Rețeta se poate schimba live.
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
@@ -60,7 +61,7 @@ export function DinoView({ recipe, className = '', style, onReady, tapToAttack, 
       style={style}
       onClick={tapToAttack ? tap : undefined}
     >
-      {error && <span className="dino-error">{error}</span>}
+      {t(error && <span className="dino-error">{t(error)}</span>)}
     </div>
   );
 }

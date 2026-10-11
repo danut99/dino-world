@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ro">
+<html lang="en" translate="no">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -75,7 +75,7 @@
     <div id="boot-loader" role="status">
       <div class="card">
         <h1>Dino World</h1>
-        <p>Se încarcă lumea…</p>
+        <p>Loading the world…</p>
         <div class="bar"></div>
         <small>0%</small>
       </div>
@@ -86,6 +86,10 @@
       // Ecranul de încărcare doar când fișierele nu sunt în cache: prima vizită sau o versiune nouă (scriptul
       // principal își schimbă numele la fiecare build). WorldLoader ține minte versiunea după o încărcare completă.
       try {
+        if (localStorage.getItem('dino-world-language') === 'ro') {
+          document.documentElement.lang = 'ro';
+          document.querySelector('#boot-loader p').textContent = 'Se încarcă lumea…';
+        }
         var scripts = document.querySelectorAll('script[type="module"][src]');
         // după scriptul principal (în dev e în body; în build, Vite îl mută în head), fără `?t=…` din dev
         var version = scripts.length ? scripts[scripts.length - 1].getAttribute('src').split('?')[0] : '';

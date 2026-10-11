@@ -1,6 +1,8 @@
 // Erorile jocului: ultimele câteva se țin în browser, ca jucătorul să le poată trimite într-un raport
 // („Trimite o problemă” din Setări sau ecranul „Ceva n-a mers”). Nimic nu pleacă singur din browser.
 
+import { t } from '../i18n';
+
 const LOG_KEY = 'dino-world:errors';
 const SAVE_KEY = 'dino-world-save-v3';
 const MAX = 15;
@@ -94,7 +96,9 @@ export function buildReport(note: string): string {
     '',
     errors.length ? `Erori recente (${errors.length}):` : 'Erori recente: niciuna',
     ...errors.map((e) => `[${e.at}] ${e.message}\n${e.stack ?? ''}`),
-  ].join('\n');
+  ]
+    .map((line) => t(line))
+    .join('\n');
 }
 
 /**
@@ -117,7 +121,7 @@ export async function sendReport(note: string): Promise<'mail' | 'form' | 'copie
   if (REPORT_EMAIL) {
     // linkurile mailto lungi sunt tăiate de unele aplicații: corpul are cel mult ~1800 de caractere
     const body = encodeURIComponent(text.slice(0, 1800));
-    window.location.href = `mailto:${REPORT_EMAIL}?subject=${encodeURIComponent('Dino World · problemă')}&body=${body}`;
+    window.location.href = `mailto:${REPORT_EMAIL}?subject=${encodeURIComponent(t('Dino World · problemă'))}&body=${body}`;
     return 'mail';
   }
   if (REPORT_URL) {

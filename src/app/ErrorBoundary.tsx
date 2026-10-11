@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../i18n';
 // Plasa de siguranță: o eroare în interfață nu mai lasă ecranul alb. Jucătorul vede „Ceva n-a mers”, își poate
 // descărca salvarea (citită direct din browser), poate trimite raportul și reîncarcă jocul.
 
@@ -18,25 +19,27 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
 }
 
 function CrashScreen() {
+  useLanguage();
   const hasSave = !!savedGame();
   return (
     <div className="crash">
-      <section className="crash-card" role="alertdialog" aria-label="Ceva n-a mers">
+      <section className="crash-card" role="alertdialog" aria-label={t('Ceva n-a mers')}>
         <span className="crash-icon" aria-hidden="true">
           🦕
         </span>
-        <h1>Ceva n-a mers</h1>
+        <h1>{t('Ceva n-a mers')}</h1>
         <p>
-          Jocul a întâlnit o eroare. {hasSave ? 'Progresul tău e salvat în acest browser' : 'Nu am găsit o salvare'}
-          {hasSave && '; reîncarcă și continui de unde ai rămas'}.
+          {t('Jocul a întâlnit o eroare. ')}
+          {t(hasSave ? 'Progresul tău e salvat în acest browser' : 'Nu am găsit o salvare')}
+          {t(hasSave && '; reîncarcă și continui de unde ai rămas')}.
         </p>
         <div className="crash-buttons">
           <button className="button" onClick={() => window.location.reload()} autoFocus>
-            ↻ Reîncarcă
+            {t('↻ Reîncarcă')}
           </button>
           {hasSave && (
             <button className="button ghost" onClick={downloadSave}>
-              ⬇ Descarcă salvarea
+              {t('⬇ Descarcă salvarea')}
             </button>
           )}
         </div>
@@ -60,22 +63,25 @@ export function ReportForm({ compact }: { compact?: boolean }) {
     <div className={`report ${compact ? 'compact' : ''}`}>
       {!compact && (
         <p className="settings-note">
-          Spune pe scurt ce făceai și ce nu a mers. Adăugăm automat versiunea jocului, browserul și ultimele erori (fără
-          salvarea întreagă și fără date personale).
+          {t(
+            'Spune pe scurt ce făceai și ce nu a mers. Adăugăm automat versiunea jocului, browserul și ultimele erori (fără salvarea întreagă și fără date personale).',
+          )}
         </p>
       )}
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder={
-          compact ? 'Ce făceai când a apărut eroarea? (opțional)' : 'Ex.: Am apăsat Eclozează și nu s-a întâmplat nimic'
-        }
+        placeholder={t(
+          compact
+            ? 'Ce făceai când a apărut eroarea? (opțional)'
+            : 'Ex.: Am apăsat Eclozează și nu s-a întâmplat nimic',
+        )}
         rows={compact ? 2 : 3}
       />
       <button className="button small" onClick={() => void sendReport(note).then((r) => setResult(messages[r]))}>
-        {REPORT_EMAIL ? '✉️ Trimite raportul' : REPORT_URL ? '📝 Deschide formularul' : '📋 Copiază raportul'}
+        {t(REPORT_EMAIL ? '✉️ Trimite raportul' : REPORT_URL ? '📝 Deschide formularul' : '📋 Copiază raportul')}
       </button>
-      {result && <small className="report-result">{result}</small>}
+      {t(result && <small className="report-result">{t(result)}</small>)}
     </div>
   );
 }

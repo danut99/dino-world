@@ -201,6 +201,7 @@ export interface GameState {
     crafted?: number;
     bred?: number;
     hatched?: number;
+    collected?: number;
     harvested?: number;
   };
   goalsClaimed?: string[];

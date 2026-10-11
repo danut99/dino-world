@@ -13,6 +13,11 @@ npm run build
 
 În dev, butonul ⏩ (stânga jos) avansează timpul și pornește un joc nou.
 
+The game defaults to English. Use **Română** in the top bar, or choose a language in Settings;
+the choice is saved separately from game progress. Translations are bundled in `src/i18n/en.json`
+and require no browser translation or network service. Wrap displayed text with `t()`; keep IDs,
+save data, and player input unchanged. Catalog templates use numbered placeholders (`{0}`, `{1}`).
+
 ## Bucla de joc
 
 - **Insula** are parcele fixe (`SLOTS`): pe ele construiești habitate (6 elemente) sau ferme.

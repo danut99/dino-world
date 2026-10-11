@@ -26,7 +26,7 @@ const { version } = JSON.parse(fs.readFileSync(new URL('./package.json', import.
 export default defineConfig({
   plugins: [react(), minifySpineRuntime()],
   define: { __APP_VERSION__: JSON.stringify(version) },
-  test: { include: ['shared/**/*.test.ts', 'src/**/*.test.ts'] },
+  test: { include: ['shared/**/*.test.ts', 'src/**/*.test.{ts,tsx}'] },
   resolve: {
     // Regulile jocului (pure, viitor comune cu serverul): import { ... } from '@shared/game'
     alias: { '@shared': fileURLToPath(new URL('./shared', import.meta.url)) },

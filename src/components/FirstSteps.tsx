@@ -1,8 +1,20 @@
+import { t } from '../i18n';
 // „Primii pași”: la primul joc, fără nicio lume deblocată. Un pui de foc așteaptă în incubator, o săgeată arată
 // Caldera de jar, apoi butonul de deblocare. De acolo preiau obiectivele de pe hartă. Se poate sări oricând.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ELEMENTS, GOALS, WORLD_UNLOCK_COST, currentGoal, farmPlots, type GameState } from '@shared/game';
+import {
+  ELEMENTS,
+  GOALS,
+  WORLD_UNLOCK_COST,
+  currentGoal,
+  farmPlots,
+  habitatCapacity,
+  residents,
+  pendingGold,
+  buildingUpgradeCost,
+  type GameState,
+} from '@shared/game';
 import { DinoThumb, formatNumber, formatTime } from './ui';
 import { HABITAT_ISLANDS } from '../world/islands';
 
@@ -73,25 +85,25 @@ export function FirstSteps({ state, onShowWorlds }: { state: GameState; onShowWo
   if (step === 'welcome')
     return (
       <div className="tour-backdrop">
-        <section className="tour-card" role="dialog" aria-label="Bun venit">
+        <section className="tour-card" role="dialog" aria-label={t('Bun venit')}>
           <Dots at={0} />
           <div className="tour-hero" style={{ '--el': ELEMENTS[FIRST].color } as React.CSSProperties}>
             {pup && <DinoThumb species={pup.species} tight className="tour-pup" />}
           </div>
-          <h2>Un pui de foc a eclozat!</h2>
+          <h2>{t('Un pui de foc a eclozat!')}</h2>
           <p className="tour-line">
-            <span className="chip">🏠 Are nevoie de o casă</span>
+            <span className="chip">{t('🏠 Are nevoie de o casă')}</span>
           </p>
           <div className="tour-flow" aria-hidden="true">
             <span>🦖</span>
             <i>→</i>
-            <span>{ELEMENTS[FIRST].icon}</span>
+            <span>{t(ELEMENTS[FIRST].icon)}</span>
             <i>→</i>
             <span>🪙</span>
           </div>
           <div className="tour-buttons">
             <button className="button ghost small" onClick={skip}>
-              Sari peste
+              {t('Sari peste')}
             </button>
             <button
               className="button"
@@ -100,7 +112,7 @@ export function FirstSteps({ state, onShowWorlds }: { state: GameState; onShowWo
                 setStep('island');
               }}
             >
-              Găsește-i o casă →
+              {t('Găsește-i o casă →')}
             </button>
           </div>
         </section>
@@ -108,7 +120,7 @@ export function FirstSteps({ state, onShowWorlds }: { state: GameState; onShowWo
     );
 
   // pașii cu săgeată: nu blochează nimic, doar arată unde să atingi
-  const below = !!rect && rect.y < 190;
+  const below = !!rect && rect.y + rect.h / 2 < window.innerHeight / 2;
   return (
     <div className="tour-layer" aria-live="polite">
       {rect && (
@@ -116,24 +128,31 @@ export function FirstSteps({ state, onShowWorlds }: { state: GameState; onShowWo
           <div
             className={`tour-pointer ${below ? 'below' : ''}`}
             style={{
-              left: Math.max(150, Math.min(window.innerWidth - 150, rect.x + rect.w / 2)),
+              left: Math.max(
+                Math.min(150, window.innerWidth / 2),
+                Math.min(window.innerWidth - Math.min(150, window.innerWidth / 2), rect.x + rect.w / 2),
+              ),
               top: below ? Math.min(window.innerHeight - 150, rect.y + rect.h) : rect.y,
             }}
           >
             <span className="tour-arrow" aria-hidden="true">
-              {below ? '⬆' : '⬇'}
+              {t(below ? '⬆' : '⬇')}
             </span>
             <div className="tour-bubble">
               <Dots at={step === 'island' ? 1 : 2} />
               {step === 'island' ? (
                 <strong>
-                  {ELEMENTS[FIRST].icon} Atinge {HABITAT_ISLANDS[FIRST].name}
+                  {t(ELEMENTS[FIRST].icon)} {t('Atinge ')}
+                  {t(HABITAT_ISLANDS[FIRST].name)}
                 </strong>
               ) : (
-                <strong>🔓 Deblochează · 🪙 {formatNumber(WORLD_UNLOCK_COST[FIRST])}</strong>
+                <strong>
+                  {t('🔓 Deblochează · 🪙 ')}
+                  {t(formatNumber(WORLD_UNLOCK_COST[FIRST]))}
+                </strong>
               )}
               <button className="tour-skip" onClick={skip}>
-                Sari peste
+                {t('Sari peste')}
               </button>
             </div>
           </div>
@@ -145,7 +164,7 @@ export function FirstSteps({ state, onShowWorlds }: { state: GameState; onShowWo
 
 function Dots({ at }: { at: number }) {
   return (
-    <span className="tour-dots" aria-label={`Pasul ${at + 1} din 3`}>
+    <span className="tour-dots" aria-label={t(`Pasul ${at + 1} din 3`)}>
       {[0, 1, 2].map((i) => (
         <i key={i} className={i === at ? 'on' : i < at ? 'done' : ''} />
       ))}
@@ -160,8 +179,14 @@ function useTarget(id: string | null, onFrame: (found: boolean) => void): Rect |
     if (!id) return setRect(null);
     let frame = 0;
     let last = '';
+    let highlighted: Element | null = null;
     const tick = () => {
       const el = document.querySelector(`[data-tour="${id}"]`);
+      if (el !== highlighted) {
+        highlighted?.classList.remove('guide-target');
+        el?.classList.add('guide-target');
+        highlighted = el;
+      }
       const r = el?.getBoundingClientRect();
       // ce iese din ecran se taie, ca săgeata să rămână vizibilă
       const next =
@@ -184,7 +209,10 @@ function useTarget(id: string | null, onFrame: (found: boolean) => void): Rect |
       frame = requestAnimationFrame(tick);
     };
     tick();
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      highlighted?.classList.remove('guide-target');
+    };
     // onFrame se schimbă la fiecare randare; pasul curent e în id
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -219,6 +247,36 @@ function guideHints(s: GameState, now: number): Hint[] | null {
   if (!goal?.intro || (goal.id === 'world' && !goal.done(s))) return null;
   if (goal.done(s)) return [{ sel: tour('goal-claim'), text: '🎁 Ia recompensa' }, ...way('')];
   const hints: Hint[] = [];
+  if (goal.id === 'gold1') {
+    const home = s.buildings.find((b) => b.kind === 'habitat');
+    hints.push({
+      sel: tour('collect'),
+      text:
+        home && pendingGold(s, home, now) < 1
+          ? '⏱ Dinozaurii produc aur. Așteaptă puțin, apoi apasă Strânge.'
+          : '🪙 Strânge aurul produs de dinozauri',
+    });
+  }
+  if (goal.id === 'habitat2') {
+    const home = s.buildings
+      .filter((b) => b.kind === 'habitat')
+      .sort((a, b) => residents(s, b.id).length - residents(s, a.id).length)[0];
+    if (home && residents(s, home.id).length >= habitatCapacity(home)) {
+      const cost = buildingUpgradeCost(home) ?? 0;
+      hints.push(
+        s.gold < cost
+          ? { sel: tour('collect'), text: '🪙 Strânge aur pentru îmbunătățire' }
+          : { sel: tour('upgrade'), text: '⬆️ Îmbunătățește habitatul pentru mai mult loc și aur' },
+      );
+    } else {
+      hints.push(
+        { sel: tour('hatch-home'), text: '🏠 Alege lumea pentru noul pui' },
+        { sel: tour('hatch'), text: '🐣 Eclozează încă un pui ca să umpli habitatul' },
+        { sel: tour('egg-wait'), text: '⏱ Așteptă să fie gata oul' },
+        { sel: tour('egg-fire'), text: '🥚 Cumpără un ou ca să umpli habitatul' },
+      );
+    }
+  }
   if (goal.id === 'feed1') hints.push({ sel: tour('feed'), text: '🍖 Hrănește puiul ca să crească' });
   if (goal.id === 'harvest') {
     const plots = s.buildings.filter((b) => b.kind === 'farm').flatMap((b) => farmPlots(b));
@@ -246,6 +304,7 @@ function guideHints(s: GameState, now: number): Hint[] | null {
 }
 /** Calea spre acțiune: din fereastra deschisă înapoi pe hartă, apoi „Du-mă acolo”. */
 const way = (title: string): Hint[] => [
+  { sel: '.stage-close', text: '✕ Înapoi la hartă' },
   { sel: '.modal .corner-button.close', text: '✕ Închide fereastra' },
   { sel: tour('goal-go'), text: title ? `👉 ${title}` : '👉 Du-mă acolo' },
   { sel: tour('goal-pill'), text: '👉 Deschide obiectivul' },
@@ -254,29 +313,37 @@ const way = (title: string): Hint[] => [
 /** Ghidul de după deblocarea lumii: o săgeată prin hrănire, prima recoltă și primul ou, până la ultimul pas. */
 export function Guide({ state, now }: { state: GameState; now: number }) {
   const [off, setOff] = useState(guideOff);
+  const hasWorld = state.buildings.some((building) => building.kind === 'habitat');
+  useEffect(() => {
+    if (!hasWorld && !guideOff()) setOff(false);
+  }, [hasWorld]);
   const hints = off ? null : guideHints(state, now);
   const found = useHintTarget(hints);
   if (!hints || !found) return null;
   const { rect, hint } = found;
   const goal = currentGoal(state)!;
-  const below = rect.y < 190;
+  const below = rect.y + rect.h / 2 < window.innerHeight / 2;
   return (
     <div className="tour-layer guide" aria-live="polite">
       <div
         className={`tour-pointer ${below ? 'below' : ''}`}
         style={{
-          left: Math.max(150, Math.min(window.innerWidth - 150, rect.x + rect.w / 2)),
+          left: Math.max(
+            Math.min(150, window.innerWidth / 2),
+            Math.min(window.innerWidth - Math.min(150, window.innerWidth / 2), rect.x + rect.w / 2),
+          ),
           top: below ? Math.min(window.innerHeight - 150, rect.y + rect.h) : rect.y,
         }}
       >
         <span className="tour-arrow" aria-hidden="true">
-          {below ? '⬆' : '⬇'}
+          {t(below ? '⬆' : '⬇')}
         </span>
         <div className="tour-bubble">
           <span className="guide-step">
-            Primii pași · {INTRO.indexOf(goal) + 1}/{INTRO.length}
+            {t('Primii pași · ')}
+            {INTRO.indexOf(goal) + 1}/{INTRO.length}
           </span>
-          <strong>{hint.text}</strong>
+          <strong>{t(hint.text)}</strong>
           <button
             className="tour-skip"
             onClick={() => {
@@ -284,7 +351,7 @@ export function Guide({ state, now }: { state: GameState; now: number }) {
               setOff(true);
             }}
           >
-            Ascunde ghidul
+            {t('Ascunde ghidul')}
           </button>
         </div>
       </div>
@@ -300,15 +367,30 @@ function useHintTarget(hints: Hint[] | null): { rect: Rect; hint: Hint } | null 
   useLayoutEffect(() => {
     let frame = 0;
     let last = '';
+    let scrolled: Element | null = null;
+    let highlighted: Element | null = null;
     const tick = () => {
       let next: { rect: Rect; hint: Hint } | null = null;
-      for (const hint of latest.current ?? []) {
+      const blocked = document.querySelector('.reward-backdrop, .levelup, .tour-backdrop');
+      for (const hint of blocked ? [] : (latest.current ?? [])) {
         const el = document.querySelector(hint.sel);
         // ce stă sub o fereastră deschisă nu se poate atinge: săgeata arată întâi închiderea ferestrei
-        const modal = document.querySelector('.modal-backdrop');
+        const modal = document.querySelector('.modal-backdrop, .dragon-stage-overlay');
         if (!el || (modal && !modal.contains(el))) continue;
         const r = el.getBoundingClientRect();
-        if (r.width <= 0 || r.bottom < 0 || r.top > window.innerHeight) continue;
+        if (r.width <= 0 || r.height <= 0) continue;
+        if (r.bottom <= 0 || r.top >= window.innerHeight || r.right <= 0 || r.left >= window.innerWidth) {
+          if (modal?.contains(el) && scrolled !== el) {
+            scrolled = el;
+            el.scrollIntoView({ block: 'center', behavior: 'instant' });
+          }
+          continue;
+        }
+        if (highlighted !== el) {
+          highlighted?.classList.remove('guide-target');
+          el.classList.add('guide-target');
+          highlighted = el;
+        }
         const pad = 8;
         const x = Math.max(pad, r.left - pad);
         const y = Math.max(pad, r.top - pad);
@@ -323,6 +405,10 @@ function useHintTarget(hints: Hint[] | null): { rect: Rect; hint: Hint } | null 
         };
         break;
       }
+      if (!next) {
+        highlighted?.classList.remove('guide-target');
+        highlighted = null;
+      }
       const key = next
         ? `${next.hint.sel}|${next.hint.text}|${Math.round(next.rect.x)},${Math.round(next.rect.y)},${Math.round(next.rect.w)},${Math.round(next.rect.h)}`
         : '';
@@ -333,7 +419,10 @@ function useHintTarget(hints: Hint[] | null): { rect: Rect; hint: Hint } | null 
       frame = requestAnimationFrame(tick);
     };
     tick();
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      highlighted?.classList.remove('guide-target');
+    };
   }, []);
   return hints ? found : null;
 }

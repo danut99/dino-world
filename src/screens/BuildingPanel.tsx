@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 // Ce se deschide când atingi o clădire: habitat, fermă, incubator, bârlog, forjă, arenă sau avanpost.
 // Două coloane: în stânga clădirea (arta, cifrele, nivelul), în dreapta ce faci în ea. La habitat, dinozaurul
 // ales stă mare pe piedestal, cu acțiunile lui; dedesubt, rândul de portrete din care îl alegi.
@@ -100,7 +101,7 @@ export function BuildingPanel({ game, building, onClose, onMove, onDino }: Props
   if (b.kind === 'arena' || b.kind === 'outpost')
     return (
       <Modal
-        title={`${spec.name} · nivel ${b.level}`}
+        title={t(`${spec.name} · nivel ${b.level}`)}
         onClose={onClose}
         bare
         corner={<Corner kind={b.kind} onMove={onMove} />}
@@ -108,10 +109,13 @@ export function BuildingPanel({ game, building, onClose, onMove, onDino }: Props
       >
         <div className="bp-adv" style={{ '--tint': TINT[b.kind] } as CSSProperties}>
           <header className="bp-bar">
-            <img className="bp-bar-art" src={`${WORLD}${b.kind}-building.webp`} alt="" draggable={false} />
+            <img className="bp-bar-art" src={`${WORLD}${b.kind}-building.webp`} alt={''} draggable={false} />
             <div className="bp-bar-title">
-              <h2>{spec.name}</h2>
-              <span className="bp-chip gold">Nv. {b.level}</span>
+              <h2>{t(spec.name)}</h2>
+              <span className="bp-chip gold">
+                {t('Nv. ')}
+                {b.level}
+              </span>
             </div>
             <div className="bp-bar-actions">
               <UpgradeButton game={game} b={b} compact />
@@ -129,7 +133,7 @@ export function BuildingPanel({ game, building, onClose, onMove, onDino }: Props
   const tint = island ? ELEMENTS[b.element!].color : (TINT[b.kind] ?? '#c9a86a');
   return (
     <Modal
-      title={`${title} · nivel ${b.level}`}
+      title={t(`${title} · nivel ${b.level}`)}
       onClose={onClose}
       bare
       corner={<Corner kind={b.kind} element={b.element} onMove={onMove} />}
@@ -141,18 +145,21 @@ export function BuildingPanel({ game, building, onClose, onMove, onDino }: Props
             {b.kind === 'forge' ? (
               <BuildingPreview kind="forge" />
             ) : (
-              <img src={island ? island.image : `${WORLD}${b.kind}-building.webp`} alt="" draggable={false} />
+              <img src={island ? island.image : `${WORLD}${b.kind}-building.webp`} alt={''} draggable={false} />
             )}
           </div>
           <div className="bp-title">
-            <h2>{title}</h2>
+            <h2>{t(title)}</h2>
             <div className="bp-chips">
               {island && (
                 <span className="bp-chip">
-                  {ELEMENTS[b.element!].icon} {ELEMENTS[b.element!].name}
+                  {t(ELEMENTS[b.element!].icon)} {t(ELEMENTS[b.element!].name)}
                 </span>
               )}
-              <span className="bp-chip gold">Nv. {b.level}</span>
+              <span className="bp-chip gold">
+                {t('Nv. ')}
+                {b.level}
+              </span>
             </div>
           </div>
           <div className="bp-stats">
@@ -163,7 +170,7 @@ export function BuildingPanel({ game, building, onClose, onMove, onDino }: Props
         <section className="bp-main">
           {/* titlul stă fix, pe rândul butoanelor din colț; doar conținutul de sub el derulează */}
           <header className="bp-main-head">
-            <h3 className="bp-main-title">{MAIN_TITLE[b.kind]}</h3>
+            <h3 className="bp-main-title">{t(MAIN_TITLE[b.kind])}</h3>
           </header>
           <div className="bp-main-body">
             {b.kind === 'habitat' && <HabitatMain game={game} b={b} onDino={onDino} />}
@@ -185,15 +192,15 @@ function Corner({ kind, element, onMove }: { kind: Building['kind']; element?: E
     <>
       <button
         className="corner-button"
-        title="Cum funcționează · Wikipedia"
-        aria-label="Cum funcționează"
+        title={t('Cum funcționează · Wikipedia')}
+        aria-label={t('Cum funcționează')}
         onClick={() => nav({ to: 'wiki', article: element ? `world-${element}` : `building-${kind}` })}
       >
         📚
       </button>
       {onMove && (
         <button className="corner-button" onClick={onMove}>
-          ✥ Mută
+          {t('✥ Mută')}
         </button>
       )}
     </>
@@ -216,13 +223,13 @@ function Meter({
   return (
     <div className="bp-meter">
       <span className="bp-meter-icon" aria-hidden="true">
-        {icon}
+        {t(icon)}
       </span>
       <span className="bp-meter-copy">
-        <strong>{value}</strong>
-        <small>{label}</small>
+        <strong>{t(value)}</strong>
+        <small>{t(label)}</small>
       </span>
-      {children}
+      {t(children)}
     </div>
   );
 }
@@ -241,16 +248,17 @@ function SideStats({ game, b }: { game: Game; b: Building }) {
             <span className="bp-coin" aria-hidden="true">
               🪙
             </span>
-            <strong>{formatNumber(gold)}</strong>
-            <small>/ {formatNumber(cap)}</small>
+            <strong>{t(formatNumber(gold))}</strong>
+            <small>/ {t(formatNumber(cap))}</small>
           </div>
           <Progress value={gold / cap} />
           <button
             className="button bp-collect"
+            data-tour="collect"
             disabled={gold < 1}
             onClick={() => run({ type: 'collect', buildingId: b.id })}
           >
-            Strânge
+            {t('Strânge')}
           </button>
         </div>
         <Meter
@@ -261,7 +269,7 @@ function SideStats({ game, b }: { game: Game; b: Building }) {
           {itemCount(state, 'gold-totem') > 0 && (
             <button
               className="bp-use"
-              title="Totem de aur: aur dublu o oră"
+              title={t('Totem de aur: aur dublu o oră')}
               onClick={() => run({ type: 'useItem', itemId: 'gold-totem', target: { habitat: b.id } })}
             >
               🗿 {itemCount(state, 'gold-totem')}
@@ -314,10 +322,10 @@ function SideStats({ game, b }: { game: Game; b: Building }) {
     return (
       <div className="bp-materials">
         {MATERIAL_IDS.map((k) => (
-          <span key={k} title={MATERIALS[k].name}>
-            <b aria-hidden="true">{MATERIALS[k].icon}</b>
+          <span key={k} title={t(MATERIALS[k].name)}>
+            <b aria-hidden="true">{t(MATERIALS[k].icon)}</b>
             <strong>{state.materials?.[k] ?? 0}</strong>
-            <small>{MATERIALS[k].name}</small>
+            <small>{t(MATERIALS[k].name)}</small>
           </span>
         ))}
       </div>
@@ -362,28 +370,44 @@ function UpgradeButton({ game, b, compact }: { game: Game; b: Building; compact?
           ⬆
         </span>
         {compact ? (
-          <strong>Nv. {b.level + 1}</strong>
+          <strong>
+            {t('Nv. ')}
+            {b.level + 1}
+          </strong>
         ) : (
           <span className="bp-upgrade-copy">
-            <strong>Nivel {b.level + 1}</strong>
-            {b.kind === 'habitat' && <small>{habitatCapacity({ ...b, level: b.level + 1 })} locuri</small>}
-            {b.kind === 'farm' && <small>{FARM_PLOTS[b.level]} straturi</small>}
-            {b.kind === 'forge' && <small>rețete noi</small>}
+            <strong>
+              {t('Nivel ')}
+              {b.level + 1}
+            </strong>
+            {b.kind === 'habitat' && (
+              <small>
+                {habitatCapacity({ ...b, level: b.level + 1 })} {t('locuri')}
+              </small>
+            )}
+            {b.kind === 'farm' && (
+              <small>
+                {FARM_PLOTS[b.level]} {t('straturi')}
+              </small>
+            )}
+            {b.kind === 'forge' && <small>{t('rețete noi')}</small>}
           </span>
         )}
         <span className="bp-upgrade-costs">
-          {lock && (
-            <span className="bp-upgrade-cost lock short" title="Încă blocat">
-              🔒 {lock}
-            </span>
+          {t(
+            lock && (
+              <span className="bp-upgrade-cost lock short" title={t('Încă blocat')}>
+                🔒 {t(lock)}
+              </span>
+            ),
           )}
-          <span className={`bp-upgrade-cost ${state.gold < next ? 'short' : ''}`} title="Aur">
-            🪙 {formatNumber(next)}
+          <span className={`bp-upgrade-cost ${state.gold < next ? 'short' : ''}`} title={t('Aur')}>
+            🪙 {t(formatNumber(next))}
           </span>
           {shards > 0 && (
             <span
               className={`bp-upgrade-cost shards ${(state.fragments ?? 0) < shards ? 'short' : ''}`}
-              title="Fragmente ancestrale din expediții"
+              title={t('Fragmente ancestrale din expediții')}
             >
               ✦ {Math.min(state.fragments ?? 0, shards)}/{shards}
             </span>
@@ -392,9 +416,9 @@ function UpgradeButton({ game, b, compact }: { game: Game; b: Building; compact?
             <span
               key={id}
               className={`bp-upgrade-cost part ${itemCount(state, id) < n ? 'short' : ''}`}
-              title={`${ITEMS[id].name} · din forjă`}
+              title={t(`${ITEMS[id].name} · din forjă`)}
             >
-              {ITEMS[id].icon} {Math.min(itemCount(state, id), n)}/{n}
+              {t(ITEMS[id].icon)} {Math.min(itemCount(state, id), n)}/{n}
             </span>
           ))}
         </span>
@@ -469,21 +493,21 @@ function UpgradeInfo({
         type="button"
         className={`bp-info ${open ? 'on' : ''}`}
         aria-expanded={open}
-        aria-label="Ce îți trebuie pentru nivelul următor"
+        aria-label={t('Ce îți trebuie pentru nivelul următor')}
         onClick={() => setOpen(!open)}
       >
-        i
+        {t('i')}
       </button>
       {open && (
         <ul className="bp-needs">
           {rows.map((r) => (
             <li key={r.what} className={r.ok ? 'ok' : 'missing'}>
-              <b aria-hidden="true">{r.icon}</b>
+              <b aria-hidden="true">{t(r.icon)}</b>
               <span>
-                <strong>{r.what}</strong>
-                <small>{r.how}</small>
+                <strong>{t(r.what)}</strong>
+                <small>{t(r.how)}</small>
               </span>
-              <i aria-label={r.ok ? 'ai' : 'lipsește'}>{r.ok ? '✓' : '✕'}</i>
+              <i aria-label={t(r.ok ? 'ai' : 'lipsește')}>{t(r.ok ? '✓' : '✕')}</i>
             </li>
           ))}
         </ul>
@@ -524,11 +548,14 @@ function Roster({
       ) : (
         <div className="bp-focus empty" style={{ '--el': ELEMENTS[element].color } as CSSProperties}>
           <EggIcon element={element} size={110} />
-          <strong>Niciun dinozaur încă</strong>
-          <span className="bp-chip">🥚 Eclozează un ou {ELEMENTS[element].icon}</span>
+          <strong>{t('Niciun dinozaur încă')}</strong>
+          <span className="bp-chip">
+            {t('🥚 Eclozează un ou ')}
+            {t(ELEMENTS[element].icon)}
+          </span>
         </div>
       )}
-      <div className="bp-roster" role="listbox" aria-label="Dinozauri">
+      <div className="bp-roster" role="listbox" aria-label={t('Dinozauri')}>
         {dinos.map((d) => {
           const s = speciesOf(d.species);
           return (
@@ -539,7 +566,7 @@ function Roster({
               className={`bp-portrait r-${s.rarity} ${d.id === current?.id ? 'on' : ''}`}
               style={{ '--el': ELEMENTS[s.elements[0]].color } as CSSProperties}
               onClick={() => setPicked(d.id)}
-              title={d.nickname ?? s.name}
+              title={t(d.nickname ?? s.name)}
             >
               <DinoThumb species={d.species} stage={stageForLevel(d.level)} tight className="bp-portrait-art" />
               <span className="bp-portrait-level">{d.level}</span>
@@ -547,7 +574,7 @@ function Roster({
           );
         })}
         {Array.from({ length: Math.max(0, seats - dinos.length) }, (_, i) => (
-          <span key={i} className="bp-portrait empty" title="Loc liber">
+          <span key={i} className="bp-portrait empty" title={t('Loc liber')}>
             <EggIcon element={element} size={34} />
           </span>
         ))}
@@ -575,46 +602,47 @@ function DinoFocus({ game, dino, onOpen, badge }: { game: Game; dino: Dino; onOp
         className="bp-stage"
         disabled={!onOpen}
         onClick={onOpen}
-        aria-label={onOpen ? `Deschide scena: ${dino.nickname ?? s.name}` : undefined}
+        aria-label={t(onOpen ? `Deschide scena: ${dino.nickname ?? s.name}` : undefined)}
       >
         <span className="bp-ground">
           <DinoThumb key={dino.id} species={dino.species} stage={stage} tight className="bp-stage-art" />
           <span className="bp-shadow" aria-hidden="true" />
         </span>
-        {status && <span className="bp-status">{status}</span>}
-        {onOpen && <span className="bp-stage-hint">↗ Scenă</span>}
+        {t(status && <span className="bp-status">{t(status)}</span>)}
+        {onOpen && <span className="bp-stage-hint">{t('↗ Scenă')}</span>}
       </button>
       <div className="bp-focus-info">
         <div className="bp-focus-head">
           <RarityBadge rarity={s.rarity} />
-          <h4>{dino.nickname ?? s.name}</h4>
+          <h4>{t(dino.nickname ?? s.name)}</h4>
           <span className="bp-focus-sub">
             {s.elements.map((e) => (
               <span
                 key={e}
                 className="bp-el"
                 style={{ '--el': ELEMENTS[e].color } as CSSProperties}
-                title={ELEMENTS[e].name}
+                title={t(ELEMENTS[e].name)}
               >
-                {ELEMENTS[e].icon}
+                {t(ELEMENTS[e].icon)}
               </span>
             ))}
-            <span>{stageName}</span>
+            <span>{t(stageName)}</span>
           </span>
         </div>
         <div className="bp-level">
           <span>
-            Nivel <strong>{dino.level}</strong>
+            {t('Nivel ')}
+            <strong>{dino.level}</strong>
             <small> / {MAX_LEVEL}</small>
           </span>
           <Progress value={dino.level / MAX_LEVEL} />
         </div>
         <div className="bp-focus-stats">
           <span>
-            <small>Putere</small>⚔ {dinoPower(dino)}
+            <small>{t('Putere')}</small>⚔ {dinoPower(dino)}
           </span>
           <span>
-            <small>Aur</small>🪙 {nursery ? '—' : `${dinoIncome(dino)}/min`}
+            <small>{t('Aur')}</small>🪙 {t(nursery ? '—' : `${dinoIncome(dino)}/min`)}
           </span>
         </div>
         <GearRow game={game} dino={dino} disabled={away} />
@@ -623,7 +651,8 @@ function DinoFocus({ game, dino, onOpen, badge }: { game: Game; dino: Dino; onOp
             className="bp-ghost bp-elixir"
             onClick={() => run({ type: 'useItem', itemId: 'elixir', target: { dino: dino.id } })}
           >
-            🍵 Elixir · trezește-l acum ({itemCount(state, 'elixir')})
+            {t('🍵 Elixir · trezește-l acum (')}
+            {itemCount(state, 'elixir')})
           </button>
         )}
         {dino.level < MAX_LEVEL ? (
@@ -633,11 +662,11 @@ function DinoFocus({ game, dino, onOpen, badge }: { game: Game; dino: Dino; onOp
             disabled={away || state.food < cost}
             onClick={() => run({ type: 'feed', dinoId: dino.id })}
           >
-            <span>Hrănește</span>
-            <span className="bp-feed-cost">🍖 {formatNumber(cost)}</span>
+            <span>{t('Hrănește')}</span>
+            <span className="bp-feed-cost">🍖 {t(formatNumber(cost))}</span>
           </button>
         ) : (
-          <span className="bp-max">✦ Nivel maxim</span>
+          <span className="bp-max">{t('✦ Nivel maxim')}</span>
         )}
         {dino.level < MAX_LEVEL &&
           (away ? (
@@ -653,22 +682,23 @@ function DinoFocus({ game, dino, onOpen, badge }: { game: Game; dino: Dino; onOp
           {homes.length > 0 && (
             <select
               className="bp-select"
-              aria-label={`Mută ${dino.nickname ?? s.name} în alt habitat`}
+              aria-label={t(`Mută ${dino.nickname ?? s.name} în alt habitat`)}
               value=""
               disabled={away}
               onChange={(e) => run({ type: 'moveDino', dinoId: dino.id, habitatId: e.target.value })}
             >
-              <option value="">↔ Mută în…</option>
+              <option value="">{t('↔ Mută în…')}</option>
               {homes.map((h) => (
                 <option key={h.id} value={h.id}>
-                  {ELEMENTS[h.element!].icon} {ELEMENTS[h.element!].name} ({residents(state, h.id).length}/
+                  {t(ELEMENTS[h.element!].icon)} {t(ELEMENTS[h.element!].name)} ({residents(state, h.id).length}/
                   {habitatCapacity(h)})
                 </option>
               ))}
             </select>
           )}
           <button className="bp-ghost" disabled={away} onClick={() => run({ type: 'sellDino', dinoId: dino.id })}>
-            Vinde · 🪙 {sellPrice(dino)}
+            {t('Vinde · 🪙 ')}
+            {sellPrice(dino)}
           </button>
         </div>
       </div>
@@ -689,14 +719,14 @@ function GearRow({ game, dino, disabled }: { game: Game; dino: Dino; disabled: b
           <label
             key={slot}
             className={`bp-gear-slot ${item ? 'on' : ''}`}
-            title={item ? `${item.name} · ${item.effect}` : GEAR_SLOTS[slot].name}
+            title={t(item ? `${item.name} · ${item.effect}` : GEAR_SLOTS[slot].name)}
           >
             <span className="bp-gear-icon" aria-hidden="true">
-              {item?.icon ?? GEAR_SLOTS[slot].icon}
+              {t(item?.icon ?? GEAR_SLOTS[slot].icon)}
             </span>
-            <small>{item ? item.effect : GEAR_SLOTS[slot].name}</small>
+            <small>{t(item ? item.effect : GEAR_SLOTS[slot].name)}</small>
             <select
-              aria-label={`Echipament: ${GEAR_SLOTS[slot].name}`}
+              aria-label={t(`Echipament: ${GEAR_SLOTS[slot].name}`)}
               value={worn ?? ''}
               disabled={disabled || (!worn && !owned.length)}
               onChange={(e) =>
@@ -705,13 +735,13 @@ function GearRow({ game, dino, disabled }: { game: Game; dino: Dino; disabled: b
                   : run({ type: 'unequip', dinoId: dino.id, slot })
               }
             >
-              <option value="">{worn ? '— Scoate' : '—'}</option>
-              {worn && <option value={worn}>{ITEMS[worn].name}</option>}
+              <option value="">{t(worn ? '— Scoate' : '—')}</option>
+              {t(worn && <option value={worn}>{t(ITEMS[worn].name)}</option>)}
               {owned
                 .filter((i) => i.id !== worn)
                 .map((i) => (
                   <option key={i.id} value={i.id}>
-                    {i.name} ({itemCount(state, i.id)})
+                    {t(i.name)} ({itemCount(state, i.id)})
                   </option>
                 ))}
             </select>
@@ -741,42 +771,43 @@ function ForgeMain({ game, b }: { game: Game; b: Building }) {
       {job && (
         <div className={`bp-craft ${job.readyAt <= now ? 'ready' : ''}`}>
           <span className="bp-craft-icon" aria-hidden="true">
-            {ITEMS[job.itemId].icon}
+            {t(ITEMS[job.itemId].icon)}
           </span>
           <div className="bp-craft-copy">
-            <strong>{ITEMS[job.itemId].name}</strong>
+            <strong>{t(ITEMS[job.itemId].name)}</strong>
             {job.readyAt > now ? (
               <Progress value={1 - (job.readyAt - now) / (ITEMS[job.itemId].seconds * 1000)} />
             ) : (
-              <small>Gata de ridicat</small>
+              <small>{t('Gata de ridicat')}</small>
             )}
           </div>
           {job.readyAt > now ? (
             <>
-              <span className="bp-chip">⏱ {formatTime(job.readyAt - now)}</span>
+              <span className="bp-chip">⏱ {t(formatTime(job.readyAt - now))}</span>
               <button className="button small gem" onClick={() => run({ type: 'rush', target: { forge: b.id } })}>
                 💎 {rushCost(job.readyAt - now)}
               </button>
             </>
           ) : (
             <button className="button" onClick={() => run({ type: 'collectCraft', forgeId: b.id })}>
-              Ia obiectul
+              {t('Ia obiectul')}
             </button>
           )}
         </div>
       )}
-      <nav className="arena-tabs bp-tabs" aria-label="Forja">
+      <nav className="arena-tabs bp-tabs" aria-label={t('Forja')}>
         <button className={tab === 'recipes' ? 'on' : ''} onClick={() => setTab('recipes')}>
-          ⚒️ Rețete
+          {t('⚒️ Rețete')}
         </button>
         <button className={tab === 'bag' ? 'on' : ''} onClick={() => setTab('bag')}>
-          🎒 Inventar{owned.length > 0 && ` · ${owned.reduce((n, i) => n + itemCount(state, i.id), 0)}`}
+          {t('🎒 Inventar')}
+          {t(owned.length > 0 && ` · ${owned.reduce((n, i) => n + itemCount(state, i.id), 0)}`)}
         </button>
       </nav>
       {tab === 'recipes' ? (
         ITEM_GROUPS.map(([kind, label]) => (
           <section key={kind} className="bp-stack">
-            <h3 className="bp-main-title">{label}</h3>
+            <h3 className="bp-main-title">{t(label)}</h3>
             <div className="bp-recipes">
               {ITEM_LIST.filter((i) => i.kind === kind).map((item) => {
                 const locked = item.level > b.level;
@@ -784,41 +815,46 @@ function ForgeMain({ game, b }: { game: Game; b: Building }) {
                 return (
                   <article key={item.id} className={`bp-recipe ${kind} ${locked ? 'locked' : ''}`}>
                     <span className="bp-recipe-icon" aria-hidden="true">
-                      {item.icon}
+                      {t(item.icon)}
                     </span>
-                    <strong>{item.name}</strong>
-                    <span className="bp-recipe-effect">{item.effect}</span>
+                    <strong>{t(item.name)}</strong>
+                    <span className="bp-recipe-effect">{t(item.effect)}</span>
                     <span className="bp-recipe-costs">
                       {Object.entries(item.materials).map(([k, n]) => (
                         <span
                           key={k}
                           className={have(k) < (n ?? 0) ? 'short' : ''}
-                          title={MATERIALS[k as MaterialId].name}
+                          title={t(MATERIALS[k as MaterialId].name)}
                         >
-                          {MATERIALS[k as MaterialId].icon} {n}
+                          {t(MATERIALS[k as MaterialId].icon)} {n}
                         </span>
                       ))}
-                      <span>⏱ {formatTime(item.seconds * 1000)}</span>
+                      <span>⏱ {t(formatTime(item.seconds * 1000))}</span>
                     </span>
                     {locked ? (
-                      <span className="bp-chip">🔒 Forja Nv. {item.level}</span>
+                      <span className="bp-chip">
+                        {t('🔒 Forja Nv. ')}
+                        {item.level}
+                      </span>
                     ) : (
                       <button
                         className="button small bp-recipe-make"
                         disabled={!can}
                         onClick={() => run({ type: 'craft', forgeId: b.id, itemId: item.id })}
                       >
-                        <span>Făurește</span>
-                        <span className="arena-cost">🪙 {formatNumber(item.gold)}</span>
+                        <span>{t('Făurește')}</span>
+                        <span className="arena-cost">🪙 {t(formatNumber(item.gold))}</span>
                       </button>
                     )}
                     {!locked && !can && (
                       <small className="bp-recipe-need">
-                        {job
-                          ? 'Forja lucrează la alt obiect'
-                          : !hasMaterials(state, item.materials)
-                            ? 'Lipsesc materiale (roșu) · din expediții și arenă'
-                            : `Îți lipsesc 🪙 ${formatNumber(item.gold - state.gold)}`}
+                        {t(
+                          job
+                            ? 'Forja lucrează la alt obiect'
+                            : !hasMaterials(state, item.materials)
+                              ? 'Lipsesc materiale (roșu) · din expediții și arenă'
+                              : `Îți lipsesc 🪙 ${formatNumber(item.gold - state.gold)}`,
+                        )}
                       </small>
                     )}
                     {itemCount(state, item.id) > 0 && (
@@ -835,10 +871,10 @@ function ForgeMain({ game, b }: { game: Game; b: Building }) {
           {owned.map((item) => (
             <article key={item.id} className={`bp-recipe ${item.kind}`}>
               <span className="bp-recipe-icon" aria-hidden="true">
-                {item.icon}
+                {t(item.icon)}
               </span>
-              <strong>{item.name}</strong>
-              <span className="bp-recipe-effect">{item.effect}</span>
+              <strong>{t(item.name)}</strong>
+              <span className="bp-recipe-effect">{t(item.effect)}</span>
               <span className="bp-recipe-owned">×{itemCount(state, item.id)}</span>
             </article>
           ))}
@@ -846,8 +882,8 @@ function ForgeMain({ game, b }: { game: Game; b: Building }) {
       ) : (
         <div className="bp-focus empty">
           <span className="bp-empty-icon">🎒</span>
-          <strong>Inventarul e gol</strong>
-          <span className="bp-chip">⚒️ Făurește din rețete</span>
+          <strong>{t('Inventarul e gol')}</strong>
+          <span className="bp-chip">{t('⚒️ Făurește din rețete')}</span>
         </div>
       )}
     </div>
@@ -877,12 +913,15 @@ function FarmMain({ game, b }: { game: Game; b: Building }) {
               <div
                 key={i}
                 className="bp-plot locked"
-                title={`Se deblochează la nivelul ${FARM_PLOTS.indexOf(i + 1) + 1}`}
+                title={t(`Se deblochează la nivelul ${FARM_PLOTS.indexOf(i + 1) + 1}`)}
               >
                 <span className="bp-plot-soil" aria-hidden="true">
                   🔒
                 </span>
-                <span className="bp-chip">⬆ Nv. {FARM_PLOTS.indexOf(i + 1) + 1}</span>
+                <span className="bp-chip">
+                  {t('⬆ Nv. ')}
+                  {FARM_PLOTS.indexOf(i + 1) + 1}
+                </span>
               </div>
             );
           const p = plots[i];
@@ -897,7 +936,7 @@ function FarmMain({ game, b }: { game: Game; b: Building }) {
                 <span className="bp-plot-soil" aria-hidden="true">
                   +
                 </span>
-                <span className="bp-chip">Liber</span>
+                <span className="bp-chip">{t('Liber')}</span>
               </button>
             );
           const crop = CROPS.find((c) => c.id === p.id)!;
@@ -910,12 +949,12 @@ function FarmMain({ game, b }: { game: Game; b: Building }) {
                 data-tour={left > 0 ? 'crop-wait' : undefined}
                 style={{ '--p': `${done * 360}deg` } as CSSProperties}
               >
-                <span aria-hidden="true">{CROP_ICON[crop.id] ?? '🌱'}</span>
+                <span aria-hidden="true">{t(CROP_ICON[crop.id] ?? '🌱')}</span>
               </div>
-              <strong className="bp-plot-name">{crop.name}</strong>
+              <strong className="bp-plot-name">{t(crop.name)}</strong>
               {left > 0 ? (
                 <>
-                  <span className="bp-chip">⏱ {formatTime(left)}</span>
+                  <span className="bp-chip">⏱ {t(formatTime(left))}</span>
                   <button
                     className="button small gem"
                     onClick={() => run({ type: 'rush', target: { farm: b.id, plot: i } })}
@@ -925,7 +964,7 @@ function FarmMain({ game, b }: { game: Game; b: Building }) {
                   {itemCount(state, 'fertilizer') > 0 && (
                     <button
                       className="bp-use"
-                      title="Fertilizator: gata pe loc"
+                      title={t('Fertilizator: gata pe loc')}
                       onClick={() => run({ type: 'useItem', itemId: 'fertilizer', target: { farm: b.id, plot: i } })}
                     >
                       🧪 {itemCount(state, 'fertilizer')}
@@ -947,7 +986,8 @@ function FarmMain({ game, b }: { game: Game; b: Building }) {
       </div>
       {ready.length > 1 && (
         <button className="button bp-big bp-harvest-all" onClick={() => run({ type: 'harvest', farmId: b.id })}>
-          Recoltează tot · 🍖 {readyFood}
+          {t('Recoltează tot · 🍖 ')}
+          {readyFood}
         </button>
       )}
       {target < 0 && !ready.length && (
@@ -956,17 +996,25 @@ function FarmMain({ game, b }: { game: Game; b: Building }) {
             🌾
           </span>
           <div>
-            <strong>Toate straturile cresc</strong>
-            <small>Revino când sunt gata</small>
+            <strong>{t('Toate straturile cresc')}</strong>
+            <small>{t('Revino când sunt gata')}</small>
           </div>
           <span className="bp-chip">🍖 +{growingFood}</span>
-          <span className="bp-chip">⏱ {formatTime(nextReady - now)}</span>
+          <span className="bp-chip">⏱ {t(formatTime(nextReady - now))}</span>
         </div>
       )}
-      {plots.length < max && <p className="bp-farm-more">⬆ Nivelul {plots.length + 1} deblochează încă un strat</p>}
+      {plots.length < max && (
+        <p className="bp-farm-more">
+          {t('⬆ Nivelul ')}
+          {plots.length + 1} {t('deblochează încă un strat')}
+        </p>
+      )}
       {target >= 0 && (
         <>
-          <h3 className="bp-main-title">Plantează · stratul {target + 1}</h3>
+          <h3 className="bp-main-title">
+            {t('Plantează · stratul ')}
+            {target + 1}
+          </h3>
           <div className="bp-crops">
             {CROPS.map((c) => (
               <button
@@ -977,12 +1025,12 @@ function FarmMain({ game, b }: { game: Game; b: Building }) {
                 onClick={() => run({ type: 'plant', farmId: b.id, cropId: c.id, plot: target }) && setPicked(null)}
               >
                 <span className="bp-crop-icon" aria-hidden="true">
-                  {CROP_ICON[c.id] ?? '🌱'}
+                  {t(CROP_ICON[c.id] ?? '🌱')}
                 </span>
-                <strong>{c.name}</strong>
+                <strong>{t(c.name)}</strong>
                 <span className="bp-crop-meta">
                   <span>🍖 {c.food}</span>
-                  <span>⏱ {formatTime(c.seconds * 1000)}</span>
+                  <span>⏱ {t(formatTime(c.seconds * 1000))}</span>
                 </span>
                 <span className={`bp-price ${state.gold < c.cost ? 'short' : ''}`}>🪙 {c.cost}</span>
               </button>
@@ -1027,16 +1075,18 @@ function HatcheryMain({ game, onDino }: { game: Game; onDino?: (id: string) => v
                 <EggIcon element={egg.element ?? s.elements[0]} size={80} shaking={left <= 0} />
               </span>
               <strong>
-                {egg.element
-                  ? `${ELEMENTS[egg.element].icon} ${ELEMENTS[egg.element].name}`
-                  : state.discovered.includes(s.id)
-                    ? s.name
-                    : '???'}
+                {t(
+                  egg.element
+                    ? `${ELEMENTS[egg.element].icon} ${ELEMENTS[egg.element].name}`
+                    : state.discovered.includes(s.id)
+                      ? s.name
+                      : '???',
+                )}
               </strong>
               {left > 0 ? (
                 <>
                   <span className="bp-chip" data-tour="egg-wait">
-                    ⏱ {formatTime(left)}
+                    ⏱ {t(formatTime(left))}
                   </span>
                   <button className="button small gem" onClick={() => run({ type: 'rush', target: { egg: egg.id } })}>
                     💎 {rushCost(left)}
@@ -1044,7 +1094,7 @@ function HatcheryMain({ game, onDino }: { game: Game; onDino?: (id: string) => v
                   {itemCount(state, 'warm-stone') > 0 && (
                     <button
                       className="bp-use"
-                      title="Piatră caldă: eclozează pe loc"
+                      title={t('Piatră caldă: eclozează pe loc')}
                       onClick={() => run({ type: 'useItem', itemId: 'warm-stone', target: { egg: egg.id } })}
                     >
                       ♨️ {itemCount(state, 'warm-stone')}
@@ -1061,28 +1111,28 @@ function HatcheryMain({ game, onDino }: { game: Game; onDino?: (id: string) => v
                         data-tour="hatch-home"
                         onClick={() => run({ type: 'hatch', eggId: egg.id, habitatId: h.id }) && setChoosing(null)}
                       >
-                        {ELEMENTS[h.element!].icon} {residents(state, h.id).length}/{habitatCapacity(h)}
+                        {t(ELEMENTS[h.element!].icon)} {residents(state, h.id).length}/{habitatCapacity(h)}
                       </button>
                     ))}
                   </span>
                 ) : (
-                  <span className="bp-chip warn">🔒 {s.elements.map((e) => ELEMENTS[e].icon).join(' ')}</span>
+                  <span className="bp-chip warn">🔒 {t(s.elements.map((e) => ELEMENTS[e].icon).join(' '))}</span>
                 )
               ) : (
                 <button className="button small" data-tour="hatch" onClick={() => setChoosing(egg.id)}>
-                  🐣 Eclozează
+                  {t('🐣 Eclozează')}
                 </button>
               )}
             </div>
           );
         })}
         {Array.from({ length: Math.max(0, hatcherySlots(state) - state.eggs.length) }, (_, i) => (
-          <div key={i} className="bp-egg empty" aria-label="Loc gol">
+          <div key={i} className="bp-egg empty" aria-label={t('Loc gol')}>
             <span className="bp-egg-ghost" aria-hidden="true" />
           </div>
         ))}
       </div>
-      <h3 className="bp-main-title">Cumpără ouă</h3>
+      <h3 className="bp-main-title">{t('Cumpără ouă')}</h3>
       <HabitatEggShop state={state} onBuy={(element) => run({ type: 'buyHabitatEgg', element })} />
     </div>
   );
@@ -1114,17 +1164,17 @@ function DenMain({ game }: { game: Game }) {
         </div>
         {left > 0 ? (
           <div className="bp-row">
-            <span className="bp-chip">⏱ {formatTime(left)}</span>
+            <span className="bp-chip">⏱ {t(formatTime(left))}</span>
             <button className="button gem" onClick={() => run({ type: 'rush', target: 'breeding' })}>
               💎 {rushCost(left)}
             </button>
             <button className="bp-ghost" onClick={() => run({ type: 'cancelBreed' })}>
-              Oprește
+              {t('Oprește')}
             </button>
           </div>
         ) : (
           <button className="button bp-big" onClick={() => run({ type: 'finishBreed' })}>
-            🥚 Ia oul
+            {t('🥚 Ia oul')}
           </button>
         )}
       </div>
@@ -1141,8 +1191,11 @@ function DenMain({ game }: { game: Game }) {
         </div>
         <div className="bp-row">
           <span className="bp-chip">🦖 × 2</span>
-          <span className="bp-chip">Nv. {BREED_LEVEL}+</span>
-          <span className="bp-chip">liberi</span>
+          <span className="bp-chip">
+            {t('Nv. ')}
+            {BREED_LEVEL}+
+          </span>
+          <span className="bp-chip">{t('liberi')}</span>
         </div>
         <Need
           what={`Ai nevoie de doi dinozauri de nivel ${BREED_LEVEL}+, liberi`}
@@ -1175,28 +1228,33 @@ function DenMain({ game }: { game: Game }) {
           {odds.map((o) => {
             const known = state.discovered.includes(o.species.id);
             return (
-              <div key={o.species.id} className={`bp-odd r-${o.species.rarity}`} title={known ? o.species.name : '???'}>
+              <div
+                key={o.species.id}
+                className={`bp-odd r-${o.species.rarity}`}
+                title={t(known ? o.species.name : '???')}
+              >
                 <DinoThumb species={o.species.id} hidden={!known} />
-                <strong>{rare && !known ? '?' : `${o.pct.toFixed(o.pct < 10 ? 1 : 0)}%`}</strong>
+                <strong>{t(rare && !known ? '?' : `${o.pct.toFixed(o.pct < 10 ? 1 : 0)}%`)}</strong>
               </div>
             );
           })}
           {!known && (
-            <div className="bp-odd mystery" title="Doar perechea potrivită dă o specie rară">
+            <div className="bp-odd mystery" title={t('Doar perechea potrivită dă o specie rară')}>
               <span className="bp-odd-mystery">❓</span>
-              <strong>rar?</strong>
+              <strong>{t('rar?')}</strong>
             </div>
           )}
         </div>
       )}
       {known && (
         <p className="bp-den-match">
-          ✨ Pereche specială: {speciesOf(rare!).name} ·{' '}
-          {adults7 ? 'doi adulți, șanse mai mari' : `doi adulți (Nv. 7+) ar avea +${DEN_ADULT_BONUS}%`}
+          {t('✨ Pereche specială: ')}
+          {t(speciesOf(rare!).name)} ·{' '}
+          {t(adults7 ? 'doi adulți, șanse mai mari' : `doi adulți (Nv. 7+) ar avea +${DEN_ADULT_BONUS}%`)}
         </p>
       )}
       <button className="button bp-big" disabled={!odds.length} onClick={() => run({ type: 'breed', a, b })}>
-        💞 Împerechează
+        {t('💞 Împerechează')}
       </button>
       {!odds.length && <Need what="Alege doi părinți diferiți" />}
       <DenRecipes state={state} />
@@ -1211,11 +1269,13 @@ function DenMain({ game }: { game: Game }) {
 function DenRecipes({ state }: { state: Game['state'] }) {
   return (
     <section className="bp-den-book">
-      <h3 className="bp-main-title">📖 Rețete rare</h3>
+      <h3 className="bp-main-title">{t('📖 Rețete rare')}</h3>
       <p className="bp-den-rules">
-        Oul din magazin dă doar specia de bază a lumii. Rarele vin de aici: perechea potrivită are {DEN_RARE_CHANCE}%
-        șanse (+{DEN_ADULT_BONUS}% dacă ambii sunt adulți). După ou, părinții se odihnesc{' '}
-        {Math.round(DEN_REST_MS / 3600000)} ore.
+        {t('Oul din magazin dă doar specia de bază a lumii. Rarele vin de aici: perechea potrivită are ')}
+        {DEN_RARE_CHANCE}
+        {t('% șanse (+')}
+        {DEN_ADULT_BONUS}
+        {t('% dacă ambii sunt adulți). După ou, părinții se odihnesc')} {Math.round(DEN_REST_MS / 3600000)} {t('ore.')}
       </p>
       <div className="bp-den-recipes">
         {Object.keys(DEN_RECIPES).map((rare) => {
@@ -1225,13 +1285,15 @@ function DenRecipes({ state }: { state: Game['state'] }) {
             <article key={rare} className={`bp-den-recipe ${found ? 'found' : ''}`}>
               <DinoThumb species={rare} hidden={!found} className="small" lazy />
               <span>
-                <strong>{found ? speciesOf(rare).name : '???'}</strong>
+                <strong>{t(found ? speciesOf(rare).name : '???')}</strong>
                 <small>
-                  {found
-                    ? `${speciesOf(x).name} + ${speciesOf(y).name}`
-                    : `${denRecipeHint(rare)
-                        .map((e) => ELEMENTS[e].icon)
-                        .join(' + ')} · găsește perechea`}
+                  {t(
+                    found
+                      ? `${speciesOf(x).name} + ${speciesOf(y).name}`
+                      : `${denRecipeHint(rare)
+                          .map((e) => ELEMENTS[e].icon)
+                          .join(' + ')} · găsește perechea`,
+                  )}
                 </small>
               </span>
             </article>
@@ -1260,7 +1322,7 @@ function ParentPicker({
       <select className="bp-select" value={value} onChange={(e) => onChange(e.target.value)}>
         {dinos.map((x) => (
           <option key={x.id} value={x.id}>
-            {label(x)}
+            {t(label(x))}
           </option>
         ))}
       </select>

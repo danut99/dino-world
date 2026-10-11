@@ -1,3 +1,4 @@
+import { t, getLocale } from '../i18n';
 // Piese mici de interfață, comune ecranelor.
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -15,7 +16,7 @@ export function formatTime(ms: number): string {
   return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
 }
 
-export const formatNumber = (n: number) => Math.floor(n).toLocaleString('ro-RO');
+export const formatNumber = (n: number) => Math.floor(n).toLocaleString(getLocale());
 
 export function Modal({
   title,
@@ -48,27 +49,27 @@ export function Modal({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={typeof title === 'string' ? title : undefined}
+        aria-label={t(typeof title === 'string' ? title : undefined)}
       >
         {bare ? (
           <>
             <div className="modal-corner">
-              {corner}
-              <button className="corner-button close" onClick={onClose} aria-label="Închide">
+              {t(corner)}
+              <button className="corner-button close" onClick={onClose} aria-label={t('Închide')}>
                 ✕
               </button>
             </div>
-            {children}
+            {t(children)}
           </>
         ) : (
           <>
             <header className="modal-head">
-              <h2>{title}</h2>
-              <button className="icon-button" onClick={onClose} aria-label="Închide">
+              <h2>{t(title)}</h2>
+              <button className="icon-button" onClick={onClose} aria-label={t('Închide')}>
                 ✕
               </button>
             </header>
-            <div className="modal-body">{children}</div>
+            <div className="modal-body">{t(children)}</div>
           </>
         )}
       </section>
@@ -79,8 +80,8 @@ export function Modal({
 export function ElementBadge({ element }: { element: ElementId }) {
   const e = ELEMENTS[element];
   return (
-    <span className="element-badge" style={{ '--el': e.color } as React.CSSProperties} title={e.name}>
-      {e.icon} {e.name}
+    <span className="element-badge" style={{ '--el': e.color } as React.CSSProperties} title={t(e.name)}>
+      {t(e.icon)} {t(e.name)}
     </span>
   );
 }
@@ -89,7 +90,7 @@ export function RarityBadge({ rarity }: { rarity: Rarity }) {
   const r = RARITIES[rarity];
   return (
     <span className="rarity-badge" style={{ color: r.color }}>
-      {r.name}
+      {t(r.name)}
     </span>
   );
 }
@@ -166,7 +167,7 @@ export function DinoThumb({
             <image href={url} width={bounds.imageWidth} height={bounds.imageHeight} />
           </svg>
         ) : (
-          <img src={url} alt="" draggable={false} />
+          <img src={url} alt={''} draggable={false} />
         )
       ) : (
         <span className="dino-thumb-wait" />
@@ -180,11 +181,11 @@ export function Need({ what, how, go }: { what: ReactNode; how?: ReactNode; go?:
   const nav = useNav();
   return (
     <p className="need">
-      <strong>{what}</strong>
-      {how && <small>{how}</small>}
+      <strong>{t(what)}</strong>
+      {t(how && <small>{t(how)}</small>)}
       {go && (
         <button type="button" className="need-go" onClick={() => nav(go)}>
-          Du-mă acolo →
+          {t('Du-mă acolo →')}
         </button>
       )}
     </p>

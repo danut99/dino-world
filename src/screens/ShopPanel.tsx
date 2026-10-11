@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 // „Extinde”: lumi noi, ouă și clădiri, pe taburi. Același cadru întunecat ca panourile clădirilor.
 
 import { useState, type CSSProperties } from 'react';
@@ -64,23 +65,23 @@ export function ShopPanel({
     state.buildings.some((b) => b.kind === 'habitat' && b.element === e),
   ).length;
   return (
-    <Modal title="Extinde lumea" onClose={onClose} bare className="bp-modal shop-modal">
+    <Modal title={t('Extinde lumea')} onClose={onClose} bare className="bp-modal shop-modal">
       <div className="bp-adv" style={{ '--tint': '#f2b544' } as CSSProperties}>
         <header className="bp-bar">
           <span className="shop-bar-icon" aria-hidden="true">
             🔓
           </span>
           <div className="bp-bar-title">
-            <h2>Extinde</h2>
+            <h2>{t('Extinde')}</h2>
           </div>
-          <nav className="arena-tabs shop-tabs" aria-label="Magazin">
+          <nav className="arena-tabs shop-tabs" aria-label={t('Magazin')}>
             {TABS.map(([id, label]) => (
               <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
-                {label}
+                {t(label)}
               </button>
             ))}
           </nav>
-          <span className="arena-pill medals shop-gold">🪙 {formatNumber(state.gold)}</span>
+          <span className="arena-pill medals shop-gold">🪙 {t(formatNumber(state.gold))}</span>
         </header>
         <div className="bp-adv-body shop-body">
           {tab === 'worlds' && (
@@ -91,7 +92,7 @@ export function ShopPanel({
                     <i key={e} className={i < unlockedCount ? 'on' : ''} />
                   ))}
                 </span>
-                {unlockedCount}/{ELEMENT_IDS.length} lumi
+                {unlockedCount}/{ELEMENT_IDS.length} {t('lumi')}
               </p>
               <div className="shop-worlds">
                 {ELEMENT_IDS.map((element) => {
@@ -105,10 +106,10 @@ export function ShopPanel({
                       style={{ '--el': ELEMENTS[element].color } as CSSProperties}
                     >
                       <div className="shop-world-art">
-                        <img src={unlocked ? island.image : island.locked} loading="lazy" alt="" draggable={false} />
-                        <span className="shop-world-el">{ELEMENTS[element].icon}</span>
+                        <img src={unlocked ? island.image : island.locked} loading="lazy" alt={''} draggable={false} />
+                        <span className="shop-world-el">{t(ELEMENTS[element].icon)}</span>
                       </div>
-                      <strong>{island.name}</strong>
+                      <strong>{t(island.name)}</strong>
                       {!unlocked && <WorldPreview state={state} element={element} compact />}
                       <ShopAction
                         gold={state.gold}
@@ -145,8 +146,8 @@ export function ShopPanel({
                         {owned}/{limit}
                       </span>
                     </div>
-                    <strong>{BUILDINGS[kind].name}</strong>
-                    <small className="shop-world-note">{label}</small>
+                    <strong>{t(BUILDINGS[kind].name)}</strong>
+                    <small className="shop-world-note">{t(label)}</small>
                     <ShopAction
                       gold={state.gold}
                       cost={cost}
@@ -189,25 +190,26 @@ function ShopAction({
   label: string;
   onClick: () => void;
 }) {
-  if (done) return <span className="shop-world-done">✓ {done}</span>;
+  if (done) return <span className="shop-world-done">✓ {t(done)}</span>;
   if (steps) {
     const next = steps.findIndex((s) => !s.done);
     return (
       <div className="shop-lock">
         <p className="shop-lock-title">
-          🔒 Se deblochează în {steps.length} {steps.length === 1 ? 'pas' : 'pași'}
+          {t('🔒 Se deblochează în ')}
+          {steps.length} {t(steps.length === 1 ? 'pas' : 'pași')}
         </p>
         <ol>
           {steps.map((s, i) => (
             <li key={s.label} className={s.done ? 'done' : i === next ? 'next' : 'later'}>
-              <b aria-hidden="true">{s.done ? '✓' : i + 1}</b>
+              <b aria-hidden="true">{t(s.done ? '✓' : i + 1)}</b>
               <span>
-                <strong>{s.label}</strong>
-                {i === next && <small>{s.how}</small>}
+                <strong>{t(s.label)}</strong>
+                {i === next && <small>{t(s.how)}</small>}
               </span>
               {i === next && s.go && onGo && (
                 <button type="button" className="shop-go" onClick={() => onGo(s.go!)}>
-                  Mergi →
+                  {t('Mergi →')}
                 </button>
               )}
             </li>
@@ -219,8 +221,8 @@ function ShopAction({
   const short = cost - gold;
   return (
     <button className={`button shop-buy ${short > 0 ? 'short' : ''}`} disabled={short > 0} onClick={onClick}>
-      <span>{short > 0 ? `Îți lipsesc 🪙 ${formatNumber(short)}` : label}</span>
-      <span className="arena-cost">🪙 {formatNumber(cost)}</span>
+      <span>{t(short > 0 ? `Îți lipsesc 🪙 ${formatNumber(short)}` : label)}</span>
+      <span className="arena-cost">🪙 {t(formatNumber(cost))}</span>
     </button>
   );
 }

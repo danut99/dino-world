@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 // Primal's main creature stage, connected to dino-world's selected dinosaur and commands.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -141,7 +142,7 @@ function StageContent({
           {!ready && (
             <div className="stage-preloader" role="status">
               <span className="dino-thumb-wait" aria-hidden="true" />
-              <span>Se încarcă dinozaurul…</span>
+              <span>{t('Se încarcă dinozaurul…')}</span>
             </div>
           )}
           <DinoView
@@ -164,7 +165,7 @@ function StageContent({
             className="ps-arrow"
             disabled={family.length < 2}
             onClick={() => step(-1)}
-            aria-label="Dinozaurul anterior"
+            aria-label={t('Dinozaurul anterior')}
           >
             ◀
           </button>
@@ -179,27 +180,30 @@ function StageContent({
               >
                 <input
                   autoFocus
-                  aria-label="Nume nou"
+                  aria-label={t('Nume nou')}
                   value={name}
                   maxLength={24}
                   onChange={(e) => setName(e.target.value)}
                 />
-                <button className="button small">OK</button>
+                <button className="button small">{t('OK')}</button>
               </form>
             ) : (
               <h2 id="dragon-stage-title">
-                {dino.nickname ?? species.name}
-                <button className="ps-rename" aria-label="Redenumește" onClick={() => setRenaming(true)}>
+                {t(dino.nickname ?? species.name)}
+                <button className="ps-rename" aria-label={t('Redenumește')} onClick={() => setRenaming(true)}>
                   ✎
                 </button>
               </h2>
             )}
             <div className="ps-chips">
-              <span className="ps-level">Nv. {dino.level}</span>
+              <span className="ps-level">
+                {t('Nv. ')}
+                {dino.level}
+              </span>
               {species.elements.map((e) => (
                 <ElementBadge key={e} element={e} />
               ))}
-              <span className="stage-chip">{info.name}</span>
+              <span className="stage-chip">{t(info.name)}</span>
               <RarityBadge rarity={species.rarity} />
             </div>
           </div>
@@ -210,48 +214,57 @@ function StageContent({
             className="ps-arrow"
             disabled={family.length < 2}
             onClick={() => step(1)}
-            aria-label="Dinozaurul următor"
+            aria-label={t('Dinozaurul următor')}
           >
             ▶
           </button>
-          <button ref={closeButton} className="stage-close ps-arrow" onClick={onClose} aria-label="Înapoi la habitat">
+          <button
+            ref={closeButton}
+            className="stage-close ps-arrow"
+            onClick={onClose}
+            aria-label={t('Înapoi la habitat')}
+          >
             ✕
           </button>
         </header>
         <div className="ps-body">
           <aside className="ps-glass">
-            <h4>Creștere</h4>
+            <h4>{t('Creștere')}</h4>
             <strong>
-              {info.name} · nivel {dino.level}
+              {t(info.name)} {t('· nivel ')}
+              {dino.level}
             </strong>
             <Progress
               value={next ? (dino.level - info.minLevel) / (next.minLevel - info.minLevel) : dino.level / MAX_LEVEL}
             />
-            <p>{next ? `${next.name} la nivelul ${next.minLevel}` : 'Forma finală · maximum nivel 10'}</p>
-            <p>🌾 {formatNumber(game.state.food)} hrană disponibilă</p>
+            <p>{t(next ? `${next.name} la nivelul ${next.minLevel}` : 'Forma finală · maximum nivel 10')}</p>
+            <p>
+              🌾 {t(formatNumber(game.state.food))} {t('hrană disponibilă')}
+            </p>
             {isRecovering(dino, game.now) && (
               <p className="stage-busy">
-                Recuperare: {formatTime(dino.recoveryUntil! - game.now)} · arena și împerecherea indisponibile.
+                {t('Recuperare: ')}
+                {t(formatTime(dino.recoveryUntil! - game.now))} {t('· arena și împerecherea indisponibile.')}
               </p>
             )}
-            {away && <p className="stage-busy">Echipa este în misiune.</p>}
+            {away && <p className="stage-busy">{t('Echipa este în misiune.')}</p>}
           </aside>
           <div className="ps-dragon" aria-hidden="true" />
           <aside className="ps-glass">
-            <h4>Statistici</h4>
+            <h4>{t('Statistici')}</h4>
             <dl>
-              <dt>⚔ Putere</dt>
+              <dt>{t('⚔ Putere')}</dt>
               <dd>{dinoPower(dino)}</dd>
-              <dt>🪙 Aur / min</dt>
+              <dt>{t('🪙 Aur / min')}</dt>
               <dd>{home?.kind === 'habitat' ? incomeAt(species, dino.level) : 0}</dd>
-              <dt>Lume</dt>
-              <dd>{home?.element ? ELEMENTS[home.element].name : 'Incubator'}</dd>
+              <dt>{t('Lume')}</dt>
+              <dd>{t(home?.element ? ELEMENTS[home.element].name : 'Incubator')}</dd>
             </dl>
-            <p>{species.description}</p>
+            <p>{t(species.description)}</p>
           </aside>
         </div>
-        <div className="ps-anims" aria-label="Animații">
-          <span className="ps-anims-label">Animații</span>
+        <div className="ps-anims" aria-label={t('Animații')}>
+          <span className="ps-anims-label">{t('Animații')}</span>
           {animations.map((a) => (
             <button
               key={a}
@@ -262,41 +275,44 @@ function StageContent({
                 controller.current?.setAnimation(a);
               }}
             >
-              {recipe.animations?.[a]?.label ?? ANIM_LABELS[a] ?? a}
+              {t(recipe.animations?.[a]?.label ?? ANIM_LABELS[a] ?? a)}
             </button>
           ))}
         </div>
         <footer className="ps-actions">
           <button
             className="ps-btn feed"
+            data-tour="feed"
             disabled={away || dino.level >= MAX_LEVEL || game.state.food < FEED_COST[dino.level]}
             onClick={feed}
           >
             <span>🌾</span>
-            <b>{dino.level >= MAX_LEVEL ? 'Nivel maxim' : 'Hrănește'}</b>
+            <b>{t(dino.level >= MAX_LEVEL ? 'Nivel maxim' : 'Hrănește')}</b>
             <small>
-              {dino.level >= MAX_LEVEL
-                ? 'Adult · nivel 10'
-                : away
-                  ? 'E plecat · revine curând'
-                  : game.state.food < FEED_COST[dino.level]
-                    ? `lipsesc ${FEED_COST[dino.level] - game.state.food} hrană · Ferma`
-                    : `${FEED_COST[dino.level]} hrană · nivel ${dino.level + 1}`}
+              {t(
+                dino.level >= MAX_LEVEL
+                  ? 'Adult · nivel 10'
+                  : away
+                    ? 'E plecat · revine curând'
+                    : game.state.food < FEED_COST[dino.level]
+                      ? `lipsesc ${FEED_COST[dino.level] - game.state.food} hrană · Ferma`
+                      : `${FEED_COST[dino.level]} hrană · nivel ${dino.level + 1}`,
+              )}
             </small>
           </button>
           {homes.length > 0 && (
             <label className="stage-move">
-              Mută în altă lume
+              {t('Mută în altă lume')}
               <select
                 className="select"
                 disabled={away || breeding}
                 value=""
                 onChange={(e) => game.run({ type: 'moveDino', dinoId: dino.id, habitatId: e.target.value })}
               >
-                <option value="">Alege lumea…</option>
+                <option value="">{t('Alege lumea…')}</option>
                 {homes.map((h) => (
                   <option key={h.id} value={h.id}>
-                    {ELEMENTS[h.element!].name}
+                    {t(ELEMENTS[h.element!].name)}
                   </option>
                 ))}
               </select>
@@ -314,8 +330,10 @@ function StageContent({
             }}
           >
             <span>🪙</span>
-            <b>Vinde</b>
-            <small>{formatNumber(sellPrice(dino))} aur</small>
+            <b>{t('Vinde')}</b>
+            <small>
+              {t(formatNumber(sellPrice(dino)))} {t('aur')}
+            </small>
           </button>
         </footer>
       </section>

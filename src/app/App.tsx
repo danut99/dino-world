@@ -1,3 +1,4 @@
+import { t, useLanguage, setLanguage } from '../i18n';
 // Cadrul jocului: resursele sus, insula în mijloc, meniul jos, panourile deschise peste.
 
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
@@ -33,6 +34,7 @@ type Panel =
   | null;
 
 export default function App() {
+  const language = useLanguage();
   const game = useGame();
   // după ce apare harta, panourile se descarcă în fundal: se deschid fără așteptare
   useEffect(() => {
@@ -99,8 +101,17 @@ export default function App() {
 
         <header className="hud-top">
           <div className="hud-summary">
-            <span className="hud-brand">Dino World</span>
-            <div className="hud-resources" aria-label="Resurse">
+            <span className="hud-brand">{t('Dino World')}</span>
+            <button
+              className="hud-language"
+              type="button"
+              lang={language === 'en' ? 'ro' : 'en'}
+              aria-label={language === 'en' ? 'Switch to Romanian' : 'Schimbă în engleză'}
+              onClick={() => setLanguage(language === 'en' ? 'ro' : 'en')}
+            >
+              {language === 'en' ? 'Română' : 'English'}
+            </button>
+            <div className="hud-resources" aria-label={t('Resurse')}>
               <Resource icon="🪙" value={state.gold} label="Aur" />
               <Resource icon="🍖" value={state.food} label="Hrană" />
               <Resource icon="💎" value={state.gems} label="Nestemate" />
@@ -108,8 +119,8 @@ export default function App() {
             </div>
             <button
               className="hud-settings"
-              aria-label="Setări"
-              title="Setări"
+              aria-label={t('Setări')}
+              title={t('Setări')}
               onClick={() => setPanel({ type: 'settings' })}
             >
               ⚙️
@@ -120,19 +131,23 @@ export default function App() {
         <nav className="hud-actions">
           <button
             className="hud-button"
-            title="Aurul din toate lumile și recoltele gata din toate fermele"
+            title={t('Aurul din toate lumile și recoltele gata din toate fermele')}
             onClick={() => run({ type: 'collectAll' })}
           >
-            <span>🪙</span>Strânge tot
+            <span>🪙</span>
+            {t('Strânge tot')}
           </button>
           <button className="hud-button" onClick={() => setPanel({ type: 'atlas' })}>
-            <span>📖</span>Atlas
+            <span>📖</span>
+            {t('Atlas')}
           </button>
           <button className="hud-button" data-tour="wikipedia" onClick={() => setPanel({ type: 'wiki' })}>
-            <span aria-hidden="true">📚</span>Wikipedia
+            <span aria-hidden="true">📚</span>
+            {t('Wikipedia')}
           </button>
           <button className="hud-button primary" onClick={() => setPanel({ type: 'shop' })}>
-            <span>🔓</span>Extinde
+            <span>🔓</span>
+            {t('Extinde')}
           </button>
         </nav>
 
@@ -203,9 +218,9 @@ export default function App() {
         {game.celebration && <LevelUp celebration={game.celebration} state={game.state} onDone={game.endCelebration} />}
 
         <div className="toasts" aria-live="polite">
-          {game.toasts.map((t) => (
-            <div key={t.id} className={`toast ${t.kind}`}>
-              {t.text}
+          {game.toasts.map((toast) => (
+            <div key={toast.id} className={`toast ${toast.kind}`}>
+              {t(toast.text)}
             </div>
           ))}
         </div>
@@ -218,13 +233,13 @@ export default function App() {
 
 function Resource({ icon, value, label }: { icon: string; value: number; label: string }) {
   return (
-    <span className="hud-pill" title={label} aria-label={`${label}: ${formatNumber(value)}`}>
+    <span className="hud-pill" title={t(label)} aria-label={`${t(label)}: ${formatNumber(value)}`}>
       <span className="hud-pill-icon" aria-hidden="true">
-        {icon}
+        {t(icon)}
       </span>
       <span className="hud-pill-copy">
-        <span className="hud-pill-label">{label}</span>
-        <span className="hud-pill-value">{formatNumber(value)}</span>
+        <span className="hud-pill-label">{t(label)}</span>
+        <span className="hud-pill-value">{t(formatNumber(value))}</span>
       </span>
     </span>
   );
@@ -242,26 +257,26 @@ function DevTools({ game }: { game: Game }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="devtools">
-      <button className="icon-button" onClick={() => setOpen(!open)} title="Unelte de dezvoltare">
+      <button className="icon-button" onClick={() => setOpen(!open)} title={t('Unelte de dezvoltare')}>
         ⏩
       </button>
       {open && (
         <div className="devtools-menu">
           {SKIPS.map(([label, ms]) => (
             <button key={label} className="button small ghost" onClick={() => game.skip(ms)}>
-              {label}
+              {t(label)}
             </button>
           ))}
           <button
             className="button small ghost"
             onClick={() => {
-              if (!window.confirm('Sigur vrei să începi un joc nou? Tot progresul actual va fi șters.')) return;
+              if (!window.confirm(t('Sigur vrei să începi un joc nou? Tot progresul actual va fi șters.'))) return;
               resetFirstSteps();
               game.reset();
               game.toast('Joc nou pornit.');
             }}
           >
-            Joc nou
+            {t('Joc nou')}
           </button>
         </div>
       )}

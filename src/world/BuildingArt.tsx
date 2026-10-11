@@ -43,7 +43,7 @@ function Platform({
   rim?: string;
   children?: ReactNode;
 }) {
-  const t = `0,${-HHP - RAISE} ${HWP},${-RAISE} 0,${HHP - RAISE} ${-HWP},${-RAISE}`;
+  const topPoints = `0,${-HHP - RAISE} ${HWP},${-RAISE} 0,${HHP - RAISE} ${-HWP},${-RAISE}`;
   return (
     <g>
       <ellipse cx={0} cy={10} rx={HWP + 10} ry={HHP + 6} fill="rgba(0,30,0,0.25)" />
@@ -61,7 +61,7 @@ function Platform({
         strokeWidth={6}
         strokeLinejoin="round"
       />
-      <polygon points={t} fill={top} stroke={rim ?? top} strokeWidth={8} strokeLinejoin="round" />
+      <polygon points={topPoints} fill={top} stroke={rim ?? top} strokeWidth={8} strokeLinejoin="round" />
       {children}
     </g>
   );
@@ -167,26 +167,24 @@ function PlantHabitat() {
       </g>
       {/* ferigi */}
       {[
-        [-60, 4],
-        [8, -44],
-        [62, 8],
-      ].map(([x, y], i) => (
-        <g key={i} transform={`translate(${x},${y})`} fill="#7cb342">
-          <path d="M0,0 Q-24,-8 -30,-24 Q-12,-14 0,0" />
-          <path d="M0,0 Q24,-8 30,-24 Q12,-14 0,0" />
-          <path d="M0,0 Q-6,-24 0,-36 Q6,-24 0,0" fill="#9ccc65" />
-        </g>
-      ))}
+          [-60, 4],
+          [8, -44],
+          [62, 8],
+        ].map(([x, y], i) => (
+          <g key={i} transform={`translate(${x},${y})`} fill="#7cb342">
+            <path d="M0,0 Q-24,-8 -30,-24 Q-12,-14 0,0" />
+            <path d="M0,0 Q24,-8 30,-24 Q12,-14 0,0" />
+            <path d="M0,0 Q-6,-24 0,-36 Q6,-24 0,0" fill="#9ccc65" />
+          </g>
+        ))}
       <g transform="translate(-10,18) scale(0.6)">
         <Bush />
       </g>
       {[
-        [20, 22, '#ffe066'],
-        [-30, 30, '#ff8fab'],
-        [34, -2, '#ffffff'],
-      ].map(([x, y, c], i) => (
-        <circle key={i} cx={x as number} cy={y as number} r={4} fill={c as string} />
-      ))}
+          [20, 22, '#ffe066'],
+          [-30, 30, '#ff8fab'],
+          [34, -2, '#ffffff'],
+        ].map(([x, y, c], i) => <circle key={i} cx={x as number} cy={y as number} r={4} fill={c as string} />)}
     </Platform>
   );
 }
@@ -196,18 +194,18 @@ function IceHabitat() {
     <Platform top="#eef8ff" left="#a9d4ee" right="#86bcdf" rim="#ffffff">
       <polygon points={inner(0.36, 14)} fill="#bfe6fb" stroke="#ffffff" strokeWidth={4} transform="translate(-20,0)" />
       {[
-        [-48, -26, 1.1],
-        [-24, -40, 1.5],
-        [40, -26, 1.2],
-        [58, -6, 0.8],
-        [12, -44, 0.9],
-      ].map(([x, y, k], i) => (
-        <g key={i} transform={`translate(${x},${y}) scale(${k})`}>
-          <path d="M-10,8 L-6,-30 L0,-40 L6,-30 L10,8 Z" fill="#9fdcff" opacity={0.92} />
-          <path d="M0,-40 L6,-30 L10,8 L2,8 Z" fill="#62b6e7" opacity={0.9} />
-          <path d="M-4,-26 L-2,0" stroke="#ffffff" strokeWidth={2} opacity={0.8} />
-        </g>
-      ))}
+          [-48, -26, 1.1],
+          [-24, -40, 1.5],
+          [40, -26, 1.2],
+          [58, -6, 0.8],
+          [12, -44, 0.9],
+        ].map(([x, y, k], i) => (
+          <g key={i} transform={`translate(${x},${y}) scale(${k})`}>
+            <path d="M-10,8 L-6,-30 L0,-40 L6,-30 L10,8 Z" fill="#9fdcff" opacity={0.92} />
+            <path d="M0,-40 L6,-30 L10,8 L2,8 Z" fill="#62b6e7" opacity={0.9} />
+            <path d="M-4,-26 L-2,0" stroke="#ffffff" strokeWidth={2} opacity={0.8} />
+          </g>
+        ))}
       <ellipse cx={30} cy={18} rx={26} ry={10} fill="#ffffff" />
       <ellipse cx={-56} cy={8} rx={18} ry={7} fill="#ffffff" />
       <circle cx={-6} cy={-60} r={2.5} fill="#ffffff" className="snow" />
@@ -244,18 +242,18 @@ function StormHabitat() {
       />
       {/* cristale plutitoare */}
       {[
-        [-50, -40, 1],
-        [46, -44, 1.2],
-        [0, -70, 0.8],
-      ].map(([x, y, k], i) => (
-        <g key={i} transform={`translate(${x},${y}) scale(${k})`}>
-          <g className={`float ${i % 2 ? 'delay' : ''}`}>
-            <path d="M0,-26 L12,-4 L0,22 L-12,-4 Z" fill="#9b6bff" />
-            <path d="M0,-26 L12,-4 L0,22 Z" fill="#6a3fd1" />
-            <path d="M0,-26 L-4,-4 L0,10" stroke="#e0d0ff" strokeWidth={2} fill="none" />
+          [-50, -40, 1],
+          [46, -44, 1.2],
+          [0, -70, 0.8],
+        ].map(([x, y, k], i) => (
+          <g key={i} transform={`translate(${x},${y}) scale(${k})`}>
+            <g className={`float ${i % 2 ? 'delay' : ''}`}>
+              <path d="M0,-26 L12,-4 L0,22 L-12,-4 Z" fill="#9b6bff" />
+              <path d="M0,-26 L12,-4 L0,22 Z" fill="#6a3fd1" />
+              <path d="M0,-26 L-4,-4 L0,10" stroke="#e0d0ff" strokeWidth={2} fill="none" />
+            </g>
           </g>
-        </g>
-      ))}
+        ))}
       <path
         d="M8,-120 L-6,-92 L6,-92 L-8,-62"
         stroke="#ffffa8"
@@ -286,41 +284,41 @@ function Farm({ stage }: { stage: 'empty' | 'growing' | 'ready' }) {
   return (
     <Platform top="#8d5a2b" left="#6d4320" right="#573417" rim="#a06a36">
       {rows.map((r) => (
-        <path
-          key={r}
-          d={`M${-62 + r * 14},${-22 + r * 7 - 6} l${60},${30}`}
-          stroke="#6d4320"
-          strokeWidth={8}
-          strokeLinecap="round"
-          transform="translate(10,-4)"
-        />
-      ))}
+          <path
+            key={r}
+            d={`M${-62 + r * 14},${-22 + r * 7 - 6} l${60},${30}`}
+            stroke="#6d4320"
+            strokeWidth={8}
+            strokeLinecap="round"
+            transform="translate(10,-4)"
+          />
+        ))}
       {stage !== 'empty' &&
-        rows.flatMap((r) =>
-          [0, 1, 2].map((c) => {
-            const x = -48 + r * 14 + c * 22;
-            const y = -26 + r * 7 + c * 11;
-            return (
-              <g key={`${r}${c}`} transform={`translate(${x},${y}) scale(${stage === 'ready' ? 1 : 0.6})`}>
-                <circle cx={0} cy={-8} r={9} fill="#4caf50" />
-                <circle cx={-5} cy={-12} r={6} fill="#66bb6a" />
-                {stage === 'ready' && (
-                  <>
-                    <circle cx={4} cy={-6} r={3.5} fill="#e53935" />
-                    <circle cx={-3} cy={-3} r={3} fill="#e53935" />
-                  </>
-                )}
-              </g>
-            );
-          }),
-        )}
+          rows.flatMap((r) =>
+            [0, 1, 2].map((c) => {
+              const x = -48 + r * 14 + c * 22;
+              const y = -26 + r * 7 + c * 11;
+              return (
+                <g key={`${r}${c}`} transform={`translate(${x},${y}) scale(${stage === 'ready' ? 1 : 0.6})`}>
+                  <circle cx={0} cy={-8} r={9} fill="#4caf50" />
+                  <circle cx={-5} cy={-12} r={6} fill="#66bb6a" />
+                  {stage === 'ready' && (
+                      <>
+                        <circle cx={4} cy={-6} r={3.5} fill="#e53935" />
+                        <circle cx={-3} cy={-3} r={3} fill="#e53935" />
+                      </>
+                    )}
+                </g>
+              );
+            }),
+          )}
       {/* gardul */}
       <g stroke="#c8a165" strokeWidth={4} strokeLinecap="round">
         <path d="M-86,-16 L0,27 L86,-16" fill="none" />
         {[0.1, 0.35, 0.6, 0.85].flatMap((t) => [
-          <path key={`l${t}`} d={`M${-86 + 86 * t},${-16 + 43 * t} l0,-12`} />,
-          <path key={`r${t}`} d={`M${86 * t},${27 - 43 * t} l0,-12`} />,
-        ])}
+            <path key={`l${t}`} d={`M${-86 + 86 * t},${-16 + 43 * t} l0,-12`} />,
+            <path key={`r${t}`} d={`M${86 * t},${27 - 43 * t} l0,-12`} />,
+          ])}
       </g>
       {/* sperietoarea */}
       <g transform="translate(58,-44)">
@@ -345,8 +343,8 @@ function Hatchery({ eggs, ready }: { eggs: number; ready: boolean }) {
         <path d="M-40,0 L-36,-120 L36,-120 L40,0 Q0,22 -40,0 Z" fill="#d8ccb0" />
         <path d="M0,10 L0,-120 L36,-120 L40,0 Q20,14 0,10 Z" fill="#bfb093" />
         {[-30, -60, -90].map((y) => (
-          <path key={y} d={`M-38,${y} Q0,${y + 14} 38,${y}`} stroke="#a8977a" strokeWidth={2} fill="none" />
-        ))}
+            <path key={y} d={`M-38,${y} Q0,${y + 14} 38,${y}`} stroke="#a8977a" strokeWidth={2} fill="none" />
+          ))}
         <path d="M-12,4 L-12,-26 Q0,-38 12,-26 L12,6 Z" fill="#5d4037" />
         <path
           d="M-44,-120 L-44,-134 L-32,-134 L-32,-126 L-18,-126 L-18,-134 L-6,-134 L-6,-126 L6,-126 L6,-134 L18,-134 L18,-126 L32,-126 L32,-134 L44,-134 L44,-120 Z"
@@ -357,17 +355,17 @@ function Hatchery({ eggs, ready }: { eggs: number; ready: boolean }) {
         <ellipse cx={0} cy={-126} rx={34} ry={11} fill="#8d6e63" />
         <ellipse cx={0} cy={-129} rx={28} ry={8} fill="#a1887f" />
         {Array.from({ length: Math.min(eggs, 3) }, (_, i) => (
-          <ellipse
-            key={i}
-            cx={-14 + i * 14}
-            cy={-138}
-            rx={7}
-            ry={10}
-            fill={ready ? '#ffe082' : '#fff3e0'}
-            stroke="#d7ccc8"
-            className={ready ? 'egg-shake' : ''}
-          />
-        ))}
+            <ellipse
+              key={i}
+              cx={-14 + i * 14}
+              cy={-138}
+              rx={7}
+              ry={10}
+              fill={ready ? '#ffe082' : '#fff3e0'}
+              stroke="#d7ccc8"
+              className={ready ? 'egg-shake' : ''}
+            />
+          ))}
       </g>
       <g transform="translate(-62,-12) scale(0.5)">
         <Bush />
@@ -498,7 +496,7 @@ export function BuildingPreview({ kind }: { kind: 'farm' | 'hatchery' | 'den' | 
         : { kind, busy: kind === 'forge' };
   // arta pictată, dacă există: o imagine simplă, se încadrează ca orice <img>
   const sprite = SPRITES[kind];
-  if (sprite) return <img className="building-preview" src={sprite.href} alt="" draggable={false} />;
+  if (sprite) return <img className="building-preview" src={sprite.href} alt={''} draggable={false} />;
   return (
     <svg className="building-preview" viewBox="-150 -240 300 300" aria-hidden="true">
       <BuildingArt visual={visual} />

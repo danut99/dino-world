@@ -259,7 +259,10 @@ export function collect(state: GameState, id: string, now: number, events: GameE
   state.gold += gold;
   b.stored = 0;
   b.since = now;
-  if (gold > 0) events.push({ type: 'collected', gold });
+  if (gold > 0) {
+    countStat(state, 'collected');
+    events.push({ type: 'collected', gold });
+  }
 }
 
 /** „Strânge”: aurul din toate habitatele și recoltele gata din toate fermele. */
@@ -272,7 +275,10 @@ export function collectAll(state: GameState, now: number, events: GameEvent[]) {
     b.since = now;
   }
   state.gold += total;
-  if (total > 0) events.push({ type: 'collected', gold: total });
+  if (total > 0) {
+    countStat(state, 'collected');
+    events.push({ type: 'collected', gold: total });
+  }
   let food = 0;
   for (const b of state.buildings) {
     if (b.kind !== 'farm' || !farmPlots(b).some((p) => p && p.readyAt <= now)) continue;

@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 // Ouăle pe habitat: desenul oului (în culorile elementului) și raftul cu ouă din magazin și din incubator.
 
 import {
@@ -100,15 +101,16 @@ export function HabitatEggShop({ state, onBuy }: { state: GameState; onBuy: (ele
             style={{ '--el': ELEMENTS[element].color } as React.CSSProperties}
             disabled={!unlocked || full || state.gold < price}
             onClick={() => onBuy(element)}
-            title={unlocked ? undefined : `Deblochează lumea de ${ELEMENTS[element].name}`}
+            title={t(unlocked ? undefined : `Deblochează lumea de ${ELEMENTS[element].name}`)}
           >
             <EggIcon element={element} />
             <strong>
-              {ELEMENTS[element].icon} Ou de {ELEMENTS[element].name.toLowerCase()}
+              {t(ELEMENTS[element].icon)} {t('Ou de ')}
+              {t(ELEMENTS[element].name.toLowerCase())}
             </strong>
             <span className="habitat-egg-odds">
               {odds.map((o) => (
-                <span key={o.species.id} title={`${o.species.name} · ${Math.round(o.pct)}%`}>
+                <span key={o.species.id} title={t(`${o.species.name} · ${Math.round(o.pct)}%`)}>
                   <DinoThumb
                     species={o.species.id}
                     hidden={!state.discovered.includes(o.species.id)}
@@ -120,19 +122,21 @@ export function HabitatEggShop({ state, onBuy }: { state: GameState; onBuy: (ele
               ))}
             </span>
             <span className="muted">
-              ⏱ {formatTime(Math.min(...times))}–{formatTime(Math.max(...times))}
+              ⏱ {t(formatTime(Math.min(...times)))}–{t(formatTime(Math.max(...times)))}
             </span>
             <span>
-              {!unlocked
-                ? '🔒 Lume blocată'
-                : full
-                  ? 'Incubator plin'
-                  : state.gold < price
-                    ? `🪙 ${price} · lipsesc ${price - state.gold}`
-                    : `🪙 ${price}`}
+              {t(
+                !unlocked
+                  ? '🔒 Lume blocată'
+                  : full
+                    ? 'Incubator plin'
+                    : state.gold < price
+                      ? `🪙 ${price} · lipsesc ${price - state.gold}`
+                      : `🪙 ${price}`,
+              )}
             </span>
-            {unlocked && full && <small className="muted">Eclozează un ou din Incubator ca să faci loc</small>}
-            {!unlocked && <small className="muted">Deblocheaz-o din Extinde → Lumi</small>}
+            {unlocked && full && <small className="muted">{t('Eclozează un ou din Incubator ca să faci loc')}</small>}
+            {!unlocked && <small className="muted">{t('Deblocheaz-o din Extinde → Lumi')}</small>}
           </button>
         );
       })}

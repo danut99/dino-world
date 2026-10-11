@@ -29,6 +29,30 @@
   justify-content: space-between;
   gap: 1rem;
 }
+.hud-language {
+  flex-shrink: 0;
+  min-height: 2.4rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #d6b26b7a;
+  border-radius: 10px;
+  background: #16291f;
+  color: #fff6d8;
+  font:
+    600 0.85rem Barlow,
+    sans-serif;
+  cursor: pointer;
+}
+.hud-language:focus-visible {
+  outline: 2px solid #ffe6a3;
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .hud-language {
+    position: fixed;
+    right: 0.5rem;
+    bottom: 6rem;
+  }
+}
 .hud-resources {
   display: flex;
   align-items: center;
@@ -160,7 +184,8 @@
     display: none;
   }
   .hud-resources {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     gap: 0.4rem;
   }
   .hud-pill {
@@ -176,6 +201,14 @@
     height: 1.65rem;
     margin-right: 0.3rem;
     font-size: 0.9rem;
+  }
+  .hud-pill-copy {
+    min-width: 0;
+  }
+  .hud-pill-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .hud-actions {
     left: 0.5rem;
@@ -226,6 +259,25 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
+}
+
+.dino-fallback {
+  animation: dino-fallback-in 0.6s ease-out both;
+}
+
+@keyframes dino-fallback-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dino-fallback {
+    animation: none;
+  }
 }
 
 .sky {
