@@ -20,14 +20,25 @@ const OWNED_SPOTS: { x: number; y: number }[] = [
   { x: 930, y: 590 },
 ];
 const STAGE_HEIGHT = { baby: 80, juvenile: 115, adult: 150 };
-function drawDinosaur(ctx: CanvasRenderingContext2D, image: HTMLImageElement,
-  crop: ReturnType<typeof dinosaurCrop>, x: number, y: number, width: number, height: number) {
+function drawDinosaur(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  crop: ReturnType<typeof dinosaurCrop>,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
   ctx.scale(width / crop.width, height / crop.height);
   ctx.translate(-crop.x, -crop.y);
   if (crop.path) ctx.clip(new Path2D(crop.path));
-  else { ctx.beginPath(); ctx.rect(crop.x, crop.y, crop.width, crop.height); ctx.clip(); }
+  else {
+    ctx.beginPath();
+    ctx.rect(crop.x, crop.y, crop.width, crop.height);
+    ctx.clip();
+  }
   ctx.drawImage(image, 0, 0);
   ctx.restore();
 }
@@ -45,6 +56,11 @@ function polygon(ctx: CanvasRenderingContext2D, points: number[][], fill: string
     ctx.stroke();
   }
 }
+const HOME_SRC = '/realms/home-island-wide-v1.webp',
+  HERO_SRC = '/realms/dinosaurs/fire.webp',
+  CONCEPTS_SRC = '/realms/building-concepts.webp';
+const utilitySrc = (kind: UtilityKind) =>
+  kind === 'market' ? '/realms/gameplay/market-building-pixel.webp' : '/realms/gameplay/utility-buildings-pixel.webp';
 /** Camera zoom range; the wheel moves in small steps, the buttons in bigger ones. Zooming out stops while the
  *  artwork still fills the screen (see `minZoom`). */
 const MAX_ZOOM = 2.5;
@@ -379,6 +395,7 @@ export default function World({
   placementKind = 'farm',
   now = Date.now(),
   covered = false,
+  onProgress,
 }: {
   save: Save;
   placing: boolean;
@@ -392,6 +409,8 @@ export default function World({
   now?: number;
   /** True while a window covers the island. */
   covered?: boolean;
+  /** Reports how many of the images this view needs have loaded, until all of them have. */
+  onProgress?: (done: number, total: number) => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null),
     image = useRef<HTMLImageElement | null>(null),
@@ -402,6 +421,12 @@ export default function World({
   /** Milestone art by path; `null` marks a file that is not drawn yet, so it is requested only once. */
   const tierImages = useRef<Record<string, HTMLImageElement | null>>({});
   const residentArt = useRef<Partial<Record<RealmId, HTMLImageElement>>>({});
+  /** Images that finished loading or failed: either way, nothing more to wait for. */
+  const settled = useRef(new Set<string>());
+  const settle = (src: string) => {
+    settled.current.add(src);
+    setLoaded((n) => n + 1);
+  };
   const [loaded, setLoaded] = useState(0),
     [cell, setCell] = useState<{ x: number; y: number } | null>(null);
   const [zoom, setZoom] = useState(1),
@@ -483,26 +508,29 @@ export default function World({
     const img = new Image();
     img.onload = () => {
       image.current = img;
-      setLoaded((n) => n + 1);
+      settle(HOME_SRC);
     };
-    img.src = '/realms/home-island-wide-v1.webp';
+    img.onerror = () => settle(HOME_SRC);
+    img.src = HOME_SRC;
   }, []);
   useEffect(() => {
     const img = new Image();
     img.onload = async () => {
       await loadDinosaurArt('fire');
       hero.current = img;
-      setLoaded((n) => n + 1);
+      settle(HERO_SRC);
     };
-    img.src = '/realms/dinosaurs/fire.webp';
+    img.onerror = () => settle(HERO_SRC);
+    img.src = HERO_SRC;
   }, []);
   useEffect(() => {
     const img = new Image();
     img.onload = () => {
       buildings.current = img;
-      setLoaded((n) => n + 1);
+      settle(CONCEPTS_SRC);
     };
-    img.src = '/realms/building-concepts.webp';
+    img.onerror = () => settle(CONCEPTS_SRC);
+    img.src = CONCEPTS_SRC;
   }, []);
   useEffect(() => {
     for (const kind of LEVELED) {
@@ -513,8 +541,9 @@ export default function World({
       img.onload = () => {
         measureGround(img);
         tierImages.current[art] = img;
-        setLoaded((n) => n + 1);
+        settle(art);
       };
+      img.onerror = () => settle(art);
       img.src = art;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -545,12 +574,14 @@ export default function World({
   }, [burst, covered]);
   useEffect(() => {
     for (const kind of ['workshop', 'portal', 'arena', 'market'] as const) {
-      const img = new Image();
+      const img = new Image(),
+        src = utilitySrc(kind);
       img.onload = () => {
         utilityArt.current[kind] = img;
-        setLoaded((n) => n + 1);
+        settle(src);
       };
-      img.src = kind === 'market' ? '/realms/gameplay/market-building-pixel.webp' : '/realms/gameplay/utility-buildings-pixel.webp';
+      img.onerror = () => settle(src);
+      img.src = src;
     }
   }, []);
   useEffect(() => {
@@ -559,8 +590,9 @@ export default function World({
     const img = new Image();
     img.onload = () => {
       worlds.current[realm] = img;
-      if (active) setLoaded((n) => n + 1);
+      if (active) settle(worldArt(realm));
     };
+    img.onerror = () => active && settle(worldArt(realm));
     img.src = worldArt(realm);
     return () => {
       active = false;
@@ -573,11 +605,34 @@ export default function World({
     img.onload = async () => {
       await loadDinosaurArt(realm);
       residentArt.current[realm] = img;
-      if (active) setLoaded(n => n + 1);
+      if (active) settle(`/realms/dinosaurs/${realm}.webp`);
     };
+    img.onerror = () => active && settle(`/realms/dinosaurs/${realm}.webp`);
     img.src = `/realms/dinosaurs/${realm}.webp`;
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [realm]);
+  // The view shows only once its real artwork is in, so the drawn stand-ins never flash on screen.
+  const needed =
+    realm === 'home'
+      ? [
+          HOME_SRC,
+          HERO_SRC,
+          CONCEPTS_SRC,
+          ...(['workshop', 'portal', 'arena', 'market'] as const)
+            .filter((kind) => save.buildings.some((b) => b.kind === kind))
+            .map(utilitySrc),
+          ...LEVELED.map((kind) => tierArt(save, kind)).filter((art): art is string => !!art),
+        ]
+      : [worldArt(realm), `/realms/dinosaurs/${realm}.webp`];
+  const pending = [...new Set(needed)],
+    done = pending.filter((src) => settled.current.has(src)).length,
+    ready = done === pending.length;
+  useEffect(() => {
+    onProgress?.(done, pending.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done, pending.length]);
   useEffect(() => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
@@ -606,7 +661,8 @@ export default function World({
     ctx.scale(zoom, zoom);
     ctx.translate(-768, -512);
     if (realm === 'home') {
-      if (image.current) ctx.drawImage(image.current, (SCENE.width - HOME_ART.width) / 2, 0, HOME_ART.width, HOME_ART.height);
+      if (image.current)
+        ctx.drawImage(image.current, (SCENE.width - HOME_ART.width) / 2, 0, HOME_ART.width, HOME_ART.height);
     } else {
       const el = ELEMENTS.find((e) => e.id === realm)!;
       const sky = ctx.createLinearGradient(0, 0, 0, 1024);
@@ -627,19 +683,19 @@ export default function World({
     ctx.imageSmoothingEnabled = false;
     if (showGhost) {
       for (const { x, y } of BUILDABLE_CELLS) {
-          const p = project(x, y);
-          polygon(
-            ctx,
-            [
-              [p.x, p.y],
-              [p.x + GRID.w, p.y + GRID.h],
-              [p.x, p.y + GRID.h * 2],
-              [p.x - GRID.w, p.y + GRID.h],
-            ],
-            (x + y) % 2 ? '#e5f4b01c' : '#284a3820',
-            '#f0e6be35',
-          );
-        }
+        const p = project(x, y);
+        polygon(
+          ctx,
+          [
+            [p.x, p.y],
+            [p.x + GRID.w, p.y + GRID.h],
+            [p.x, p.y + GRID.h * 2],
+            [p.x - GRID.w, p.y + GRID.h],
+          ],
+          (x + y) % 2 ? '#e5f4b01c' : '#284a3820',
+          '#f0e6be35',
+        );
+      }
     }
     if (realm === 'home')
       [...save.buildings]
@@ -679,13 +735,9 @@ export default function World({
     if (cell && showGhost) {
       const p = project(cell.x, cell.y),
         valid = canPlace(save, cell.x, cell.y, ghostId ?? undefined),
-        ghostKind = ghostId ? save.buildings.find((b) => b.id === ghostId)?.kind ?? placementKind : placementKind;
+        ghostKind = ghostId ? (save.buildings.find((b) => b.id === ghostId)?.kind ?? placementKind) : placementKind;
       ctx.globalAlpha = 0.65;
-      drawBuilding(
-        ctx,
-        { id: 'ghost', kind: ghostKind, ...cell },
-        ...artFor(ghostKind as UtilityKind),
-      );
+      drawBuilding(ctx, { id: 'ghost', kind: ghostKind, ...cell }, ...artFor(ghostKind as UtilityKind));
       ctx.globalAlpha = 1;
       // The footprint marker goes on top: newer building art covers its whole 3x3 plate and would hide it.
       const footprint = [
@@ -755,7 +807,7 @@ export default function World({
   };
   return (
     <div
-      className={`realm-world${held ? ' holding' : ''}${panning ? ' panning' : ''}${placing ? ' placing' : ''}${hovering ? ' hovering' : ''}`}
+      className={`realm-world${held ? ' holding' : ''}${panning ? ' panning' : ''}${placing ? ' placing' : ''}${hovering ? ' hovering' : ''}${ready ? '' : ' loading'}`}
       data-realm={realm}
       data-residents={here.length}
       data-preview-residents={0}
@@ -765,6 +817,13 @@ export default function World({
       data-camera-y={cameraPan.y}
       data-camera-zoom={zoom}
     >
+      {!ready && (
+        <div className="realm-world-loading" role="status">
+          <span>
+            {lang ? 'Loading the world…' : 'Se încarcă lumea…'} {done}/{pending.length}
+          </span>
+        </div>
+      )}
       <canvas
         ref={ref}
         width={1536 * resolution}
@@ -865,9 +924,7 @@ export default function World({
             }
             if (d.moved) {
               const r = e.currentTarget.getBoundingClientRect();
-              setPan(
-                boundPan({ x: d.px + (dx * 1536) / r.width, y: d.py + (dy * 1024) / r.height }, zoom, viewport),
-              );
+              setPan(boundPan({ x: d.px + (dx * 1536) / r.width, y: d.py + (dy * 1024) / r.height }, zoom, viewport));
             }
           }
         }}
@@ -915,14 +972,16 @@ export default function World({
           setCell(null);
         }}
       />
-      {realm !== 'home' && <button className="world-resident-book" onClick={() => onSelect('collection')}>
-        {here.length
-          ? `🦖 ${here.length} · ${lang ? 'Your dinosaurs here' : 'Dinozaurii tăi de aici'}`
-          : lang
-            ? 'No dinosaurs here yet · Market →'
-            : 'Niciun dinozaur aici încă · Piață →'}
-        <span className="sr-only">{SPECIES.map(s => SPECIES_NAMES[s]).join(', ')}</span>
-      </button>}
+      {realm !== 'home' && (
+        <button className="world-resident-book" onClick={() => onSelect('collection')}>
+          {here.length
+            ? `🦖 ${here.length} · ${lang ? 'Your dinosaurs here' : 'Dinozaurii tăi de aici'}`
+            : lang
+              ? 'No dinosaurs here yet · Market →'
+              : 'Niciun dinozaur aici încă · Piață →'}
+          <span className="sr-only">{SPECIES.map((s) => SPECIES_NAMES[s]).join(', ')}</span>
+        </button>
+      )}
       {!showGhost && (
         <div className="realm-object-overlay">
           {realm === 'home' ? (
@@ -1020,11 +1079,7 @@ export default function World({
                 ? 'Drag to move around · mouse wheel or pinch to zoom'
                 : 'Trage ca să te miști · rotița mouse-ului sau două degete pentru zoom'}
               {realm === 'home' && (
-                <small>
-                  {lang
-                    ? 'Press and hold a building to move it'
-                    : 'Ține apăsat pe o clădire ca s-o muți'}
-                </small>
+                <small>{lang ? 'Press and hold a building to move it' : 'Ține apăsat pe o clădire ca s-o muți'}</small>
               )}
             </span>
             <button onClick={dismissHint} aria-label={lang ? 'Got it' : 'Am înțeles'}>

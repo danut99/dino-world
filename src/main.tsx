@@ -15,7 +15,7 @@ import './styles/forge.css';
 watchErrors();
 const App = React.lazy(() => import('./app/App'));
 const classic = new URLSearchParams(window.location.search).get('mode') === 'classic';
-if (!classic) document.getElementById('boot-loader')?.remove();
+// Dino Realms keeps the boot loader until the island's artwork is in (RealmsApp removes it).
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>

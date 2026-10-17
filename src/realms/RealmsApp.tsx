@@ -196,6 +196,22 @@ export default function RealmsApp() {
       }
       return !open;
     });
+  // The boot screen from index.html stays until the first view's artwork has loaded, showing its progress.
+  const bootProgress = (done: number, total: number) => {
+    const loader = document.getElementById('boot-loader');
+    if (!loader) return;
+    const percent = total ? Math.round((done / total) * 100) : 100;
+    const bar = loader.querySelector<HTMLElement>('.bar'),
+      label = loader.querySelector('small');
+    if (bar) bar.style.background = `linear-gradient(90deg, #d6b970 ${percent}%, #142219 ${percent}%)`;
+    if (label) label.textContent = `${percent}%`;
+    if (done >= total) loader.remove();
+  };
+  // Never leave the player behind the boot screen if an image hangs.
+  useEffect(() => {
+    const id = window.setTimeout(() => document.getElementById('boot-loader')?.remove(), 20_000);
+    return () => window.clearTimeout(id);
+  }, []);
   const [selectedDino, setSelectedDino] = useState<string | null>(null),
     [devOpen, setDevOpen] = useState(false);
   const [storageError, setStorageError] = useState(false);
@@ -466,6 +482,7 @@ export default function RealmsApp() {
           if (run({ type: 'move', id, x, y })) setMessage(tr('Clădire mutată!', 'Building moved!'));
         }}
         onSelect={openBuilding}
+        onProgress={bootProgress}
       />
       <header className="realm-hud">
         <a

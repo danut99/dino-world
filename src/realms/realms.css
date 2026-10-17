@@ -1889,3 +1889,17 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f5cd74; outline-offse
 .realm-quest.collapsed .realm-quest-body { display: none; }
 .realm-quest-alert { display: grid; place-items: center; width: 16px; height: 16px; font-size: 11px; letter-spacing: 0; color: #2b2112; background: #f5cd74; border-radius: 50%; animation: realm-plot-ready 1.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .realm-quest-alert { animation: none; } }
+
+/* Location title and logo: a soft, mostly transparent shade with no hard edges, so they read over bright sky and trees */
+.realm-location { padding: 12px 18px 14px; background: radial-gradient(ellipse at 70% 50%, #0f243266 0%, #0f243233 55%, transparent 75%); text-shadow: 0 1px 0 #0d1d27, 0 2px 8px #0d1d27b3; }
+.realm-brand { padding: 6px 18px 6px 8px; margin: -6px -18px -6px -8px; background: radial-gradient(ellipse at 45% 50%, #0f243259 0%, #0f24322e 55%, transparent 75%); }
+.realm-brand > span:not(.realm-brand-mark) { text-shadow: 0 2px 0 #3d2a16, 0 2px 8px #0d1d27b3; }
+.realm-brand small { text-shadow: 0 1px 0 #0d1d27, 0 1px 5px #0d1d27e6; }
+.realm-location .realm-eyebrow { color: #f2c374; }
+.realm-location p { color: #e9e2c8; }
+
+/* While a view's artwork loads, the canvas and its labels stay hidden; a quiet note shows instead */
+.realm-world.loading > * { visibility: hidden; }
+.realm-world.loading > .realm-world-loading { visibility: visible; }
+.realm-world-loading { position: absolute; inset: 0; display: grid; place-items: center; background: linear-gradient(#3f97d6 0%, #7cc6f5 55%, #c9ecfb 100%); }
+.realm-world-loading span { padding: 10px 18px; color: #f0dfb9; font-weight: 700; letter-spacing: 1px; background: #142c3ce6; border: 1px solid #e4c48a99; }
