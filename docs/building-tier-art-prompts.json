@@ -1,0 +1,98 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "status": "All seven farm, hatchery, workshop and arena tier sprites generated with built-in image_gen.imagegen. PNG sources in art/realms/buildings; runtime WebP images in public/realms/buildings, active through buildingTiers.ts.",
+  "framing": "Save the PNG under art/realms/buildings/, then run python scripts/realms-images.py. The game draws each sprite into a 220x220 box and finds the ground plate itself (its widest row), lining the plate's left and right corners up with the 3x3 footprint. Keep the plate full-width and horizontally centered, with transparent space around the building.",
+  "prompts": [
+    {
+      "building": "farm",
+      "tier": 2,
+      "levels": "3-4",
+      "path": "art/realms/buildings/farm-2.png",
+      "prompt": "Use case: stylized-concept. ONE standalone isometric building sprite for Dino Realms pixel art game. Detailed deliberate crisp PIXEL ART, square pixel clusters, stepped shading and dark outlines, limited palette, no smooth painting or blur. Classic 2:1 isometric view matching a 3x3 tile footprint: the building stands on a diamond-shaped ground plate about 80% of the canvas width, centered horizontally, plate center at 78% of the canvas height. Square 1024x1024 canvas, transparent background, NO sky, NO surrounding scenery, NO text or UI, NO characters. Top-left lighting. Subject: an upgraded prehistoric farm, tier 2 of 3: larger fenced field of tilled soil rows with ferns, cicada cages and ginkgo saplings, a sturdy wooden barn with a thatched roof, a small water trough, warm wood and green palette consistent with a friendly fantasy dinosaur world, clearly bigger and richer than a simple starter field",
+      "actualSize": {
+        "width": 1254,
+        "height": 1254
+      },
+      "transparent": true,
+      "runtimePath": "public/realms/buildings/farm-2.webp"
+    },
+    {
+      "building": "farm",
+      "tier": 3,
+      "levels": "5",
+      "path": "art/realms/buildings/farm-3.png",
+      "prompt": "Use case: stylized-concept. ONE standalone isometric building sprite for Dino Realms pixel art game. Detailed deliberate crisp PIXEL ART, square pixel clusters, stepped shading and dark outlines, limited palette, no smooth painting or blur. Classic 2:1 isometric view matching a 3x3 tile footprint: the building stands on a diamond-shaped ground plate about 80% of the canvas width, centered horizontally, plate center at 78% of the canvas height. Square 1024x1024 canvas, transparent background, NO sky, NO surrounding scenery, NO text or UI, NO characters. Top-left lighting. Subject: a grand prehistoric farm estate, tier 3 of 3 (max level): lush terraced fields of ferns, ginkgo trees and glowing amber fruit bushes, a two-storey timber-and-stone barn with a smokehouse chimney, a wooden windmill with leaf sails, stone irrigation channels with flowing water, golden harvest baskets, the most impressive and abundant version of the farm",
+      "actualSize": {
+        "width": 1254,
+        "height": 1254
+      },
+      "transparent": true,
+      "runtimePath": "public/realms/buildings/farm-3.webp"
+    },
+    {
+      "building": "hatchery",
+      "tier": 2,
+      "levels": "2",
+      "path": "art/realms/buildings/hatchery-2.png",
+      "prompt": "Use case: stylized-concept. ONE standalone isometric building sprite for Dino Realms pixel art game. Detailed deliberate crisp PIXEL ART, square pixel clusters, stepped shading and dark outlines, limited palette, no smooth painting or blur. Classic 2:1 isometric view matching a 3x3 tile footprint: the building stands on a diamond-shaped ground plate about 80% of the canvas width, centered horizontally, plate center at 78% of the canvas height. Square 1024x1024 canvas, transparent background, NO sky, NO surrounding scenery, NO text or UI, NO characters. Top-left lighting. Subject: an upgraded dinosaur egg hatchery, tier 2 of 3: a round stone nesting pavilion with a tiled roof, two warm straw nests holding eggs, a glowing brazier keeping them warm, carved dinosaur claw pillars, warm ochre stone and ember orange palette, clearly sturdier than a simple starter nest",
+      "actualSize": {
+        "width": 1254,
+        "height": 1254
+      },
+      "transparent": true,
+      "runtimePath": "public/realms/buildings/hatchery-2.webp"
+    },
+    {
+      "building": "hatchery",
+      "tier": 3,
+      "levels": "3",
+      "path": "art/realms/buildings/hatchery-3.png",
+      "prompt": "Use case: stylized-concept. ONE standalone isometric building sprite for Dino Realms pixel art game. Detailed deliberate crisp PIXEL ART, square pixel clusters, stepped shading and dark outlines, limited palette, no smooth painting or blur. Classic 2:1 isometric view matching a 3x3 tile footprint: the building stands on a diamond-shaped ground plate about 80% of the canvas width, centered horizontally, plate center at 78% of the canvas height. Square 1024x1024 canvas, transparent background, NO sky, NO surrounding scenery, NO text or UI, NO characters. Top-left lighting. Subject: a grand egg temple hatchery, tier 3 of 3 (max level): an elegant stepped stone temple with a golden dome, three ornate nests with eggs of different elemental colors, floating elemental crystals (fire, water, earth, ice, wind) glowing softly around it, carved fossil reliefs and warm lanterns, the most impressive and magical version of the hatchery",
+      "actualSize": {
+        "width": 1254,
+        "height": 1254
+      },
+      "transparent": true,
+      "runtimePath": "public/realms/buildings/hatchery-3.webp"
+    },
+    {
+      "building": "workshop",
+      "tier": 2,
+      "levels": "2",
+      "path": "art/realms/buildings/workshop-2.png",
+      "prompt": "Use case: stylized-concept. ONE standalone isometric building sprite for Dino Realms pixel art game. Detailed deliberate crisp PIXEL ART, square pixel clusters, stepped shading and dark outlines, limited palette, no smooth painting or blur. Classic 2:1 isometric view matching a 3x3 tile footprint: the building stands on a diamond-shaped ground plate about 80% of the canvas width, centered horizontally, plate center at 78% of the canvas height. Square 1024x1024 canvas, transparent background, NO sky, NO surrounding scenery, NO text or UI, NO characters. Top-left lighting. Subject: an upgraded prehistoric crafting workshop, tier 2 of 3: a sturdy timber and stone workshop with a bigger forge and glowing embers, a stone anvil, a wooden saw bench with stacked planks and cut stone blocks, tool racks with bone and stone tools, a small crane lifting a beam, warm wood, slate and ember orange palette, clearly busier and more productive than a simple starter workshop",
+      "actualSize": {
+        "width": 1254,
+        "height": 1254
+      },
+      "transparent": true,
+      "runtimePath": "public/realms/buildings/workshop-2.webp"
+    },
+    {
+      "building": "workshop",
+      "tier": 3,
+      "levels": "3",
+      "path": "art/realms/buildings/workshop-3.png",
+      "prompt": "Use case: stylized-concept. ONE standalone isometric building sprite for Dino Realms pixel art game. Detailed deliberate crisp PIXEL ART, square pixel clusters, stepped shading and dark outlines, limited palette, no smooth painting or blur. Classic 2:1 isometric view matching a 3x3 tile footprint: the building stands on a diamond-shaped ground plate about 80% of the canvas width, centered horizontally, plate center at 78% of the canvas height. Square 1024x1024 canvas, transparent background, NO sky, NO surrounding scenery, NO text or UI, NO characters. Top-left lighting. Subject: a grand crafting hall, tier 3 of 3 (max level): a two-storey timber-and-stone workshop with two working forges side by side, a water wheel powering a stone saw, crystal-lit workbenches, organized shelves of planks, blocks and glowing crystals, a carved dinosaur-claw sign over the door, the most impressive and productive version of the workshop",
+      "actualSize": {
+        "width": 1254,
+        "height": 1254
+      },
+      "transparent": true,
+      "runtimePath": "public/realms/buildings/workshop-3.webp"
+    },
+    {
+      "building": "arena",
+      "tier": 2,
+      "levels": "2",
+      "path": "art/realms/buildings/arena-2.png",
+      "prompt": "Use case: stylized-concept. ONE standalone isometric building sprite for Dino Realms pixel art game. Detailed deliberate crisp PIXEL ART, square pixel clusters, stepped shading and dark outlines, limited palette, no smooth painting or blur. Classic 2:1 isometric view matching a 3x3 tile footprint: the building stands on a diamond-shaped ground plate about 80% of the canvas width, centered horizontally, plate center at 78% of the canvas height. Square 1024x1024 canvas, transparent background, NO sky, NO surrounding scenery, NO text or UI, NO characters. Top-left lighting. Subject: an upgraded PvE arena gate, tier 2 of 2 (max level): a monumental stone gateway with a heavy carved arch, ten small elemental banners around it (fire, water, earth, nature, ice, lightning, wind, dark, light, arcane), golden trophy shields, braziers on both sides and a glimpse of a sand arena floor through the open gate, grander and more prestigious than a simple starter gate",
+      "actualSize": {
+        "width": 1254,
+        "height": 1254
+      },
+      "transparent": true,
+      "runtimePath": "public/realms/buildings/arena-2.webp"
+    }
+  ]
+}

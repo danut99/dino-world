@@ -1,0 +1,1498 @@
+.gameplay-screen {
+  position: absolute;
+  z-index: 50;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  outline: none;
+  background: #122936;
+  color: #efdfba;
+  --screen-gold: #dfbd77;
+}
+.adventure-map,
+.arena-lobby-scene,
+.battle-environment,
+.crafting-layout,
+.arena-lobby-enemy,
+.battle-unit > img,
+.utility-sprite {
+  image-rendering: pixelated;
+}
+.realm-toast {
+  z-index: 70;
+}
+.gameplay-screen .arena-lobby-enemy,
+.gameplay-screen .battle-unit > img {
+  image-rendering: pixelated;
+}
+.adventure-map-plane {
+  position: absolute;
+  inset: 0;
+  background: url('/realms/gameplay/all-worlds-map-pixel.webp') center / 100% 100%;
+  image-rendering: pixelated;
+  transform-origin: center;
+  will-change: transform;
+}
+.adventure-map .map-caption {
+  top: 16px;
+  bottom: auto;
+  left: 18px;
+  background: #183745e6;
+  border: 1px solid #dbc17d88;
+  padding: 10px 14px;
+  pointer-events: none;
+}
+.adventure-map .map-caption h2 {
+  font-size: 17px;
+  margin: 5px 0;
+}
+.adventure-map .map-caption p {
+  margin: 5px 0 0;
+  font-size: 10px;
+}
+.adventure-node > strong small {
+  display: block;
+  font:
+    8px Barlow,
+    sans-serif;
+  margin-top: 4px;
+  color: #c4d3c7;
+}
+.adventure-map-controls {
+  position: absolute;
+  z-index: 3;
+  bottom: 16px;
+  left: 18px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.adventure-map-controls button {
+  width: 44px;
+  height: 44px;
+  background: #183544f2;
+  border: 1px solid #d7bb77;
+  color: #f2d495;
+  font-size: 23px;
+}
+.adventure-map-controls span {
+  background: #183544e6;
+  color: #d3dfca;
+  padding: 8px;
+  font-size: 10px;
+}
+.gameplay-header {
+  height: 88px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  padding: 12px 27px;
+  background: #152d3df5;
+  border-bottom: 2px solid #bd9b58;
+  box-shadow: 0 4px 18px #06172366;
+  z-index: 2;
+}
+.gameplay-header h1 {
+  font-size: clamp(21px, 2.3vw, 34px);
+  margin-top: 4px;
+  color: #f1d595;
+}
+.gameplay-header .realm-eyebrow {
+  font-size: 8px;
+  color: #afbbaf;
+}
+.gameplay-header button {
+  color: #e7d4a8;
+  border: 1px solid #a7b2954d;
+  background: #213c4b;
+  min-height: 42px;
+}
+.gameplay-back {
+  padding: 10px 14px;
+}
+.gameplay-close {
+  font-size: 25px !important;
+  width: 42px;
+  margin-left: 5px;
+}
+.gameplay-header nav {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.gameplay-header nav button {
+  padding: 9px 16px;
+  font-size: 12px;
+}
+.gameplay-header nav button.active {
+  color: #f5d591;
+  border-color: #bd9b58;
+  background: #b3924b23;
+}
+.gameplay-header > .gameplay-close:last-child {
+  margin-left: auto;
+}
+.gameplay-header nav + .gameplay-close {
+  margin-left: 0;
+}
+.adventure-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 345px;
+}
+.adventure-map {
+  touch-action: none;
+  position: relative;
+  min-width: 0;
+  background: #173548;
+  border-right: 2px solid #af945c;
+  overflow: hidden;
+}
+.adventure-map::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(0deg, #0d2c44c4, transparent 30%, transparent 80%, #1b31432e);
+}
+.adventure-route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+.adventure-route path {
+  fill: none;
+  stroke: #f2d58d;
+  stroke-width: 0.7;
+  stroke-dasharray: 0.7 1.4;
+  stroke-linecap: round;
+  filter: drop-shadow(0 1px 1px #5c4529);
+}
+.adventure-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #fff0cb;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.adventure-node > span {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border: 3px solid #f0d18a;
+  color: #eec982;
+  background: #213f4af5;
+  font-size: 31px;
+  border-radius: 50%;
+  box-shadow:
+    0 4px 0 #6e552f,
+    0 6px 18px #092e4b7a;
+}
+.adventure-node.selected > span {
+  outline: 3px solid #fff5bd;
+  outline-offset: 7px;
+  background: #376576;
+}
+.adventure-node.cleared > span {
+  background: #426e4b;
+}
+.adventure-node.locked > span {
+  background: #394349;
+  color: #b1ada1;
+  border-color: #b1a37d;
+}
+.adventure-node > strong {
+  font-family: Cinzel, serif;
+  font-size: 11px;
+  margin-top: 14px;
+  padding: 7px 10px;
+  background: #1a3445ed;
+  border: 1px solid #e5c58688;
+  white-space: nowrap;
+}
+.map-caption {
+  position: absolute;
+  bottom: 25px;
+  left: 25px;
+  z-index: 1;
+  text-shadow: 0 2px 5px #133141;
+}
+.map-caption h2 {
+  font-size: clamp(18px, 2.2vw, 30px);
+  margin-top: 8px;
+}
+.map-caption p {
+  font-size: 12px;
+  color: #c8d2be;
+}
+.adventure-detail {
+  min-height: 0;
+  overflow-y: auto;
+  background: #142e3e;
+  padding: 16px;
+  box-shadow: inset 0 0 0 4px #c4a4670d;
+}
+.destination-cover {
+  height: 160px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  border: 1px solid #d5b67c;
+}
+.destination-cover span {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px;
+  background: #f3e0b4ed;
+  color: #4b3a24;
+  font-family: Cinzel, serif;
+  font-weight: 700;
+  font-size: 17px;
+  text-align: center;
+}
+.adventure-detail-body {
+  padding: 18px 2px 10px;
+}
+.gameplay-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #e8c884;
+  font-size: 11px;
+  letter-spacing: 1.6px;
+  font-weight: 700;
+}
+.gameplay-section-label small {
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: #aebdb6;
+}
+.gameplay-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 23px;
+}
+.gameplay-rewards > span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0a2432;
+  border: 1px solid #9ea98655;
+  flex: 1;
+  min-width: 48px;
+  padding: 8px 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.gameplay-rewards b {
+  font-size: 29px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+.gameplay-rewards small {
+  font-size: 8px;
+  color: #bac9c4;
+  margin-top: 5px;
+}
+.gameplay-team-slots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.gameplay-team-slots > div {
+  height: 110px;
+  border: 1px dashed #8fa6a068;
+  background: #0c2634;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.gameplay-team-slots > .occupied {
+  border: 1px solid #cbb26f;
+}
+.gameplay-team-slots .realm-hero {
+  height: 72px;
+}
+.gameplay-team-slots strong {
+  font-size: 9px;
+}
+.gameplay-team-slots i {
+  width: 75%;
+  height: 3px;
+  background: #9dbd71;
+  margin-top: 7px;
+}
+.gameplay-team-slots > div > span {
+  font-size: 25px;
+  color: #607f8a;
+}
+.gameplay-team-slots small {
+  font-size: 8px;
+  color: #829da5;
+  padding-top: 10px;
+}
+.gameplay-small {
+  font-size: 10px !important;
+  color: #a4b8b9 !important;
+  line-height: 1.6;
+}
+.gameplay-warning {
+  color: #e8b181;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.encounter-condition {
+  border-top: 1px solid #899f8a44;
+  padding-top: 15px;
+  color: #bbcdcb;
+  font-size: 11px;
+  line-height: 1.8;
+  margin-top: 15px;
+}
+.adventure-start {
+  width: 100%;
+  margin-top: 16px;
+  font-size: 16px !important;
+  min-height: 51px;
+}
+.arena-lobby-scene {
+  background: url('/realms/gameplay/arena-scene-pixel.webp') center / cover;
+  position: relative;
+  min-width: 0;
+  border-right: 2px solid #b39963;
+  overflow: hidden;
+}
+.arena-challenge-title {
+  position: absolute;
+  top: 28px;
+  left: 30px;
+  right: 30px;
+  text-align: center;
+  text-shadow: 0 3px 9px #16272e;
+}
+.arena-challenge-title h2 {
+  font-size: clamp(25px, 3vw, 44px);
+  color: #fff0bd;
+  margin-top: 8px;
+}
+.arena-challenge-title p {
+  color: #f3e6ca;
+  font-size: 12px;
+}
+.arena-lobby-enemy.realm-hero {
+  position: absolute;
+  height: 60%;
+  width: 65%;
+  object-fit: contain;
+  left: 18%;
+  bottom: 110px;
+  image-rendering: auto;
+  filter: drop-shadow(0 15px 12px #3d3c3744);
+}
+.arena-ladder {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 24px;
+  display: flex;
+  gap: 9px;
+}
+.arena-ladder button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  background: #162f40f2;
+  color: #e9d3a3;
+  border: 1px solid #b0ab855c;
+}
+.arena-ladder button.selected {
+  border: 2px solid #e4be71;
+}
+.arena-ladder span {
+  font-size: 20px;
+  color: #ddbd7a;
+}
+.arena-ladder strong {
+  font-size: 12px;
+}
+.arena-ladder small {
+  font-size: 9px;
+  color: #b6c6bd;
+}
+.crafting-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr) 230px;
+  gap: 20px;
+  padding: 24px;
+  overflow: auto;
+  background:
+    linear-gradient(#0d1d2870, #271c1560),
+    url('/realms/gameplay/workshop-scene-pixel.webp') center / cover;
+}
+.craft-inventory,
+.craft-use {
+  background: #122b39eb;
+  border: 1px solid #b7a16b7a;
+  padding: 17px;
+  align-self: start;
+}
+.craft-material-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin: 16px 0;
+}
+.craft-material-grid > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid #b7b58c55;
+  padding: 10px 4px;
+  background: #0b2230d9;
+}
+.craft-material-grid span {
+  font-size: 35px;
+}
+.craft-material-grid strong {
+  font-size: 18px;
+  margin-top: 3px;
+}
+.craft-material-grid small {
+  font-size: 9px;
+  margin-top: 5px;
+  color: #abbfbd;
+}
+.craft-workspace {
+  min-width: 0;
+}
+.craft-recipe-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 15px;
+}
+.craft-recipe-tabs button {
+  background: #193442ee;
+  border: 1px solid #c4b57960;
+  color: #e2d8ba;
+  padding: 10px 12px;
+  font-size: 11px;
+  min-height: 40px;
+}
+.craft-recipe-tabs .active {
+  background: #e5c282;
+  color: #493a25;
+  border-color: #ffe4ab;
+}
+.craft-parchment {
+  background: #f0e0bdef;
+  border: 3px solid #cba769;
+  color: #4b3924;
+  text-align: center;
+  box-shadow:
+    inset 0 0 0 5px #f8edcd,
+    0 10px 25px #171a2360;
+  padding: 28px 22px;
+}
+.craft-parchment .realm-eyebrow {
+  color: #8c754b;
+}
+.craft-parchment h2 {
+  font-size: 25px;
+  margin-top: 10px;
+}
+.craft-parchment > p {
+  font-size: 12px;
+  color: #887047;
+  margin: 16px 0 22px;
+}
+.craft-transformation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin: 30px 0 10px;
+}
+.craft-inputs {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.craft-inputs > div,
+.craft-output {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  min-width: 65px;
+}
+.craft-inputs span,
+.craft-output > span {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  background: #193542;
+  border: 2px solid #ae925d;
+  font-size: 45px;
+  text-shadow: 0 3px #11252d;
+}
+.craft-inputs strong,
+.craft-output strong {
+  font-size: 15px;
+}
+.craft-inputs .missing {
+  color: #b14c3a;
+}
+.craft-inputs small,
+.craft-output small {
+  font-size: 10px;
+  color: #7f6844;
+}
+.craft-arrow {
+  font-size: 45px;
+  color: #b08b4d;
+}
+.craft-parchment > .realm-button {
+  min-width: 200px;
+  font-size: 17px !important;
+}
+.craft-parchment > .realm-link {
+  display: block;
+  color: #71562c;
+  margin: 13px auto 0;
+}
+.craft-queue {
+  margin-top: 22px;
+  background: #112a38eb;
+  padding: 18px;
+  border: 1px solid #ae9d6d99;
+}
+.craft-job {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid #7d927451;
+}
+.craft-job > span {
+  color: #d4ba7c;
+  font-size: 29px;
+}
+.craft-job > div {
+  flex: 1;
+  min-width: 0;
+}
+.craft-job strong {
+  display: block;
+  font-size: 12px;
+}
+.craft-job small {
+  font-size: 9px;
+  color: #a9bfb8;
+}
+.craft-job .realm-button {
+  min-height: 36px;
+  padding: 7px 12px;
+  font-size: 10px !important;
+}
+.craft-job i {
+  display: block;
+  height: 3px;
+  margin-top: 7px;
+  background: #0b1e29;
+}
+.craft-job i b {
+  display: block;
+  height: 3px;
+  background: #dbc082;
+}
+.craft-use > div:not(:first-child) {
+  padding: 20px 0;
+  border-top: 1px solid #8b9a7655;
+  text-align: center;
+}
+.craft-use > p {
+  font-size: 11px;
+  color: #b9c7b8;
+}
+.craft-use > div > span {
+  font-size: 37px;
+  color: #cbb883;
+  display: block;
+  margin-bottom: 8px;
+}
+.craft-use strong {
+  display: block;
+  font-size: 12px;
+}
+.craft-use p {
+  font-size: 10px;
+  color: #a9bcb6;
+}
+.craft-use .realm-button {
+  min-height: 35px;
+  padding: 8px 15px;
+  font-size: 10px !important;
+}
+.gameplay-battle {
+  background: #172e3c;
+}
+.battle-environment {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: url('/realms/gameplay/arena-scene-pixel.webp') center / cover;
+  overflow: hidden;
+}
+.battle-round {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: #173041e8;
+  border: 1px solid #d1b77c;
+  padding: 12px 30px;
+  z-index: 1;
+}
+.battle-round span {
+  letter-spacing: 2px;
+  color: #e8c686;
+  font-size: 12px;
+}
+.battle-round small {
+  font-size: 9px;
+  color: #a8bfbd;
+}
+.battle-unit {
+  position: absolute;
+  width: 33%;
+  height: 75%;
+  bottom: 45px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: end;
+}
+.battle-unit.ally {
+  left: 8%;
+}
+.battle-unit.enemy {
+  right: 8%;
+}
+.battle-unit > .realm-hero,
+.battle-unit > img {
+  width: 100%;
+  height: calc(100% - 100px);
+  object-fit: contain;
+  filter: drop-shadow(0 13px 10px #3635283d);
+}
+.battle-vitals {
+  width: 230px;
+  max-width: 100%;
+  background: #132e3de8;
+  border: 1px solid #a9aa7a99;
+  padding: 11px 14px;
+}
+.battle-vitals strong {
+  display: block;
+  font-size: 14px;
+  color: #f0d597;
+  margin-bottom: 7px;
+}
+.battle-vitals strong small {
+  float: right;
+  color: #e6dfca;
+  font-size: 10px;
+}
+.battle-vitals > span {
+  display: block;
+  font-size: 10px;
+  text-align: center;
+  margin: 5px 0;
+  color: #e4e0cf;
+}
+.battle-vitals > small {
+  font-size: 9px;
+  color: #e0bd7a;
+}
+.battle-vitals .energy {
+  height: 4px;
+}
+.battle-vitals .energy > i {
+  background: #e6bd59;
+}
+.battle-narration {
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  bottom: 14px;
+  background: #173141e6;
+  border: 1px solid #c0aa7566;
+  color: #e9dfc5;
+  padding: 10px;
+  text-align: center;
+  font-size: 12px;
+}
+.battle-command-bar {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  padding: 15px 20px 10px;
+  background: #152d3e;
+  border-top: 2px solid #c1a16a;
+}
+.battle-command {
+  width: 165px;
+  min-height: 105px;
+  background: #102634;
+  border: 2px solid #d0ad66;
+  color: #ead4a1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  box-shadow: inset 0 0 0 3px #c6a87718;
+}
+.battle-command > span {
+  color: #faad55;
+  font-size: 38px;
+  line-height: 1.1;
+}
+.battle-command.skill > span {
+  color: #73d2ee;
+}
+.battle-command.defend > span {
+  color: #aacbe8;
+}
+.battle-command.ultimate > span {
+  color: #f3d777;
+}
+.battle-command > strong {
+  font:
+    700 14px Cinzel,
+    serif;
+  margin: 7px 0 5px;
+}
+.battle-command > small {
+  font-size: 9px;
+  color: #a4b8b7;
+}
+.battle-art-note {
+  text-align: center;
+  padding: 5px;
+  font-size: 8px;
+  color: #9db2b1;
+}
+.battle-impact {
+  pointer-events: none;
+  position: absolute;
+  left: 55%;
+  top: 37%;
+  font-size: 170px;
+  line-height: 1;
+  color: #ffdf93;
+  text-shadow: 0 0 25px #f0642b;
+  animation: battle-flash 0.45s ease-out forwards;
+}
+.impact-defend .battle-impact {
+  left: 24%;
+  color: #99cbe9;
+  text-shadow: 0 0 25px #7bd3ff;
+}
+.battle-result {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -40%);
+  text-align: center;
+  background: #173344f5;
+  border: 2px solid #e1c17c;
+  box-shadow:
+    0 0 0 6px #183546,
+    0 15px 80px #102334b8;
+  padding: 30px 50px;
+  min-width: 330px;
+}
+.battle-result h2 {
+  font-size: 32px;
+  color: #f3d593;
+  margin: 12px 0 20px;
+}
+.battle-result p {
+  font-size: 23px;
+  color: #dfc082;
+}
+.result-materials {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 22px;
+  font-size: 12px;
+  color: #c2d2cb;
+}
+@keyframes battle-flash {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.utility-sprite {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+}
+.realm-build-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.realm-build-grid .realm-build-card {
+  margin: 0;
+  flex-direction: column;
+  text-align: center;
+  gap: 4px;
+  padding: 16px;
+}
+.realm-build-grid .realm-build-card .realm-button {
+  margin: 10px 0 0;
+}
+.realm-build-grid .realm-build-card p {
+  font-size: 11px;
+  min-height: 35px;
+}
+.realm-build-grid .realm-build-card h3 {
+  font-size: 17px;
+}
+.realm-build-grid .realm-build-card .utility-sprite {
+  width: 140px;
+  height: 130px;
+}
+.realm-object-overlay {
+  position: absolute;
+  width: max(100vw, 150dvh);
+  height: max(66.6667vw, 100dvh);
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.production-bubble {
+  pointer-events: auto;
+  position: absolute;
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+  padding: 7px 12px;
+  min-height: 33px;
+  color: #f8e3ae;
+  background: #173744ee;
+  border: 1px solid #e5c988;
+  box-shadow: 0 3px #66543b;
+  font-size: 10px !important;
+}
+.production-bubble.ready {
+  background: #f2d384;
+  color: #493b24;
+}
+.production-bubble::after {
+  content: '';
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  background: inherit;
+  border-right: 1px solid #e5c988;
+  border-bottom: 1px solid #e5c988;
+  bottom: -5px;
+  left: calc(50% - 4px);
+  transform: rotate(45deg);
+}
+.realm-offline-strip {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 148px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  max-width: calc(100% - 40px);
+  padding: 14px 18px;
+  border: 1px solid #e5c786;
+  background: #173342f2;
+  box-shadow: 0 5px 25px #12354e66;
+}
+.realm-offline-strip strong {
+  font-size: 12px;
+  display: block;
+}
+.realm-offline-strip small {
+  color: #a6bdb9;
+  font-size: 9px;
+  display: block;
+  margin-top: 4px;
+}
+.realm-offline-strip > span {
+  color: #ecd192;
+  font-size: 15px;
+  white-space: nowrap;
+}
+.realm-offline-strip > button:last-child:not(.realm-button) {
+  border: 0;
+  color: #e2cb9c;
+  background: transparent;
+  font-size: 20px;
+  padding: 5px;
+}
+@media (max-width: 1100px) {
+  .gameplay-header {
+    gap: 15px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .adventure-layout {
+    grid-template-columns: minmax(0, 1fr) 290px;
+  }
+  .adventure-detail {
+    padding: 12px;
+  }
+  .destination-cover {
+    height: 120px;
+  }
+  .crafting-layout {
+    grid-template-columns: 155px minmax(0, 1fr);
+    gap: 14px;
+    padding: 16px;
+  }
+  .craft-use {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  .craft-use > .gameplay-section-label {
+    display: none;
+  }
+  .craft-use > div:not(:first-child) {
+    flex: 1;
+    border: 0;
+    padding: 7px;
+  }
+  .craft-use > p {
+    display: none;
+  }
+  .craft-use > div > span {
+    display: none;
+  }
+  .craft-inventory {
+    padding: 12px;
+  }
+  .craft-material-grid {
+    gap: 6px;
+  }
+  .craft-material-grid span {
+    font-size: 28px;
+  }
+  .craft-parchment {
+    padding: 24px 15px;
+  }
+  .craft-parchment h2 {
+    font-size: 22px;
+  }
+  .craft-transformation {
+    gap: 12px;
+  }
+  .craft-inputs {
+    gap: 8px;
+  }
+  .craft-inputs > div {
+    min-width: 55px;
+  }
+  .craft-inputs span,
+  .craft-output > span {
+    width: 58px;
+    height: 58px;
+    font-size: 35px;
+  }
+  .gameplay-header nav button {
+    padding: 8px 12px;
+  }
+  .battle-unit {
+    width: 37%;
+  }
+  .battle-unit.ally {
+    left: 5%;
+  }
+  .battle-unit.enemy {
+    right: 5%;
+  }
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  .gameplay-header {
+    height: 65px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+  .gameplay-header h1 {
+    font-size: 22px;
+  }
+  .gameplay-header button {
+    min-height: 36px;
+  }
+  .destination-cover {
+    height: 105px;
+  }
+  .adventure-detail-body {
+    padding-top: 12px;
+  }
+  .gameplay-rewards {
+    margin-bottom: 13px;
+  }
+  .gameplay-team-slots > div {
+    height: 90px;
+  }
+  .gameplay-team-slots .realm-hero {
+    height: 55px;
+  }
+  .map-caption {
+    bottom: 16px;
+    left: 18px;
+  }
+  .map-caption h2 {
+    font-size: 18px;
+  }
+  .adventure-node > span {
+    width: 43px;
+    height: 43px;
+    font-size: 24px;
+  }
+  .adventure-node > strong {
+    font-size: 8px;
+    margin-top: 8px;
+    padding: 5px;
+  }
+  .arena-ladder {
+    bottom: 14px;
+    left: 14px;
+    right: 14px;
+    gap: 6px;
+  }
+  .arena-ladder button {
+    padding: 7px;
+  }
+  .arena-ladder span {
+    font-size: 14px;
+  }
+  .arena-ladder strong {
+    font-size: 10px;
+  }
+  .arena-challenge-title {
+    top: 15px;
+  }
+  .arena-challenge-title h2 {
+    font-size: 22px;
+  }
+  .arena-challenge-title p {
+    display: none;
+  }
+  .arena-lobby-enemy.realm-hero {
+    bottom: 72px;
+    height: 65%;
+  }
+  .battle-command-bar {
+    gap: 10px;
+    padding: 8px 15px 3px;
+  }
+  .battle-command {
+    min-height: 72px;
+    width: 130px;
+    padding: 5px;
+  }
+  .battle-command > span {
+    font-size: 26px;
+  }
+  .battle-command > strong {
+    font-size: 11px;
+    margin: 3px 0;
+  }
+  .battle-command > small {
+    font-size: 8px;
+  }
+  .battle-unit {
+    bottom: 30px;
+    height: 88%;
+  }
+  .battle-unit > .realm-hero,
+  .battle-unit > img {
+    height: calc(100% - 70px);
+  }
+  .battle-vitals {
+    width: 180px;
+    padding: 5px 9px;
+  }
+  .battle-vitals strong {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+  .battle-vitals > span {
+    font-size: 8px;
+    margin: 3px 0;
+  }
+  .battle-round {
+    top: 10px;
+    padding: 7px 14px;
+  }
+  .battle-round span {
+    font-size: 9px;
+  }
+  .battle-round small {
+    font-size: 7px;
+  }
+  .battle-narration {
+    bottom: 5px;
+    font-size: 9px;
+    padding: 7px;
+  }
+  .battle-art-note {
+    font-size: 6px;
+    padding: 3px;
+  }
+  .battle-result {
+    padding: 17px 30px;
+  }
+  .battle-result h2 {
+    font-size: 23px;
+    margin: 7px 0;
+  }
+  .battle-result p {
+    margin: 8px 0;
+    font-size: 17px;
+  }
+  .crafting-layout {
+    padding: 12px;
+  }
+  .craft-parchment {
+    padding: 18px 12px;
+  }
+  .realm-offline-strip {
+    bottom: 112px;
+    padding: 9px 12px;
+    gap: 12px;
+  }
+  .realm-offline-strip small {
+    display: none;
+  }
+  .production-bubble {
+    font-size: 8px !important;
+    padding: 5px 9px;
+    min-height: 27px;
+  }
+}
+@media (max-width: 650px) {
+  .gameplay-header {
+    height: 70px;
+    gap: 10px;
+    padding: 10px;
+  }
+  .gameplay-header h1 {
+    font-size: 18px;
+  }
+  .gameplay-back {
+    padding: 7px 10px;
+  }
+  .gameplay-back span,
+  .gameplay-header nav span {
+    display: none;
+  }
+  .gameplay-header nav {
+    gap: 4px;
+  }
+  .gameplay-header nav button {
+    padding: 7px 10px;
+  }
+  .gameplay-close {
+    width: 34px;
+  }
+  .gameplay-header .realm-eyebrow {
+    font-size: 6px;
+  }
+  .adventure-layout {
+    overflow: auto;
+    grid-template-columns: 1fr;
+    display: block;
+  }
+  .adventure-map {
+    touch-action: none;
+    height: 480px;
+    border-right: 0;
+    border-bottom: 2px solid #b8a56d;
+  }
+  .adventure-detail {
+    overflow: visible;
+  }
+  .destination-cover {
+    height: 150px;
+  }
+  .gameplay-team-slots > div {
+    height: 120px;
+  }
+  .gameplay-team-slots .realm-hero {
+    height: 80px;
+  }
+  .arena-lobby-scene {
+    height: 420px;
+    border: 0;
+  }
+  .arena-ladder strong {
+    font-size: 10px;
+  }
+  .crafting-layout {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+  }
+  .craft-inventory {
+    width: 100%;
+  }
+  .craft-material-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+  }
+  .craft-material-grid > div {
+    padding: 7px 2px;
+  }
+  .craft-material-grid span {
+    font-size: 23px;
+  }
+  .craft-material-grid strong {
+    font-size: 13px;
+  }
+  .craft-material-grid small {
+    font-size: 7px;
+  }
+  .craft-use {
+    display: block;
+    width: 100%;
+  }
+  .craft-use > div:not(:first-child) {
+    border-top: 1px solid #819e6955;
+    padding: 14px;
+  }
+  .craft-workspace {
+    width: 100%;
+  }
+  .craft-recipe-tabs button {
+    flex: 1;
+    font-size: 9px;
+    min-width: 95px;
+  }
+  .craft-parchment h2 {
+    font-size: 20px;
+  }
+  .craft-inputs span,
+  .craft-output > span {
+    width: 50px;
+    height: 50px;
+  }
+  .craft-transformation {
+    gap: 9px;
+  }
+  .craft-inputs {
+    gap: 6px;
+  }
+  .craft-inputs > div {
+    min-width: 45px;
+  }
+  .craft-arrow {
+    font-size: 30px;
+  }
+  .craft-job .realm-button {
+    font-size: 9px !important;
+  }
+  .battle-unit {
+    width: 45%;
+    height: 62%;
+    bottom: 75px;
+  }
+  .battle-unit.ally {
+    left: 3%;
+  }
+  .battle-unit.enemy {
+    right: 3%;
+  }
+  .battle-vitals {
+    padding: 7px;
+  }
+  .battle-vitals strong {
+    font-size: 11px;
+  }
+  .battle-vitals > span {
+    font-size: 8px;
+  }
+  .battle-unit > .realm-hero,
+  .battle-unit > img {
+    height: calc(100% - 85px);
+  }
+  .battle-command-bar {
+    gap: 5px;
+    padding: 9px 7px;
+  }
+  .battle-command {
+    width: 24%;
+    min-height: 85px;
+    padding: 7px 3px;
+  }
+  .battle-command > span {
+    font-size: 30px;
+  }
+  .battle-command > strong {
+    font-size: 10px;
+  }
+  .battle-command > small {
+    font-size: 7px;
+  }
+  .battle-narration {
+    left: 5%;
+    right: 5%;
+    bottom: 15px;
+    font-size: 10px;
+  }
+  .battle-round {
+    top: 25px;
+    padding: 10px 20px;
+    white-space: nowrap;
+  }
+  .battle-result {
+    min-width: 0;
+    width: calc(100% - 40px);
+    padding: 24px;
+  }
+  .battle-result h2 {
+    font-size: 25px;
+  }
+  .battle-impact {
+    font-size: 90px;
+  }
+  .realm-build-grid {
+    grid-template-columns: 1fr;
+  }
+  .realm-build-grid .realm-build-card {
+    flex-direction: row;
+    text-align: left;
+    gap: 10px;
+  }
+  .realm-build-grid .realm-build-card .utility-sprite {
+    width: 85px;
+    height: 95px;
+  }
+  .realm-build-grid .realm-build-card h3 {
+    font-size: 15px;
+  }
+  .realm-build-grid .realm-build-card p {
+    font-size: 10px;
+    min-height: 0;
+  }
+  .realm-build-grid .realm-build-card .realm-button {
+    margin: 0 0 0 auto;
+  }
+  .realm-offline-strip {
+    width: calc(100% - 24px);
+    gap: 8px;
+    flex-wrap: wrap;
+    bottom: 140px;
+  }
+  .realm-offline-strip > span {
+    font-size: 12px;
+  }
+  .realm-offline-strip strong {
+    font-size: 11px;
+  }
+  .realm-offline-strip small {
+    display: none;
+  }
+  .realm-offline-strip .realm-button {
+    min-height: 35px;
+    padding: 7px 10px;
+  }
+  .production-bubble {
+    font-size: 8px !important;
+    padding: 5px 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle-impact {
+    animation: none;
+  }
+}
+
+.adventure-map {
+  touch-action: none;
+  background: #173548;
+}
+.adventure-map .map-caption p {
+  display: none;
+}
+@media (max-width: 650px), (max-height: 480px) {
+  .adventure-map .map-caption {
+    display: none;
+  }
+  .adventure-map-controls span {
+    display: none;
+  }
+}
+.battle-unit.enemy > .dinosaur-opponent { transform: scaleX(-1); }
+.gameplay-screen .dinosaur-art { image-rendering: pixelated; overflow: hidden; }
+
+/* Arena leagues: ice is the starter league; each unlocked world opens its own league */
+.arena-leagues { position: absolute; top: 14px; right: 14px; z-index: 2; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 58%; }
+.arena-leagues button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: #162f40ee; color: #e9d3a3; border: 1px solid #b0ab855c; border-left: 3px solid var(--league-color); font: inherit; font-size: 12px; cursor: pointer; }
+.arena-leagues button small { color: #a9b8ad; font-size: 10px; }
+.arena-leagues button[aria-pressed='true'] { border-color: #e4be71; border-left-color: var(--league-color); background: #23465c; }
+.arena-leagues button:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.7); }
+@media (max-width: 760px) {
+  .arena-leagues { position: static; max-width: none; justify-content: flex-start; margin: 8px; }
+}
+.gameplay-screen .arena-boss-art { object-fit: contain; image-rendering: pixelated; }
+.arena-boss-name { display: block; color: #ffe3a3; font-size: 16px; letter-spacing: 1px; margin-top: 8px; }
+.arena-boss-tag { font-style: normal; color: #ffb35c; letter-spacing: 1px; }
+
+/* Egg drops: chance on the rewards list, the egg on the victory screen */
+.reward-egg > b { color: #f5cd74; }
+.result-egg { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: -8px auto 16px; padding: 8px 14px; width: fit-content; color: #ffe3a3; background: #e4bd7122; border: 1px solid #e4bd7199; animation: result-egg-in 0.5s ease-out; }
+.result-egg small { color: #d9c79f; font-size: 11px; }
+@keyframes result-egg-in { from { opacity: 0; transform: scale(0.8); } }
+@media (prefers-reduced-motion: reduce) { .result-egg { animation: none; } }

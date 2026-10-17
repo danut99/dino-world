@@ -1,0 +1,41 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "status": "Generation stopped after five bosses at user request; remaining league champions retain ordinary dinosaur art.",
+  "prompts": [
+    {
+      "element": "fire",
+      "species": "brachiosaurus",
+      "name": "Furnace Sovereign",
+      "path": "art/realms/bosses/fire.png",
+      "prompt": "Use case: stylized-concept. ONE full-body standalone enemy boss sprite for Dino Realms pixel art game. Detailed deliberate crisp PIXEL ART, square pixel clusters, stepped shading and dark outlines, limited palette, no smooth painting or blur. Friendly fantasy cartoon dinosaur anatomy with heroic equipment, recognizable species rather than human in dinosaur costume. Adult elite boss, ornate signature silhouette clearly distinct from ordinary collectible dinosaurs. Face RIGHT in 3/4 side view, neutral battle-ready standing pose. Entire feet tail neck crown and weapon fully inside square 1024x1024 canvas with 8% transparent padding. Single character only, transparent background, NO ground, NO shadow, NO text or UI, NO extra characters. Top-left lighting. Do not use oversized surrounding effects which obscure body. Subject: long-necked volcanic Brachiosaurus emperor, charcoal scales lava fissures, black red gold samurai mage armor, towering brazier staff and crown of ember horns"
+    },
+    {
+      "element": "water",
+      "species": "trex",
+      "name": "Tidebreaker",
+      "path": "art/realms/bosses/water.png",
+      "prompt": "Use case: stylized-concept. ONE full-body standalone enemy boss sprite for Dino Realms pixel art game. Detailed deliberate crisp PIXEL ART, square pixel clusters, stepped shading and dark outlines, limited palette, no smooth painting or blur. Friendly fantasy cartoon dinosaur anatomy with heroic equipment, recognizable species rather than human in dinosaur costume. Adult elite boss, ornate signature silhouette clearly distinct from ordinary collectible dinosaurs. Face RIGHT in 3/4 side view, neutral battle-ready standing pose. Entire feet tail neck crown and weapon fully inside square 1024x1024 canvas with 8% transparent padding. Single character only, transparent background, NO ground, NO shadow, NO text or UI, NO extra characters. Top-left lighting. Do not use oversized surrounding effects which obscure body. Subject: broad-headed T-Rex admiral healer, turquoise pearl robes, shell crown, great shell staff with luminous tidal orb"
+    },
+    {
+      "element": "earth",
+      "species": "raptor",
+      "name": "Monolith Warden",
+      "path": "art/realms/bosses/earth.png",
+      "prompt": "Use case: stylized-concept. ONE full-body standalone enemy boss sprite for Dino Realms pixel art game. Detailed deliberate crisp PIXEL ART, square pixel clusters, stepped shading and dark outlines, limited palette, no smooth painting or blur. Friendly fantasy cartoon dinosaur anatomy with heroic equipment, recognizable species rather than human in dinosaur costume. Adult elite boss, ornate signature silhouette clearly distinct from ordinary collectible dinosaurs. Face RIGHT in 3/4 side view, neutral battle-ready standing pose. Entire feet tail neck crown and weapon fully inside square 1024x1024 canvas with 8% transparent padding. Single character only, transparent background, NO ground, NO shadow, NO text or UI, NO extra characters. Top-left lighting. Do not use oversized surrounding effects which obscure body. Subject: slender feather-crested Raptor passive guardian, ochre mineral plated armor, monumental stone shield and jade totem, no offensive blade"
+    },
+    {
+      "element": "nature",
+      "species": "triceratops",
+      "name": "Thorn Regent",
+      "path": "art/realms/bosses/nature.png",
+      "prompt": "Use case: stylized-concept. ONE full-body standalone enemy boss sprite for Dino Realms pixel art game. Detailed deliberate crisp PIXEL ART, square pixel clusters, stepped shading and dark outlines, limited palette, no smooth painting or blur. Friendly fantasy cartoon dinosaur anatomy with heroic equipment, recognizable species rather than human in dinosaur costume. Adult elite boss, ornate signature silhouette clearly distinct from ordinary collectible dinosaurs. Face RIGHT in 3/4 side view, neutral battle-ready standing pose. Entire feet tail neck crown and weapon fully inside square 1024x1024 canvas with 8% transparent padding. Single character only, transparent background, NO ground, NO shadow, NO text or UI, NO extra characters. Top-left lighting. Do not use oversized surrounding effects which obscure body. Subject: three-horned wide-frilled Triceratops forest monarch, bark crown branching frill, green living armor orchids vines and regeneration staff"
+    },
+    {
+      "element": "ice",
+      "species": "ankylosaurus",
+      "name": "Glacier Colossus",
+      "path": "art/realms/bosses/ice.png",
+      "prompt": "Use case: stylized-concept. ONE full-body standalone enemy boss sprite for Dino Realms pixel art game. Detailed deliberate crisp PIXEL ART, square pixel clusters, stepped shading and dark outlines, limited palette, no smooth painting or blur. Friendly fantasy cartoon dinosaur anatomy with heroic equipment, recognizable species rather than human in dinosaur costume. Adult elite boss, ornate signature silhouette clearly distinct from ordinary collectible dinosaurs. Face RIGHT in 3/4 side view, neutral battle-ready standing pose. Entire feet tail neck crown and weapon fully inside square 1024x1024 canvas with 8% transparent padding. Single character only, transparent background, NO ground, NO shadow, NO text or UI, NO extra characters. Top-left lighting. Do not use oversized surrounding effects which obscure body. Subject: low heavily armored Ankylosaurus with club tail, vast blue ice crystals fur mantle silver crown and enormous frost hammer"
+    }
+  ]
+}

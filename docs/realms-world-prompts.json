@@ -1,0 +1,82 @@
+[
+  {
+    "id": "fire",
+    "file": "public/realms/worlds/fire.png",
+    "tool": "image_gen.imagegen",
+    "reference": "public/realms/home-island-concept.png",
+    "prompt": "Use case: stylized-concept. Create ONE dedicated high resolution environment illustration for the FIRE habitat world in Dino Realms. The supplied home-island image is a STYLE, SCALE AND COMPOSITION reference only; create a brand new elemental landscape. Landscape 1536x1024 or larger, same 3:2 aspect ratio as the reference. Match the home world: expansive detailed fantasy game environment, fine crisp texture, rich foliage/rock detail, smooth readable shapes, NOT coarse low resolution pixel blocks, NOT a small sprite enlarged. A massive wide floating island dominates the frame, broad 2:1 isometric top surface, roughly x=100..1436 and y=190..670 with tall rock cliffs below. At least 65 percent of its usable top is flat spacious EMPTY terrain for dinosaur residents. Decorations and tall landmarks stay around the perimeter. Theme: dark basalt plateau, orange lava streams along the perimeter, volcanic crags and ember crystals, warm volcanic haze, spacious dark stone center. Full atmospheric background with distant tiny floating islands and clouds, thoughtful lighting. Island size, usable area and level of detail comparable to the home-world reference. Single continuous environment only. NO atlas, NO contact sheet, NO multiple panels, NO text, NO UI, NO buildings, NO habitat enclosure, NO fences, NO dinosaurs, NO characters, NO grid. Keep the full island readable and richly detailed, leaving modest sky margin.",
+    "generated": true
+  },
+  {
+    "id": "water",
+    "file": "public/realms/worlds/water.png",
+    "tool": "image_gen.imagegen",
+    "reference": "public/realms/home-island-concept.png",
+    "prompt": "Use case: stylized-concept. Create ONE dedicated high resolution environment illustration for the WATER habitat world in Dino Realms. The supplied home-island image is a STYLE, SCALE AND COMPOSITION reference only; create a brand new elemental landscape. Landscape 1536x1024 or larger, same 3:2 aspect ratio as the reference. Match the home world: expansive detailed fantasy game environment, fine crisp texture, rich foliage/rock detail, smooth readable shapes, NOT coarse low resolution pixel blocks, NOT a small sprite enlarged. A massive wide floating island dominates the frame, broad 2:1 isometric top surface, roughly x=100..1436 and y=190..670 with tall rock cliffs below. At least 65 percent of its usable top is flat spacious EMPTY terrain for dinosaur residents. Decorations and tall landmarks stay around the perimeter. Theme: turquoise lagoon and sandy plateau, corals, palms, tropical waterfalls, sunlit blue skies, spacious sand and pale stone center. Full atmospheric background with distant tiny floating islands and clouds, thoughtful lighting. Island size, usable area and level of detail comparable to the home-world reference. Single continuous environment only. NO atlas, NO contact sheet, NO multiple panels, NO text, NO UI, NO buildings, NO habitat enclosure, NO fences, NO dinosaurs, NO characters, NO grid. Keep the full island readable and richly detailed, leaving modest sky margin.",
+    "generated": true
+  },
+  {
+    "id": "earth",
+    "file": "public/realms/worlds/earth.png",
+    "tool": "image_gen.imagegen",
+    "reference": "public/realms/home-island-concept.png",
+    "prompt": "Use case: stylized-concept. Create ONE dedicated high resolution environment illustration for the EARTH habitat world in Dino Realms. The supplied home-island image is a STYLE, SCALE AND COMPOSITION reference only; create a brand new elemental landscape. Landscape 1536x1024 or larger, same 3:2 aspect ratio as the reference. Match the home world: expansive detailed fantasy game environment, fine crisp texture, rich foliage/rock detail, smooth readable shapes, NOT coarse low resolution pixel blocks, NOT a small sprite enlarged. A massive wide floating island dominates the frame, broad 2:1 isometric top surface, roughly x=100..1436 and y=190..670 with tall rock cliffs below. At least 65 percent of its usable top is flat spacious EMPTY terrain for dinosaur residents. Decorations and tall landmarks stay around the perimeter. Theme: ochre canyon plateau, layered sandstone cliffs, mineral veins and fossil rocks around the edges, bright desert sky, spacious flat warm sandstone center. Full atmospheric background with distant tiny floating islands and clouds, thoughtful lighting. Island size, usable area and level of detail comparable to the home-world reference. Single continuous environment only. NO atlas, NO contact sheet, NO multiple panels, NO text, NO UI, NO buildings, NO habitat enclosure, NO fences, NO dinosaurs, NO characters, NO grid. Keep the full island readable and richly detailed, leaving modest sky margin.",
+    "generated": true
+  },
+  {
+    "id": "nature",
+    "file": "public/realms/worlds/nature.png",
+    "tool": "image_gen.imagegen",
+    "reference": "public/realms/home-island-concept.png",
+    "prompt": "Use case: stylized-concept. Create ONE dedicated high resolution environment illustration for the NATURE habitat world in Dino Realms. The supplied home-island image is a STYLE, SCALE AND COMPOSITION reference only; create a brand new elemental landscape. Landscape 1536x1024 or larger, same 3:2 aspect ratio as the reference. Match the home world: expansive detailed fantasy game environment, fine crisp texture, rich foliage/rock detail, smooth readable shapes, NOT coarse low resolution pixel blocks, NOT a small sprite enlarged. A massive wide floating island dominates the frame, broad 2:1 isometric top surface, roughly x=100..1436 and y=190..670 with tall rock cliffs below. At least 65 percent of its usable top is flat spacious EMPTY terrain for dinosaur residents. Decorations and tall landmarks stay around the perimeter. Theme: lush emerald jungle plateau, ancient trees, vines, flowers and waterfalls on the edges, clear sunlit sky, spacious grassy center. Full atmospheric background with distant tiny floating islands and clouds, thoughtful lighting. Island size, usable area and level of detail comparable to the home-world reference. Single continuous environment only. NO atlas, NO contact sheet, NO multiple panels, NO text, NO UI, NO buildings, NO habitat enclosure, NO fences, NO dinosaurs, NO characters, NO grid. Keep the full island readable and richly detailed, leaving modest sky margin.",
+    "generated": true
+  },
+  {
+    "id": "ice",
+    "file": "public/realms/worlds/ice.png",
+    "tool": "image_gen.imagegen",
+    "reference": "public/realms/home-island-concept.png",
+    "prompt": "Use case: stylized-concept. Create ONE dedicated high resolution environment illustration for the ICE habitat world in Dino Realms. The supplied home-island image is a STYLE, SCALE AND COMPOSITION reference only; create a brand new elemental landscape. Landscape 1536x1024 or larger, same 3:2 aspect ratio as the reference. Match the home world: expansive detailed fantasy game environment, fine crisp texture, rich foliage/rock detail, smooth readable shapes, NOT coarse low resolution pixel blocks, NOT a small sprite enlarged. A massive wide floating island dominates the frame, broad 2:1 isometric top surface, roughly x=100..1436 and y=190..670 with tall rock cliffs below. At least 65 percent of its usable top is flat spacious EMPTY terrain for dinosaur residents. Decorations and tall landmarks stay around the perimeter. Theme: broad snowy plateau, blue ice cliffs, frozen waterfalls, snow-covered firs and crystals on the edges, pale winter sky, spacious snow center. Full atmospheric background with distant tiny floating islands and clouds, thoughtful lighting. Island size, usable area and level of detail comparable to the home-world reference. Single continuous environment only. NO atlas, NO contact sheet, NO multiple panels, NO text, NO UI, NO buildings, NO habitat enclosure, NO fences, NO dinosaurs, NO characters, NO grid. Keep the full island readable and richly detailed, leaving modest sky margin.",
+    "generated": true
+  },
+  {
+    "id": "lightning",
+    "file": "public/realms/worlds/lightning.png",
+    "tool": "image_gen.imagegen",
+    "reference": "public/realms/home-island-concept.png",
+    "prompt": "Use case: stylized-concept. Create ONE dedicated high resolution environment illustration for the LIGHTNING habitat world in Dino Realms. The supplied home-island image is a STYLE, SCALE AND COMPOSITION reference only; create a brand new elemental landscape. Landscape 1536x1024 or larger, same 3:2 aspect ratio as the reference. Match the home world: expansive detailed fantasy game environment, fine crisp texture, rich foliage/rock detail, smooth readable shapes, NOT coarse low resolution pixel blocks, NOT a small sprite enlarged. A massive wide floating island dominates the frame, broad 2:1 isometric top surface, roughly x=100..1436 and y=190..670 with tall rock cliffs below. At least 65 percent of its usable top is flat spacious EMPTY terrain for dinosaur residents. Decorations and tall landmarks stay around the perimeter. Theme: broad violet stone plateau, gold conductive crystals and storm crags on the edges, distant storm clouds with warm breaks of light, spacious gray violet center. Full atmospheric background with distant tiny floating islands and clouds, thoughtful lighting. Island size, usable area and level of detail comparable to the home-world reference. Single continuous environment only. NO atlas, NO contact sheet, NO multiple panels, NO text, NO UI, NO buildings, NO habitat enclosure, NO fences, NO dinosaurs, NO characters, NO grid. Keep the full island readable and richly detailed, leaving modest sky margin.",
+    "generated": true
+  },
+  {
+    "id": "wind",
+    "file": "public/realms/worlds/wind.png",
+    "tool": "image_gen.imagegen",
+    "reference": "public/realms/home-island-concept.png",
+    "prompt": "Use case: stylized-concept. Create ONE dedicated high resolution environment illustration for the WIND habitat world in Dino Realms. The supplied home-island image is a STYLE, SCALE AND COMPOSITION reference only; create a brand new elemental landscape. Landscape 1536x1024 or larger, same 3:2 aspect ratio as the reference. Match the home world: expansive detailed fantasy game environment, fine crisp texture, rich foliage/rock detail, smooth readable shapes, NOT coarse low resolution pixel blocks, NOT a small sprite enlarged. A massive wide floating island dominates the frame, broad 2:1 isometric top surface, roughly x=100..1436 and y=190..670 with tall rock cliffs below. At least 65 percent of its usable top is flat spacious EMPTY terrain for dinosaur residents. Decorations and tall landmarks stay around the perimeter. Theme: high green meadow plateau, ivory stone arches and wispy clouds around the edges, clear azure skies, spacious pale grassy center. Full atmospheric background with distant tiny floating islands and clouds, thoughtful lighting. Island size, usable area and level of detail comparable to the home-world reference. Single continuous environment only. NO atlas, NO contact sheet, NO multiple panels, NO text, NO UI, NO buildings, NO habitat enclosure, NO fences, NO dinosaurs, NO characters, NO grid. Keep the full island readable and richly detailed, leaving modest sky margin.",
+    "generated": true
+  },
+  {
+    "id": "dark",
+    "file": "public/realms/worlds/dark.png",
+    "tool": "image_gen.imagegen",
+    "reference": "public/realms/home-island-concept.png",
+    "prompt": "Use case: stylized-concept. Create ONE dedicated high resolution environment illustration for the DARK habitat world in Dino Realms. The supplied home-island image is a STYLE, SCALE AND COMPOSITION reference only; create a brand new elemental landscape. Landscape 1536x1024 or larger, same 3:2 aspect ratio as the reference. Match the home world: expansive detailed fantasy game environment, fine crisp texture, rich foliage/rock detail, smooth readable shapes, NOT coarse low resolution pixel blocks, NOT a small sprite enlarged. A massive wide floating island dominates the frame, broad 2:1 isometric top surface, roughly x=100..1436 and y=190..670 with tall rock cliffs below. At least 65 percent of its usable top is flat spacious EMPTY terrain for dinosaur residents. Decorations and tall landmarks stay around the perimeter. Theme: readable dusky violet plateau, purple trees and glowing mushrooms around the edges, blue twilight sky, spacious visible violet stone center, never nearly black. Full atmospheric background with distant tiny floating islands and clouds, thoughtful lighting. Island size, usable area and level of detail comparable to the home-world reference. Single continuous environment only. NO atlas, NO contact sheet, NO multiple panels, NO text, NO UI, NO buildings, NO habitat enclosure, NO fences, NO dinosaurs, NO characters, NO grid. Keep the full island readable and richly detailed, leaving modest sky margin.",
+    "generated": true
+  },
+  {
+    "id": "light",
+    "file": "public/realms/worlds/light.png",
+    "tool": "image_gen.imagegen",
+    "reference": "public/realms/home-island-concept.png",
+    "prompt": "Use case: stylized-concept. Create ONE dedicated high resolution environment illustration for the LIGHT habitat world in Dino Realms. The supplied home-island image is a STYLE, SCALE AND COMPOSITION reference only; create a brand new elemental landscape. Landscape 1536x1024 or larger, same 3:2 aspect ratio as the reference. Match the home world: expansive detailed fantasy game environment, fine crisp texture, rich foliage/rock detail, smooth readable shapes, NOT coarse low resolution pixel blocks, NOT a small sprite enlarged. A massive wide floating island dominates the frame, broad 2:1 isometric top surface, roughly x=100..1436 and y=190..670 with tall rock cliffs below. At least 65 percent of its usable top is flat spacious EMPTY terrain for dinosaur residents. Decorations and tall landmarks stay around the perimeter. Theme: ivory stone plateau, golden trees, warm gold crystals and graceful ruined arches around the edges, sunlit skies, spacious cream stone center. Full atmospheric background with distant tiny floating islands and clouds, thoughtful lighting. Island size, usable area and level of detail comparable to the home-world reference. Single continuous environment only. NO atlas, NO contact sheet, NO multiple panels, NO text, NO UI, NO buildings, NO habitat enclosure, NO fences, NO dinosaurs, NO characters, NO grid. Keep the full island readable and richly detailed, leaving modest sky margin.",
+    "generated": true
+  },
+  {
+    "id": "arcane",
+    "file": "public/realms/worlds/arcane.png",
+    "tool": "image_gen.imagegen",
+    "reference": "public/realms/home-island-concept.png",
+    "prompt": "Use case: stylized-concept. Create ONE dedicated high resolution environment illustration for the ARCANE habitat world in Dino Realms. The supplied home-island image is a STYLE, SCALE AND COMPOSITION reference only; create a brand new elemental landscape. Landscape 1536x1024 or larger, same 3:2 aspect ratio as the reference. Match the home world: expansive detailed fantasy game environment, fine crisp texture, rich foliage/rock detail, smooth readable shapes, NOT coarse low resolution pixel blocks, NOT a small sprite enlarged. A massive wide floating island dominates the frame, broad 2:1 isometric top surface, roughly x=100..1436 and y=190..670 with tall rock cliffs below. At least 65 percent of its usable top is flat spacious EMPTY terrain for dinosaur residents. Decorations and tall landmarks stay around the perimeter. Theme: lavender stone plateau, cyan rune monoliths and floating crystal fragments around the edges, clear violet blue sky, spacious lavender stone center. Full atmospheric background with distant tiny floating islands and clouds, thoughtful lighting. Island size, usable area and level of detail comparable to the home-world reference. Single continuous environment only. NO atlas, NO contact sheet, NO multiple panels, NO text, NO UI, NO buildings, NO habitat enclosure, NO fences, NO dinosaurs, NO characters, NO grid. Keep the full island readable and richly detailed, leaving modest sky margin.",
+    "generated": true
+  }
+]

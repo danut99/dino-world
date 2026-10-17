@@ -1,0 +1,7 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "asset": "public/realms/gameplay/market-building-pixel.png",
+  "reference": "public/realms/gameplay/utility-buildings-pixel.png",
+  "transparent_background": true,
+  "prompt": "Use case: stylized-concept. Create ONE standalone Market utility building sprite for Dino Realms. Reference image is STYLE ONLY: match its deliberate detailed pixel art, square pixel clusters, stepped shading, dark outlines, warm wood stone and lush grass, same 2:1 isometric view showing front and right side, light upper left. A charming dinosaur fantasy trading market: substantial timber and sandstone merchant hall with terracotta roof, teal and cream striped canvas awnings over open counters, crates of fruit, rolled cloth, small sacks, baskets and golden coin display, tiny egg-shaped carved trade emblem above entrance. No characters. A compact grass-edged square diamond foundation matching the reference utilities, entire building and foundation centered within square canvas with 8 percent clear margin all sides. Large readable architecture comparable to the workshop, not just a tiny stall. Transparent background, no text, no lettering, no UI, no scenery outside foundation. Crisp PIXEL ART throughout; no smooth vector, no realistic 3D, no blurry painterly shading. Produce square 1024x1024 transparent PNG."
+}

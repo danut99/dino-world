@@ -1,0 +1,7 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "asset": "public/realms/home-island-wide-v1.png",
+  "reference": "public/realms/home-island-concept.png",
+  "status": "Active main-island background. Generated size 1672x941, rendered at its original aspect ratio over approximately 1820x1024 world units, centered on the saved building grid. Home-specific camera bounds allow sideways 1x dragging; other worlds retain their existing artwork and bounds.",
+  "prompt": "Edit the reference main island into a WIDER landscape game background. Output canvas 1824x1024 pixels (approximately 16:9). Preserve the reference's deliberately detailed PIXEL ART style, coherent pixel clusters, sunny palette, isometric floating grass island, stone cliffs, waterfalls, ruined arches and lush trees around edges, big empty grassy buildable center. Expand the actual island's grassy plateau and cliff geography to BOTH LEFT AND RIGHT, with additional walkable grass and peripheral forest ruins, giving a noticeably wider horizontal island rather than just adding sky margins. Keep the existing central terrain recognizable, same perspective and art density. Entire island visible with some sky/cloud margin beyond both edges, deep cliffs below. No buildings, dinosaurs, characters, labels, UI, text, dark background or blurred fills. This is a new sibling wide version, do not add game objects. Crisp pixel art throughout. Wide 1824 by 1024 composition."
+}

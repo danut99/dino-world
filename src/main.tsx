@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './app/App';
+import RealmsApp from './realms/RealmsApp';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { watchErrors } from './app/errors';
 import './styles/fonts.css';
@@ -13,10 +13,13 @@ import './styles/adventure.css';
 import './styles/forge.css';
 
 watchErrors();
+const App = React.lazy(() => import('./app/App'));
+const classic = new URLSearchParams(window.location.search).get('mode') === 'classic';
+if (!classic) document.getElementById('boot-loader')?.remove();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      <React.Suspense fallback={null}>{classic ? <App /> : <RealmsApp />}</React.Suspense>
     </ErrorBoundary>
   </React.StrictMode>,
 );

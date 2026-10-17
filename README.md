@@ -1,4 +1,14 @@
-# Dino World
+# Dino World / Dino Realms
+
+The default entry now opens the **Dino Realms first-path prototype**, adapted from the supplied reference package. Run `npm install`, then `npm run dev`. Open `?mode=classic` for the original Dino World game; its saves are preserved separately.
+
+The main island has five placeable utilities: Hatchery, Farm, Workshop, Expedition Portal and Arena Gate. Habitats remain separate elemental worlds; Ignis lives in the fire world. Full-screen pixel-art expeditions, arena and crafting include a ten-world adventure map, resumable solo battles, a timed crafting queue, material rewards and offline collection. Romanian is the default, with English in Settings. Character art is static; final animations and 3v3 remain pending. See [adaptation status](docs/STATUS.md), [decisions](docs/DECISIONS.md), and [asset backlog](docs/ASSET_BACKLOG.md).
+
+Validation: `npm test`, `npm run build`. Browser QA: `node scripts/review-realms.mjs` with Playwright and Microsoft Edge installed (`PLAYWRIGHT_MODULE` can point to an existing Playwright package). On Windows where PowerShell blocks npm.ps1, use `npm.cmd`.
+
+Reference 03/05 UI checks: `node scripts/review-reference-gameplay.mjs`. If the disk is nearly full, `node scripts/build-low-space.mjs` produces a complete local build using hard links for immutable public assets; rebuild rather than editing files in `dist`. The Windows sandbox config-loader restriction can be avoided with `npm.cmd test -- --configLoader runner`.
+
+The documentation below describes the retained classic game.
 
 Joc de colecție cu dinozauri, în stilul Dragon City: o insulă cu habitate pe elemente, ferme, incubator,
 împerechere și un atlas al speciilor. Aspectul fiecărui dinozaur vine dintr-un generator (elemente + raritate + seed)

@@ -1,0 +1,106 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "requestedSize": "approximately 1824x1024; actual sizes recorded after generation",
+  "prompts": [
+    {
+      "element": "fire",
+      "reference": "public/realms/worlds/fire.png",
+      "asset": "public/realms/worlds/fire-wide-v1.png",
+      "prompt": "Edit this elemental island game background into a WIDER 16:9 landscape, matching the approved wide main island. Output approximately 1824x1024. Preserve its specific elemental palette, landmarks, detailed deliberate PIXEL ART with crisp square clusters and stepped shading, isometric floating island, open central terrain and cliff edges. Expand actual traversable plateau and geography to BOTH LEFT AND RIGHT, not just extra sky margins. Keep a very large empty center for dinosaur residents, peripheral elemental scenery, full island visible with sky/cloud margins. Same top-left lighting and game-art density. No buildings, characters, dinosaurs, UI, text, labels, blur, smooth painting or black void. Faithfully retain this world's elemental identity. Element: fire.",
+      "actualSize": {
+        "width": 1672,
+        "height": 941
+      }
+    },
+    {
+      "element": "water",
+      "reference": "public/realms/worlds/water.png",
+      "asset": "public/realms/worlds/water-wide-v1.png",
+      "prompt": "Edit this elemental island game background into a WIDER 16:9 landscape, matching the approved wide main island. Output approximately 1824x1024. Preserve its specific elemental palette, landmarks, detailed deliberate PIXEL ART with crisp square clusters and stepped shading, isometric floating island, open central terrain and cliff edges. Expand actual traversable plateau and geography to BOTH LEFT AND RIGHT, not just extra sky margins. Keep a very large empty center for dinosaur residents, peripheral elemental scenery, full island visible with sky/cloud margins. Same top-left lighting and game-art density. No buildings, characters, dinosaurs, UI, text, labels, blur, smooth painting or black void. Faithfully retain this world's elemental identity. Element: water.",
+      "actualSize": {
+        "width": 1672,
+        "height": 941
+      }
+    },
+    {
+      "element": "earth",
+      "reference": "public/realms/worlds/earth.png",
+      "asset": "public/realms/worlds/earth-wide-v1.png",
+      "prompt": "Edit this elemental island game background into a WIDER 16:9 landscape, matching the approved wide main island. Output approximately 1824x1024. Preserve its specific elemental palette, landmarks, detailed deliberate PIXEL ART with crisp square clusters and stepped shading, isometric floating island, open central terrain and cliff edges. Expand actual traversable plateau and geography to BOTH LEFT AND RIGHT, not just extra sky margins. Keep a very large empty center for dinosaur residents, peripheral elemental scenery, full island visible with sky/cloud margins. Same top-left lighting and game-art density. No buildings, characters, dinosaurs, UI, text, labels, blur, smooth painting or black void. Faithfully retain this world's elemental identity. Element: earth.",
+      "actualSize": {
+        "width": 1672,
+        "height": 941
+      }
+    },
+    {
+      "element": "nature",
+      "reference": "public/realms/worlds/nature.png",
+      "asset": "public/realms/worlds/nature-wide-v1.png",
+      "prompt": "Edit this elemental island game background into a WIDER 16:9 landscape, matching the approved wide main island. Output approximately 1824x1024. Preserve its specific elemental palette, landmarks, detailed deliberate PIXEL ART with crisp square clusters and stepped shading, isometric floating island, open central terrain and cliff edges. Expand actual traversable plateau and geography to BOTH LEFT AND RIGHT, not just extra sky margins. Keep a very large empty center for dinosaur residents, peripheral elemental scenery, full island visible with sky/cloud margins. Same top-left lighting and game-art density. No buildings, characters, dinosaurs, UI, text, labels, blur, smooth painting or black void. Faithfully retain this world's elemental identity. Element: nature.",
+      "actualSize": {
+        "width": 1672,
+        "height": 941
+      }
+    },
+    {
+      "element": "ice",
+      "reference": "public/realms/worlds/ice.png",
+      "asset": "public/realms/worlds/ice-wide-v1.png",
+      "prompt": "Edit this elemental island game background into a WIDER 16:9 landscape, matching the approved wide main island. Output approximately 1824x1024. Preserve its specific elemental palette, landmarks, detailed deliberate PIXEL ART with crisp square clusters and stepped shading, isometric floating island, open central terrain and cliff edges. Expand actual traversable plateau and geography to BOTH LEFT AND RIGHT, not just extra sky margins. Keep a very large empty center for dinosaur residents, peripheral elemental scenery, full island visible with sky/cloud margins. Same top-left lighting and game-art density. No buildings, characters, dinosaurs, UI, text, labels, blur, smooth painting or black void. Faithfully retain this world's elemental identity. Element: ice.",
+      "actualSize": {
+        "width": 1672,
+        "height": 941
+      }
+    },
+    {
+      "element": "lightning",
+      "reference": "public/realms/worlds/lightning.png",
+      "asset": "public/realms/worlds/lightning-wide-v1.png",
+      "prompt": "Edit this elemental island game background into a WIDER 16:9 landscape, matching the approved wide main island. Output approximately 1824x1024. Preserve its specific elemental palette, landmarks, detailed deliberate PIXEL ART with crisp square clusters and stepped shading, isometric floating island, open central terrain and cliff edges. Expand actual traversable plateau and geography to BOTH LEFT AND RIGHT, not just extra sky margins. Keep a very large empty center for dinosaur residents, peripheral elemental scenery, full island visible with sky/cloud margins. Same top-left lighting and game-art density. No buildings, characters, dinosaurs, UI, text, labels, blur, smooth painting or black void. Faithfully retain this world's elemental identity. Element: lightning.",
+      "actualSize": {
+        "width": 1672,
+        "height": 941
+      }
+    },
+    {
+      "element": "wind",
+      "reference": "public/realms/worlds/wind.png",
+      "asset": "public/realms/worlds/wind-wide-v1.png",
+      "prompt": "Edit this elemental island game background into a WIDER 16:9 landscape, matching the approved wide main island. Output approximately 1824x1024. Preserve its specific elemental palette, landmarks, detailed deliberate PIXEL ART with crisp square clusters and stepped shading, isometric floating island, open central terrain and cliff edges. Expand actual traversable plateau and geography to BOTH LEFT AND RIGHT, not just extra sky margins. Keep a very large empty center for dinosaur residents, peripheral elemental scenery, full island visible with sky/cloud margins. Same top-left lighting and game-art density. No buildings, characters, dinosaurs, UI, text, labels, blur, smooth painting or black void. Faithfully retain this world's elemental identity. Element: wind.",
+      "actualSize": {
+        "width": 1672,
+        "height": 941
+      }
+    },
+    {
+      "element": "dark",
+      "reference": "public/realms/worlds/dark.png",
+      "asset": "public/realms/worlds/dark-wide-v1.png",
+      "prompt": "Edit this elemental island game background into a WIDER 16:9 landscape, matching the approved wide main island. Output approximately 1824x1024. Preserve its specific elemental palette, landmarks, detailed deliberate PIXEL ART with crisp square clusters and stepped shading, isometric floating island, open central terrain and cliff edges. Expand actual traversable plateau and geography to BOTH LEFT AND RIGHT, not just extra sky margins. Keep a very large empty center for dinosaur residents, peripheral elemental scenery, full island visible with sky/cloud margins. Same top-left lighting and game-art density. No buildings, characters, dinosaurs, UI, text, labels, blur, smooth painting or black void. Faithfully retain this world's elemental identity. Element: dark.",
+      "actualSize": {
+        "width": 1672,
+        "height": 941
+      }
+    },
+    {
+      "element": "light",
+      "reference": "public/realms/worlds/light.png",
+      "asset": "public/realms/worlds/light-wide-v1.png",
+      "prompt": "Edit this elemental island game background into a WIDER 16:9 landscape, matching the approved wide main island. Output approximately 1824x1024. Preserve its specific elemental palette, landmarks, detailed deliberate PIXEL ART with crisp square clusters and stepped shading, isometric floating island, open central terrain and cliff edges. Expand actual traversable plateau and geography to BOTH LEFT AND RIGHT, not just extra sky margins. Keep a very large empty center for dinosaur residents, peripheral elemental scenery, full island visible with sky/cloud margins. Same top-left lighting and game-art density. No buildings, characters, dinosaurs, UI, text, labels, blur, smooth painting or black void. Faithfully retain this world's elemental identity. Element: light.",
+      "actualSize": {
+        "width": 1672,
+        "height": 941
+      }
+    },
+    {
+      "element": "arcane",
+      "reference": "public/realms/worlds/arcane.png",
+      "asset": "public/realms/worlds/arcane-wide-v1.png",
+      "prompt": "Edit this elemental island game background into a WIDER 16:9 landscape, matching the approved wide main island. Output approximately 1824x1024. Preserve its specific elemental palette, landmarks, detailed deliberate PIXEL ART with crisp square clusters and stepped shading, isometric floating island, open central terrain and cliff edges. Expand actual traversable plateau and geography to BOTH LEFT AND RIGHT, not just extra sky margins. Keep a very large empty center for dinosaur residents, peripheral elemental scenery, full island visible with sky/cloud margins. Same top-left lighting and game-art density. No buildings, characters, dinosaurs, UI, text, labels, blur, smooth painting or black void. Faithfully retain this world's elemental identity. Element: arcane.",
+      "actualSize": {
+        "width": 1672,
+        "height": 941
+      }
+    }
+  ]
+}
