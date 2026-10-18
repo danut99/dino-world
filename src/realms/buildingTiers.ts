@@ -9,11 +9,25 @@ import { ARENA_LEVELS, HATCHERY_LEVELS, WORKSHOP_LEVELS, type Save } from './gam
  */
 export const BUILDING_TIERS: Partial<Record<UtilityKind, { from: number; art: string }[]>> = {
   // Clădirile PixelLab (96×96, desenate ×2 pe amprenta 3×3), în stilul insulelor. Nivelurile mai mari vin pe rând.
-  farm: [{ from: 1, art: '/realms/buildings/px/farm-1.png' }],
-  hatchery: [{ from: 1, art: '/realms/buildings/px/hatchery-1.png' }],
-  workshop: [{ from: 1, art: '/realms/buildings/px/workshop-1.png' }],
-  arena: [{ from: 1, art: '/realms/buildings/px/arena-1.png' }],
-  portal: [{ from: 1, art: '/realms/buildings/px/portal-1.png' }],
+  farm: [
+    { from: 1, art: '/realms/buildings/px/farm-1.png' },
+    { from: 3, art: '/realms/buildings/px/farm-3.png' },
+    { from: 5, art: '/realms/buildings/px/farm-5.png' },
+  ],
+  hatchery: [
+    { from: 1, art: '/realms/buildings/px/hatchery-1.png' },
+    { from: 2, art: '/realms/buildings/px/hatchery-2.png' },
+    { from: 3, art: '/realms/buildings/px/hatchery-3.png' },
+  ],
+  workshop: [
+    { from: 1, art: '/realms/buildings/px/workshop-1.png' },
+    { from: 2, art: '/realms/buildings/px/workshop-2.png' },
+    { from: 3, art: '/realms/buildings/px/workshop-3.png' },
+  ],
+  arena: [
+    { from: 1, art: '/realms/buildings/px/arena-1.png' },
+    { from: 2, art: '/realms/buildings/px/arena-2.png' },
+  ],
   market: [{ from: 1, art: '/realms/buildings/px/market-1.png' }],
 };
 /** Every building kind that has its own sprite. */
@@ -79,6 +93,6 @@ export function buildingLevel(s: Save, kind: UtilityKind): { level: number; max:
 
 /** The milestone art for the building's current level, or null while it still uses its base look. */
 export function tierArt(s: Save, kind: UtilityKind): string | null {
-  const level = buildingLevel(s, kind)?.level ?? 1;
+  const level = buildingLevel(s, kind)?.level || 1;
   return [...(BUILDING_TIERS[kind] ?? [])].reverse().find((t) => level >= t.from)?.art ?? null;
 }

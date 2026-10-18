@@ -83,7 +83,7 @@ export function loadAnimation(species: Species, element: RealmId, stage: Stage) 
   if (!AVAILABLE.has(id)) return Promise.resolve(null);
   return loadManifest(id);
 }
-export const ANIMATED_BOSS_ELEMENTS = ['fire', 'water', 'earth', 'nature'] as const;
+export const ANIMATED_BOSS_ELEMENTS = ['fire', 'water', 'earth', 'nature', 'lightning'] as const;
 export function loadBossAnimation(element: RealmId) {
   return ANIMATED_BOSS_ELEMENTS.some(id => id === element)
     ? loadManifest(`boss_${element}_adult`) : Promise.resolve(null);
