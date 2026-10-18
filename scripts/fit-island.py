@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SCENE_W, SCENE_H, SCALE = 1536, 1024, 2
 ERODE = 4
 TOL = None
+FLAT = None
 
 
 def fit(realm, src, cells=None, seed=None, corners=None):
@@ -38,6 +39,13 @@ def fit(realm, src, cells=None, seed=None, corners=None):
     ref = np.median(win, 0)
     tol = TOL or max(28.0, float(np.percentile(np.sqrt(((win - ref) ** 2).sum(1)), 90)) * 1.6)
     near = alpha & (np.sqrt(((rgb - ref) ** 2).sum(-1)) < tol)
+    if FLAT:
+        # platoul e neted: deviație mică a luminanței într-o fereastră 9×9 (stâncile și decorul sunt „zgomotoase”)
+        lum = rgb @ np.array([0.299, 0.587, 0.114])
+        m1 = ndimage.uniform_filter(lum, 9)
+        m2 = ndimage.uniform_filter(lum * lum, 9)
+        sd = np.sqrt(np.maximum(m2 - m1 * m1, 0))
+        near &= sd < FLAT
     near = ndimage.binary_closing(near, np.ones((3, 3)), iterations=2)
     # eroziune înainte de etichetare: rupe punțile subțiri spre stâncile de aceeași culoare
     core = ndimage.binary_erosion(near, np.ones((3, 3)), iterations=ERODE)
@@ -124,6 +132,8 @@ if __name__ == '__main__':
     seed = tuple(map(int, args[args.index('--seed') + 1].split(','))) if '--seed' in args else None
     if '--erode' in args:
         ERODE = int(args[args.index('--erode') + 1])
+    if '--flat' in args:
+        FLAT = float(args[args.index('--flat') + 1])
     if '--tol' in args:
         TOL = float(args[args.index('--tol') + 1])
     corners = args[args.index('--corners') + 1] if '--corners' in args else None
