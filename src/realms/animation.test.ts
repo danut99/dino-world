@@ -21,11 +21,24 @@ const manifest = (): SpriteManifest => ({
   clips: { se: { idle: structuredClone(clip) } },
 });
 describe('animation timing', () => {
+  it('uses the enhanced fire T-Rex clips and completed Sylvaraa ultimate', () => {
+    for (const stage of ['juvenile', 'adult']) {
+      const m = JSON.parse(readFileSync(`public/realms/animations/trex_fire_${stage}/manifest.json`, 'utf8')) as SpriteManifest;
+      expect(m.clips.se?.attack?.durationsMs).toHaveLength(16);
+      expect(m.clips.se?.defend?.durationsMs).toHaveLength(16);
+      expect(m.clips.se?.walk?.durationsMs).toHaveLength(12);
+      expect(m.clips.se?.ultimate?.durationsMs.length).toBe(stage === 'adult' ? 24 : undefined);
+      expect(m.clips.ne?.walk).toBeDefined();
+    }
+    const boss = JSON.parse(readFileSync('public/realms/animations/boss_nature_adult/manifest.json', 'utf8')) as SpriteManifest;
+    expect(boss.clips.se?.ultimate?.durationsMs).toHaveLength(40);
+    expect(boss.clips.se?.ultimate?.loop).toBe(false);
+  });
   it('ships complete local atlases for every registered family and age', () => {
     for (const id of [...inventory, ...ANIMATED_BOSS_ELEMENTS.map(e => `boss_${e}_adult`)]) {
       const m = validateManifest(JSON.parse(readFileSync(`public/realms/animations/${id}/manifest.json`, 'utf8')));
       expect(`${m.variantId}_${m.stage}`).toBe(id);
-      const required = ['idle', 'walk', ...(m.stage === 'baby' ? [] : ['attack', 'defend', 'hurt', 'death']), ...(m.stage === 'adult' && id !== 'boss_nature_adult' ? ['ultimate'] : [])];
+      const required = ['idle', 'walk', ...(m.stage === 'baby' ? [] : ['attack', 'defend', 'hurt', 'death']), ...(m.stage === 'adult' ? ['ultimate'] : [])];
       for (const name of required) expect(m.clips.se).toHaveProperty(name);
       for (const direction of Object.values(m.clips)) {
         for (const c of Object.values(direction ?? {})) {

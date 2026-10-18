@@ -51,6 +51,70 @@
         ],
         "loop": true
       },
+      "attack": {
+        "sheet": "/realms/animations/trex_fire_adult/attack-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 8,
+        "durationsMs": [
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83
+        ],
+        "loop": false,
+        "impactFrame": 8
+      },
+      "defend": {
+        "sheet": "/realms/animations/trex_fire_adult/defend-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 8,
+        "durationsMs": [
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100
+        ],
+        "loop": false
+      },
+      "hurt": {
+        "sheet": "/realms/animations/trex_fire_adult/hurt-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 4,
+        "durationsMs": [
+          83,
+          83,
+          83,
+          83
+        ],
+        "loop": false
+      },
       "death": {
         "sheet": "/realms/animations/trex_fire_adult/death-se.png",
         "frameWidth": 256,
@@ -93,33 +157,6 @@
           83,
           83,
           83,
-          83
-        ],
-        "loop": false,
-        "impactFrame": 10
-      },
-      "hurt": {
-        "sheet": "/realms/animations/trex_fire_adult/hurt-se.png",
-        "frameWidth": 256,
-        "frameHeight": 256,
-        "columns": 4,
-        "durationsMs": [
-          83,
-          83,
-          83,
-          83
-        ],
-        "loop": false
-      },
-      "attack": {
-        "sheet": "/realms/animations/trex_fire_adult/attack-se.png",
-        "frameWidth": 256,
-        "frameHeight": 256,
-        "columns": 8,
-        "durationsMs": [
-          83,
-          83,
-          83,
           83,
           83,
           83,
@@ -127,22 +164,7 @@
           83
         ],
         "loop": false,
-        "impactFrame": 4
-      },
-      "defend": {
-        "sheet": "/realms/animations/trex_fire_adult/defend-se.png",
-        "frameWidth": 256,
-        "frameHeight": 256,
-        "columns": 6,
-        "durationsMs": [
-          100,
-          100,
-          100,
-          100,
-          100,
-          100
-        ],
-        "loop": false
+        "impactFrame": 12
       }
     },
     "ne": {

@@ -9,10 +9,48 @@
   },
   "pivot": {
     "x": 128,
-    "y": 216
+    "y": 223
   },
   "clips": {
     "se": {
+      "idle": {
+        "sheet": "/realms/animations/boss_nature_adult/idle-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 8,
+        "durationsMs": [
+          125,
+          125,
+          125,
+          125,
+          125,
+          125,
+          125,
+          125
+        ],
+        "loop": true
+      },
+      "walk": {
+        "sheet": "/realms/animations/boss_nature_adult/walk-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 8,
+        "durationsMs": [
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83
+        ],
+        "loop": true
+      },
       "attack": {
         "sheet": "/realms/animations/boss_nature_adult/attack-se.png",
         "frameWidth": 256,
@@ -43,16 +81,12 @@
         "loop": false,
         "impactFrame": 10
       },
-      "death": {
-        "sheet": "/realms/animations/boss_nature_adult/death-se.png",
+      "defend": {
+        "sheet": "/realms/animations/boss_nature_adult/defend-se.png",
         "frameWidth": 256,
         "frameHeight": 256,
         "columns": 8,
         "durationsMs": [
-          100,
-          100,
-          100,
-          100,
           100,
           100,
           100,
@@ -93,12 +127,16 @@
         ],
         "loop": false
       },
-      "defend": {
-        "sheet": "/realms/animations/boss_nature_adult/defend-se.png",
+      "death": {
+        "sheet": "/realms/animations/boss_nature_adult/death-se.png",
         "frameWidth": 256,
         "frameHeight": 256,
         "columns": 8,
         "durationsMs": [
+          100,
+          100,
+          100,
+          100,
           100,
           100,
           100,
@@ -122,29 +160,40 @@
         ],
         "loop": false
       },
-      "idle": {
-        "sheet": "/realms/animations/boss_nature_adult/idle-se.png",
+      "ultimate": {
+        "sheet": "/realms/animations/boss_nature_adult/ultimate-se.png",
         "frameWidth": 256,
         "frameHeight": 256,
         "columns": 8,
         "durationsMs": [
-          125,
-          125,
-          125,
-          125,
-          125,
-          125,
-          125,
-          125
-        ],
-        "loop": true
-      },
-      "walk": {
-        "sheet": "/realms/animations/boss_nature_adult/walk-se.png",
-        "frameWidth": 256,
-        "frameHeight": 256,
-        "columns": 8,
-        "durationsMs": [
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
           83,
           83,
           83,
@@ -158,7 +207,8 @@
           83,
           83
         ],
-        "loop": true
+        "loop": false,
+        "impactFrame": 20
       }
     }
   }
