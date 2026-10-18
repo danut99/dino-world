@@ -520,3 +520,16 @@
 .realms-app .realm-collect.empty {
   opacity: 0.6;
 }
+/* eticheta locuitorilor dintr-o lume stă deasupra barei de jos, nu peste ea */
+@media (min-width: 761px) {
+  .realms-app .world-resident-book {
+    bottom: 170px;
+  }
+}
+.realms-app .world-resident-book {
+  background: none;
+  border: 6px solid transparent;
+  border-image: var(--frame-card);
+  image-rendering: pixelated;
+  color: var(--ui-text);
+}

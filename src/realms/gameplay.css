@@ -29,7 +29,7 @@
 .adventure-map-plane {
   position: absolute;
   inset: 0;
-  background: url('/realms/gameplay/all-worlds-map-pixel.webp') center / 100% 100%;
+  background: url('/realms/gameplay/all-worlds-map-px.png') center / 100% 100%;
   image-rendering: pixelated;
   transform-origin: center;
   will-change: transform;

@@ -8,18 +8,16 @@ import { ARENA_LEVELS, HATCHERY_LEVELS, WORKSHOP_LEVELS, type Save } from './gam
  * (see docs/building-tier-art-prompts.json); until its file exists, the building keeps its current art.
  */
 export const BUILDING_TIERS: Partial<Record<UtilityKind, { from: number; art: string }[]>> = {
-  farm: [
-    { from: 1, art: FARM_ART },
-  ],
-  hatchery: [
-    { from: 2, art: '/realms/buildings/hatchery-2.webp' },
-    { from: 3, art: '/realms/buildings/hatchery-3.webp' },
-  ],
-  workshop: [
-    { from: 1, art: WORKSHOP_ART },
-  ],
-  arena: [{ from: 2, art: '/realms/buildings/arena-2.webp' }],
+  // Clădirile PixelLab (96×96, desenate ×2 pe amprenta 3×3), în stilul insulelor. Nivelurile mai mari vin pe rând.
+  farm: [{ from: 1, art: '/realms/buildings/px/farm-1.png' }],
+  hatchery: [{ from: 1, art: '/realms/buildings/px/hatchery-1.png' }],
+  workshop: [{ from: 1, art: '/realms/buildings/px/workshop-1.png' }],
+  arena: [{ from: 1, art: '/realms/buildings/px/arena-1.png' }],
+  portal: [{ from: 1, art: '/realms/buildings/px/portal-1.png' }],
+  market: [{ from: 1, art: '/realms/buildings/px/market-1.png' }],
 };
+/** Every building kind that has its own sprite. */
+export const TIERED = Object.keys(BUILDING_TIERS) as UtilityKind[];
 /** Buildings with levels, in the order their upgrades appear. */
 export const LEVELED: UtilityKind[] = ['farm', 'hatchery', 'workshop', 'arena'];
 

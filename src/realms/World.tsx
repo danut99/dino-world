@@ -1,9 +1,9 @@
-import { drawWorkshop, WORKSHOP_GROUND } from './animatedWorkshop';
-import { drawFarm, FARM_GROUND } from './animatedFarm';
+import { drawWorkshop, WORKSHOP_ART, WORKSHOP_GROUND } from './animatedWorkshop';
+import { drawFarm, FARM_ART, FARM_GROUND } from './animatedFarm';
 import { useEffect, useRef, useState } from 'react';
 import { advance, canPlace, ELEMENTS, farmNextAt, type Building, type Save, type RealmId } from './game';
 import { constrainPan, HOME_ART, SCENE } from './camera';
-import { buildingLevel, groundLine, LEVELED, measureGround, tierArt } from './buildingTiers';
+import { buildingLevel, groundLine, LEVELED, measureGround, TIERED, tierArt } from './buildingTiers';
 import { worldArt } from './worldArt';
 import { ISLANDS, SKIES } from './islands';
 import HOME_ISLAND from './islands/home.json';
@@ -52,7 +52,7 @@ const MAX_ZOOM = 2.5;
 /** Insula principală e mare: pornește micșorată, cu tot platoul în cadru. */
 const HOME_ZOOM = 0.8;
 /** Drawn building size; 260 was the original. The lift keeps the base on the same 3×3 footprint. */
-const BUILDING_SIZE = 196,
+const BUILDING_SIZE = 192,
   BUILDING_LIFT = Math.round((BUILDING_SIZE * 205) / 260);
 export function drawBuilding(
   ctx: CanvasRenderingContext2D,
@@ -62,11 +62,11 @@ export function drawBuilding(
   animationMs = 0,
 ) {
   const p = project(b.x + 1.5, b.y + 1.5);
-  if (b.kind === 'workshop' && texture && standalone) {
+  if (b.kind === 'workshop' && texture && standalone && texture.src.endsWith(WORKSHOP_ART)) {
     drawWorkshop(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - WORKSHOP_GROUND * BUILDING_SIZE), BUILDING_SIZE);
     return;
   }
-  if (b.kind === 'farm' && texture && standalone) {
+  if (b.kind === 'farm' && texture && standalone && texture.src.endsWith(FARM_ART)) {
     drawFarm(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - FARM_GROUND * BUILDING_SIZE), BUILDING_SIZE);
     return;
   }
@@ -541,7 +541,7 @@ export default function World({
     img.src = CONCEPTS_SRC;
   }, []);
   useEffect(() => {
-    for (const kind of LEVELED) {
+    for (const kind of TIERED) {
       const art = tierArt(save, kind);
       if (!art || art in tierImages.current) continue;
       tierImages.current[art] = null;
@@ -615,7 +615,9 @@ export default function World({
           ...(['workshop', 'portal', 'arena', 'market'] as const)
             .filter((kind) => save.buildings.some((b) => b.kind === kind))
             .map(utilitySrc),
-          ...LEVELED.map((kind) => tierArt(save, kind)).filter((art): art is string => !!art),
+          ...TIERED.filter((kind) => save.buildings.some((b) => b.kind === kind))
+            .map((kind) => tierArt(save, kind))
+            .filter((art): art is string => !!art),
         ]
       : [worldArt(realm)];
   const pending = [...new Set(needed)],
