@@ -28,6 +28,7 @@ import { ArenaOpponent } from './ArenaOpponent';
 import { arenaBoss } from './arenaBosses';
 import { UpgradeCard } from './UpgradeCard';
 import './gameplay.css';
+import { Icon } from './ui/Icon';
 export type GameplayView = 'expedition' | 'arena' | 'workshop';
 /** Every fight has its own opponent: expeditions use their world's element; arena leagues are generated below. */
 const OPPONENTS: Record<string, [Species, RealmId]> = {
@@ -157,7 +158,7 @@ function Frame({
           </nav>
         )}
         <button onClick={close} className="gameplay-close" aria-label="Close">
-          ×
+          <Icon name="close" />
         </button>
       </header>
       {children}

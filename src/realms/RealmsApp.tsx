@@ -36,6 +36,7 @@ import {
 } from './game';
 import './realms.css';
 import './pixel-theme.css';
+import { Icon, type IconName } from './ui/Icon';
 
 type Panel =
   | 'dino'
@@ -129,7 +130,7 @@ function Window({
           {eyebrow && <span className="realm-eyebrow">{eyebrow}</span>}
           <h2>{title}</h2>
           <button className="realm-close" onClick={close} aria-label="Close">
-            ×
+            <Icon name="close" />
           </button>
         </header>
         <div className="realm-window-body">{children}</div>
@@ -506,9 +507,9 @@ export default function RealmsApp() {
             <section className="realm-profile-card" id="realm-mobile-stats" aria-label={tr('Resurse', 'Resources')} onKeyDown={(event) => { if (event.key === 'Escape') setProfileOpen(false); }}>
               <header><strong>{badge.title}</strong><button aria-label="Close resources" onClick={() => setProfileOpen(false)}>×</button></header>
               <div className="realm-profile-stats">
-                <Resource symbol="●" value={Math.floor(save.gold)} label={tr('Aur', 'Gold')} color="gold" />
-                <Resource symbol="❧" value={save.food} label={tr('Hrană', 'Food')} color="food" />
-                <Resource symbol="★" value={d?.level ?? 1} label={tr('Nivel', 'Level')} color="gold" />
+                <Resource icon="gold" value={Math.floor(save.gold)} label={tr('Aur', 'Gold')} color="gold" />
+                <Resource icon="food" value={save.food} label={tr('Hrană', 'Food')} color="food" />
+                <Resource icon="star" value={d?.level ?? 1} label={tr('Nivel', 'Level')} color="gold" />
               </div>
               <footer>
                 <button onClick={() => { setProfileOpen(false); setPanel('dino'); }}>{tr('Dinozauri', 'Dinosaurs')}</button>
@@ -528,15 +529,15 @@ export default function RealmsApp() {
             setPanel(null);
           }}
         >
-          <span className="realm-brand-mark">◆</span>
+          <span className="realm-brand-mark"><Icon name="egg" scale={3} /></span>
           <span>
             DINO <b>REALMS</b>
             <small>COLLECT · BUILD · BELONG</small>
           </span>
         </a>
         <div className="realm-resources">
-          <Resource symbol="●" value={Math.floor(save.gold)} label={tr('Aur', 'Gold')} color="gold" />
-          <Resource symbol="❧" value={save.food} label={tr('Hrană', 'Food')} color="food" />
+          <Resource icon="gold" value={Math.floor(save.gold)} label={tr('Aur', 'Gold')} color="gold" />
+          <Resource icon="food" value={save.food} label={tr('Hrană', 'Food')} color="food" />
           <div className="realm-account">
             <span>{badge.numeral}</span>
             <div>
@@ -554,13 +555,13 @@ export default function RealmsApp() {
           aria-label={tr('Unelte de test', 'Test tools')}
           aria-expanded={devOpen}
         >
-          i
+          <Icon name="clock" />
         </button>
         <button className="realm-square" onClick={() => setPanel('wiki')} aria-label="Wikipedia" title="Wikipedia">
-          📖
+          <Icon name="wiki" />
         </button>
         <button className="realm-square" onClick={() => setPanel('settings')} aria-label={tr('Setări', 'Settings')}>
-          ⚙
+          <Icon name="settings" />
         </button>
       </header>
       {devOpen && (
@@ -815,13 +816,13 @@ export default function RealmsApp() {
             <span className="realm-nav-grip" aria-hidden />
             <span className="realm-nav-toggle-label">{tr('Meniu', 'Menu')}</span>
           </button>
-          <Nav icon="▦" label={tr('Construiește', 'Build')} onClick={() => setPanel('build')} />
-          <Nav icon="🦖" label={tr('Dinozauri', 'Dinosaurs')} onClick={() => setPanel('dino')} />
-          <Nav icon="▤" label={tr('Colecție', 'Collection')} onClick={() => setPanel('collection')} />
-          <Nav icon="⌘" label={tr('Tărâmuri', 'Realms')} onClick={() => setPanel('realms')} />
-          <Nav icon="⚔" label={tr('Expediții', 'Expeditions')} onClick={() => setPanel('expedition')} featured />
-          <Nav icon="♜" label={tr('Arena PvE', 'PvE Arena')} onClick={() => setPanel('arena')} />
-          <Nav icon="⚒" label={tr('Atelier', 'Workshop')} onClick={() => setPanel('workshop')} />
+          <Nav icon="build" label={tr('Construiește', 'Build')} onClick={() => setPanel('build')} />
+          <Nav icon="dino" label={tr('Dinozauri', 'Dinosaurs')} onClick={() => setPanel('dino')} />
+          <Nav icon="collection" label={tr('Colecție', 'Collection')} onClick={() => setPanel('collection')} />
+          <Nav icon="realms" label={tr('Tărâmuri', 'Realms')} onClick={() => setPanel('realms')} />
+          <Nav icon="expedition" label={tr('Expediții', 'Expeditions')} onClick={() => setPanel('expedition')} featured />
+          <Nav icon="arena" label={tr('Arena PvE', 'PvE Arena')} onClick={() => setPanel('arena')} />
+          <Nav icon="workshop" label={tr('Atelier', 'Workshop')} onClick={() => setPanel('workshop')} />
           <button
             className="realm-collect"
             aria-label={tr('Colectează', 'Collect')}
@@ -831,11 +832,7 @@ export default function RealmsApp() {
             }}
           >
             <span aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="9" fill="#e8bd65" stroke="#ffe3a3" strokeWidth="1.5" />
-                <circle cx="12" cy="12" r="6.5" stroke="#a77530" />
-                <path d="M14 8.5h-3a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-3M12 7v11" stroke="#785120" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <Icon name="gold" />
             </span>
             <div>
               <strong>{tr('Colectează', 'Collect')}</strong>
@@ -1193,10 +1190,12 @@ export default function RealmsApp() {
     </main>
   );
 }
-function Resource({ symbol, value, label, color }: { symbol: string; value: number; label: string; color: string }) {
+function Resource({ icon, value, label, color }: { icon: IconName; value: number; label: string; color: string }) {
   return (
     <div className={`realm-resource ${color}`}>
-      <span>{symbol}</span>
+      <span>
+        <Icon name={icon} />
+      </span>
       <div>
         <small>{label}</small>
         <strong>{value.toLocaleString('en-GB')}</strong>
@@ -1210,14 +1209,16 @@ function Nav({
   onClick,
   featured = false,
 }: {
-  icon: string;
+  icon: IconName;
   label: string;
   onClick: () => void;
   featured?: boolean;
 }) {
   return (
     <button className={featured ? 'featured' : ''} onClick={onClick} aria-label={label} title={label}>
-      <span>{icon}</span>
+      <span>
+        <Icon name={icon} scale={2} />
+      </span>
       <strong>{label}</strong>
     </button>
   );

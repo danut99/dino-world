@@ -1,16 +1,16 @@
 .realms-wiki-search { display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
-.realms-wiki-search input { width: 100%; box-sizing: border-box; background: #102735; border: 1px solid #8f9f97; color: #f2e6c7; padding: 12px; font: inherit; }
+.realms-wiki-search input { width: 100%; box-sizing: border-box; background: #2f2520; border: 1px solid #a39380; color: #f6eed9; padding: 12px; font: inherit; }
 .realms-wiki-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 22px; margin-top: 18px; }
 .realms-wiki-layout nav { display: flex; flex-direction: column; gap: 7px; }
-.realms-wiki-layout nav button { display: flex; justify-content: space-between; gap: 8px; background: #102735; color: #e8dbbb; border: 1px solid #83908260; padding: 12px; text-align: left; cursor: pointer; }
-.realms-wiki-layout nav button[aria-pressed="true"] { border-color: #e7bb67; background: #594831; }
+.realms-wiki-layout nav button { display: flex; justify-content: space-between; gap: 8px; background: #2f2520; color: #e2d3b2; border: 1px solid #a3938060; padding: 12px; text-align: left; cursor: pointer; }
+.realms-wiki-layout nav button[aria-pressed="true"] { border-color: #d7a94c; background: #574a40; }
 .realms-wiki-content { min-width: 0; max-height: 62dvh; overflow: auto; padding-right: 12px; }
 .realms-wiki-content h2 { font-size: 23px; margin-top: 7px; }
 .realms-wiki-content p, .realms-wiki-content li { font-size: 14px; line-height: 1.7; }
 .realms-wiki-content li { margin: 8px 0; }
 .realms-wiki-results { display: grid; gap: 10px; }
-.realms-wiki-results > button { text-align: left; cursor: pointer; background: #102735; border: 1px solid #83908260; color: #eddfbc; padding: 15px; }
+.realms-wiki-results > button { text-align: left; cursor: pointer; background: #2f2520; border: 1px solid #a3938060; color: #e2d3b2; padding: 15px; }
 .realms-wiki-results strong { display: block; margin-bottom: 7px; font-size: 16px; }
-.realms-wiki-results span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #a7bbb9; font-size: 12px; line-height: 1.6; }
+.realms-wiki-results span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #cdbfa8; font-size: 12px; line-height: 1.6; }
 .realms-wiki-related { display: flex; gap: 8px; flex-wrap: wrap; }
 @media(max-width:600px) { .realms-wiki-layout { grid-template-columns: 1fr; gap: 12px; } .realms-wiki-layout nav { flex-direction: row; overflow-x: auto; } .realms-wiki-layout nav button { flex-shrink: 0; padding: 8px; font-size: 11px; } .realms-wiki-content { max-height: 52dvh; } }

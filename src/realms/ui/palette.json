@@ -1,0 +1,33 @@
+{
+  "_doc": "Paleta master Dino Realms. Sursa unică pentru UI, iconițe și verificarea asset-urilor (scripts/pixel-ui.py, scripts/pixel-check.py). Fiecare rampă merge de la luminos la întunecat.",
+  "outline": "#21191a",
+  "ramps": {
+    "stone": ["#cdbfa8", "#a39380", "#7a6a5a", "#574a40", "#3d332d", "#2b2421"],
+    "bone": ["#fffaf0", "#f6eed9", "#e2d3b2", "#c9b48e", "#9c8763"],
+    "leather": ["#d39a63", "#b4764a", "#8a5236", "#6a3a28", "#4a281e"],
+    "wood": ["#e0a96a", "#b98352", "#94603f", "#6e4430", "#4a2e22"],
+    "moss": ["#d9f08c", "#a6d85a", "#6fae45", "#3f7d38", "#24502c"],
+    "amber": ["#fff1a8", "#ffcf5a", "#eda233", "#bd6b1d", "#7a3d12"],
+    "ember": ["#ffb070", "#f2733a", "#c9432a", "#8a2621", "#521617"],
+    "sea": ["#c8f2f4", "#7fd0e6", "#3f97c8", "#2a5f95", "#1d3657"],
+    "frost": ["#f4ffff", "#c9f0f8", "#8ad0e8", "#5a93bf", "#3a5d88"],
+    "storm": ["#fff7b0", "#ffe14d", "#e5b52a", "#a8771e", "#5f4318"],
+    "gale": ["#e9fff4", "#b6ecd6", "#7cc7ad", "#4d8f80", "#2e5a55"],
+    "dusk": ["#c9b3f0", "#9478d0", "#6a4fa6", "#46337a", "#2a1f4d"],
+    "dawn": ["#fffde8", "#fff1b8", "#f6d77a", "#d7a94c", "#9a6f2f"],
+    "rune": ["#f5d6ff", "#d79bf2", "#a965d8", "#7440a6", "#47276b"],
+    "ui": ["#f6eed9", "#c9b48e", "#3a2e27", "#2f2520", "#241c18", "#1a1412"]
+  },
+  "elements": {
+    "fire": "ember",
+    "water": "sea",
+    "earth": "wood",
+    "nature": "moss",
+    "ice": "frost",
+    "lightning": "storm",
+    "wind": "gale",
+    "dark": "dusk",
+    "light": "dawn",
+    "arcane": "rune"
+  }
+}
