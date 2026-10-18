@@ -4,8 +4,7 @@ import { constrainPan, HOME_ART, SCENE } from './camera';
 describe('world camera coverage', () => {
   it('allows sideways movement at 1x within the wider centered home art', () => {
     const pan = constrainPan({ x: 9999, y: -9999 }, 1, SCENE, HOME_ART);
-    expect(pan.x).toBeGreaterThan(140);
-    expect(pan.x).toBeLessThan(143);
+    expect(pan.x).toBeCloseTo((HOME_ART.width - SCENE.width) / 2);
     expect(pan.y).toBeCloseTo(0);
     expect(SCENE.width / 2 + SCENE.width / 2 - pan.x).toBeLessThanOrEqual((SCENE.width + HOME_ART.width) / 2);
     expect(SCENE.width / 2 - SCENE.width / 2 - pan.x).toBeCloseTo((SCENE.width - HOME_ART.width) / 2);

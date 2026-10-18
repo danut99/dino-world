@@ -7,14 +7,15 @@ import { AnimatedPortalSprite } from './AnimatedPortalSprite';
 
 export function BuildingSprite({ kind, save }: { kind: UtilityKind; save?: Save }) {
   if (kind === 'portal') return <AnimatedPortalSprite />;
-  if (kind === 'workshop') return <AnimatedWorkshopSprite />;
-  if (kind === 'farm') return <AnimatedFarmSprite />;
-  const upgraded = save ? tierArt(save, kind) : null;
+  // Clădirile PixelLab au prioritate; animațiile vechi rămân doar pentru ce nu are încă sprite nou.
+  const upgraded = tierArt(save ?? ({} as Save), kind);
   if (upgraded) return (
-    <svg className="utility-sprite" viewBox="0 0 1 1" aria-hidden="true">
-      <image href={upgraded} width="1" height="1" />
+    <svg className="utility-sprite pixel" viewBox="0 0 1 1" aria-hidden="true">
+      <image href={upgraded} width="1" height="1" style={{ imageRendering: 'pixelated' }} />
     </svg>
   );
+  if (kind === 'workshop') return <AnimatedWorkshopSprite />;
+  if (kind === 'farm') return <AnimatedFarmSprite />;
   if (kind === 'market') return (
     <svg className="utility-sprite" viewBox="0 0 1 1" aria-hidden="true">
       <image href="/realms/gameplay/market-building-pixel.webp" width="1" height="1" />

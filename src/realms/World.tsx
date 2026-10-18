@@ -1,11 +1,13 @@
 import { drawPortal, PORTAL_ART, PORTAL_GROUND } from './animatedPortal';
-import { drawWorkshop, WORKSHOP_GROUND } from './animatedWorkshop';
-import { drawFarm, FARM_GROUND } from './animatedFarm';
+import { drawWorkshop, WORKSHOP_ART, WORKSHOP_GROUND } from './animatedWorkshop';
+import { drawFarm, FARM_ART, FARM_GROUND } from './animatedFarm';
 import { useEffect, useRef, useState } from 'react';
 import { advance, canPlace, ELEMENTS, farmNextAt, type Building, type Save, type RealmId } from './game';
 import { constrainPan, HOME_ART, SCENE } from './camera';
-import { buildingLevel, groundLine, LEVELED, measureGround, tierArt } from './buildingTiers';
-import { worldArt, worldArtSize } from './worldArt';
+import { buildingLevel, groundLine, LEVELED, measureGround, TIERED, tierArt } from './buildingTiers';
+import { worldArt } from './worldArt';
+import { ISLANDS, SKIES } from './islands';
+import HOME_ISLAND from './islands/home.json';
 import { UTILITY_BUILDINGS, type UtilityKind } from './content';
 import { SPECIES, SPECIES_NAMES } from './dinosaurs';
 import { BUILDABLE_CELLS, GRID, project, unproject } from './grid';
@@ -40,15 +42,18 @@ function polygon(ctx: CanvasRenderingContext2D, points: number[][], fill: string
     ctx.stroke();
   }
 }
-const HOME_SRC = '/realms/home-island-wide-v1.webp',
+const HOME_SRC = HOME_ISLAND.art,
+  HOME_SKY: [string, string, string] = ['#13183a', '#2c4a7a', '#bfe8ff'],
   CONCEPTS_SRC = '/realms/building-concepts.webp';
 const utilitySrc = (kind: UtilityKind) =>
   kind === 'portal' ? PORTAL_ART : kind === 'market' ? '/realms/gameplay/market-building-pixel.webp' : '/realms/gameplay/utility-buildings-pixel.webp';
 /** Camera zoom range; the wheel moves in small steps, the buttons in bigger ones. Zooming out stops while the
  *  artwork still fills the screen (see `minZoom`). */
 const MAX_ZOOM = 2.5;
+/** Insula principală e mare: pornește micșorată, cu tot platoul în cadru. */
+const HOME_ZOOM = 0.8;
 /** Drawn building size; 260 was the original. The lift keeps the base on the same 3×3 footprint. */
-const BUILDING_SIZE = 220,
+const BUILDING_SIZE = 192,
   BUILDING_LIFT = Math.round((BUILDING_SIZE * 205) / 260);
 export function drawBuilding(
   ctx: CanvasRenderingContext2D,
@@ -58,15 +63,15 @@ export function drawBuilding(
   animationMs = 0,
 ) {
   const p = project(b.x + 1.5, b.y + 1.5);
-  if (b.kind === 'portal' && texture && standalone) {
+  if (b.kind === 'portal' && texture && standalone && texture.src.endsWith(PORTAL_ART)) {
     drawPortal(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - PORTAL_GROUND * BUILDING_SIZE), BUILDING_SIZE);
     return;
   }
-  if (b.kind === 'workshop' && texture && standalone) {
+  if (b.kind === 'workshop' && texture && standalone && texture.src.endsWith(WORKSHOP_ART)) {
     drawWorkshop(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - WORKSHOP_GROUND * BUILDING_SIZE), BUILDING_SIZE);
     return;
   }
-  if (b.kind === 'farm' && texture && standalone) {
+  if (b.kind === 'farm' && texture && standalone && texture.src.endsWith(FARM_ART)) {
     drawFarm(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - FARM_GROUND * BUILDING_SIZE), BUILDING_SIZE);
     return;
   }
@@ -445,7 +450,7 @@ export default function World({
   };
   const [loaded, setLoaded] = useState(0),
     [cell, setCell] = useState<{ x: number; y: number } | null>(null);
-  const [zoom, setZoom] = useState(1),
+  const [zoom, setZoom] = useState(realm === 'home' ? HOME_ZOOM : 1),
     [pan, setPan] = useState({ x: 0, y: 0 });
   const [viewport, setViewport] = useState({ width: SCENE.width, height: SCENE.height });
   // Canvas pixels per scene pixel, so the canvas matches the screen instead of being stretched by CSS.
@@ -467,12 +472,14 @@ export default function World({
       /* Optional preference. */
     }
   };
-  const artSize = realm === 'home' ? HOME_ART : worlds.current[realm] ? worldArtSize(worlds.current[realm]!) : SCENE;
+  // Elemental worlds are a whole island on a night sky that fills the scene; the camera keeps the scene in view.
+  const artSize = realm === 'home' ? HOME_ART : SCENE;
   const boundPan = (point: { x: number; y: number }, scale: number, view: { width: number; height: number }) =>
     constrainPan(point, scale, view, artSize);
   const cameraPan = boundPan(pan, zoom, viewport);
   // Zooming out stops while the artwork still covers the whole screen, so no empty margin ever shows.
-  const minZoom = Math.min(1, Math.max(viewport.width / artSize.width, viewport.height / artSize.height));
+  // Cerul de noapte se întinde dincolo de scenă, deci se poate micșora până se vede toată insula.
+  const minZoom = 0.7;
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
   // Press and hold a building on the home island to pick it up and drag it to a new spot.
   const holdTimer = useRef<number | null>(null);
@@ -539,7 +546,7 @@ export default function World({
     img.src = CONCEPTS_SRC;
   }, []);
   useEffect(() => {
-    for (const kind of LEVELED) {
+    for (const kind of TIERED) {
       const art = tierArt(save, kind);
       if (!art || art in tierImages.current) continue;
       tierImages.current[art] = null;
@@ -613,7 +620,9 @@ export default function World({
           ...(['workshop', 'portal', 'arena', 'market'] as const)
             .filter((kind) => save.buildings.some((b) => b.kind === kind))
             .map(utilitySrc),
-          ...LEVELED.map((kind) => tierArt(save, kind)).filter((art): art is string => !!art),
+          ...TIERED.filter((kind) => save.buildings.some((b) => b.kind === kind))
+            .map((kind) => tierArt(save, kind))
+            .filter((art): art is string => !!art),
         ]
       : [worldArt(realm)];
   const pending = [...new Set(needed)],
@@ -624,7 +633,7 @@ export default function World({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done, pending.length]);
   useEffect(() => {
-    setZoom(1);
+    setZoom(realm === 'home' ? HOME_ZOOM : 1);
     setPan({ x: 0, y: 0 });
     setCell(null);
     setHeld(null);
@@ -654,24 +663,33 @@ export default function World({
     ctx.translate(768 + cameraPan.x, 512 + cameraPan.y);
     ctx.scale(zoom, zoom);
     ctx.translate(-768, -512);
+    {
+      const [skyTop, skyBottom, glow] = realm === 'home' ? HOME_SKY : SKIES[realm];
+      const sky = ctx.createLinearGradient(0, 0, 0, 1024);
+      sky.addColorStop(0, skyTop);
+      sky.addColorStop(1, skyBottom);
+      ctx.fillStyle = sky;
+      ctx.fillRect(-480, -240, 2496, 1504);
+      // stele pixel, fixe, cu o licărire lentă
+      for (let i = 0; i < 110; i++) {
+        const twinkle = reducedMotion ? 1 : 0.55 + 0.45 * Math.sin(time / 700 + i * 1.7);
+        ctx.globalAlpha = (i % 4 ? 0.55 : 0.9) * twinkle;
+        ctx.fillStyle = i % 5 ? '#ffffff' : glow;
+        const sz = i % 7 ? 2 : 4;
+        ctx.fillRect((((i * 317 + 43) % 2496) - 480) & ~1, (((i * 211 + 61) % 1504) - 240) & ~1, sz, sz);
+      }
+      ctx.globalAlpha = 1;
+    }
+    // insula plutește ușor (2 px de scenă = 1 pixel de artă, deci rămâne pe grilă)
+    const bob = reducedMotion || realm === 'home' ? 0 : Math.round(Math.sin(time / 1400) * 2) * 2;
     if (realm === 'home') {
       if (image.current)
-        ctx.drawImage(image.current, (SCENE.width - HOME_ART.width) / 2, 0, HOME_ART.width, HOME_ART.height);
+        ctx.drawImage(image.current, HOME_ISLAND.offset[0], HOME_ISLAND.offset[1], HOME_ISLAND.size[0] * 2, HOME_ISLAND.size[1] * 2);
     } else {
-      const el = ELEMENTS.find((e) => e.id === realm)!;
-      const sky = ctx.createLinearGradient(0, 0, 0, 1024);
-      sky.addColorStop(0, '#10223d');
-      sky.addColorStop(1, '#29445c');
-      ctx.fillStyle = sky;
-      ctx.fillRect(0, 0, 1536, 1024);
-      for (let i = 0; i < 70; i++) {
-        ctx.fillStyle = i % 3 ? '#b6d5d350' : el.color;
-        ctx.fillRect((i * 317 + 43) % 1536, (i * 127 + 61) % 1024, i % 3 ? 2 : 3, i % 3 ? 2 : 3);
-      }
       const environment = worlds.current[realm];
       if (environment) {
-        const size = worldArtSize(environment);
-        ctx.drawImage(environment, (SCENE.width - size.width) / 2, 0, size.width, size.height);
+        const isl = ISLANDS[realm];
+        ctx.drawImage(environment, isl.offset[0], isl.offset[1] + bob, isl.size[0] * isl.scale, isl.size[1] * isl.scale);
       }
     }
     ctx.imageSmoothingEnabled = false;
@@ -713,7 +731,8 @@ export default function World({
     // Worlds show only the dinosaurs the player owns there.
     if (realm !== 'home')
       owned.forEach((x, i) => {
-        const anchor = OWNED_SPOTS[i % OWNED_SPOTS.length];
+        const spots = ISLANDS[realm as RealmId].spots;
+        const anchor = spots[i % spots.length];
         const phase = reducedMotion ? 0 : ((time + i * 1700) % 10000) / 1000;
         const walking = (phase >= 3 && phase < 5) || phase >= 8;
         const returning = phase >= 8;
@@ -736,7 +755,7 @@ export default function World({
           ctx.restore();
         }
         const label = `${x.id === save.champion ? '★ ' : ''}${x.nickname} · ${x.level}`;
-        ctx.font = 'bold 12px Barlow, sans-serif';
+        ctx.font = "600 13px 'Pixelify Sans', sans-serif";
         ctx.textAlign = 'center';
         const width = ctx.measureText(label).width + 16;
         ctx.fillStyle = '#183342';
@@ -919,7 +938,8 @@ export default function World({
               realm === 'home'
                 ? !!buildingAt(p)
                 : here.some((x, i) => {
-                    const dp = OWNED_SPOTS[i % OWNED_SPOTS.length];
+                    const spots = ISLANDS[realm as RealmId].spots;
+                    const dp = spots[i % spots.length];
                     return Math.abs(p.x - dp.x) < 60 && p.y > dp.y - STAGE_HEIGHT[x.stage] && p.y < dp.y + 25;
                   }),
             );
@@ -1117,7 +1137,7 @@ export default function World({
         </button>
         <button
           onClick={() => {
-            setZoom(1);
+            setZoom(realm === 'home' ? HOME_ZOOM : 1);
             setPan({ x: 0, y: 0 });
           }}
           aria-label={lang ? 'Center island' : 'Centrează insula'}
