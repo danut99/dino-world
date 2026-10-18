@@ -3,8 +3,10 @@ import type { UtilityKind } from './content';
 import type { Save } from './game';
 import { tierArt } from './buildingTiers';
 import { AnimatedFarmSprite } from './AnimatedFarmSprite';
+import { AnimatedPortalSprite } from './AnimatedPortalSprite';
 
 export function BuildingSprite({ kind, save }: { kind: UtilityKind; save?: Save }) {
+  if (kind === 'portal') return <AnimatedPortalSprite />;
   if (kind === 'workshop') return <AnimatedWorkshopSprite />;
   if (kind === 'farm') return <AnimatedFarmSprite />;
   const upgraded = save ? tierArt(save, kind) : null;
@@ -25,7 +27,7 @@ export function BuildingSprite({ kind, save }: { kind: UtilityKind; save?: Save 
   ) : (
     <svg
       className="utility-sprite"
-      viewBox={`${kind === 'portal' ? 1 : 2} 0 1 1`}
+      viewBox="2 0 1 1"
       aria-hidden="true"
     >
       <image href="/realms/gameplay/utility-buildings-pixel.webp" width="3" height="1" preserveAspectRatio="none" />

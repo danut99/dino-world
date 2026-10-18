@@ -1,3 +1,4 @@
+import { drawPortal, PORTAL_ART, PORTAL_GROUND } from './animatedPortal';
 import { drawWorkshop, WORKSHOP_GROUND } from './animatedWorkshop';
 import { drawFarm, FARM_GROUND } from './animatedFarm';
 import { useEffect, useRef, useState } from 'react';
@@ -42,7 +43,7 @@ function polygon(ctx: CanvasRenderingContext2D, points: number[][], fill: string
 const HOME_SRC = '/realms/home-island-wide-v1.webp',
   CONCEPTS_SRC = '/realms/building-concepts.webp';
 const utilitySrc = (kind: UtilityKind) =>
-  kind === 'market' ? '/realms/gameplay/market-building-pixel.webp' : '/realms/gameplay/utility-buildings-pixel.webp';
+  kind === 'portal' ? PORTAL_ART : kind === 'market' ? '/realms/gameplay/market-building-pixel.webp' : '/realms/gameplay/utility-buildings-pixel.webp';
 /** Camera zoom range; the wheel moves in small steps, the buttons in bigger ones. Zooming out stops while the
  *  artwork still fills the screen (see `minZoom`). */
 const MAX_ZOOM = 2.5;
@@ -57,6 +58,10 @@ export function drawBuilding(
   animationMs = 0,
 ) {
   const p = project(b.x + 1.5, b.y + 1.5);
+  if (b.kind === 'portal' && texture && standalone) {
+    drawPortal(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - PORTAL_GROUND * BUILDING_SIZE), BUILDING_SIZE);
+    return;
+  }
   if (b.kind === 'workshop' && texture && standalone) {
     drawWorkshop(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - WORKSHOP_GROUND * BUILDING_SIZE), BUILDING_SIZE);
     return;
@@ -553,7 +558,7 @@ export default function World({
   const artFor = (kind: UtilityKind): [HTMLImageElement | null, boolean] => {
     const tier = tierArt(save, kind),
       img = tier ? tierImages.current[tier] : null;
-    return img ? [img, true] : [utilityArt.current[kind] ?? (kind === 'market' ? null : buildings.current), false];
+    return img ? [img, true] : [utilityArt.current[kind] ?? (kind === 'market' ? null : buildings.current), kind === 'portal' && !!utilityArt.current[kind]];
   };
   // A short burst over a building the moment it reaches a new level.
   const levelOf = (kind: UtilityKind) => buildingLevel(save, kind)?.level ?? 0;
@@ -692,7 +697,7 @@ export default function World({
         .forEach((b) => {
           if (b.id === held?.id) ctx.globalAlpha = 0.3;
           drawBuilding(ctx, b, ...artFor(b.kind as UtilityKind), reducedMotion ? 0 : time);
-          if (b.kind !== 'farm' && b.kind !== 'workshop') drawBuildingEffect(ctx, b.kind, project(b.x + 1.5, b.y + 1.5).x, project(b.x + 1.5, b.y + 1.5).y, reducedMotion ? 0 : time);
+          if (b.kind !== 'farm' && b.kind !== 'workshop' && b.kind !== 'portal') drawBuildingEffect(ctx, b.kind, project(b.x + 1.5, b.y + 1.5).x, project(b.x + 1.5, b.y + 1.5).y, reducedMotion ? 0 : time);
           ctx.globalAlpha = 1;
         });
     if (realm === 'home')

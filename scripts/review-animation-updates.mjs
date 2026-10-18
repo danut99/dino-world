@@ -28,6 +28,7 @@ try {
     ['trex_fire_juvenile', ['attack', 'defend']],
     ['trex_fire_adult', ['attack', 'defend', 'ultimate']],
     ['boss_nature_adult', ['ultimate']],
+    ['boss_lightning_adult', ['idle', 'walk', 'attack', 'defend', 'hurt', 'death', 'ultimate']],
   ]) {
     for (const clip of clips) {
       const count = await page.evaluate(async ({ id, clip }) => {
@@ -44,12 +45,33 @@ try {
         return c?.dataset.animation === clip && Number(c.dataset.frame) > 0;
       }, clip);
       await canvas.screenshot({ path: `output/realms/animation/updates/${id}-${clip}.png` });
-      await page.waitForFunction(last => document.querySelector('#animation-update-review canvas')?.getAttribute('data-frame') === String(last), count - 1);
-      await page.waitForTimeout(120);
-      assert.equal(await canvas.getAttribute('data-frame'), String(count - 1));
-      checked.push({ id, clip, frames: count, holdsFinalFrame: true });
+      const loop = ['idle', 'walk'].includes(clip);
+      if (!loop) {
+        await page.waitForFunction(last => document.querySelector('#animation-update-review canvas')?.getAttribute('data-frame') === String(last), count - 1);
+        await page.waitForTimeout(120);
+        assert.equal(await canvas.getAttribute('data-frame'), String(count - 1));
+      }
+      checked.push({ id, clip, frames: count, holdsFinalFrame: !loop });
     }
   }
+  await page.evaluate(async () => {
+    const module = await import('/node_modules/.vite/deps/react.js');
+    const { createElement } = module.default ?? module;
+    const { BuildingSprite } = await import('/src/realms/BuildingSprite.tsx');
+    window.animationReviewRoot.render(createElement(BuildingSprite, { kind: 'portal' }));
+  });
+  const portal = page.locator('#animation-update-review canvas.utility-sprite');
+  await portal.waitFor();
+  await page.waitForTimeout(300);
+  const first = await portal.evaluate(c => c.toDataURL());
+  await page.waitForTimeout(400);
+  assert.notEqual(await portal.evaluate(c => c.toDataURL()), first, 'Portal must animate');
+  await portal.screenshot({ path: 'output/realms/animation/updates/portal.png' });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.waitForTimeout(200);
+  const still = await portal.evaluate(c => c.toDataURL());
+  await page.waitForTimeout(300);
+  assert.equal(await portal.evaluate(c => c.toDataURL()), still, 'Portal must respect reduced motion');
   assert.deepEqual(errors, []);
   assert.deepEqual(missing, []);
   const report = { checked, errors, missing };
