@@ -239,7 +239,7 @@ function Rewards({
       ))}
       {eggChance !== undefined && (
         <span className="reward-egg">
-          <b>🥚</b>
+          <b><Icon name="egg" scale={1} /></b>
           {Math.round(eggChance * 100)}%<small>{T(lang, 'Șansă de ou', 'Egg chance')}</small>
         </span>
       )}
@@ -934,7 +934,7 @@ export function BattleScreen({ save, lang, run, close }: Pick<Props, 'save' | 'l
               {battle.reward.egg && (
                 <div className="result-egg">
                   <strong>
-                    🥚 {tr('Ou găsit!', 'Egg found!')} {SPECIES_NAMES[battle.reward.egg.species]} ·{' '}
+                    <Icon name="egg" scale={1} /> {tr('Ou găsit!', 'Egg found!')} {SPECIES_NAMES[battle.reward.egg.species]} ·{' '}
                     {ELEMENTS.find((e) => e.id === battle.reward.egg!.element)!.name[lang]}
                   </strong>
                   {save.eggs.length >= BALANCE.maxEggs && (

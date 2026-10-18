@@ -1,5 +1,6 @@
 import { playableSpecies } from './playableDinosaurs';
 import { useState } from 'react';
+import { Icon } from './ui/Icon';
 import { DinosaurArt } from './DinosaurArt';
 import { duration } from './FarmPanel';
 import { ITEMS, type ItemId } from './content';
@@ -39,38 +40,13 @@ const tr = (lang: number, ro: string, en: string) => (lang ? en : ro);
 const element = (id: RealmId) => ELEMENTS.find((e) => e.id === id)!;
 const stageName = (s: Stage, lang: number) =>
   ({ baby: ['Copil', 'Baby'], juvenile: ['Juvenil', 'Juvenile'], adult: ['Adult', 'Adult'] })[s][lang];
-/** The species mark painted on each egg (plan section 11). */
-const SPECIES_MARK: Record<Species, string> = {
-  trex: '🦷',
-  raptor: '🪝',
-  triceratops: '🔱',
-  ankylosaurus: '🔨',
-  brachiosaurus: '🦕',
-};
-
-/** Half-widths of a 12×16 pixel egg, top to bottom. */
-const EGG_ROWS = [2, 3, 4, 4, 5, 5, 5, 6, 6, 6, 6, 6, 5, 5, 4, 3];
-export function EggArt({ species, realm, size = 64 }: { species: Species; realm: RealmId; size?: number }) {
-  const { color } = element(realm);
+/** Un ou PixelLab pe tărâm (64 px), comun tuturor speciilor acelui element; eclozarea are animația lui. */
+export const eggSrc = (realm: RealmId) => `/realms/eggs/${realm}.png`;
+export const hatchSrc = (realm: RealmId) => `/realms/eggs/${realm}-hatch.png`;
+export function EggArt({ realm, size = 64, hatching = false }: { species?: Species; realm: RealmId; size?: number; hatching?: boolean }) {
   return (
-    <span className="realm-egg" style={{ width: size * 0.75, height: size }}>
-      <svg viewBox="0 0 12 16" shapeRendering="crispEdges" aria-hidden="true">
-        {EGG_ROWS.map((half, y) => (
-          <rect key={y} x={6 - half} y={y} width={half * 2} height={1} fill="#1d1a17" />
-        ))}
-        {EGG_ROWS.map((half, y) =>
-          half > 2 ? <rect key={y} x={7 - half} y={y} width={half * 2 - 2} height={1} fill={color} /> : null,
-        )}
-        {EGG_ROWS.map((half, y) =>
-          y > 8 && half > 2 ? (
-            <rect key={y} x={7 - half} y={y} width={half * 2 - 2} height={1} fill="#00000038" />
-          ) : null,
-        )}
-        <rect x={3} y={3} width={1} height={3} fill="#ffffffb0" />
-        <rect x={4} y={2} width={1} height={1} fill="#ffffffb0" />
-      </svg>
-      <b>{element(realm).symbol}</b>
-      <i>{SPECIES_MARK[species]}</i>
+    <span className={`realm-egg${hatching ? ' hatching' : ''}`} style={{ width: size, height: size, '--egg-size': `${size}px`, '--hatch-sheet': `url('${hatchSrc(realm)}')` } as React.CSSProperties}>
+      <img src={eggSrc(realm)} alt="" width={size} height={size} draggable={false} />
     </span>
   );
 }
@@ -106,6 +82,7 @@ export function HatcheryPanel({
   openMarket: () => void;
   move: () => void;
 }) {
+  const [hatchingId, setHatchingId] = useState<string | null>(null);
   const busy = incubating(save).length,
     slots = hatcherySlots(save),
     next = HATCHERY_LEVELS[save.hatcheryLevel];
@@ -187,14 +164,25 @@ export function HatcheryPanel({
               style={{ '--egg-glow': element(egg.element).color } as React.CSSProperties}
             >
               <span className="realm-nest-bed" />
-              <EggArt species={egg.species} realm={egg.element} size={84} />
+              <EggArt species={egg.species} realm={egg.element} size={128} hatching={hatchingId === egg.id} />
               <strong>
                 {SPECIES_NAMES[egg.species]} · {element(egg.element).name[lang]}
               </strong>
               {ready ? (
                 <>
-                  <button className="realm-button" onClick={() => run({ type: 'hatch', eggId: egg.id }) && onHatched()}>
-                    🐣 {tr(lang, 'Eclozează', 'Hatch')}
+                  <button
+                    className="realm-button"
+                    disabled={!!hatchingId}
+                    onClick={() => {
+                      // animația de eclozare rulează întâi; comanda se dă la final (aceeași regulă de joc)
+                      setHatchingId(egg.id);
+                      window.setTimeout(() => {
+                        setHatchingId(null);
+                        if (run({ type: 'hatch', eggId: egg.id })) onHatched();
+                      }, 1400);
+                    }}
+                  >
+                    <Icon name="egg" scale={1} /> {tr(lang, 'Eclozează', 'Hatch')}
                   </button>
                   {(!save.habitats[egg.element] || full) && (
                     <small className="realm-warning">
@@ -298,7 +286,7 @@ export function HatcheryPanel({
               </span>
               <ul>
                 <li>
-                  🥚 {slots} → <b>{next.slots}</b> {tr(lang, 'ouă incubate deodată', 'eggs incubating at once')}
+                  <Icon name="egg" scale={1} /> {slots} → <b>{next.slots}</b> {tr(lang, 'ouă incubate deodată', 'eggs incubating at once')}
                 </li>
               </ul>
               <Costs save={save} gold={next.gold} materials={next.materials} />
@@ -351,7 +339,7 @@ export function MarketPanel({
         )}
       </p>
       <p className="realm-market-note">
-        🥚{' '}
+        <Icon name="egg" scale={1} />{' '}
         {tr(
           lang,
           'Ouăle celorlalte elemente se câștigă: în liga arenei fiecărei lumi (bossul dă sigur un ou prima dată) și, mai rar, în expediții. Ouăle de care nu ai nevoie le poți vinde din Incubator.',

@@ -637,7 +637,7 @@ export default function RealmsApp() {
                     {tr('Recompensă', 'Reward')}: <b>+{story.gold ?? 0} ●</b> · <b>+{story.food ?? 0} ❧</b>
                     {storyEgg(story) && (
                       <em>
-                        + 🥚 {SPECIES_NAMES[story.species]} · {ELEMENTS.find((e) => e.id === story.element)!.name[lang]}{' '}
+                        + <Icon name="egg" scale={1} /> {SPECIES_NAMES[story.species]} · {ELEMENTS.find((e) => e.id === story.element)!.name[lang]}{' '}
                         ({tr('final de capitol', 'chapter finale')})
                       </em>
                     )}
@@ -655,7 +655,7 @@ export default function RealmsApp() {
                 </div>
                 {storyReady ? (
                   <button className="realm-button" onClick={() => run({ type: 'claimQuestEgg', questId: story.id })}>
-                    {storyEgg(story) ? '🥚 ' : '★ '}
+                    {storyEgg(story) ? <Icon name="egg" scale={1} /> : <Icon name="star" scale={1} />}{' '}
                     {tr('Primește recompensa', 'Claim reward')} <span>→</span>
                   </button>
                 ) : (
@@ -680,7 +680,7 @@ export default function RealmsApp() {
             )}
             {storyEggs.some((q) => q.id !== story?.id) && (
               <button className="realm-button secondary realm-story-egg" onClick={() => setPanel('hatchery')}>
-                🥚 {tr('Ou nou din poveste!', 'New story egg!')} ({storyEggs.filter((q) => q.id !== story?.id).length}){' '}
+                <Icon name="egg" scale={1} /> {tr('Ou nou din poveste!', 'New story egg!')} ({storyEggs.filter((q) => q.id !== story?.id).length}){' '}
                 <span>→</span>
               </button>
             )}
@@ -718,7 +718,7 @@ export default function RealmsApp() {
             </button>
             {storyEggs.length > 0 && (
               <button className="realm-button secondary realm-story-egg" onClick={() => setPanel('hatchery')}>
-                🥚 {tr('Ou nou din poveste!', 'New story egg!')} ({storyEggs.length}) <span>→</span>
+                <Icon name="egg" scale={1} /> {tr('Ou nou din poveste!', 'New story egg!')} ({storyEggs.length}) <span>→</span>
               </button>
             )}
           </div>
