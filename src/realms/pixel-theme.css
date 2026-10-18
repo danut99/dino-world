@@ -314,7 +314,7 @@
   border-image: var(--frame-card);
   color: var(--px-bone-0);
 }
-.realms-app .realm-nav > button > span {
+.realms-app .realm-nav > button:not(.realm-nav-toggle) > span {
   display: grid;
   place-items: center;
   color: inherit;
@@ -350,6 +350,18 @@
 }
 .realms-app .realm-quest-body p {
   color: var(--ui-text-soft);
+}
+.realms-app .realm-quest-body h2 {
+  color: var(--px-bone-0);
+  text-shadow: 2px 2px 0 var(--px-outline);
+}
+.realms-app .realm-quest-body .realm-eyebrow {
+  font-size: 10px;
+}
+/* sugestia de cameră stă deasupra butoanelor de zoom, nu peste bara de jos */
+.realms-app .realm-world-hint {
+  right: 0;
+  bottom: calc(100% + 10px);
 }
 .realms-app .realm-quest-progress i {
   background: var(--px-stone-4);
@@ -487,4 +499,24 @@
   .realms-app :is(.realm-button, .battle-command) {
     transition: none;
   }
+}
+
+/* arena: ligile pe un rând deasupra, titlul sub ele — nu se mai suprapun */
+.realms-app .arena-leagues {
+  left: 14px;
+  right: 14px;
+  max-width: none;
+  justify-content: center;
+}
+.realms-app .arena-leagues button {
+  background: var(--px-ui-4);
+  border: 2px solid var(--px-outline);
+  border-left: 4px solid var(--league-color);
+  color: var(--px-bone-1);
+}
+.realms-app .arena-challenge-title {
+  top: 64px;
+}
+.realms-app .realm-collect.empty {
+  opacity: 0.6;
 }

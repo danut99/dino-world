@@ -824,7 +824,7 @@ export default function RealmsApp() {
           <Nav icon="arena" label={tr('Arena PvE', 'PvE Arena')} onClick={() => setPanel('arena')} />
           <Nav icon="workshop" label={tr('Atelier', 'Workshop')} onClick={() => setPanel('workshop')} />
           <button
-            className="realm-collect"
+            className={`realm-collect${Math.floor(live.storedGold) > 0 ? '' : ' empty'}`}
             aria-label={tr('Colectează', 'Collect')}
             title={tr('Colectează', 'Collect')}
             onClick={() => {
@@ -837,7 +837,9 @@ export default function RealmsApp() {
             <div>
               <strong>{tr('Colectează', 'Collect')}</strong>
               <small>
-                {Math.floor(live.storedGold)} {tr('aur disponibil', 'gold available')}
+                {Math.floor(live.storedGold) > 0
+                  ? `${Math.floor(live.storedGold)} ${tr('aur disponibil', 'gold available')}`
+                  : tr('Nimic încă', 'Nothing yet')}
               </small>
             </div>
           </button>

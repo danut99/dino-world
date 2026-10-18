@@ -65,7 +65,7 @@ type Props = {
   lang: number;
   run: (c: Command) => boolean;
   close: () => void;
-  navigate: (v: GameplayView) => void;
+  navigate: (v: GameplayView | 'dino') => void;
   build: () => void;
 };
 const T = (lang: number, ro: string, en: string) => (lang ? en : ro);
@@ -727,12 +727,26 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
               )}
               {!hero || hero.stage === 'baby' ? (
                 <p className="gameplay-warning">
-                  {tr(
-                    'Alege un campion juvenil sau adult (Dinozauri → Campion).',
-                    'Pick a juvenile or adult champion (Dinosaurs → Champion).',
+                  {hero
+                    ? tr(
+                        `${hero.nickname} e încă pui. Hrănește-l până la nivelul 9 și evoluează-l în juvenil ca să lupte.`,
+                        `${hero.nickname} is still a baby. Feed him to level 9 and evolve him into a juvenile to fight.`,
+                      )
+                    : tr('Eclozează primul ou ca să ai un luptător.', 'Hatch your first egg to get a fighter.')}
+                  {hero && (
+                    <button className="realm-button secondary gameplay-warning-action" onClick={() => navigate('dino')}>
+                      {tr('Crește-l acum', 'Raise him now')} →
+                    </button>
                   )}
                 </p>
               ) : null}
+              {!hasBuilding && encounter.id !== 'training' && (
+                <p className="gameplay-warning">
+                  {view === 'arena'
+                    ? tr('Construiește Poarta arenei pe insula principală ca să lupți aici.', 'Build the Arena Gate on the main island to fight here.')
+                    : tr('Construiește Portalul de expediții pe insula principală.', 'Build the Expedition Portal on the main island.')}
+                </p>
+              )}
               <button className="realm-button adventure-start" disabled={!save.battle && !canBattle} onClick={start}>
                 {save.battle ? tr('Reia lupta', 'Resume battle') : tr('Începe aventura', 'Begin adventure')} →
               </button>

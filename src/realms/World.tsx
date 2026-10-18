@@ -39,7 +39,7 @@ function polygon(ctx: CanvasRenderingContext2D, points: number[][], fill: string
     ctx.stroke();
   }
 }
-const HOME_SRC = '/realms/home-island-wide-v1.webp',
+const HOME_SRC = '/realms/worlds/home-px.png',
   CONCEPTS_SRC = '/realms/building-concepts.webp';
 const utilitySrc = (kind: UtilityKind) =>
   kind === 'market' ? '/realms/gameplay/market-building-pixel.webp' : '/realms/gameplay/utility-buildings-pixel.webp';
@@ -47,7 +47,7 @@ const utilitySrc = (kind: UtilityKind) =>
  *  artwork still fills the screen (see `minZoom`). */
 const MAX_ZOOM = 2.5;
 /** Drawn building size; 260 was the original. The lift keeps the base on the same 3×3 footprint. */
-const BUILDING_SIZE = 220,
+const BUILDING_SIZE = 196,
   BUILDING_LIFT = Math.round((BUILDING_SIZE * 205) / 260);
 export function drawBuilding(
   ctx: CanvasRenderingContext2D,
@@ -731,7 +731,7 @@ export default function World({
           ctx.restore();
         }
         const label = `${x.id === save.champion ? '★ ' : ''}${x.nickname} · ${x.level}`;
-        ctx.font = 'bold 12px Barlow, sans-serif';
+        ctx.font = "600 13px 'Pixelify Sans', sans-serif";
         ctx.textAlign = 'center';
         const width = ctx.measureText(label).width + 16;
         ctx.fillStyle = '#183342';

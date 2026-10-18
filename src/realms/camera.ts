@@ -1,6 +1,7 @@
 export const SCENE = { width: 1536, height: 1024 };
 // Wider art is centered on the existing grid, keeping saved building coordinates stable.
-export const HOME_ART = { width: (1672 / 941) * 1024, height: 1024 };
+/** The home island, composed from PixelLab tiles at 910×512 art pixels and drawn at 2 scene pixels per art pixel. */
+export const HOME_ART = { width: 1820, height: 1024 };
 export interface Point {
   x: number;
   y: number;
