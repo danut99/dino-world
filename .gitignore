@@ -9,3 +9,4 @@ tmp/
 # Sursele de artă și imaginile brute generate: doar locale (nu ajung în build).
 art/
 output/
+__pycache__/
