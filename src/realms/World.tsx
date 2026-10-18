@@ -1,11 +1,16 @@
+import { drawWorkshop, WORKSHOP_GROUND } from './animatedWorkshop';
+import { drawFarm, FARM_GROUND } from './animatedFarm';
 import { useEffect, useRef, useState } from 'react';
 import { advance, canPlace, ELEMENTS, farmNextAt, type Building, type Save, type RealmId } from './game';
 import { constrainPan, HOME_ART, SCENE } from './camera';
 import { buildingLevel, groundLine, LEVELED, measureGround, tierArt } from './buildingTiers';
 import { worldArt, worldArtSize } from './worldArt';
 import { UTILITY_BUILDINGS, type UtilityKind } from './content';
-import { SPECIES, SPECIES_NAMES, dinosaurCrop, loadDinosaurArt } from './dinosaurs';
+import { SPECIES, SPECIES_NAMES } from './dinosaurs';
 import { BUILDABLE_CELLS, GRID, project, unproject } from './grid';
+import { drawSprite, frameAt, loadAnimation, loadSpriteImage, type SpriteManifest } from './animation';
+import { drawBuildingEffect, drawRealmAtmosphere } from './worldEffects';
+import { useReducedMotion } from './useMotion';
 
 export { project, unproject };
 /**
@@ -20,28 +25,6 @@ const OWNED_SPOTS: { x: number; y: number }[] = [
   { x: 930, y: 590 },
 ];
 const STAGE_HEIGHT = { baby: 80, juvenile: 115, adult: 150 };
-function drawDinosaur(
-  ctx: CanvasRenderingContext2D,
-  image: HTMLImageElement,
-  crop: ReturnType<typeof dinosaurCrop>,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-) {
-  ctx.save();
-  ctx.translate(Math.round(x), Math.round(y));
-  ctx.scale(width / crop.width, height / crop.height);
-  ctx.translate(-crop.x, -crop.y);
-  if (crop.path) ctx.clip(new Path2D(crop.path));
-  else {
-    ctx.beginPath();
-    ctx.rect(crop.x, crop.y, crop.width, crop.height);
-    ctx.clip();
-  }
-  ctx.drawImage(image, 0, 0);
-  ctx.restore();
-}
 function polygon(ctx: CanvasRenderingContext2D, points: number[][], fill: string, stroke?: string) {
   ctx.beginPath();
   points.forEach(([x, y], i) =>
@@ -57,7 +40,6 @@ function polygon(ctx: CanvasRenderingContext2D, points: number[][], fill: string
   }
 }
 const HOME_SRC = '/realms/home-island-wide-v1.webp',
-  HERO_SRC = '/realms/dinosaurs/fire.webp',
   CONCEPTS_SRC = '/realms/building-concepts.webp';
 const utilitySrc = (kind: UtilityKind) =>
   kind === 'market' ? '/realms/gameplay/market-building-pixel.webp' : '/realms/gameplay/utility-buildings-pixel.webp';
@@ -72,8 +54,18 @@ export function drawBuilding(
   b: Building,
   texture?: HTMLImageElement | null,
   standalone = false,
+  animationMs = 0,
 ) {
   const p = project(b.x + 1.5, b.y + 1.5);
+  if (b.kind === 'workshop' && texture && standalone) {
+    drawWorkshop(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - WORKSHOP_GROUND * BUILDING_SIZE), BUILDING_SIZE);
+    return;
+  }
+  if (b.kind === 'farm' && texture && standalone) {
+    drawFarm(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - FARM_GROUND * BUILDING_SIZE), BUILDING_SIZE);
+    return;
+  }
+
   if (texture && (standalone || b.kind === 'market')) {
     const ground = groundLine(texture);
     const top = ground === undefined ? BUILDING_LIFT : Math.round(ground * BUILDING_SIZE);
@@ -414,13 +406,32 @@ export default function World({
 }) {
   const ref = useRef<HTMLCanvasElement>(null),
     image = useRef<HTMLImageElement | null>(null),
-    hero = useRef<HTMLImageElement | null>(null),
     buildings = useRef<HTMLImageElement | null>(null),
     worlds = useRef<Partial<Record<RealmId, HTMLImageElement>>>({});
   const utilityArt = useRef<Partial<Record<UtilityKind, HTMLImageElement>>>({});
   /** Milestone art by path; `null` marks a file that is not drawn yet, so it is requested only once. */
   const tierImages = useRef<Record<string, HTMLImageElement | null>>({});
-  const residentArt = useRef<Partial<Record<RealmId, HTMLImageElement>>>({});
+  const animatedArt = useRef(new Map<string, { manifest: SpriteManifest; images: Map<string, HTMLImageElement> }>());
+  const reducedMotion = useReducedMotion();
+  useEffect(() => {
+    let active = true;
+    const residents = realm === 'home' ? [] : save.dinos.filter(d => d.element === realm);
+    for (const d of residents) {
+      const id = `${d.species}_${d.element}_${d.stage}`;
+      if (animatedArt.current.has(id)) continue;
+      loadAnimation(d.species, d.element, d.stage).then(async manifest => {
+        if (!manifest || !active) return;
+        const images = new Map<string, HTMLImageElement>();
+        await Promise.all(Object.values(manifest.clips).flatMap(clips => Object.values(clips ?? {}))
+          .map(async clip => { try { images.set(clip.sheet, await loadSpriteImage(clip.sheet)); } catch { /* Retain concept fallback. */ } }));
+        if (active) {
+          animatedArt.current.set(id, { manifest, images });
+          setLoaded(n => n + 1);
+        }
+      });
+    }
+    return () => { active = false; animatedArt.current.clear(); };
+  }, [realm, save.dinos]);
   /** Images that finished loading or failed: either way, nothing more to wait for. */
   const settled = useRef(new Set<string>());
   const settle = (src: string) => {
@@ -515,16 +526,6 @@ export default function World({
   }, []);
   useEffect(() => {
     const img = new Image();
-    img.onload = async () => {
-      await loadDinosaurArt('fire');
-      hero.current = img;
-      settle(HERO_SRC);
-    };
-    img.onerror = () => settle(HERO_SRC);
-    img.src = HERO_SRC;
-  }, []);
-  useEffect(() => {
-    const img = new Image();
     img.onload = () => {
       buildings.current = img;
       settle(CONCEPTS_SRC);
@@ -598,34 +599,18 @@ export default function World({
       active = false;
     };
   }, [realm]);
-  useEffect(() => {
-    if (realm === 'home' || residentArt.current[realm]) return;
-    let active = true;
-    const img = new Image();
-    img.onload = async () => {
-      await loadDinosaurArt(realm);
-      residentArt.current[realm] = img;
-      if (active) settle(`/realms/dinosaurs/${realm}.webp`);
-    };
-    img.onerror = () => active && settle(`/realms/dinosaurs/${realm}.webp`);
-    img.src = `/realms/dinosaurs/${realm}.webp`;
-    return () => {
-      active = false;
-    };
-  }, [realm]);
   // The view shows only once its real artwork is in, so the drawn stand-ins never flash on screen.
   const needed =
     realm === 'home'
       ? [
           HOME_SRC,
-          HERO_SRC,
           CONCEPTS_SRC,
           ...(['workshop', 'portal', 'arena', 'market'] as const)
             .filter((kind) => save.buildings.some((b) => b.kind === kind))
             .map(utilitySrc),
           ...LEVELED.map((kind) => tierArt(save, kind)).filter((art): art is string => !!art),
         ]
-      : [worldArt(realm), `/realms/dinosaurs/${realm}.webp`];
+      : [worldArt(realm)];
   const pending = [...new Set(needed)],
     done = pending.filter((src) => settled.current.has(src)).length,
     ready = done === pending.length;
@@ -645,6 +630,10 @@ export default function World({
       ctx = canvas?.getContext('2d');
     if (!ctx || !canvas) return;
     const owned = realm === 'home' ? [] : save.dinos.filter((x) => x.element === realm);
+    let raf = 0, lastPaint = -Infinity;
+    const paint = (time: number) => {
+    if (!document.hidden && (time - lastPaint >= 80 || reducedMotion || covered)) {
+    lastPaint = time;
     ctx.setTransform(resolution, 0, 0, resolution, 0, 0);
     ctx.clearRect(0, 0, 1536, 1024);
     // A sky matching the artwork's border, under it in case rounding leaves a sliver at the edge.
@@ -654,7 +643,7 @@ export default function World({
     ctx.fillStyle = margin;
     ctx.fillRect(0, 0, 1536, 1024);
     // Zoomed in, smoothing blurs the pixel art; nearest-neighbour keeps every pixel crisp.
-    ctx.imageSmoothingEnabled = zoom < 1.25;
+    ctx.imageSmoothingEnabled = false;
     ctx.imageSmoothingQuality = 'high';
     ctx.save();
     ctx.translate(768 + cameraPan.x, 512 + cameraPan.y);
@@ -702,7 +691,8 @@ export default function World({
         .sort((a, b) => a.x + a.y - b.x - b.y)
         .forEach((b) => {
           if (b.id === held?.id) ctx.globalAlpha = 0.3;
-          drawBuilding(ctx, b, ...artFor(b.kind as UtilityKind));
+          drawBuilding(ctx, b, ...artFor(b.kind as UtilityKind), reducedMotion ? 0 : time);
+          if (b.kind !== 'farm' && b.kind !== 'workshop') drawBuildingEffect(ctx, b.kind, project(b.x + 1.5, b.y + 1.5).x, project(b.x + 1.5, b.y + 1.5).y, reducedMotion ? 0 : time);
           ctx.globalAlpha = 1;
         });
     if (realm === 'home')
@@ -716,13 +706,30 @@ export default function World({
         ctx.fillRect(p.x - 4, p.y - 40, 8, 7);
       }
     // Worlds show only the dinosaurs the player owns there.
-    if (realm !== 'home' && residentArt.current[realm])
+    if (realm !== 'home')
       owned.forEach((x, i) => {
-        const p = OWNED_SPOTS[i % OWNED_SPOTS.length],
-          crop = dinosaurCrop(realm, x.species, x.stage);
-        const h = Math.round(STAGE_HEIGHT[x.stage] * (x.species === 'brachiosaurus' ? 1.15 : 1)),
-          w = Math.round((h * crop.width) / crop.height);
-        drawDinosaur(ctx, residentArt.current[realm]!, crop, p.x - w / 2, p.y - h, w, h);
+        const anchor = OWNED_SPOTS[i % OWNED_SPOTS.length];
+        const phase = reducedMotion ? 0 : ((time + i * 1700) % 10000) / 1000;
+        const walking = (phase >= 3 && phase < 5) || phase >= 8;
+        const returning = phase >= 8;
+        const travel = phase < 3 ? 0 : phase < 5 ? (phase - 3) / 2 : phase < 8 ? 1 : 1 - (phase - 8) / 2;
+        const art = animatedArt.current.get(`${x.species}_${x.element}_${x.stage}`);
+        const facing = 'se';
+        const clip = art?.manifest.clips[facing]?.[walking ? 'walk' : 'idle'];
+        const sheet = clip && art?.images.get(clip.sheet);
+        const p = { x: anchor.x + (sheet ? travel * 64 : 0), y: anchor.y };
+        if (clip && sheet && art) {
+          const size = x.stage === 'baby' ? 128 : x.stage === 'juvenile' ? 176 : 224;
+          const m = art.manifest;
+          const factor = size / m.sourceSize.height;
+          ctx.save();
+          ctx.translate(Math.round(p.x), Math.round(p.y));
+          if (returning) ctx.scale(-1, 1);
+          const clipTime = walking ? (phase - (returning ? 8 : 3)) * 1000 : time + i * 137;
+          drawSprite(ctx, sheet, clip, frameAt(clip, reducedMotion ? 0 : clipTime),
+            -m.pivot.x * factor, -m.pivot.y * factor, m.sourceSize.width * factor, size);
+          ctx.restore();
+        }
         const label = `${x.id === save.champion ? '★ ' : ''}${x.nickname} · ${x.level}`;
         ctx.font = 'bold 12px Barlow, sans-serif';
         ctx.textAlign = 'center';
@@ -756,7 +763,15 @@ export default function World({
       ctx.stroke();
       ctx.restore();
     }
+    if (!showGhost) drawRealmAtmosphere(ctx, realm, reducedMotion ? 0 : time);
     ctx.restore();
+    }
+    if (!reducedMotion && !covered) raf = requestAnimationFrame(paint);
+    };
+    paint(performance.now());
+    const resume = () => { if (!document.hidden) { cancelAnimationFrame(raf); lastPaint = -Infinity; paint(performance.now()); } };
+    document.addEventListener('visibilitychange', resume);
+    return () => { cancelAnimationFrame(raf); document.removeEventListener('visibilitychange', resume); };
   }, [
     save.buildings,
     save.dinos,
@@ -773,6 +788,8 @@ export default function World({
     cameraPan.x,
     cameraPan.y,
     realm,
+    reducedMotion,
+    covered,
   ]);
   const here = realm === 'home' ? [] : save.dinos.filter((x) => x.element === realm);
   // Two-finger pinch on phones: the scene point between the fingers stays under them while zooming and moving.
@@ -811,7 +828,7 @@ export default function World({
       data-realm={realm}
       data-residents={here.length}
       data-preview-residents={0}
-      data-dinosaur-art-ready={realm === 'home' || !!residentArt.current[realm]}
+      data-dinosaur-art-ready={realm === 'home' || save.dinos.filter(d => d.element === realm).every(d => animatedArt.current.has(`${d.species}_${d.element}_${d.stage}`))}
       data-environment-ready={realm === 'home' ? !!image.current : !!worlds.current[realm]}
       data-camera-x={cameraPan.x}
       data-camera-y={cameraPan.y}
@@ -1099,8 +1116,14 @@ export default function World({
             setPan({ x: 0, y: 0 });
           }}
           aria-label={lang ? 'Center island' : 'Centrează insula'}
+          className="realm-recenter"
         >
-          ⌖
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="6" stroke="currentColor" strokeWidth="1.7" />
+            <circle cx="12" cy="12" r="2" fill="currentColor" />
+            <path d="M12 2v4m0 12v4M2 12h4m12 0h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          </svg>
+          <span>{lang ? 'Center' : 'Centru'}</span>
         </button>
       </div>
     </div>

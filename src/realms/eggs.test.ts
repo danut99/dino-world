@@ -39,31 +39,31 @@ describe('eggs, hatchery, market and habitats', () => {
     let s = run(newSave(now), { type: 'build', kind: 'farm', x: 5, y: 8 });
     expect(() => run(s, { type: 'claimQuestEgg', questId: 'raptor_fire' })).toThrow('locked');
     s = run(s, { type: 'claimQuestEgg', questId: 'triceratops_earth' });
-    expect(s.eggs.at(-1)).toMatchObject({ species: 'triceratops', element: 'earth', seconds: 300 });
+    expect(s.eggs.at(-1)).toMatchObject({ species: 'triceratops', element: 'nature', seconds: 300 });
     // The egg waits: its world stays locked until it is bought with gold and materials.
-    expect(s.habitats.earth).toBeUndefined();
+    expect(s.habitats.nature).toBeUndefined();
     s = run(s, { type: 'incubate', eggId: s.eggs.at(-1)!.id });
     expect(() => command(s, { type: 'hatch' }, now + 300_000)).toThrow('habitat');
-    s = run(s, { type: 'unlockHabitat', realm: 'earth' });
-    expect(s).toMatchObject({ gold: 1100 - 500, habitats: { earth: 1 } });
-    expect(s.inventory.stone).toBe(15);
+    s = run(s, { type: 'unlockHabitat', realm: 'nature' });
+    expect(s).toMatchObject({ gold: 1100 - 750, habitats: { nature: 1 } });
+    expect(s.inventory.fiber).toBeLessThan(30);
     expect(() => run(s, { type: 'claimQuestEgg', questId: 'triceratops_earth' })).toThrow('locked');
     expect(() => command(s, { type: 'hatch' }, now + 299_999)).toThrow('timer');
     s = command(s, { type: 'hatch' }, now + 300_000);
-    expect(s.dinos).toMatchObject([{ species: 'triceratops', element: 'earth', stage: 'baby' }]);
+    expect(s.dinos).toMatchObject([{ species: 'triceratops', element: 'nature', stage: 'baby' }]);
     s.cleared = ['training'];
-    expect(run(s, { type: 'claimQuestEgg', questId: 'raptor_fire' }).eggs.at(-1)?.element).toBe('fire');
+    expect(run(s, { type: 'claimQuestEgg', questId: 'raptor_fire' }).eggs.at(-1)?.element).toBe('earth');
     // Saves that claimed the old wind story egg keep it claimed under its new id.
     expect(parseSave(JSON.stringify({ ...s, questEggs: ['raptor_wind'] })).questEggs).toEqual(['raptor_fire']);
     roundTrip(s);
   });
 
   it('sells eggs only with a market and a habitat in that world', () => {
-    expect(() => run(newSave(now), { type: 'buyEgg', species: 'raptor', element: 'fire' })).toThrow('building');
+    expect(() => run(newSave(now), { type: 'buyEgg', species: 'trex', element: 'fire' })).toThrow('building');
     let s = rich();
     expect(() => run(s, { type: 'buyEgg', species: 'raptor', element: 'dark' })).toThrow('habitat');
     const gold = s.gold;
-    s = run(s, { type: 'buyEgg', species: 'raptor', element: 'fire' });
+    s = run(s, { type: 'buyEgg', species: 'trex', element: 'fire' });
     expect(s.gold).toBe(gold - 250);
     s = run(s, { type: 'unlockHabitat', realm: 'dark' });
     expect(() => run(s, { type: 'buyEgg', species: 'raptor', element: 'dark' })).toThrow('fightEgg');
@@ -79,8 +79,8 @@ describe('eggs, hatchery, market and habitats', () => {
   it('limits incubation to the hatchery slots and upgrades them', () => {
     let s = run(
       rich(),
-      { type: 'buyEgg', species: 'raptor', element: 'fire' },
-      { type: 'buyEgg', species: 'triceratops', element: 'fire' },
+      { type: 'buyEgg', species: 'trex', element: 'fire' },
+      { type: 'buyEgg', species: 'trex', element: 'fire' },
     );
     s = run(s, { type: 'incubate', eggId: s.eggs[0].id });
     expect(() => run(s, { type: 'incubate', eggId: s.eggs[1].id })).toThrow('slots');
@@ -92,21 +92,21 @@ describe('eggs, hatchery, market and habitats', () => {
 
   it('keeps a ready egg waiting while the habitat is full, until the habitat grows', () => {
     let s = rich();
-    for (const species of ['raptor', 'triceratops'] as const) s = run(s, { type: 'buyEgg', species, element: 'fire' });
+    for (const species of ['trex', 'trex'] as const) s = run(s, { type: 'buyEgg', species, element: 'fire' });
     s = run(s, { type: 'upgradeHatchery' }, { type: 'incubate' }, { type: 'incubate' }, { type: 'devSkip' });
     s = run(s, { type: 'hatch' });
     expect(s.dinos).toHaveLength(2);
     expect(() => run(s, { type: 'hatch' })).toThrow('habitatFull');
     expect(s.eggs).toHaveLength(1);
     s = run(s, { type: 'upgradeHabitat', realm: 'fire' }, { type: 'hatch' });
-    expect(s.dinos.map((d) => d.species)).toEqual(['trex', 'raptor', 'triceratops']);
-    expect(s.dinos[2].nickname).toBe('Triceratops 1');
+    expect(s.dinos.map((d) => d.species)).toEqual(['trex', 'trex', 'trex']);
+    expect(s.dinos[2].nickname).toBe('T-Rex 3');
     roundTrip(s);
   });
 
   it('pays every dinosaur, with earth at ×1.25 and habitat levels adding 10%', () => {
     let s = rich();
-    s.dinos.push({ id: 'rock', species: 'triceratops', element: 'earth', level: 1, stage: 'baby', nickname: 'Rock' });
+    s.dinos.push({ id: 'rock', species: 'raptor', element: 'earth', level: 1, stage: 'baby', nickname: 'Rock' });
     s.habitats.earth = 1;
     expect(goldRate(s)).toBe(10 + 12.5);
     s.storedGold = 0;
@@ -118,8 +118,8 @@ describe('eggs, hatchery, market and habitats', () => {
 
   it('fights with the champion, applies species stats, and locks the champion during battle', () => {
     let s = rich();
-    s.dinos.push({ id: 'zip', species: 'raptor', element: 'wind', level: 12, stage: 'juvenile', nickname: 'Zip' });
-    s.habitats.wind = 1;
+    s.dinos.push({ id: 'zip', species: 'raptor', element: 'earth', level: 12, stage: 'juvenile', nickname: 'Zip' });
+    s.habitats.earth = 1;
     expect(() => run(s, { type: 'battle' })).toThrow('juvenile');
     s = run(s, { type: 'setChampion', dinoId: 'zip' }, { type: 'battle' });
     expect(s.battle).toMatchObject({ dinoId: 'zip', maxHp: stats(12, 'juvenile', 'raptor').hp });
@@ -134,7 +134,7 @@ describe('eggs, hatchery, market and habitats', () => {
     let s = run(rich(), { type: 'build', kind: 'farm', x: 5, y: 8 }, { type: 'build', kind: 'workshop', x: 1, y: 8 });
     s = run(
       s,
-      { type: 'buyEgg', species: 'raptor', element: 'fire' },
+      { type: 'buyEgg', species: 'trex', element: 'fire' },
       { type: 'incubate' },
       { type: 'plant', crop: 'cicadas' },
     );

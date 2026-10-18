@@ -1,0 +1,6 @@
+{
+  "canvas": { "width": 400, "height": 400 },
+  "image": "building.png",
+  "rotor": { "x": 290, "y": 116, "radius": 100, "squash": 0.95, "shear": 0.12, "phase": -0.6, "secondsPerTurn": 12 },
+  "chimney": { "x": 132, "y": 64 }
+}

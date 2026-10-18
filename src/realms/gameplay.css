@@ -823,10 +823,17 @@
   text-shadow: 0 0 25px #f0642b;
   animation: battle-flash 0.45s ease-out forwards;
 }
-.impact-defend .battle-impact {
+.battle-impact.on-ally {
   left: 24%;
+}
+.battle-impact.kind-guard {
   color: #99cbe9;
   text-shadow: 0 0 25px #7bd3ff;
+}
+.battle-impact.kind-ultimate {
+  color: #fff1b8;
+  text-shadow: 0 0 40px #ff8a3b;
+  animation-duration: 0.7s;
 }
 .battle-result {
   position: absolute;
@@ -1496,3 +1503,75 @@
 .result-egg small { color: #d9c79f; font-size: 11px; }
 @keyframes result-egg-in { from { opacity: 0; transform: scale(0.8); } }
 @media (prefers-reduced-motion: reduce) { .result-egg { animation: none; } }
+
+/* Battle choreography: the unit carries the clip it plays; CSS adds the body motion the sprite cannot. */
+.battle-unit {
+  --motion-ms: 600ms;
+  will-change: transform;
+}
+.battle-unit[data-motion='walk'] {
+  animation: battle-enter-left var(--motion-ms) ease-out both;
+}
+.battle-unit.enemy[data-motion='walk'] {
+  animation-name: battle-enter-right;
+}
+.battle-unit[data-motion='attack'],
+.battle-unit[data-motion='ultimate'] {
+  animation: battle-lunge-right var(--motion-ms) ease-in-out both;
+}
+.battle-unit.enemy[data-motion='attack'],
+.battle-unit.enemy[data-motion='ultimate'] {
+  animation-name: battle-lunge-left;
+}
+.battle-unit[data-motion='ultimate'] > .realm-hero {
+  filter: drop-shadow(0 13px 10px #3635283d) drop-shadow(0 0 18px #ffb45a);
+}
+.battle-unit[data-motion='hurt'] {
+  animation: battle-shake var(--motion-ms) ease-out both;
+}
+.battle-unit[data-motion='hurt'] > .realm-hero {
+  filter: drop-shadow(0 13px 10px #3635283d) brightness(1.6) saturate(0.4);
+}
+.battle-unit[data-motion='defend'] > .realm-hero {
+  filter: drop-shadow(0 13px 10px #3635283d) drop-shadow(0 0 14px #7bd3ff);
+}
+/* Static art has no defeat clip, so the fallen fighter fades and sinks instead. */
+.battle-unit[data-motion='death'] > img,
+.battle-unit[data-motion='death'] > svg {
+  filter: grayscale(1) brightness(0.55);
+  opacity: 0.7;
+  transition: filter 0.6s, opacity 0.6s;
+}
+.battle-playing .battle-command-bar {
+  pointer-events: none;
+}
+@keyframes battle-enter-left {
+  from { transform: translateX(-70%); }
+  to { transform: translateX(0); }
+}
+@keyframes battle-enter-right {
+  from { transform: translateX(70%); }
+  to { transform: translateX(0); }
+}
+@keyframes battle-lunge-right {
+  0% { transform: translateX(0); }
+  35% { transform: translateX(28%); }
+  70% { transform: translateX(28%); }
+  100% { transform: translateX(0); }
+}
+@keyframes battle-lunge-left {
+  0% { transform: translateX(0); }
+  35% { transform: translateX(-28%); }
+  70% { transform: translateX(-28%); }
+  100% { transform: translateX(0); }
+}
+@keyframes battle-shake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-4%) rotate(-1.5deg); }
+  45% { transform: translateX(3%) rotate(1deg); }
+  70% { transform: translateX(-2%); }
+  100% { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle-unit[data-motion] { animation: none; }
+}

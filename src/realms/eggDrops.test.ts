@@ -33,8 +33,8 @@ function win(s: Save, encounterId: string, at = now) {
 describe('egg drops and selling', () => {
   it('sells only fire, water and earth eggs at the market', () => {
     const s = arena();
-    expect(() => run(s, { type: 'buyEgg', species: 'raptor', element: 'nature' })).toThrow('fightEgg');
-    expect(run(s, { type: 'buyEgg', species: 'raptor', element: 'fire' }).eggs.at(-1)?.element).toBe('fire');
+    expect(() => run(s, { type: 'buyEgg', species: 'triceratops', element: 'nature' })).toThrow('fightEgg');
+    expect(run(s, { type: 'buyEgg', species: 'trex', element: 'fire' }).eggs.at(-1)?.element).toBe('fire');
   });
 
   it('always drops an egg of its element from a boss the first time', () => {
@@ -94,14 +94,14 @@ describe('egg drops and selling', () => {
 
   it('sells waiting eggs, but not incubating ones or the tutorial egg', () => {
     expect(() => run(newSave(now), { type: 'sellEgg', eggId: 'egg-ignis' })).toThrow('egg');
-    let s = run(arena(), { type: 'buyEgg', species: 'raptor', element: 'fire' });
+    let s = run(arena(), { type: 'buyEgg', species: 'trex', element: 'fire' });
     const egg = s.eggs.at(-1)!.id,
       gold = s.gold;
     expect(() => run(run(s, { type: 'incubate', eggId: egg }), { type: 'sellEgg', eggId: egg })).toThrow('egg');
     s = run(s, { type: 'sellEgg', eggId: egg });
     expect(s.gold).toBe(gold + 100);
     expect(s.eggs.some((e) => e.id === egg)).toBe(false);
-    s.eggs.push({ id: 'egg-x', species: 'trex', element: 'nature', seconds: 300, hatchAt: null });
+    s.eggs.push({ id: 'egg-x', species: 'triceratops', element: 'nature', seconds: 300, hatchAt: null });
     expect(run(s, { type: 'sellEgg', eggId: 'egg-x' }).gold).toBe(gold + 400);
   });
 

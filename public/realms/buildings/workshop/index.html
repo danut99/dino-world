@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ro">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moara din grădină — previzualizare</title>
+<style>
+  * { box-sizing: border-box } body { margin:0; background:#101d1c; color:#ecedda; font:16px system-ui,sans-serif; }
+  main { max-width:1040px; margin:auto; padding:28px; } h1 { font-size:26px; margin:0 0 8px; } p { color:#b5c6b8; }
+  .stage { display:grid; place-items:center; overflow:auto; min-height:440px; border:1px solid #42564c; border-radius:16px; background:radial-gradient(ellipse,#476844,#263e32 65%,#1a2c27); }
+  canvas { image-rendering:pixelated; display:block; flex-shrink:0; }
+  .controls { display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding:20px 0; }
+  button,select { font:inherit; background:#273f34; color:#ecedda; border:1px solid #779178; border-radius:8px; padding:8px 14px; }
+  button:focus-visible,select:focus-visible,input:focus-visible { outline:3px solid #f1ce7d; outline-offset:3px; }
+  #status { min-height:24px; } a { color:#f1ce7d; }
+</style>
+<main>
+  <h1>Moara din grădină</h1>
+  <p>Pale în mișcare, fum în aer și aceeași clădire, cadru după cadru.</p>
+  <div class="controls">
+    <button id="play" type="button">Pauză</button>
+    <label>Mărime <select id="scale"><option value="1">400 px · 1×</option><option value="2" selected>800 px · 2×</option><option value="3">1200 px · 3×</option></select></label>
+    <label><input id="smoke" type="checkbox" checked> Fum</label>
+    <label>Vânt <input id="speed" type="range" min="0.25" max="2" step="0.25" value="1"></label>
+  </div>
+  <div class="stage"><canvas width="400" height="400" aria-label="Moară animată cu grădină și coș de fum"></canvas></div>
+  <p id="status" role="status">Se încarcă moara…</p>
+</main>
+<script type="module">
+  import { Workshop } from './workshop.js';
+  const canvas = document.querySelector('canvas'), ctx = canvas.getContext('2d');
+  const play = document.querySelector('#play'), scale = document.querySelector('#scale');
+  const smoke = document.querySelector('#smoke'), speed = document.querySelector('#speed');
+  let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches, time = 0, previous, raf;
+  let mill;
+  function resize() { canvas.style.width = `${400*Number(scale.value)}px`; canvas.style.height = `${400*Number(scale.value)}px`; }
+  function paint() { ctx.clearRect(0,0,400,400); mill?.draw(ctx,time,{smoke:smoke.checked,speed:Number(speed.value)}); }
+  function tick(now) { if (!playing || document.hidden) { previous=undefined; return; } if (previous!==undefined) time+=Math.min((now-previous)/1000,.1); previous=now; paint(); raf=requestAnimationFrame(tick); }
+  function sync() { cancelAnimationFrame(raf); previous=undefined; play.textContent=playing?'Pauză':'Pornește'; play.setAttribute('aria-pressed',String(playing)); paint(); if(playing&&!document.hidden) raf=requestAnimationFrame(tick); }
+  play.onclick=()=>{playing=!playing;sync()}; scale.onchange=resize; smoke.onchange=paint; speed.oninput=paint;
+  document.addEventListener('visibilitychange',sync); resize(); sync();
+  try {
+    const rig={image:'building.png'};
+    const image=new Image(); image.src=new URL(rig.image,location.href).href; await image.decode();
+    mill=new Workshop(image); document.querySelector('#status').textContent='400 × 400 px nativ · pale și fum animate separat'; sync();
+  } catch { document.querySelector('#status').textContent='Imaginea atelierului nu este disponibilă încă.'; }
+</script>
+</html>

@@ -1,0 +1,165 @@
+@font-face {
+  font-family: 'Realms Pixel';
+  src: url('/fonts/pixelify-sans-bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+.realms-app {
+  --ink: #f3efff;
+  --soft: #b8b2d1;
+  --gold: #c5a3ff;
+  --navy: #201c35;
+}
+.realms-app :is(h1, h2, h3),
+.realms-app .realm-brand,
+.realms-app .realm-brand b,
+.realms-app .realm-resource strong {
+  font-family: 'Realms Pixel', Barlow, sans-serif;
+  letter-spacing: 0.01em;
+}
+.realms-app .realm-brand {
+  text-shadow: 3px 3px #181222;
+}
+.realms-app .realm-brand b {
+  color: #c4a0ff;
+}
+.realms-app :is(.realm-window, .realm-quest, .realm-resource, .realm-nav) {
+  background-color: #211c35f5;
+  border-color: #8c78b6;
+  color: #f3efff;
+  border-radius: 0;
+  box-shadow:
+    0 4px 0 #100d1c,
+    inset 0 0 0 2px #ffffff08;
+}
+.realms-app .realm-window > header {
+  background: #2e2646;
+  border-bottom: 2px solid #655381;
+}
+.realms-app .gameplay-screen { background: #211c35; color: #f3efff; --screen-gold: #c5a3ff; }
+.realms-app :is(.gameplay-header,.battle-command-bar,.craft-queue,.gameplay-sidebar,.battle-vitals) { background-color: #211c35f5; border-color: #8c78b6; color: #f3efff; }
+.realms-app .battle-command { background: #302642; border-color: #8d74b4; color: #eee4fc; }
+.realms-app .battle-command > strong { font-family: 'Realms Pixel', Barlow, sans-serif; font-size: 17px; }
+.realms-app .realm-quest-body {
+  background: #211c35;
+  color: #f3efff;
+  border-color: #655381;
+}
+.realms-app .realm-quest-body p {
+  color: #c6bed6;
+}
+.realms-app :is(.realm-eyebrow, .realm-resource small) {
+  color: #b7a8d3;
+}
+.realms-app .realm-button {
+  background: #b894f5;
+  color: #201631;
+  border: 2px solid #d3baff;
+  border-radius: 0;
+  box-shadow:
+    inset 0 -4px #8c67c8,
+    0 4px #130e20;
+  transition:
+    background 120ms,
+    translate 120ms;
+}
+.realms-app .realm-button:hover:not(:disabled) {
+  background: #d4b9ff;
+  translate: 0 -2px;
+}
+.realms-app .realm-button:active:not(:disabled) {
+  translate: 0 2px;
+}
+.realms-app .realm-button.secondary {
+  background: #302642;
+  color: #f0e6ff;
+  border-color: #8d74b4;
+}
+.realms-app .realm-nav > button {
+  color: #e3d9f4;
+  border-radius: 0;
+}
+.realms-app .realm-nav > button:hover {
+  background: #4e3b69;
+}
+.realms-app .realm-nav > button.featured {
+  background: #a8e7cb;
+  color: #132b25;
+}
+.realms-app :is(button, a, select, input):focus-visible {
+  outline-color: #a8e7cb;
+}
+.realms-app .realm-viewer {
+  background: #181422;
+  background-image:
+    linear-gradient(45deg, #2b233d 25%, transparent 25%), linear-gradient(-45deg, #2b233d 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #2b233d 75%), linear-gradient(-45deg, transparent 75%, #2b233d 75%);
+  background-size: 24px 24px;
+  background-position:
+    0 0,
+    0 12px,
+    12px -12px,
+    -12px 0;
+}
+.realms-app .realm-viewer.light {
+  background-color: #e4dceb;
+  background-image: none;
+}
+.realms-app .dinosaur-art {
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+.realms-app .realm-viewer .animated-dinosaur {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+.realm-animation-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 14px 0;
+}
+.realm-animation-toolbar button,
+.realm-animation-toolbar select {
+  min-height: 44px;
+  background: #302642;
+  color: #f0e6ff;
+  border: 1px solid #8d74b4;
+  padding: 8px 12px;
+}
+.realm-animation-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.realm-animation-status {
+  color: #a8e7cb;
+  font-size: 13px;
+}
+.realm-stage-comparison {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+}
+.realm-stage-comparison figure {
+  flex: 0 0 192px;
+  margin: 0;
+  text-align: center;
+}
+.realm-stage-comparison .realm-hero {
+  width: 192px;
+  height: 192px;
+}
+.realm-stage-comparison figcaption {
+  color: #cab9df;
+  font-size: 13px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .realms-app .realm-button {
+    transition: none;
+    translate: none;
+  }
+}

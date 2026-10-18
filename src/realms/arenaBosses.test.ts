@@ -4,7 +4,8 @@ import { ELEMENTS, SPECIES } from './game';
 import { ARENA_BOSSES, arenaBoss } from './arenaBosses';
 
 it('assigns released bosses to their champions and keeps unreleased encounters unchanged', () => {
-  expect(new Set(Object.values(ARENA_BOSSES).map(b => b.art)).size).toBe(10);
+  expect(Object.values(ARENA_BOSSES).filter(b => b.animated)).toHaveLength(4);
+  expect(Object.values(ARENA_BOSSES).filter(b => b.animated).every(b => !b.art)).toBe(true);
   for (const [index, element] of ELEMENTS.entries()) {
     const boss = ARENA_BOSSES[element.id];
     expect(boss.species).toBe(SPECIES[(index + 4) % SPECIES.length]);

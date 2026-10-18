@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "variantId": "triceratops_nature",
+  "stage": "adult",
+  "status": "prototype",
+  "sourceSize": {
+    "width": 256,
+    "height": 256
+  },
+  "pivot": {
+    "x": 128,
+    "y": 216
+  },
+  "clips": {
+    "se": {
+      "ultimate": {
+        "sheet": "/realms/animations/triceratops_nature_adult/ultimate-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 8,
+        "durationsMs": [
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83
+        ],
+        "loop": false,
+        "impactFrame": 10
+      },
+      "death": {
+        "sheet": "/realms/animations/triceratops_nature_adult/death-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 8,
+        "durationsMs": [
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100
+        ],
+        "loop": false
+      },
+      "hurt": {
+        "sheet": "/realms/animations/triceratops_nature_adult/hurt-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 4,
+        "durationsMs": [
+          83,
+          83,
+          83,
+          83
+        ],
+        "loop": false
+      },
+      "attack": {
+        "sheet": "/realms/animations/triceratops_nature_adult/attack-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 8,
+        "durationsMs": [
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83
+        ],
+        "loop": false,
+        "impactFrame": 4
+      },
+      "walk": {
+        "sheet": "/realms/animations/triceratops_nature_adult/walk-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 8,
+        "durationsMs": [
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83
+        ],
+        "loop": true
+      },
+      "defend": {
+        "sheet": "/realms/animations/triceratops_nature_adult/defend-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 6,
+        "durationsMs": [
+          100,
+          100,
+          100,
+          100,
+          100,
+          100
+        ],
+        "loop": false
+      },
+      "idle": {
+        "sheet": "/realms/animations/triceratops_nature_adult/idle-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 8,
+        "durationsMs": [
+          125,
+          125,
+          125,
+          125,
+          125,
+          125,
+          125,
+          125
+        ],
+        "loop": true
+      }
+    }
+  }
+}

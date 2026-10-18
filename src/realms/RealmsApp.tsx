@@ -5,7 +5,8 @@ import { worldThumb } from './worldArt';
 import { Hero } from './Hero';
 import { DinosaurCollection } from './DinosaurCollection';
 import { DinosaurArt } from './DinosaurArt';
-import { SPECIES, SPECIES_NAMES, type Species } from './dinosaurs';
+import { AnimationViewer } from './AnimationViewer';
+import { SPECIES_NAMES, type Species } from './dinosaurs';
 import { BuildingSprite } from './BuildingSprite';
 import { GameplayScreen, BattleScreen, type GameplayView } from './GameplayScreens';
 import { ITEMS, UTILITY_BUILDINGS, RECIPES, type ItemId, type UtilityKind } from './content';
@@ -34,6 +35,7 @@ import {
   type RealmId,
 } from './game';
 import './realms.css';
+import './pixel-theme.css';
 
 type Panel =
   | 'dino'
@@ -137,6 +139,7 @@ function Window({
 }
 
 export default function RealmsApp() {
+  const [profileOpen, setProfileOpen] = useState(false);
   const [save, setSave] = useState(load),
     [now, setNow] = useState(Date.now()),
     [panel, setPanel] = useState<Panel>(null);
@@ -160,6 +163,7 @@ export default function RealmsApp() {
     [message, setMessage] = useState('');
   // The bottom bar can fold down to just the Collect button; phones start folded, where it covers more island.
   const [navOpen, setNavOpen] = useState(() => {
+    if (window.matchMedia('(max-width: 760px), (max-height: 500px) and (orientation: landscape)').matches) return false;
     try {
       const saved = localStorage.getItem('dino-realms-nav');
       if (saved) return saved === 'open';
@@ -179,6 +183,7 @@ export default function RealmsApp() {
     });
   // The story card folds to its header, remembered like the bottom bar; phones start folded.
   const [storyOpen, setStoryOpen] = useState(() => {
+    if (window.matchMedia('(max-width: 760px), (max-height: 500px) and (orientation: landscape)').matches) return false;
     try {
       const saved = localStorage.getItem('dino-realms-story');
       if (saved) return saved === 'open';
@@ -484,6 +489,36 @@ export default function RealmsApp() {
         onSelect={openBuilding}
         onProgress={bootProgress}
       />
+      <div className="realm-mobile-profile">
+        <button
+          className="realm-avatar"
+          aria-label={tr('Resurse', 'Resources')}
+          aria-expanded={profileOpen}
+          aria-controls="realm-mobile-stats"
+          onClick={() => setProfileOpen((open) => !open)}
+        >
+          <Hero stage={d?.stage ?? 'baby'} />
+          <span>{d?.level ?? 1}</span>
+        </button>
+        {profileOpen && (
+          <>
+            <button className="realm-profile-dismiss" aria-label="Close resources" onClick={() => setProfileOpen(false)} />
+            <section className="realm-profile-card" id="realm-mobile-stats" aria-label={tr('Resurse', 'Resources')} onKeyDown={(event) => { if (event.key === 'Escape') setProfileOpen(false); }}>
+              <header><strong>{badge.title}</strong><button aria-label="Close resources" onClick={() => setProfileOpen(false)}>×</button></header>
+              <div className="realm-profile-stats">
+                <Resource symbol="●" value={Math.floor(save.gold)} label={tr('Aur', 'Gold')} color="gold" />
+                <Resource symbol="❧" value={save.food} label={tr('Hrană', 'Food')} color="food" />
+                <Resource symbol="★" value={d?.level ?? 1} label={tr('Nivel', 'Level')} color="gold" />
+              </div>
+              <footer>
+                <button onClick={() => { setProfileOpen(false); setPanel('dino'); }}>{tr('Dinozauri', 'Dinosaurs')}</button>
+                <button onClick={() => { setProfileOpen(false); setPanel('settings'); }}>{tr('Setări', 'Settings')}</button>
+                <button onClick={() => { setProfileOpen(false); setPanel('wiki'); }}>Wikipedia</button>
+              </footer>
+            </section>
+          </>
+        )}
+      </div>
       <header className="realm-hud">
         <a
           className="realm-brand"
@@ -570,10 +605,11 @@ export default function RealmsApp() {
           className="realm-quest-top"
           onClick={toggleStory}
           aria-expanded={storyOpen}
+          aria-label={storyOpen ? tr('Restrânge povestea', 'Collapse the story') : tr('Arată povestea', 'Show the story')}
           title={storyOpen ? tr('Restrânge povestea', 'Collapse the story') : tr('Arată povestea', 'Show the story')}
         >
           <span>✦</span>
-          {tr('POVESTEA TA', 'YOUR STORY')}
+          <span className="realm-quest-label">{tr('POVESTEA TA', 'YOUR STORY')}</span>
           {!storyOpen && (storyReady || storyEggs.length > 0) && (
             <b className="realm-quest-alert" aria-label={tr('Recompensă disponibilă', 'Reward ready')}>
               !
@@ -777,6 +813,7 @@ export default function RealmsApp() {
           >
             <span className="realm-nav-chevron" aria-hidden />
             <span className="realm-nav-grip" aria-hidden />
+            <span className="realm-nav-toggle-label">{tr('Meniu', 'Menu')}</span>
           </button>
           <Nav icon="▦" label={tr('Construiește', 'Build')} onClick={() => setPanel('build')} />
           <Nav icon="🦖" label={tr('Dinozauri', 'Dinosaurs')} onClick={() => setPanel('dino')} />
@@ -787,11 +824,19 @@ export default function RealmsApp() {
           <Nav icon="⚒" label={tr('Atelier', 'Workshop')} onClick={() => setPanel('workshop')} />
           <button
             className="realm-collect"
+            aria-label={tr('Colectează', 'Collect')}
+            title={tr('Colectează', 'Collect')}
             onClick={() => {
               if (run({ type: 'collectAvailable' })) setMessage(tr('Resurse colectate!', 'Resources collected!'));
             }}
           >
-            <span>●</span>
+            <span aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" fill="#e8bd65" stroke="#ffe3a3" strokeWidth="1.5" />
+                <circle cx="12" cy="12" r="6.5" stroke="#a77530" />
+                <path d="M14 8.5h-3a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-3M12 7v11" stroke="#785120" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </span>
             <div>
               <strong>{tr('Colectează', 'Collect')}</strong>
               <small>
@@ -818,14 +863,6 @@ export default function RealmsApp() {
           {message}
         </div>
       )}
-      <div className="realm-portrait">
-        <span>↻</span>
-        <strong>{tr('Aventura se vede mai bine pe lat', 'Adventure looks better in landscape')}</strong>
-        <p>{tr('Rotește telefonul sau continuă în modul portret.', 'Rotate your phone, or continue in portrait.')}</p>
-        <button onClick={(e) => e.currentTarget.parentElement?.classList.add('dismissed')}>
-          {tr('Continuă', 'Continue')}
-        </button>
-      </div>
 
       {panel && !gameplayView && (
         <Window
@@ -934,7 +971,7 @@ export default function RealmsApp() {
                         <p>{spec.description[lang]}</p>
                       </div>
                       {existing ? (
-                        <div>
+                        <div className="realm-build-actions">
                           <button
                             className="realm-button secondary"
                             onClick={() => {
@@ -1106,7 +1143,7 @@ export default function RealmsApp() {
               </p>
             </div>
           )}
-          {panel === 'assets' && <AssetViewer lang={lang} />}
+          {panel === 'assets' && <AnimationViewer lang={lang} />}
         </Window>
       )}
       {gameplayView && (
@@ -1179,88 +1216,9 @@ function Nav({
   featured?: boolean;
 }) {
   return (
-    <button className={featured ? 'featured' : ''} onClick={onClick}>
+    <button className={featured ? 'featured' : ''} onClick={onClick} aria-label={label} title={label}>
       <span>{icon}</span>
       <strong>{label}</strong>
     </button>
-  );
-}
-function AssetViewer({ lang }: { lang: number }) {
-  const [species, setSpecies] = useState<Species>('trex');
-  const [element, setElement] = useState<RealmId>('fire');
-  const [stage, setStage] = useState<Stage>('juvenile'),
-    [scale, setScale] = useState(1),
-    [dark, setDark] = useState(true),
-    [pivot, setPivot] = useState(true);
-  const tr = (ro: string, en: string) => text(lang, ro, en);
-  return (
-    <>
-      <p className="realm-intro">
-        {tr(
-          'Concepte noi pentru direcția vizuală. Nu sunt sprite-uri animate finale.',
-          'New concepts for the visual direction. These are not final animated sprites.',
-        )}
-      </p>
-      <div className="realm-viewer-controls">
-        <select aria-label="Species" value={species} onChange={(e) => setSpecies(e.target.value as Species)}>
-          {SPECIES.map((s) => (
-            <option key={s} value={s}>
-              {SPECIES_NAMES[s]}
-            </option>
-          ))}
-        </select>
-        <select aria-label="Element" value={element} onChange={(e) => setElement(e.target.value as RealmId)}>
-          {ELEMENTS.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name[lang]}
-            </option>
-          ))}
-        </select>
-        <select aria-label="Stage" value={stage} onChange={(e) => setStage(e.target.value as Stage)}>
-          {(['baby', 'juvenile', 'adult'] as Stage[]).map((s) => (
-            <option key={s} value={s}>
-              {stageName(s, lang)}
-            </option>
-          ))}
-        </select>
-        <select aria-label="Scale" value={scale} onChange={(e) => setScale(Number(e.target.value))}>
-          {[1, 2, 3].map((s) => (
-            <option key={s} value={s}>
-              {s}×
-            </option>
-          ))}
-        </select>
-        <button onClick={() => setDark((v) => !v)}>{tr('Schimbă fundalul', 'Switch background')}</button>
-        <label>
-          <input type="checkbox" checked={pivot} onChange={(e) => setPivot(e.target.checked)} /> Pivot
-        </label>
-      </div>
-      <div className={`realm-viewer ${dark ? '' : 'light'}`}>
-        <div style={{ width: 192 * scale, height: 192 * scale }} className={pivot ? 'show-pivot' : ''}>
-          <DinosaurArt species={species} element={element} stage={stage} />
-        </div>
-      </div>
-      <p className="realm-note">
-        {tr(
-          'Preview static la 1×/2×/3×. Atlasurile, cadrele, pivoturile și clipurile idle/walk/attack/defend/hurt/death/ultimate sunt încă de produs și validat.',
-          'Static preview at 1×/2×/3×. Atlases, frames, pivots, and idle/walk/attack/defend/hurt/death/ultimate clips still need production and validation.',
-        )}
-      </p>
-      <h3>{tr('Referințele originale', 'Original references')}</h3>
-      <div className="realm-reference-links">
-        {[
-          '01_character_evolutions',
-          '02_elemental_eggs',
-          '03_home_island_buildings',
-          '04_elemental_realms',
-          '05_gameplay_screens',
-          '06_raptor_fire_wind',
-        ].map((name, i) => (
-          <a key={name} href={`/realms/references/${name}.png`} target="_blank" rel="noreferrer">
-            0{i + 1} · {name.slice(3).replaceAll('_', ' ')} ↗
-          </a>
-        ))}
-      </div>
-    </>
   );
 }

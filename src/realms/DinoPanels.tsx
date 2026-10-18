@@ -1,3 +1,4 @@
+import { playableSpecies } from './playableDinosaurs';
 import { useState } from 'react';
 import { DinosaurArt } from './DinosaurArt';
 import { duration } from './FarmPanel';
@@ -10,7 +11,6 @@ import {
   MARKET_ELEMENTS,
   QUEST_EGGS,
   REALM_NAMES,
-  SPECIES,
   SPECIES_NAMES,
   WORLD_UNLOCK,
   dinoIncome,
@@ -369,7 +369,7 @@ export function MarketPanel({
         )}
       </div>
       <div className="realm-egg-grid">
-        {SPECIES.map((species) => (
+        {playableSpecies(realm).map((species) => (
           <div key={species} className="realm-egg-card">
             <EggArt species={species} realm={realm} />
             <strong>{SPECIES_NAMES[species]}</strong>
@@ -557,7 +557,7 @@ export function DinoPanel({
         <div className="realm-character-card">
           <DinosaurArt species={d.species} element={d.element} stage={d.stage} />
           <span className="realm-concept-label">
-            {tr(lang, 'CONCEPT STATIC · ANIMAȚII ÎN LUCRU', 'STATIC CONCEPT · ANIMATIONS PENDING')}
+            {stageName(d.stage, lang)}
           </span>
         </div>
         <div className="realm-dino-copy">

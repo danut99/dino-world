@@ -1,22 +1,53 @@
-import { dinosaurCrop, loadDinosaurArt, SPECIES_NAMES, type Species } from './dinosaurs';
+import { SPECIES_NAMES, type Species } from './dinosaurs';
 import type { RealmId, Stage } from './game';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { loadAnimation, type Clip, type Facing, type SpriteManifest } from './animation';
+import { AnimatedDinosaur } from './AnimatedDinosaur';
 
-export function DinosaurArt({ species, element, stage, className = '' }: {
-  species: Species; element: RealmId; stage: Stage; className?: string;
+export function DinosaurArt({
+  species,
+  element,
+  stage,
+  className = '',
+  animation = 'idle',
+  facing = 'se',
+  paused,
+  frame,
+  bounds,
+}: {
+  species: Species;
+  element: RealmId;
+  stage: Stage;
+  className?: string;
+  animation?: Clip;
+  facing?: Facing;
+  paused?: boolean;
+  frame?: number;
+  bounds?: boolean;
 }) {
-  const crop = dinosaurCrop(element, species, stage);
-  const clip = useId().replaceAll(':', '');
-  const [ready, setReady] = useState<RealmId | null>(null);
+  const [manifest, setManifest] = useState<SpriteManifest | null>(null);
   useEffect(() => {
     let active = true;
-    loadDinosaurArt(element).then(() => { if (active) setReady(element); });
-    return () => { active = false; };
-  }, [element]);
-  return <svg className={`realm-hero dinosaur-art ${stage} ${className}`}
-    viewBox={`${crop.x - 4} ${crop.y - 4} ${crop.width + 8} ${crop.height + 8}`} role="img"
-    aria-label={`${element} ${SPECIES_NAMES[species]} ${stage}`} data-art-ready={ready === element}>
-    <defs><clipPath id={clip}>{crop.path ? <path d={crop.path} /> : <rect x={crop.x} y={crop.y} width={crop.width} height={crop.height} />}</clipPath></defs>
-    {ready === element && <image clipPath={`url(#${clip})`} href={`/realms/dinosaurs/${element}.webp`} width={crop.sheetWidth} height={crop.sheetHeight} />}
-  </svg>;
+    setManifest(null);
+    loadAnimation(species, element, stage).then((m) => {
+      if (active) setManifest(m);
+    });
+    return () => {
+      active = false;
+    };
+  }, [species, element, stage]);
+  if (manifest?.variantId === `${species}_${element}` && manifest.stage === stage && (manifest.clips[facing]?.[animation] || manifest.clips[facing]?.idle))
+    return (
+      <AnimatedDinosaur
+        manifest={manifest}
+        clip={manifest.clips[facing]?.[animation] ? animation : 'idle'}
+        facing={facing}
+        paused={paused}
+        frame={frame}
+        bounds={bounds}
+        className={className}
+        label={`${element} ${SPECIES_NAMES[species]} ${stage}`}
+      />
+    );
+  return <span className={`dinosaur-art ${className}`} role="status" aria-label="Loading animation" />;
 }

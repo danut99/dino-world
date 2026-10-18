@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { PLAYABLE_DINOSAURS, isPlayableDinosaur } from './playableDinosaurs';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ENCOUNTERS, ITEMS, RECIPES, type Encounter, type ItemId } from './content';
 import {
   advance,
@@ -20,6 +21,8 @@ import {
   type Species,
 } from './game';
 import { DinosaurArt } from './DinosaurArt';
+import { loadAnimation, loadBossAnimation, type Clip } from './animation';
+import { entrance, exchange, fighter, rest, runMs, runStart, type BattleAction, type Fighter, type Step, type Unit } from './battleChoreography';
 import { worldThumb } from './worldArt';
 import { ArenaOpponent } from './ArenaOpponent';
 import { arenaBoss } from './arenaBosses';
@@ -46,11 +49,13 @@ export function opponentOf(encounter: Encounter) {
   const [species, element] =
     OPPONENTS[encounter.id] ??
     (league >= 0 ? [SPECIES[(league + tier * 2) % SPECIES.length], encounter.league as RealmId] : ['raptor', 'ice']);
+  const animated = isPlayableDinosaur(species, element) ? { species, element }
+    : PLAYABLE_DINOSAURS.find(d => d.element === element) ?? PLAYABLE_DINOSAURS[(Math.max(0, league) + tier) % PLAYABLE_DINOSAURS.length];
   return {
-    species,
-    element,
+    species: animated.species,
+    element: animated.element,
     stage: encounter.level >= 15 || tier === 2 ? ('adult' as const) : ('juvenile' as const),
-    info: ELEMENTS.find((e) => e.id === element)!,
+    info: ELEMENTS.find((e) => e.id === animated.element)!,
   };
 }
 type Props = {
@@ -749,88 +754,154 @@ export function BattleScreen({ save, lang, run, close }: Pick<Props, 'save' | 'l
     d = save.dinos.find((x) => x.id === battle.dinoId)!,
     el = ELEMENTS.find((e) => e.id === d.element)!,
     encounter = ENCOUNTERS.find((e) => e.id === battle.encounterId)!,
-    foe = opponentOf(encounter);
+    foe = opponentOf(encounter),
+    boss = arenaBoss(encounter);
   const tr = (ro: string, en: string) => T(lang, ro, en);
-  const [impact, setImpact] = useState('');
-  const action = (name: 'basic' | 'skill' | 'defend' | 'ultimate') => {
-    if (run({ type: 'action', action: name })) {
-      setImpact(name);
-      window.setTimeout(() => setImpact(''), 500);
+  const alive = { ally: battle.hp > 0, enemy: battle.enemy > 0 };
+  // The reducer resolves a round instantly; the screen replays it beat by beat with the clips each fighter owns.
+  const [fighters, setFighters] = useState<{ ally: Fighter; enemy: Fighter } | null>(null);
+  const [steps, setSteps] = useState<Step[]>([]);
+  const [index, setIndex] = useState(0);
+  const [shown, setShown] = useState({ hp: battle.hp, enemy: battle.enemy });
+  const seenRound = useRef(battle.round);
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      loadAnimation(d.species, d.element, d.stage),
+      boss ? loadBossAnimation(encounter.league as RealmId) : loadAnimation(foe.species, foe.element, foe.stage),
+    ]).then(([a, e]) => {
+      if (!active) return;
+      const ally = fighter(a),
+        enemy = fighter(e);
+      setFighters({ ally, enemy });
+      setSteps(battle.log === 'start' ? entrance(ally, enemy, alive) : [rest(alive)]);
+      setIndex(0);
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d.species, d.element, d.stage, foe.species, foe.element, foe.stage, encounter.league, !!boss]);
+  useEffect(() => {
+    if (battle.round === seenRound.current || !fighters) return;
+    seenRound.current = battle.round;
+    if (!['basic', 'skill', 'defend', 'ultimate'].includes(battle.log)) return;
+    setSteps(exchange(battle.log as BattleAction, fighters.ally, fighters.enemy, alive));
+    setIndex(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [battle.round, fighters]);
+  const step = steps[index],
+    busy = !!step && Number.isFinite(step.ms);
+  useEffect(() => {
+    if (!step) return;
+    if (step.reveal === 'enemy') setShown((s) => ({ ...s, enemy: battle.enemy }));
+    if (step.reveal === 'ally') setShown((s) => ({ ...s, hp: battle.hp }));
+    if (!Number.isFinite(step.ms)) {
+      setShown({ hp: battle.hp, enemy: battle.enemy });
+      return;
     }
+    const timer = setTimeout(() => setIndex((i) => i + 1), step.ms);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps, index]);
+  const pose = (unit: Unit) => ({
+    clip: step?.[unit] ?? ('idle' as Clip),
+    // Static artwork never changes with the clip, so it keeps one key and never flickers through remounts.
+    key: fighters?.[unit].clips.size ? `${runStart(steps, index, unit)}-${step?.[unit] ?? 'idle'}` : 'static',
+    style: { '--motion-ms': `${runMs(steps, index, unit) || 600}ms` } as CSSProperties,
+  });
+  const ally = pose('ally'),
+    enemy = pose('enemy');
+  const foeName = boss ? `BOSS ${boss.name}` : SPECIES_NAMES[foe.species];
+  const action = (name: BattleAction) => {
+    if (busy) return;
+    run({ type: 'action', action: name });
   };
+  const narration = !step
+    ? ''
+    : step.ally === 'walk' || step.enemy === 'walk'
+      ? `${d.nickname} ${tr('intră în arenă.', 'enters the arena.')}`
+      : busy && step.enemy === 'attack' && step.ally === 'defend'
+        ? `${d.nickname} ${tr('se apără. Lovitura inamică este redusă.', 'guards. The incoming hit is reduced.')}`
+        : busy && step.enemy === 'attack'
+          ? `${foeName} ${tr('ripostează!', 'strikes back!')}`
+          : busy && step.ally === 'ultimate'
+            ? `${d.nickname} ${tr('dezlănțuie Erupția!', 'unleashes the Eruption!')}`
+            : busy && step.ally === 'attack'
+              ? `${d.nickname} ${tr('lovește!', 'strikes!')}`
+              : busy
+                ? ''
+                : battle.log === 'start'
+                  ? `${d.nickname} ${tr('este pregătit. Alege prima acțiune.', 'is ready. Choose your first action.')}`
+                  : battle.log === 'defend'
+                    ? `${d.nickname} ${tr('se apără. Lovitura inamică este redusă.', 'guards. The incoming hit is reduced.')}`
+                    : tr(
+                        'Lovitura a fost rezolvată. Adversarul răspunde dacă mai este în viață.',
+                        'The strike resolves. The opponent responds if still alive.',
+                      );
+  const commands: BattleAction[] = d.stage === 'adult' ? ['basic', 'defend', 'ultimate'] : ['basic', 'defend'];
   return (
     <Frame title={encounter.name[lang]} view="battle" close={close} lang={lang}>
-      <div className={`battle-environment impact-${impact}`}>
+      <div className={`battle-environment ${busy ? 'battle-playing' : ''}`}>
         <div className="battle-round">
           <span>
             {tr('RUNDA', 'ROUND')} {Math.min(battle.round, 30)} / 30
           </span>
           <small>
-            {d.nickname} → {arenaBoss(encounter) ? `BOSS ${arenaBoss(encounter)!.name}` : SPECIES_NAMES[foe.species]} ·
-            1v1
+            {d.nickname} → {foeName} · 1v1
           </small>
         </div>
-        <div className="battle-unit ally">
+        <div className="battle-unit ally" data-motion={ally.clip} style={ally.style}>
           <div className="battle-vitals">
             <strong>
               {el.symbol} {d.nickname} <small>Lv. {d.level}</small>
             </strong>
             <div className="realm-meter health">
-              <i style={{ width: `${(battle.hp / battle.maxHp) * 100}%` }} />
+              <i style={{ width: `${(shown.hp / battle.maxHp) * 100}%` }} />
             </div>
             <span>
-              {battle.hp} / {battle.maxHp} HP
+              {shown.hp} / {battle.maxHp} HP
             </span>
             <div className="realm-meter energy">
               <i style={{ width: `${battle.energy}%` }} />
             </div>
             <small>ϟ {battle.energy} / 100</small>
           </div>
-          <DinosaurArt species={d.species} element={d.element} stage={d.stage} />
+          <DinosaurArt key={ally.key} species={d.species} element={d.element} stage={d.stage} animation={ally.clip} />
         </div>
-        <div className="battle-unit enemy">
+        <div className="battle-unit enemy" data-motion={enemy.clip} style={enemy.style}>
           <div className="battle-vitals">
             <strong>
-              {foe.info.symbol} {arenaBoss(encounter)?.name ?? `${SPECIES_NAMES[foe.species]} ${foe.info.name[lang]}`}{' '}
+              {foe.info.symbol} {boss?.name ?? `${SPECIES_NAMES[foe.species]} ${foe.info.name[lang]}`}{' '}
               <small>Lv. {encounter.level}</small>
             </strong>
             <div className="realm-meter health">
-              <i style={{ width: `${(battle.enemy / battle.enemyMax) * 100}%` }} />
+              <i style={{ width: `${(shown.enemy / battle.enemyMax) * 100}%` }} />
             </div>
             <span>
-              {battle.enemy} / {battle.enemyMax} HP
+              {shown.enemy} / {battle.enemyMax} HP
             </span>
-            {battle.burn > 0 && (
-              <small>
-                ♨ {tr('Arsură', 'Burn')} · {battle.burn}
-              </small>
-            )}
           </div>
           <ArenaOpponent
+            key={enemy.key}
             encounter={encounter}
             species={foe.species}
             element={foe.element}
             stage={foe.stage}
             className="dinosaur-opponent"
+            animation={enemy.clip}
           />
         </div>
-        {impact && (
-          <div className="battle-impact" key={`${battle.round}-${impact}`} aria-hidden="true">
-            {impact === 'defend' ? '◇' : impact === 'ultimate' ? '✹' : '╱'}
+        {step?.impact && (
+          <div className={`battle-impact on-${step.impact.on} kind-${step.impact.kind}`} key={index} aria-hidden="true">
+            {step.impact.kind === 'guard' ? '◇' : step.impact.kind === 'ultimate' ? '✹' : '╱'}
           </div>
         )}
         <div className="battle-narration" aria-live="polite">
-          {battle.log === 'start'
-            ? `${d.nickname} ${tr('este pregătit. Alege prima acțiune.', 'is ready. Choose your first action.')}`
-            : battle.log === 'defend'
-              ? `${d.nickname} ${tr('se apără. Lovitura inamică este redusă.', 'guards. The incoming hit is reduced.')}`
-              : tr(
-                  'Lovitura a fost rezolvată. Adversarul răspunde dacă mai este în viață.',
-                  'The strike resolves. The opponent responds if still alive.',
-                )}
+          {narration}
         </div>
       </div>
-      {battle.result ? (
+      {battle.result && !busy ? (
         <div className="battle-result">
           <span className="realm-eyebrow">{tr('REZULTAT', 'RESULT')}</span>
           <h2>
@@ -876,50 +947,29 @@ export function BattleScreen({ save, lang, run, close }: Pick<Props, 'save' | 'l
         </div>
       ) : (
         <div className="battle-command-bar">
-          {(['basic', 'skill', 'defend', 'ultimate'] as const).map((name, i) => (
+          {/* Only moves with a matching clip: basic → attack, defend → defend, ultimate → adult-only ultimate. */}
+          {commands.map((name) => (
             <button
               key={name}
               className={`battle-command ${name}`}
-              disabled={
-                name === 'skill'
-                  ? battle.cooldown > 0
-                  : name === 'ultimate'
-                    ? d.stage !== 'adult' || battle.energy < 100
-                    : false
-              }
+              disabled={busy || !!battle.result || (name === 'ultimate' && battle.energy < 100)}
               onClick={() => action(name)}
             >
-              <span>{['⚔', '♨', '◇', '✹'][i]}</span>
+              <span>{name === 'basic' ? '⚔' : name === 'defend' ? '◇' : '✹'}</span>
               <strong>
-                {
-                  [tr('Lovitură', 'Basic'), tr('Flacără', 'Flame'), tr('Apărare', 'Defend'), tr('Erupție', 'Eruption')][
-                    i
-                  ]
-                }
+                {name === 'basic'
+                  ? tr('Lovitură', 'Basic')
+                  : name === 'defend'
+                    ? tr('Apărare', 'Defend')
+                    : tr('Erupție', 'Eruption')}
               </strong>
               <small>
-                {name === 'skill' && battle.cooldown
-                  ? `${battle.cooldown} ${tr('ture', 'turns')}`
-                  : name === 'ultimate'
-                    ? d.stage === 'adult'
-                      ? '100 ϟ'
-                      : tr('Necesită adult', 'Requires adult')
-                    : name === 'defend'
-                      ? '−40% damage'
-                      : name === 'skill'
-                        ? tr('Arsură · +20 energie', 'Burn · +20 energy')
-                        : tr('+25 energie', '+25 energy')}
+                {name === 'ultimate' ? '100 ϟ' : name === 'defend' ? '−40% damage' : tr('+25 energie', '+25 energy')}
               </small>
             </button>
           ))}
         </div>
       )}
-      <div className="battle-art-note">
-        {tr(
-          'Artă de personaj statică · efecte separate · animații finale în lucru',
-          'Static character art · separate effects · final animations pending',
-        )}
-      </div>
     </Frame>
   );
 }

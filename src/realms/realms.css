@@ -1882,6 +1882,7 @@
 
 /* Story card: the header folds the card down to itself */
 button.realm-quest-top { width: 100%; color: inherit; font-family: inherit; text-align: left; cursor: pointer; transition: background 0.15s; }
+.realm-quest-top > .realm-quest-label { font-size: inherit; color: inherit; }
 button.realm-quest-top:hover { background: #22394af0; }
 button.realm-quest-top:focus-visible { outline: 2px solid #f5cd74; outline-offset: 2px; }
 .realm-quest-chevron { width: 8px; height: 8px; margin: -4px 2px 0 4px; border-right: 2px solid #e4c48a; border-bottom: 2px solid #e4c48a; transform: rotate(-135deg); transition: transform 0.2s; }
@@ -1903,3 +1904,257 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f5cd74; outline-offse
 .realm-world.loading > .realm-world-loading { visibility: visible; }
 .realm-world-loading { position: absolute; inset: 0; display: grid; place-items: center; background: linear-gradient(#3f97d6 0%, #7cc6f5 55%, #c9ecfb 100%); }
 .realm-world-loading span { padding: 10px 18px; color: #f0dfb9; font-weight: 700; letter-spacing: 1px; background: #142c3ce6; border: 1px solid #e4c48a99; }
+
+/* Keep the HUD and controls inside the usable phone viewport in either orientation. */
+@media (max-width: 1050px) {
+  .realm-nav { max-width: calc(100% - 32px); }
+  .realm-nav > button { min-width: 0; flex: 1; padding-inline: 9px; }
+  .realm-nav > .realm-collect { min-width: 0; }
+}
+@media (max-width: 760px) {
+  .realms-app { --mobile-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .realm-hud {
+    top: max(10px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(3, 44px);
+    gap: 8px;
+  }
+  .realm-brand { font-size: 19px; }
+  .realm-brand-mark { display: none; }
+  .realm-brand small { font-size: 7px; letter-spacing: 1.6px; }
+  .realm-hud > .realm-square { width: 44px; height: 44px; }
+  .realm-resources { grid-row: 2; grid-column: 1 / -1; margin: 0; gap: 8px; }
+  .realm-resource { min-width: 0; padding: 6px 10px; flex: 1; gap: 8px; }
+  .realm-resource > span { font-size: 23px; }
+  .realm-resource strong { font-size: 17px; overflow-wrap: anywhere; }
+  .realm-resource small { font-size: 9px; }
+  .realm-location { top: calc(max(10px, env(safe-area-inset-top)) + 112px); right: 12px; padding: 5px 8px; max-width: 52%; }
+  .realm-location h1 { font-size: 19px; margin-top: 4px; }
+  .realm-location p { display: none; }
+  .realm-quest { top: calc(max(10px, env(safe-area-inset-top)) + 117px); left: 12px; width: 42%; z-index: 2; }
+  .realm-quest-top { min-height: 44px; font-size: 9px; letter-spacing: 1px; padding: 8px; }
+  .realm-quest-body { max-height: 36dvh; overflow-y: auto; overscroll-behavior: contain; }
+  .realm-nav {
+    bottom: var(--mobile-bottom);
+    width: calc(100% - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));
+    max-width: 560px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    padding: 6px;
+    z-index: 3;
+  }
+  .realm-nav > button { width: auto; min-width: 0; height: 58px; padding: 4px 2px; gap: 3px; }
+  .realm-nav > button > span { font-size: 24px; }
+  .realm-nav > button > strong { font-size: 11px; overflow-wrap: anywhere; }
+  .realm-nav > button.realm-nav-toggle { grid-column: 1 / -1; width: 100%; height: 44px; margin: 0; flex-direction: row; }
+  .realm-nav > .realm-collect { margin: 0; border: 1px solid #d3be8755; flex-direction: column; gap: 3px; }
+  .realm-collect > div { display: block; }
+  .realm-collect strong { font-size: 11px; }
+  .realm-collect small { display: none; }
+  .realm-nav.collapsed { display: flex; width: min(260px, calc(100% - 24px)); gap: 6px; }
+  .realm-nav.collapsed > button.realm-nav-toggle { width: 52px; height: 48px; flex: 0 0 52px; }
+  .realm-nav.collapsed > .realm-collect { height: 48px; flex: 1; flex-direction: row; }
+  .realm-camera { right: max(12px, env(safe-area-inset-right)); bottom: calc(var(--mobile-bottom) + 78px); }
+  .realm-camera button { width: 44px; height: 44px; }
+  .realms-app:has(.realm-nav:not(.collapsed)) .realm-camera { bottom: calc(var(--mobile-bottom) + 200px); }
+  .realm-building-shortcuts { display: none; }
+  .realm-island-badge, .realm-version { display: none; }
+  .realm-toast, .realm-offline-strip { bottom: calc(var(--mobile-bottom) + 205px); }
+  .realm-backdrop { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+  .realm-window { min-width: 0; max-height: 100%; }
+  .realm-window > header { flex-shrink: 0; padding: 14px; }
+  .realm-window h2 { font-size: 20px; overflow-wrap: anywhere; padding-right: 48px; }
+  .realm-close { width: 44px; height: 44px; top: 10px; right: 10px; }
+  .realm-window-body { min-height: 0; padding: 16px 12px; overscroll-behavior: contain; }
+  .realm-window-body input, .realm-window-body select { font-size: 16px; max-width: 100%; }
+  .realm-window-body .realm-button { min-height: 44px; white-space: normal; }
+  .realm-dino-layout { grid-template-columns: minmax(0, 1fr); }
+  .realm-collection, .realm-realms-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .realm-build-card { flex-wrap: wrap; min-width: 0; }
+  .realm-build-card > div { min-width: 0; flex: 1; }
+  .realm-build-grid .realm-build-card { display: grid; grid-template-columns: 80px minmax(0, 1fr); text-align: left; }
+  .realm-build-grid .realm-build-card .utility-sprite { width: 80px; height: 90px; }
+  .realm-build-grid .realm-build-card h3 { overflow-wrap: anywhere; }
+  .realm-build-grid .realm-build-card > .realm-button,
+  .realm-build-grid .realm-build-card > .realm-build-actions { grid-column: 1 / -1; width: 100%; margin: 0; }
+  .realm-build-actions { display: flex; align-items: center; gap: 12px; }
+  .realm-build-actions .realm-link { min-height: 44px; padding-inline: 12px; }
+  .realm-egg-sell { min-height: 44px; }
+  .realm-settings label, .realm-setting-row { flex-wrap: wrap; gap: 10px; }
+  .realm-placement { bottom: var(--mobile-bottom); flex-wrap: wrap; }
+}
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  .realm-hud { top: max(8px, env(safe-area-inset-top)); }
+  .realm-brand { display: none; }
+  .realm-hud { display: flex; gap: 8px; left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); }
+  .realm-resources { margin-right: auto; margin-left: 0; }
+  .realm-resource { min-width: 90px; }
+  .realm-hud > .realm-square { width: 44px; height: 44px; flex-shrink: 0; }
+  .realm-quest { top: calc(max(8px, env(safe-area-inset-top)) + 62px); }
+  .realm-quest-body { max-height: 38dvh; overflow-y: auto; }
+  .realm-location { top: calc(max(8px, env(safe-area-inset-top)) + 58px); }
+  .realm-camera { flex-direction: row; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 78px); }
+  .realm-camera button { width: 44px; height: 44px; }
+  .realm-nav:not(.collapsed) { display: flex; max-width: calc(100% - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)); width: 900px; }
+  .realm-nav:not(.collapsed) > button { min-width: 0; flex: 1; height: 54px; padding-inline: 3px; }
+  .realm-nav:not(.collapsed) > button.realm-nav-toggle { width: 44px; flex: 0 0 44px; }
+  .realms-app:has(.realm-nav:not(.collapsed)) .realm-camera { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 78px); }
+  .realm-building-shortcuts, .realm-version { display: none; }
+}
+
+/* Compact mobile HUD: the island stays visible; secondary actions expand on demand. */
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  .realm-hud {
+    display: flex;
+    top: max(8px, env(safe-area-inset-top));
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    gap: 4px;
+  }
+  .realm-hud .realm-brand, .realm-hud .realm-info { display: none; }
+  .realm-resources { display: flex; flex: 1; min-width: 0; margin: 0 auto 0 0; gap: 4px; max-width: 260px; }
+  .realm-resource { flex: 1; min-width: 0; padding: 5px 8px; gap: 6px; height: 38px; box-sizing: border-box; }
+  .realm-resource > span { font-size: 18px; }
+  .realm-resource small { display: none; }
+  .realm-resource strong { font-size: 15px; }
+  .realm-hud > .realm-square { width: 40px; height: 40px; flex: 0 0 40px; font-size: 19px !important; }
+  .realm-location { top: calc(max(8px, env(safe-area-inset-top)) + 44px); right: max(8px, env(safe-area-inset-right)); max-width: 65%; padding: 4px 6px; pointer-events: none; }
+  .realm-location .realm-eyebrow, .realm-location p { display: none; }
+  .realm-location h1 { font: 600 12px Barlow, sans-serif; margin: 0; letter-spacing: 0.4px; }
+  .realm-location .realm-return { pointer-events: auto; min-height: 36px; font-size: 10px !important; margin-top: 6px; }
+  .realm-quest { top: calc(max(8px, env(safe-area-inset-top)) + 48px); left: max(8px, env(safe-area-inset-left)); width: min(260px, calc(100% - 72px)); }
+  .realm-quest.collapsed { width: 40px; }
+  .realm-quest-top { min-height: 40px; padding: 8px; gap: 8px; }
+  .realm-quest.collapsed .realm-quest-top { width: 40px; height: 40px; justify-content: center; padding: 0; position: relative; }
+  .realm-quest.collapsed .realm-quest-label,
+  .realm-quest.collapsed .realm-quest-top small,
+  .realm-quest.collapsed .realm-quest-chevron { display: none; }
+  .realm-quest.collapsed .realm-quest-alert { position: absolute; right: -4px; top: -4px; }
+  .realm-quest-body { max-height: min(42dvh, 280px); }
+  .realm-world-hint { display: none; }
+  .realm-camera,
+  .realms-app:has(.realm-nav:not(.collapsed)) .realm-camera {
+    right: max(8px, env(safe-area-inset-right));
+    bottom: calc(max(10px, env(safe-area-inset-bottom)) + 62px);
+    flex-direction: column;
+  }
+  .realm-camera > button { width: 40px; height: 40px; font-size: 20px !important; }
+  .realm-camera > button[aria-label='Zoom in'], .realm-camera > button[aria-label='Zoom out'] { display: none; }
+  .realm-nav, .realm-nav:not(.collapsed) {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: min(300px, calc(100% - 24px));
+    max-width: calc(100% - 24px);
+    padding: 5px;
+    gap: 4px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+  }
+  .realm-nav > button, .realm-nav:not(.collapsed) > button { height: 44px; min-width: 0; width: auto; padding: 4px; gap: 0; }
+  .realm-nav > button > strong, .realm-nav .realm-collect > div { display: none; }
+  .realm-nav > button > span { font-size: 23px; }
+  .realm-nav > button.realm-nav-toggle, .realm-nav:not(.collapsed) > button.realm-nav-toggle { grid-column: 1 / -1; width: 100%; height: 32px; margin: 0; flex-direction: row; }
+  .realm-nav-toggle .realm-nav-grip { display: none; }
+  .realm-nav.collapsed { display: flex; width: auto; max-width: calc(100% - 24px); gap: 6px; padding: 4px; }
+  .realm-nav.collapsed > button.realm-nav-toggle { width: 44px; height: 44px; flex: 0 0 44px; }
+  .realm-nav.collapsed > .realm-collect { width: 44px; height: 44px; flex: 0 0 44px; }
+  .realm-nav > .realm-collect { margin: 0; min-width: 0; }
+  .realm-toast, .realm-offline-strip { bottom: calc(max(10px, env(safe-area-inset-bottom)) + 168px); }
+  .world-resident-book { left: 8px; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 62px); font-size: 11px; padding: 7px 9px; max-width: 55%; }
+}
+
+.realm-nav-toggle-label { display: none; }
+.realm-mobile-profile { display: none; }
+.realm-recenter { display: flex; align-items: center; justify-content: center; }
+.realm-recenter > span { display: none; }
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  .realm-nav { border-radius: 14px; box-shadow: 0 6px 20px #071d2b55; border-color: #b8c6c333; }
+  .realm-nav > button { border-radius: 8px; }
+  .realm-nav.collapsed {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    gap: 8px;
+  }
+  .realm-nav.collapsed > button.realm-nav-toggle,
+  .realm-nav.collapsed > .realm-collect {
+    width: auto;
+    min-width: 104px;
+    flex: 0 0 auto;
+    height: 44px;
+    padding: 0 14px;
+    display: flex;
+    flex-direction: row;
+    gap: 9px;
+    border: 1px solid #a7b6bb55;
+    border-radius: 12px;
+    background: #172f40f2;
+    box-shadow: 0 3px 12px #071d2b40;
+  }
+  .realm-nav > button.realm-nav-toggle { gap: 8px; height: 40px; }
+  .realm-nav-toggle > .realm-nav-chevron,
+  .realm-nav.collapsed .realm-nav-toggle > .realm-nav-chevron {
+    border: 0;
+    transform: none;
+    width: 18px;
+    height: 20px;
+    margin: 0;
+    font-size: 20px;
+    line-height: 20px;
+  }
+  .realm-nav-toggle > .realm-nav-chevron::before { content: '×'; }
+  .realm-nav.collapsed .realm-nav-toggle > .realm-nav-chevron::before { content: '\2630'; }
+  .realm-nav > button > .realm-nav-toggle-label { display: inline; font-size: 13px; font-weight: 600; color: #ecdfbf; }
+  .realm-nav .realm-collect > div { display: block; }
+  .realm-nav .realm-collect strong { font-size: 12px; color: #f5dc9d; }
+  .realm-nav .realm-collect small { display: none; }
+  .realm-nav > .realm-collect { flex-direction: row; gap: 5px; }
+  .realm-nav .realm-collect > span { display: flex; align-items: center; }
+  .realm-nav:not(.collapsed) > .realm-collect { flex-direction: column; gap: 1px; }
+  .realm-nav:not(.collapsed) .realm-collect svg { width: 20px; height: 20px; }
+  .realm-nav:not(.collapsed) .realm-collect strong { font-size: 10px; }
+}
+
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  .realm-hud { display: none; }
+  .realm-mobile-profile { display: block; position: absolute; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); z-index: 5; }
+  .realm-avatar { position: relative; display: block; width: 56px; height: 56px; padding: 3px; border: 2px solid #e2bd76; border-radius: 50%; background: radial-gradient(circle, #48616a, #142d3c); box-shadow: 0 3px 12px #071d2b66; color: #fff0ca; }
+  .realm-avatar .dinosaur-art { width: 100%; height: 100%; border-radius: 50%; pointer-events: none; }
+  .realm-avatar > span { position: absolute; right: -2px; bottom: -3px; min-width: 22px; padding: 2px 4px; box-sizing: border-box; border-radius: 8px; border: 1px solid #e2bd76; background: #172f40; font-size: 11px; font-weight: 700; }
+  .realm-profile-dismiss { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #071d2b33; z-index: -1; }
+  .realm-profile-card { position: absolute; top: 66px; left: 0; width: min(290px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right))); box-sizing: border-box; max-height: calc(100dvh - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 12px; border-radius: 14px; border: 1px solid #d0b47a77; background: #172f40fa; box-shadow: 0 12px 30px #071d2b66; }
+  .realm-profile-card > header { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; font-size: 14px; }
+  .realm-profile-card > header > strong { flex: 1; }
+  .realm-profile-card button { min-height: 40px; background: #294656; color: #f0dfb9; border: 1px solid #a7b6bb44; border-radius: 8px; padding: 6px 10px; }
+  .realm-profile-card > header > button { width: 40px; font-size: 22px; }
+  .realm-profile-stats { display: grid; gap: 6px; }
+  .realm-profile-stats .realm-resource { height: auto; min-height: 44px; border-radius: 8px; padding: 8px 10px; }
+  .realm-profile-stats .realm-resource small { display: block; font-size: 10px; }
+  .realm-profile-stats .realm-resource > span { width: 24px; text-align: center; }
+  .realm-profile-card > footer { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .realm-profile-card > footer button { flex: 1; font-size: 12px; }
+  .realm-quest { top: calc(max(10px, env(safe-area-inset-top)) + 68px); }
+  .realm-location { top: max(14px, env(safe-area-inset-top)); max-width: calc(100% - 94px); }
+}
+
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  .realm-camera > button.realm-recenter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: auto;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid #a7b6bb55;
+    border-radius: 12px;
+    background: #172f40f2;
+    box-shadow: 0 3px 12px #071d2b40;
+    color: #ecdfbf;
+  }
+  .realm-recenter > span { display: inline; font-size: 12px; font-weight: 600; }
+  .realm-recenter > svg { flex-shrink: 0; color: #e8bd65; }
+}

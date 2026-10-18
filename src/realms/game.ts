@@ -1,3 +1,4 @@
+import { isPlayableDinosaur, playableSpecies } from './playableDinosaurs';
 import {
   CROPS,
   ENCOUNTERS,
@@ -242,11 +243,11 @@ export function eggOdds(s: Save, encounter: Encounter, firstWin: boolean) {
   if (encounter.id === 'training') return null;
   if (encounter.mode === 'arena') {
     const league = encounter.league as RealmId | undefined;
-    if (!league || MARKET_ELEMENTS.includes(league)) return null;
+    if (!league || MARKET_ELEMENTS.includes(league) || !playableSpecies(league).length) return null;
     const boss = encounter.id === `arena-${league}-3`;
     return { chance: boss ? (firstWin ? 1 : EGG_DROP.boss) : EGG_DROP.league, elements: [league] };
   }
-  const elements = ELEMENTS.map((e) => e.id).filter((id) => s.habitats[id] && !MARKET_ELEMENTS.includes(id));
+  const elements = ELEMENTS.map((e) => e.id).filter((id) => s.habitats[id] && !MARKET_ELEMENTS.includes(id) && playableSpecies(id).length > 0);
   return elements.length ? { chance: EGG_DROP.expedition, elements } : null;
 }
 /** A number in [0, 1) fixed by its seed, so `command` stays pure and replayable. */
@@ -282,27 +283,27 @@ export const QUEST_EGGS: {
   {
     id: 'raptor_fire',
     species: 'raptor',
-    element: 'fire',
+    element: 'earth',
     task: ['Câștigă prima luptă', 'Win your first battle'],
     done: (s) => s.cleared.includes('training'),
   },
   {
     id: 'triceratops_earth',
     species: 'triceratops',
-    element: 'earth',
+    element: 'nature',
     task: ['Construiește o fermă', 'Build a farm'],
     done: (s) => s.buildings.some((b) => b.kind === 'farm'),
   },
   {
     id: 'ankylosaurus_nature',
-    species: 'ankylosaurus',
+    species: 'triceratops',
     element: 'nature',
     task: ['Cucerește expediția Ruinele străvechi', 'Clear the Ancient ruins expedition'],
     done: (s) => s.cleared.includes('ruins'),
   },
   {
     id: 'brachiosaurus_water',
-    species: 'brachiosaurus',
+    species: 'raptor',
     element: 'water',
     task: ['Cucerește expediția Reciful de safir', 'Clear the Sapphire reef expedition'],
     done: (s) => s.cleared.includes('lagoon'),
@@ -350,7 +351,7 @@ export const QUEST_EGGS: {
   {
     id: 'ch2_dinos8',
     chapter: 2,
-    species: 'brachiosaurus',
+    species: 'triceratops',
     element: 'nature',
     gold: 900,
     food: 350,
@@ -403,7 +404,7 @@ export const QUEST_EGGS: {
     id: 'ch2_worlds10',
     chapter: 3,
     species: 'raptor',
-    element: 'arcane',
+    element: 'dark',
     gold: 1500,
     food: 600,
     task: ['Deblochează toate cele 10 lumi', 'Unlock all 10 worlds'],
@@ -654,7 +655,7 @@ export function command(save: Save, c: Command, now: number): Save {
       break;
     case 'buyEgg': {
       require(s.buildings.some((b) => b.kind === 'market'), 'building');
-      require(SPECIES.includes(c.species) && ELEMENTS.some((e) => e.id === c.element), 'egg');
+      require(isPlayableDinosaur(c.species, c.element), 'egg');
       require(s.habitats[c.element], 'habitat');
       require(MARKET_ELEMENTS.includes(c.element), 'fightEgg');
       require(s.eggs.length < BALANCE.maxEggs, 'eggsFull');
@@ -976,10 +977,9 @@ export function command(save: Save, c: Command, now: number): Save {
         if (odds) {
           const seed = `${s.revision}:${now}:${encounter.id}`;
           if (s.eggLuck >= EGG_DROP.pity || roll(seed) < odds.chance) {
-            b.reward.egg = {
-              species: SPECIES[Math.floor(roll(`${seed}:species`) * SPECIES.length)],
-              element: odds.elements[Math.floor(roll(`${seed}:element`) * odds.elements.length)],
-            };
+            const element = odds.elements[Math.floor(roll(`${seed}:element`) * odds.elements.length)];
+            const species = playableSpecies(element);
+            b.reward.egg = { species: species[Math.floor(roll(`${seed}:species`) * species.length)], element };
             s.eggLuck = 0;
           } else s.eggLuck++;
         }
@@ -1277,5 +1277,16 @@ export function parseSave(text: string): Save {
     )
       throw Error('Invalid battle');
   } else if (s.rewardPending) throw Error('Invalid reward');
+  // Remove retired static-only families without resetting resources or progress.
+  s.dinos = s.dinos.filter(d => isPlayableDinosaur(d.species, d.element));
+  s.eggs = s.eggs.filter(e => isPlayableDinosaur(e.species, e.element));
+  s.owedEggs = s.owedEggs.filter(e => isPlayableDinosaur(e.species, e.element));
+  if (!s.dinos.some(d => d.id === s.champion)) s.champion = s.dinos[0]?.id ?? null;
+  if (s.battle && !s.dinos.some(d => d.id === s.battle!.dinoId)) {
+    s.battle = null;
+    s.rewardPending = false;
+  }
+  if (s.battle?.reward.egg && !isPlayableDinosaur(s.battle.reward.egg.species, s.battle.reward.egg.element))
+    delete s.battle.reward.egg;
   return s;
 }

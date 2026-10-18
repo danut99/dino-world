@@ -6,14 +6,14 @@ import { DinosaurArt } from './DinosaurArt';
 export function DinosaurCollection({ lang, dinos, openOwned, openMarket, initialElement = 'fire' }: {
   lang: number; dinos: Dino[]; openOwned: (id: string) => void; openMarket: () => void; initialElement?: RealmId;
 }) {
-  const [element, setElement] = useState<RealmId>(initialElement);
+  const [element, setElement] = useState<RealmId>(DINOSAURS.some(d => d.element === initialElement) ? initialElement : 'fire');
   const [stage, setStage] = useState<Stage>('adult');
   const tr = (ro: string, en: string) => lang ? en : ro;
   const discovered = new Set(dinos.map(d => `${d.species}_${d.element}`)).size;
   return <div className="dinosaur-catalog">
-    <p>{tr(`50 de variante elementale · 150 de stadii. Descoperite: ${discovered} / 50. Ouăle vin din poveste și din Piață.`, `50 elemental variants · 150 stage designs. Discovered: ${discovered} / 50. Eggs come from the story and the Market.`)}</p>
+    <p>{tr(`${DINOSAURS.length} variante elementale · ${DINOSAURS.length * STAGES.length} stadii animate. Descoperite: ${discovered} / ${DINOSAURS.length}. Ouăle vin din poveste și din Piață.`, `${DINOSAURS.length} elemental variants · ${DINOSAURS.length * STAGES.length} animated stages. Discovered: ${discovered} / ${DINOSAURS.length}. Eggs come from the story and the Market.`)}</p>
     <div className="dinosaur-filters" aria-label={lang ? 'Element filter' : 'Filtru elemental'}>
-      {ELEMENTS.map(e => <button key={e.id} aria-pressed={element === e.id} onClick={() => setElement(e.id)}>{e.symbol} {e.name[lang]}</button>)}
+      {ELEMENTS.filter(e => DINOSAURS.some(d => d.element === e.id)).map(e => <button key={e.id} aria-pressed={element === e.id} onClick={() => setElement(e.id)}>{e.symbol} {e.name[lang]}</button>)}
     </div>
     <div className="dinosaur-filters" aria-label={tr('Stadiu de evoluție', 'Evolution stage')}>
       {STAGES.map((s, i) => <button key={s} aria-pressed={stage === s} onClick={() => setStage(s)}>{[['Copil', 'Baby'], ['Juvenil', 'Juvenile'], ['Adult', 'Adult']][i][lang]}</button>)}

@@ -1,12 +1,12 @@
 import type { Encounter } from './content';
 import type { RealmId, Species } from './game';
 
-/** Dedicated champion artwork; tiers one and two retain their ordinary opponents. */
-export const ARENA_BOSSES: Record<RealmId, { name: string; species: Species; art: string }> = {
-  fire: { name: 'Furnace Sovereign', species: 'brachiosaurus', art: '/realms/bosses/fire.webp' },
-  water: { name: 'Tidebreaker', species: 'trex', art: '/realms/bosses/water.webp' },
-  earth: { name: 'Monolith Warden', species: 'raptor', art: '/realms/bosses/earth.webp' },
-  nature: { name: 'Thorn Regent', species: 'triceratops', art: '/realms/bosses/nature.webp' },
+/** Dedicated bosses: four animated champions plus the existing ice artwork. */
+export const ARENA_BOSSES: Record<RealmId, { name: string; species: Species; art?: string; animated?: boolean }> = {
+  fire: { name: 'Ignaroth', species: 'brachiosaurus', animated: true },
+  water: { name: 'Thalassion', species: 'trex', animated: true },
+  earth: { name: 'Terragor', species: 'raptor', animated: true },
+  nature: { name: 'Sylvaraa', species: 'triceratops', animated: true },
   ice: { name: 'Glacier Colossus', species: 'ankylosaurus', art: '/realms/bosses/ice.webp' },
   lightning: { name: 'Storm Conductor', species: 'brachiosaurus', art: '/realms/bosses/lightning.webp' },
   wind: { name: 'Sky Marshal', species: 'trex', art: '/realms/bosses/wind.webp' },

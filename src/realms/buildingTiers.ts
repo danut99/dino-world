@@ -1,3 +1,5 @@
+import { WORKSHOP_ART, WORKSHOP_GROUND } from './animatedWorkshop';
+import { FARM_ART, FARM_GROUND } from './animatedFarm';
 import { FARM_LEVELS, type UtilityKind } from './content';
 import { ARENA_LEVELS, HATCHERY_LEVELS, WORKSHOP_LEVELS, type Save } from './game';
 
@@ -7,16 +9,14 @@ import { ARENA_LEVELS, HATCHERY_LEVELS, WORKSHOP_LEVELS, type Save } from './gam
  */
 export const BUILDING_TIERS: Partial<Record<UtilityKind, { from: number; art: string }[]>> = {
   farm: [
-    { from: 3, art: '/realms/buildings/farm-2.webp' },
-    { from: 5, art: '/realms/buildings/farm-3.webp' },
+    { from: 1, art: FARM_ART },
   ],
   hatchery: [
     { from: 2, art: '/realms/buildings/hatchery-2.webp' },
     { from: 3, art: '/realms/buildings/hatchery-3.webp' },
   ],
   workshop: [
-    { from: 2, art: '/realms/buildings/workshop-2.webp' },
-    { from: 3, art: '/realms/buildings/workshop-3.webp' },
+    { from: 1, art: WORKSHOP_ART },
   ],
   arena: [{ from: 2, art: '/realms/buildings/arena-2.webp' }],
 };
@@ -28,6 +28,8 @@ export const LEVELED: UtilityKind[] = ['farm', 'hatchery', 'workshop', 'arena'];
  * each picture. The game puts that line on the footprint's corners, so the building sits on its 3x3 cells.
  */
 export const GROUND_LINE: Record<string, number> = {
+  [FARM_ART]: FARM_GROUND,
+  [WORKSHOP_ART]: WORKSHOP_GROUND,
   '/realms/buildings/farm-2.webp': 0.553,
   '/realms/buildings/farm-3.webp': 0.644,
   '/realms/buildings/hatchery-2.webp': 0.689,
