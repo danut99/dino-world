@@ -296,11 +296,28 @@
 
 /* Workshop: readable cards instead of narrow, competing flex columns. */
 .realms-app .crafting-layout {
-  grid-template-columns: 180px minmax(0, 1fr) 300px;
+  grid-template-columns: 180px minmax(0, 640px) 280px;
+  justify-content: center;
   gap: 18px;
   padding: 20px;
   align-items: start;
   overscroll-behavior: contain;
+}
+.realms-app .craft-workspace {
+  min-width: 0;
+}
+.realms-app .craft-parchment {
+  padding: 20px 16px;
+  background: #e2d3b2;
+}
+.realms-app .craft-parchment h2 {
+  margin: 8px 0 16px;
+}
+.realms-app .craft-transformation {
+  margin: 16px 0;
+}
+.realms-app .craft-queue {
+  margin-top: 14px;
 }
 .realms-app .craft-use {
   display: grid;

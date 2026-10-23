@@ -8,6 +8,7 @@ import {
   RECIPES,
   UTILITY_BUILDINGS,
   initialInventory,
+  recipeFoodCost,
   type CropId,
   type Encounter,
   type Inventory,
@@ -15,6 +16,9 @@ import {
   type UtilityKind,
 } from './content';
 import { buildable } from './grid';
+import { newDaily, dailyState, dailyQuests, DAILY_QUESTS, DAILY_BONUS, WHEEL_PRIZES, wheelPrize, grantDailyReward, addDailyProgress, validDaily, type DailyState, type DailyQuestId } from './daily';
+import { expeditionMs, expeditionPlan, expeditionStageCount } from './expeditionRules';
+export { expeditionMs } from './expeditionRules';
 export const SAVE_KEY = 'dino-realms-save-v1';
 export const BALANCE = {
   /** The tutorial fire egg; every other egg uses `eggSeconds`. */
@@ -61,7 +65,7 @@ export const REALM_NAMES: Record<RealmId, readonly [string, string]> = {
   light: ['Sanctuarul zorilor', 'Dawn Sanctuary'],
   arcane: ['Insula sigiliilor', 'Isle of Sigils'],
 };
-export const SPECIES = ['trex', 'raptor', 'triceratops', 'ankylosaurus', 'brachiosaurus', 'ignasaur', 'thalassaur'] as const;
+export const SPECIES = ['trex', 'raptor', 'triceratops', 'ankylosaurus', 'brachiosaurus', 'ignasaur', 'thalassaur', 'terrasaur'] as const;
 export type Species = (typeof SPECIES)[number] | 'boss';
 export const SPECIES_NAMES: Record<Species, string> = {
   trex: 'T-Rex',
@@ -71,6 +75,7 @@ export const SPECIES_NAMES: Record<Species, string> = {
   brachiosaurus: 'Brachiosaurus',
   ignasaur: 'Ignasaur',
   thalassaur: 'Thalassaur',
+  terrasaur: 'Terrasaur',
   boss: 'Boss',
 };
 /** Species stat multipliers from the plan (section 3). */
@@ -82,6 +87,7 @@ const SPECIES_STATS: Record<Species, { hp: number; power: number; defense: numbe
   brachiosaurus: { hp: 1.15, power: 0.9, defense: 1, speed: 1 },
   ignasaur: { hp: 0.95, power: 1.1, defense: 0.95, speed: 1.1 },
   thalassaur: { hp: 1, power: 1, defense: 1.05, speed: 1.05 },
+  terrasaur: { hp: 1.1, power: 1, defense: 1.15, speed: 0.8 },
   boss: { hp: 1.15, power: 1.1, defense: 1.1, speed: 0.9 },
 };
 export type Stage = 'baby' | 'juvenile' | 'adult';
@@ -103,6 +109,8 @@ export interface Dino {
   level: number;
   stage: Stage;
   nickname: string;
+  /** Missing in older saves: common. */
+  rarity?: Rarity;
 }
 /** An egg knows its species and element before incubation. `hatchAt` is null while it waits in the inventory. */
 export interface Egg {
@@ -111,17 +119,42 @@ export interface Egg {
   element: RealmId;
   seconds: number;
   hatchAt: number | null;
+  /** Decided when the egg is won and passed on to the dinosaur; missing means common. */
+  rarity?: Rarity;
 }
 /** An egg's identity before it reaches the shelf. */
 export interface EggKind {
   species: Species;
   element: RealmId;
+  rarity?: Rarity;
 }
+/**
+ * Rarity: the same species can hatch common, rare or epic; arena champions are always legendary. A rarer
+ * dinosaur has more health and power at the same level.
+ */
+export const RARITIES = ['common', 'rare', 'epic', 'legendary'] as const;
+export type Rarity = (typeof RARITIES)[number];
+export const RARITY_POWER: Record<Rarity, number> = { common: 1, rare: 1.1, epic: 1.2, legendary: 1.35 };
+export const RARITY_NAMES: Record<Rarity, readonly [string, string]> = {
+  common: ['Comun', 'Common'],
+  rare: ['Rar', 'Rare'],
+  epic: ['Epic', 'Epic'],
+  legendary: ['Legendar', 'Legendary'],
+};
+/** Chance of a rare and of an epic egg, by where it is won; harder arena tiers pay better. Market eggs are common. */
+export function rarityOdds(encounter: Pick<Encounter, 'id' | 'mode'>): { rare: number; epic: number } {
+  if (encounter.mode !== 'arena') return { rare: 0.2, epic: 0.04 };
+  const tier = Number(encounter.id.split('-')[2] ?? 1);
+  return tier >= 3 ? { rare: 0.25, epic: 0.12 } : tier === 2 ? { rare: 0.22, epic: 0.08 } : { rare: 0.2, epic: 0.05 };
+}
+export const rarityOf = (x: { rarity?: Rarity }): Rarity => x.rarity ?? 'common';
 export interface Battle {
   encounterId: string;
   dinoId: string;
-  /** `egg` is rolled when the fight is won (see `eggOdds`). */
-  reward: { gold: number; food: number; materials: Partial<Inventory>; egg?: EggKind };
+  /** `egg` is rolled when the fight is won (see `eggOdds`); `milestones` counts star milestones it pays out. */
+  reward: { gold: number; food: number; materials: Partial<Inventory>; egg?: EggKind; milestones?: number };
+  /** Stars earned when the fight was won, from the health left (see `starsFor`). */
+  stars?: number;
   hp: number;
   enemy: number;
   maxHp: number;
@@ -132,6 +165,35 @@ export interface Battle {
   round: number;
   result: 'victory' | 'defeat' | 'draw' | null;
   log: string;
+  /** The opponent's bar: +50 a round, its ultimate fires when full (see `foeMove`). Missing in older saves. */
+  enemyEnergy?: number;
+  /** What happened in the last round, for the replay and the on-screen callouts. */
+  report?: RoundReport;
+}
+export type FoeMove = 'attack' | 'defend' | 'ultimate';
+/** A timed expedition: the dinosaur leaves, and its rewards wait until it is back (`endsAt`). */
+export interface Expedition {
+  encounterId: string;
+  dinoId: string;
+  startedAt: number;
+  endsAt: number;
+  /** Absent only on trips started before staged expeditions. */
+  stage?: number;
+  reward: { gold: number; food: number; materials: Partial<Inventory>; egg?: EggKind };
+}
+export interface RoundReport {
+  ally: 'basic' | 'skill' | 'defend' | 'ultimate';
+  /** `none` when the opponent fell to the dinosaur's strike before it could act. */
+  foe: FoeMove | 'none';
+  /** Damage the dinosaur's strike dealt, after the opponent's guard. */
+  dealt: number;
+  /** Opponent HP right after the strike, before any reflected damage. */
+  enemyAfterStrike: number;
+  /** Damage the dinosaur took. */
+  taken: number;
+  dodged: boolean;
+  /** Damage the dinosaur's guard turned back on the opponent. */
+  reflected: number;
 }
 export interface Save {
   schemaVersion: 5;
@@ -160,6 +222,12 @@ export interface Save {
   /** Eggs won while the shelf was full; they move to the shelf as soon as there is room. */
   owedEggs: EggKind[];
   bossEggsClaimed: RealmId[];
+  /** Best stars (1 to 3) won in each arena fight; two stars on a tier open the next one. */
+  stars: Record<string, number>;
+  /** Star milestones already paid out (see STAR_MILESTONES). */
+  starMilestones: number;
+  /** Dinosaurs resting after a lost fight, until the given time; they cannot fight before. */
+  tired: Record<string, number>;
   farmLevel: number;
   /** One entry per unlocked plot (see FARM_LEVELS); null = empty. */
   plots: (FarmPlot | null)[];
@@ -169,6 +237,10 @@ export interface Save {
   rewardedTutorial: boolean;
   inventory: Inventory;
   crafting: CraftJob[];
+  /** The dinosaur away on a timed expedition, and what it brings back. Null when nobody is out. */
+  expedition: Expedition | null;
+  expeditionProgress: Partial<Record<string, number>>;
+  daily: DailyState;
   cleared: string[];
   lanterns: number;
 }
@@ -184,8 +256,8 @@ export interface CraftJob {
 /** Hatchery: eggs incubating at the same time, per level. */
 export const HATCHERY_LEVELS: { slots: number; gold: number; materials: Partial<Record<ItemId, number>> }[] = [
   { slots: 1, gold: 0, materials: {} },
-  { slots: 2, gold: 400, materials: { planks: 4 } },
-  { slots: 3, gold: 1000, materials: { planks: 6, blocks: 6 } },
+  { slots: 3, gold: 400, materials: { planks: 4 } },
+  { slots: 5, gold: 1000, materials: { planks: 6, blocks: 6 } },
 ];
 /**
  * Workshop: `slots` jobs running or waiting, `lanes` of them running at once, `speed` multiplies crafting time.
@@ -199,8 +271,8 @@ export const WORKSHOP_LEVELS: {
   materials: Partial<Record<ItemId, number>>;
 }[] = [
   { slots: 3, lanes: 1, speed: 1, gold: 0, materials: {} },
-  { slots: 5, lanes: 1, speed: 0.75, gold: 600, materials: { planks: 6, blocks: 6 } },
-  { slots: 6, lanes: 2, speed: 0.75, gold: 1500, materials: { planks: 10, blocks: 10, crystal: 10 } },
+  { slots: 5, lanes: 2, speed: 0.75, gold: 600, materials: { planks: 6, blocks: 6 } },
+  { slots: 6, lanes: 3, speed: 0.75, gold: 1500, materials: { planks: 10, blocks: 10, crystal: 10 } },
 ];
 /** Arena Gate: level 2 adds 25% to arena rewards and opens the last five leagues. */
 export const ARENA_LEVELS: { bonus: number; gold: number; materials: Partial<Record<ItemId, number>> }[] = [
@@ -273,6 +345,11 @@ const worldsOpen = (s: Save) => Object.keys(s.habitats).length;
  * Story rewards. Chapter I gives the four MVP egg variants (plan section 5). From chapter II on, the story card
  * follows five goals per chapter, one at a time: each pays gold and food, and the chapter's last one adds an egg.
  */
+/** A quest goal naming an expedition by its current title, so renaming or reordering never leaves it stale. */
+const clearTask = (id: string): [string, string] => {
+  const name = ENCOUNTERS.find((e) => e.id === id)!.name;
+  return [`Termină expediția ${name[0]}`, `Finish the ${name[1]} expedition`];
+};
 export const QUEST_EGGS: {
   id: string;
   /** The egg this step gives; most chapter steps pay only gold and food. */
@@ -292,7 +369,7 @@ export const QUEST_EGGS: {
     id: 'raptor_fire',
     species: 'raptor',
     element: 'earth',
-    task: ['Câștigă prima luptă', 'Win your first battle'],
+    task: ['Termină prima expediție', 'Finish your first expedition'],
     done: (s) => s.cleared.includes('training'),
   },
   {
@@ -306,14 +383,14 @@ export const QUEST_EGGS: {
     id: 'ankylosaurus_nature',
     species: 'triceratops',
     element: 'nature',
-    task: ['Cucerește expediția Ruinele străvechi', 'Clear the Ancient ruins expedition'],
+    task: clearTask('ruins'),
     done: (s) => s.cleared.includes('ruins'),
   },
   {
     id: 'brachiosaurus_water',
     species: 'raptor',
     element: 'water',
-    task: ['Cucerește expediția Reciful de safir', 'Clear the Sapphire reef expedition'],
+    task: clearTask('lagoon'),
     done: (s) => s.cleared.includes('lagoon'),
   },
   {
@@ -447,6 +524,8 @@ export function storyChapter(s: Save) {
 }
 
 export type Command =
+  | { type: 'spinDaily' | 'claimDailyBonus' }
+  | { type: 'claimDailyQuest'; quest: DailyQuestId }
   | { type: 'incubate' | 'hatch'; eggId?: string }
   | { type: 'feed' | 'evolve' | 'useCrystal'; dinoId?: string }
   | {
@@ -460,7 +539,8 @@ export type Command =
         | 'upgradeWorkshop'
         | 'upgradeArena'
         | 'devSkip'
-        | 'devResources';
+        | 'devResources'
+        | 'devRarityEggs';
     }
   | { type: 'setChampion'; dinoId: string }
   | { type: 'buyEgg'; species: Species; element: RealmId }
@@ -470,6 +550,8 @@ export type Command =
   | { type: 'plant'; crop?: CropId; plot?: number }
   | { type: 'harvest'; plot?: number }
   | { type: 'battle'; encounterId?: string }
+  | { type: 'expedition'; encounterId: string }
+  | { type: 'claimExpedition' }
   | { type: 'build'; x: number; y: number; kind?: UtilityKind }
   | { type: 'craft'; recipeId: string }
   | { type: 'claimCraft' | 'cancelCraft'; jobId: string }
@@ -496,6 +578,9 @@ export function newSave(now: number): Save {
     eggLuck: 0,
     owedEggs: [],
     bossEggsClaimed: [],
+    stars: {},
+    starMilestones: 0,
+    tired: {},
     farmLevel: 1,
     plots: [null],
     battle: null,
@@ -504,6 +589,9 @@ export function newSave(now: number): Save {
     rewardedTutorial: false,
     inventory: initialInventory(),
     crafting: [],
+    expedition: null,
+    expeditionProgress: {},
+    daily: newDaily(now),
     cleared: [],
     lanterns: 0,
   };
@@ -556,8 +644,8 @@ export const hatcheryStoryEggs = (s: Save) =>
     .filter((q) => !q.chapter)
     .filter(storyEgg);
 export const feedCost = (level: number) => 10 + 5 * (level - 1);
-export const stats = (level: number, stage: Stage, species: Species = 'trex') => {
-  const factor = (1 + 0.05 * (level - 10)) * (stage === 'adult' ? 1.15 : 1),
+export const stats = (level: number, stage: Stage, species: Species = 'trex', rarity: Rarity = 'common') => {
+  const factor = (1 + 0.05 * (level - 10)) * (stage === 'adult' ? 1.15 : 1) * RARITY_POWER[rarity],
     m = SPECIES_STATS[species];
   return {
     hp: Math.round(220 * m.hp * factor),
@@ -566,11 +654,156 @@ export const stats = (level: number, stage: Stage, species: Species = 'trex') =>
     speed: Math.round(25 * m.speed),
   };
 };
+/** Rolls the egg an encounter may drop, with the shared pity counter. Mutates `s.eggLuck`. */
+function rollEgg(s: Save, encounter: Encounter, now: number): EggKind | undefined {
+  const odds = eggOdds(s, encounter, !s.cleared.includes(encounter.id));
+  if (!odds) return undefined;
+  const seed = `${s.revision}:${now}:${encounter.id}`;
+  if (s.eggLuck >= EGG_DROP.pity || roll(seed) < odds.chance) {
+    const element = odds.elements[Math.floor(roll(`${seed}:element`) * odds.elements.length)];
+    const species = playableSpecies(element);
+    const chance = rarityOdds(encounter),
+      r = roll(`${seed}:rarity`);
+    s.eggLuck = 0;
+    return {
+      species: species[Math.floor(roll(`${seed}:species`) * species.length)],
+      element,
+      rarity: r < chance.epic ? 'epic' : r < chance.epic + chance.rare ? 'rare' : 'common',
+    };
+  }
+  s.eggLuck++;
+  return undefined;
+}
+/** Hands a won egg to the waiting list (the shelf takes it as soon as there is room). */
+function receiveEgg(s: Save, egg: EggKind) {
+  // Twenty regular waiting eggs plus ten reserved slots for the unique boss rewards.
+  if (egg.species === 'boss') {
+    if (s.owedEggs.length >= MAX_OWED_EGGS) throw new Error('eggsFull');
+    s.owedEggs.push(egg);
+  } else if (s.owedEggs.length < MAX_OWED_EGGS && s.owedEggs.filter(e => e.species !== 'boss').length < 20) {
+    s.owedEggs.push(egg);
+  }
+  if (egg.species === 'boss' && !s.bossEggsClaimed.includes(egg.element)) s.bossEggsClaimed.push(egg.element);
+}
+/** Stars for a won fight, from the share of health left: half or more is three, a fifth or more two. */
+export function starsFor(hpLeft: number, maxHp: number) {
+  const share = hpLeft / maxHp;
+  return share >= 0.5 ? 3 : share >= 0.2 ? 2 : 1;
+}
+/** Stars needed on a tier to open the next tier of its league. */
+export const STARS_TO_ADVANCE = 2;
+/** Rewards for the total of arena stars (90 at most: ten leagues, three tiers, three stars). */
+export const STAR_MILESTONES: { stars: number; gold: number; food: number; materials: Partial<Inventory> }[] = [
+  { stars: 5, gold: 300, food: 150, materials: { crystal: 5 } },
+  { stars: 12, gold: 500, food: 250, materials: { evolutionCrystal: 1 } },
+  { stars: 20, gold: 800, food: 400, materials: { crystal: 15, blocks: 3 } },
+  { stars: 30, gold: 1200, food: 600, materials: { evolutionCrystal: 2 } },
+  { stars: 42, gold: 1800, food: 800, materials: { crystal: 25, planks: 5, blocks: 5 } },
+  { stars: 55, gold: 2500, food: 1000, materials: { evolutionCrystal: 3 } },
+  { stars: 70, gold: 3500, food: 1500, materials: { crystal: 40, habitatKit: 1 } },
+  { stars: 90, gold: 6000, food: 2500, materials: { evolutionCrystal: 5 } },
+];
+export const starTotal = (s: Pick<Save, 'stars'>) => Object.values(s.stars).reduce((a, b) => a + b, 0);
+/** How long a dinosaur rests after losing a fight. */
+export const TIRED_MS = 3 * 60_000;
+/** Whether the dinosaur is still resting from a lost fight. */
+export const isTired = (s: Pick<Save, 'tired'>, dinoId: string, now: number) => (s.tired[dinoId] ?? 0) > now;
+/** Damage the dinosaur's strike deals; `defend` deals none. Shared by the reducer and the auto-battle planner. */
+export function strikeDamage(d: Pick<Dino, 'level' | 'stage' | 'species' | 'rarity'>, action: 'basic' | 'skill' | 'defend' | 'ultimate') {
+  if (action === 'defend') return 0;
+  const st = stats(d.level, d.stage, d.species, rarityOf(d)),
+    coefficient = action === 'skill' ? 1.2 : action === 'ultimate' ? 1.3 : 1;
+  return Math.max(1, Math.floor(((st.power * coefficient * 100) / 115) * 1.25));
+}
+/** Arena ages follow tier, independently of level; expeditions retain their level-based progression. */
+export function opponentAdult(e: Pick<Encounter, 'id' | 'level'>) {
+  const arenaTier = /^arena-[a-z]+-([123])$/.exec(e.id);
+  return arenaTier ? Number(arenaTier[1]) >= 2 : e.level >= 15;
+}
+/** Only adults and champions own an ultimate clip, so only they may unleash one. */
+export function foeHasUltimate(encounterId: string) {
+  const e = ENCOUNTERS.find((x) => x.id === encounterId);
+  return !!e && (!!arenaBoss(e) || opponentAdult(e));
+}
+/** The opponent's move this round, fixed by the round and its bar, so the fight stays replayable. */
+export function foeMove(b: Pick<Battle, 'encounterId' | 'round' | 'enemyEnergy'>): FoeMove {
+  // The guard comes first on its rounds, so it is seen even while the bar is full.
+  if (b.round % 6 === 2) return 'defend';
+  return (b.enemyEnergy ?? 0) >= 100 && foeHasUltimate(b.encounterId) ? 'ultimate' : 'attack';
+}
+/**
+ * Energy pacing: both bars fill fast enough for an ultimate about every third round, so they show all fight
+ * long instead of once near the end. The dinosaur also charges when it is hit.
+ */
+export const ENERGY = { basic: 50, skill: 20, defend: 25, hit: 15, foe: 50 };
+/** Power of either side's ultimate, against a basic strike. */
+export const ULTIMATE_POWER = 1.3;
+/** A guarding opponent takes half of the blow. */
+export const FOE_GUARD = 0.5;
+/** Share of the incoming blow a guarding dinosaur turns back on its opponent. */
+export const REFLECT = 0.25;
+/** Chance to dodge an unguarded blow: faster species slip away more often (raptor about 9%, ankylosaur 1%). */
+export function dodgeChance(d: Pick<Dino, 'level' | 'stage' | 'species' | 'rarity'>) {
+  return Math.min(0.12, Math.max(0.01, (stats(d.level, d.stage, d.species, rarityOf(d)).speed - 20) / 100));
+}
+/** Damage the dinosaur's strike would deal this round, after the opponent's guard. */
+/**
+ * The element wheel: each element beats the next one in its cycle. Fire burns nature, nature overgrows earth,
+ * earth grounds lightning, lightning strikes water, water quenches fire; ice freezes wind, wind scatters arcane
+ * sigils, arcane cracks ice; light and dark beat each other.
+ */
+export const ELEMENT_BEATS: Record<RealmId, RealmId[]> = {
+  fire: ['nature'],
+  nature: ['earth'],
+  earth: ['lightning'],
+  lightning: ['water'],
+  water: ['fire'],
+  ice: ['wind'],
+  wind: ['arcane'],
+  arcane: ['ice'],
+  light: ['dark'],
+  dark: ['light'],
+};
+/** 1 when `attacker` has the edge over `defender`, -1 when it is at a disadvantage, 0 when neutral. */
+export function elementEdge(attacker: RealmId, defender: RealmId): -1 | 0 | 1 {
+  if (ELEMENT_BEATS[attacker].includes(defender)) return 1;
+  if (ELEMENT_BEATS[defender].includes(attacker)) return -1;
+  return 0;
+}
+/** Damage multipliers from the edge: an advantage hits harder and softens the blows taken; a disadvantage, the reverse. */
+export const EDGE_DEALT = { [1]: 1.3, [0]: 1, [-1]: 0.8 } as const;
+export const EDGE_TAKEN = { [1]: 0.8, [0]: 1, [-1]: 1.3 } as const;
+/** The opponent's element in an encounter: arena leagues fight with their own element. */
+export const encounterElement = (encounterId: string) => ENCOUNTERS.find((e) => e.id === encounterId)?.league as RealmId | undefined;
+/** The dinosaur's edge in this encounter (neutral where the opponent has no element). */
+export function battleEdge(encounterId: string, d: Pick<Dino, 'element'>): -1 | 0 | 1 {
+  const foe = encounterElement(encounterId);
+  return foe ? elementEdge(d.element, foe) : 0;
+}
+export function strikeAgainst(b: Pick<Battle, 'encounterId' | 'round' | 'enemyEnergy'>, d: Pick<Dino, 'level' | 'stage' | 'species' | 'element' | 'rarity'>, action: 'basic' | 'skill' | 'defend' | 'ultimate') {
+  if (action === 'defend') return 0;
+  const raw = Math.max(1, Math.floor(strikeDamage(d, action) * EDGE_DEALT[battleEdge(b.encounterId, d)]));
+  return foeMove(b) === 'defend' ? Math.max(1, Math.floor(raw * FOE_GUARD)) : raw;
+}
+/** Damage the opponent deals back in a round, reduced when the dinosaur defends. */
+export function incomingDamage(b: Pick<Battle, 'encounterId'>, d: Pick<Dino, 'level' | 'stage' | 'species' | 'element' | 'rarity'>, defending: boolean) {
+  const st = stats(d.level, d.stage, d.species, rarityOf(d));
+  return Math.max(
+    1,
+    Math.floor(
+      (((ENCOUNTERS.find((e) => e.id === b.encounterId)?.power ?? 30) * 100) / (100 + st.defense)) *
+        0.8 *
+        (defending ? 0.6 : 1) *
+        EDGE_TAKEN[battleEdge(b.encounterId, d)],
+    ),
+  );
+}
 export function advance(save: Save, now: number): Save {
   const s = structuredClone(save),
     elapsed = Math.min(Math.max(0, now - s.updatedAt), BALANCE.offlineCap);
   s.storedGold = Math.max(s.storedGold, Math.min(goldCap(s), s.storedGold + (elapsed / 3_600_000) * goldRate(s)));
   s.updatedAt = Math.max(s.updatedAt, now);
+  s.daily = dailyState(s, now);
   return s;
 }
 /** A 3×3 building fits when all nine cells are on the buildable lawn (see grid.ts) and none is taken. */
@@ -606,6 +839,27 @@ export function command(save: Save, c: Command, now: number): Save {
     return d!;
   };
   switch (c.type) {
+    case 'spinDaily': {
+      require(s.daily.spin === null, 'dailyClaimed');
+      const prize = wheelPrize(Math.random());
+      s.daily.spin = prize;
+      grantDailyReward(s, WHEEL_PRIZES[prize].reward);
+      break;
+    }
+    case 'claimDailyQuest': {
+      require(dailyQuests(s.daily.day).includes(c.quest), 'dailyQuest');
+      require(!s.daily.claimed.includes(c.quest), 'dailyClaimed');
+      require(s.daily.progress[c.quest] >= DAILY_QUESTS[c.quest].target, 'dailyIncomplete');
+      grantDailyReward(s, DAILY_QUESTS[c.quest].reward);
+      s.daily.claimed.push(c.quest);
+      break;
+    }
+    case 'claimDailyBonus':
+      require(!s.daily.bonus, 'dailyClaimed');
+      require(dailyQuests(s.daily.day).every(id => s.daily.claimed.includes(id)), 'dailyIncomplete');
+      grantDailyReward(s, DAILY_BONUS);
+      s.daily.bonus = true;
+      break;
     case 'incubate': {
       const egg = s.eggs.find((e) => (c.eggId ? e.id === c.eggId : e.hatchAt === null));
       require(egg && egg.hatchAt === null, 'egg');
@@ -627,6 +881,7 @@ export function command(save: Save, c: Command, now: number): Save {
         level: egg.species === 'boss' ? 25 : 1,
         stage: egg.species === 'boss' ? 'adult' : 'baby',
         nickname: egg.species === 'boss' ? ARENA_BOSSES[egg.element].name : nicknameFor(s, egg.species, egg.element),
+        rarity: egg.species === 'boss' ? 'legendary' : rarityOf(egg),
       };
       s.dinos.push(dino);
       s.eggs = s.eggs.filter((e) => e !== egg);
@@ -806,6 +1061,8 @@ export function command(save: Save, c: Command, now: number): Save {
       require(s.crafting.filter((j) => j.endsAt > now).length < level.slots && s.crafting.length < 20, 'queue');
       const costs = Object.entries(recipe.cost) as [ItemId, number][];
       require(costs.every(([id, count]) => s.inventory[id] >= count), 'materials');
+      require(s.food >= recipeFoodCost(recipe), 'food');
+      s.food -= recipeFoodCost(recipe);
       costs.forEach(([id, count]) => (s.inventory[id] -= count));
       // The new job joins whichever lane frees up first.
       const lane = Array.from({ length: level.lanes }, (_, l) => l).reduce((a, b) =>
@@ -837,6 +1094,7 @@ export function command(save: Save, c: Command, now: number): Save {
       if (!job) break;
       const recipe = RECIPES.find((r) => r.id === job.recipeId)!;
       (Object.entries(recipe.cost) as [ItemId, number][]).forEach(([id, count]) => (s.inventory[id] += count));
+      s.food += recipeFoodCost(recipe);
       const duration = job.endsAt - job.startedAt;
       s.crafting.splice(index, 1);
       s.crafting
@@ -886,6 +1144,10 @@ export function command(save: Save, c: Command, now: number): Save {
       s.storedGold = Math.max(s.storedGold, goldCap(s));
       break;
     }
+    case 'devRarityEggs':
+      // Test tool: a rare and an epic fire T-Rex egg, delivered like won eggs, to preview the rarity look.
+      for (const rarity of ['rare', 'epic'] as const) receiveEgg(s, { species: 'trex', element: 'fire', rarity });
+      break;
     case 'devResources':
       s.gold += 5000;
       s.food += 5000;
@@ -899,17 +1161,24 @@ export function command(save: Save, c: Command, now: number): Save {
       const d = champion(s);
       require(d && d.stage !== 'baby' && !s.battle && !s.rewardPending, 'juvenile');
       if (!d) break;
+      require(s.expedition?.dinoId !== d.id, 'away');
       const encounter = ENCOUNTERS.find((e) => e.id === (c.encounterId ?? 'training'));
       require(encounter, 'encounter');
       if (!encounter) break;
-      require(!encounter.requires || s.cleared.includes(encounter.requires), 'locked');
+      require(encounter.mode === 'arena' || encounter.id === 'training', 'timedExpedition');
+      require(
+        !encounter.requires ||
+          (encounter.mode === 'arena' ? (s.stars[encounter.requires] ?? 0) >= STARS_TO_ADVANCE : s.cleared.includes(encounter.requires)),
+        encounter.mode === 'arena' ? 'stars' : 'locked',
+      );
       require(!encounter.league || !!s.habitats[encounter.league as RealmId], 'locked');
+      require(!isTired(s, d.id, now), 'tired');
       require(!GATE_LEAGUES.includes(encounter.league ?? '') || s.arenaLevel >= 2, 'gate');
       require(d.level >= encounter.level, 'level');
       require(encounter.id === 'training' ||
         s.buildings.some((b) => b.kind === (encounter.mode === 'arena' ? 'arena' : 'portal')), 'building');
       const repeat = s.cleared.includes(encounter.id);
-      const st = stats(d.level, d.stage, d.species);
+      const st = stats(d.level, d.stage, d.species, rarityOf(d));
       // The upgraded Arena Gate adds its bonus to arena rewards.
       const boost = (n: number) =>
         encounter.mode === 'arena' ? Math.round(n * (1 + ARENA_LEVELS[s.arenaLevel - 1].bonus)) : n;
@@ -939,17 +1208,71 @@ export function command(save: Save, c: Command, now: number): Save {
       };
       break;
     }
+    case 'expedition': {
+      const d = champion(s);
+      require(d && d.stage !== 'baby', 'juvenile');
+      require(!s.expedition, 'busy');
+      if (!d) break;
+      require(s.battle?.dinoId !== d.id, 'busy');
+      const encounter = ENCOUNTERS.find((e) => e.id === c.encounterId && e.mode === 'expedition');
+      require(encounter, 'encounter');
+      if (!encounter) break;
+      require(!encounter.requires || s.cleared.includes(encounter.requires), 'locked');
+      const plan = expeditionPlan(s, encounter.id);
+      require(d.level >= plan.level, 'level');
+      require(encounter.id === 'training' || s.buildings.some((b) => b.kind === 'portal'), 'building');
+      require(plan.stocked, 'provisions');
+      s.inventory.provisions -= plan.supplies;
+      const repeat = s.cleared.includes(encounter.id);
+      // The egg is decided when the dinosaur leaves, so waiting never changes what it brings back.
+      const finalStage = plan.stage === plan.total - 1;
+      const egg = finalStage ? rollEgg(s, encounter, now) : undefined;
+      const portion = (n: number) => Math.max(1, Math.floor(n / plan.total));
+      s.expedition = {
+        encounterId: encounter.id,
+        dinoId: d.id,
+        startedAt: now,
+        endsAt: now + plan.duration,
+        stage: plan.stage,
+        reward: {
+          gold: repeat ? 50 : portion(encounter.gold),
+          food: repeat ? 25 : portion(encounter.food),
+          materials: Object.fromEntries(
+            Object.entries(encounter.materials).map(([id, count]) => [id, repeat ? Math.max(1, Math.floor(count! / 4)) : portion(count!)]),
+          ),
+          ...(egg ? { egg } : {}),
+        },
+      };
+      break;
+    }
+    case 'claimExpedition': {
+      const x = s.expedition;
+      require(x && now >= x.endsAt, 'expedition');
+      if (!x) break;
+      s.gold += x.reward.gold;
+      s.food += x.reward.food;
+      (Object.entries(x.reward.materials) as [ItemId, number][]).forEach(([id, count]) => (s.inventory[id] += count));
+      const total = expeditionStageCount(x.encounterId);
+      const completed = x.stage === undefined ? total : x.stage + 1;
+      s.expeditionProgress[x.encounterId] = Math.max(s.expeditionProgress[x.encounterId] ?? 0, completed);
+      if (completed >= total && !s.cleared.includes(x.encounterId)) s.cleared.push(x.encounterId);
+      if (x.reward.egg) receiveEgg(s, x.reward.egg);
+      if (x.encounterId === 'training') s.rewardedTutorial = true;
+      s.expedition = null;
+      break;
+    }
     case 'action': {
       const b = s.battle,
         d = b && s.dinos.find((x) => x.id === b.dinoId);
       require(b && d && !b.result, 'battle');
       if (!b || !d) break;
-      require(c.action !== 'ultimate' || (d.stage === 'adult' && b.energy >= 100), 'energy');
+      // A full bar unlocks the ultimate; it may also land as the finishing blow, which kills either way.
+      require(c.action !== 'ultimate' || (d.stage === 'adult' && (b.energy >= 100 || strikeAgainst(b, d, 'basic') >= b.enemy)), 'energy');
       require(c.action !== 'skill' || b.cooldown === 0, 'cooldown');
-      const st = stats(d.level, d.stage, d.species),
-        coefficient = c.action === 'skill' ? 1.2 : c.action === 'ultimate' ? 1.3 : 1;
-      if (c.action !== 'defend')
-        b.enemy = Math.max(0, b.enemy - Math.max(1, Math.floor(((st.power * coefficient * 100) / 115) * 1.25)));
+      const foe = foeMove(b);
+      const dealt = c.action === 'defend' ? 0 : strikeAgainst(b, d, c.action);
+      b.enemy = Math.max(0, b.enemy - dealt);
+      const enemyAfterStrike = b.enemy;
       b.cooldown = Math.max(0, b.cooldown - 1);
       if (c.action === 'skill') {
         b.cooldown = 2;
@@ -958,41 +1281,57 @@ export function command(save: Save, c: Command, now: number): Save {
       b.energy =
         c.action === 'ultimate'
           ? 0
-          : Math.min(100, b.energy + (c.action === 'basic' ? 25 : c.action === 'skill' ? 20 : 15));
+          : Math.min(100, b.energy + ENERGY[c.action]);
       if (b.enemy > 0 && b.burn > 0) {
         b.enemy = Math.max(0, b.enemy - Math.floor(b.enemyMax * 0.05));
         b.burn--;
       }
-      if (b.enemy > 0)
-        b.hp = Math.max(
-          0,
-          b.hp -
-            Math.max(
-              1,
-              Math.floor(
-                (((ENCOUNTERS.find((e) => e.id === b.encounterId)?.power ?? 30) * 100) / (100 + st.defense)) *
-                  0.8 *
-                  (c.action === 'defend' ? 0.6 : 1),
-              ),
-            ),
-        );
+      // The opponent answers: it guards, strikes, or unleashes its ultimate. A guard turns part of the blow
+      // back; an unguarded blow may be dodged.
+      let taken = 0,
+        dodged = false,
+        reflected = 0;
+      const acts = b.enemy > 0;
+      if (acts && foe !== 'defend') {
+        const guarding = c.action === 'defend',
+          power = foe === 'ultimate' ? ULTIMATE_POWER : 1;
+        if (guarding) {
+          taken = Math.floor(incomingDamage(b, d, true) * power);
+          reflected = Math.floor(incomingDamage(b, d, false) * power * REFLECT);
+          b.enemy = Math.max(0, b.enemy - reflected);
+        } else if (roll(`${b.encounterId}:${b.round}:${d.id}:dodge`) < dodgeChance(d)) dodged = true;
+        else taken = Math.floor(incomingDamage(b, d, false) * power);
+        b.hp = Math.max(0, b.hp - taken);
+      }
+      if (acts) b.enemyEnergy = foe === 'ultimate' ? 0 : Math.min(100, (b.enemyEnergy ?? 0) + ENERGY.foe);
+      if (taken > 0 && b.hp > 0) b.energy = Math.min(100, b.energy + ENERGY.hit);
+      b.report = { ally: c.action, foe: acts ? foe : 'none', dealt, enemyAfterStrike, taken, dodged, reflected };
       b.log = c.action;
       b.round++;
       b.result = b.enemy === 0 ? 'victory' : b.hp === 0 ? 'defeat' : b.round > 30 ? 'draw' : null;
       if (b.result === 'victory') {
         s.rewardPending = true;
-        const encounter = ENCOUNTERS.find((e) => e.id === b.encounterId)!,
-          odds = eggOdds(s, encounter, !s.cleared.includes(encounter.id));
+        const encounter = ENCOUNTERS.find((e) => e.id === b.encounterId)!;
+        if (encounter.mode === 'arena') {
+          b.stars = starsFor(b.hp, b.maxHp);
+          // Milestones the new best reaches are paid with this fight's reward.
+          const total = starTotal(s) - (s.stars[encounter.id] ?? 0) + Math.max(s.stars[encounter.id] ?? 0, b.stars);
+          const reached = STAR_MILESTONES.slice(s.starMilestones).filter((m) => m.stars <= total);
+          if (reached.length) {
+            b.reward.milestones = reached.length;
+            for (const m of reached) {
+              b.reward.gold += m.gold;
+              b.reward.food += m.food;
+              for (const [id, n] of Object.entries(m.materials) as [ItemId, number][])
+                b.reward.materials[id] = (b.reward.materials[id] ?? 0) + n;
+            }
+          }
+        }
         if (arenaBoss(encounter) && !s.bossEggsClaimed.includes(encounter.league as RealmId)) {
-          b.reward.egg = { species: 'boss', element: encounter.league as RealmId };
-        } else if (odds) {
-          const seed = `${s.revision}:${now}:${encounter.id}`;
-          if (s.eggLuck >= EGG_DROP.pity || roll(seed) < odds.chance) {
-            const element = odds.elements[Math.floor(roll(`${seed}:element`) * odds.elements.length)];
-            const species = playableSpecies(element);
-            b.reward.egg = { species: species[Math.floor(roll(`${seed}:species`) * species.length)], element };
-            s.eggLuck = 0;
-          } else s.eggLuck++;
+          b.reward.egg = { species: 'boss', element: encounter.league as RealmId, rarity: 'legendary' };
+        } else {
+          const egg = rollEgg(s, encounter, now);
+          if (egg) b.reward.egg = egg;
         }
       }
       break;
@@ -1006,20 +1345,15 @@ export function command(save: Save, c: Command, now: number): Save {
           ([id, count]) => (s.inventory[id] += count),
         );
         if (!s.cleared.includes(s.battle!.encounterId)) s.cleared.push(s.battle!.encounterId);
-        if (s.battle!.reward.egg) {
-          const egg = s.battle!.reward.egg;
-          // Twenty regular waiting eggs plus ten reserved slots for the unique boss rewards.
-          if (egg.species === 'boss') {
-            require(s.owedEggs.length < MAX_OWED_EGGS, 'eggsFull');
-            s.owedEggs.push(egg);
-          } else if (s.owedEggs.length < MAX_OWED_EGGS && s.owedEggs.filter(e => e.species !== 'boss').length < 20) {
-            s.owedEggs.push(egg);
-          }
-          if (egg.species === 'boss' && !s.bossEggsClaimed.includes(egg.element)) s.bossEggsClaimed.push(egg.element);
-        }
+        if (s.battle!.reward.egg) receiveEgg(s, s.battle!.reward.egg);
         s.victories++;
         s.rewardPending = false;
         if (s.battle!.encounterId === 'training') s.rewardedTutorial = true;
+        const id = s.battle!.encounterId;
+        if (s.battle!.stars) s.stars[id] = Math.max(s.stars[id] ?? 0, s.battle!.stars);
+        s.starMilestones += s.battle!.reward.milestones ?? 0;
+      } else if (s.battle!.result === 'defeat') {
+        s.tired[s.battle!.dinoId] = now + TIRED_MS;
       }
       s.battle = null;
       break;
@@ -1032,6 +1366,13 @@ export function command(save: Save, c: Command, now: number): Save {
       seconds: BALANCE.eggSeconds,
       hatchAt: null,
     });
+  if (c.type === 'feed' || c.type === 'evolve') addDailyProgress(s, 'feed');
+  const harvested = save.plots.filter((p, i) => p && !s.plots[i]).length;
+  if (harvested) addDailyProgress(s, 'harvest', harvested);
+  const crafted = save.crafting.filter(j => !s.crafting.some(next => next.id === j.id) && j.endsAt <= now).length;
+  if (crafted && (c.type === 'claimCraft' || c.type === 'collectAvailable')) addDailyProgress(s, 'craft', crafted);
+  if (c.type === 'claim' && save.battle?.result) addDailyProgress(s, 'battle');
+  if (c.type === 'claimExpedition') addDailyProgress(s, 'expedition');
   s.revision++;
   return s;
 }
@@ -1119,10 +1460,22 @@ export function parseSave(text: string): Save {
   const s = (raw && typeof raw.schemaVersion === 'number' ? migrate(raw) : raw) as unknown as Save;
   if (s && typeof s === 'object') {
     s.workshopLevel ??= 1;
+    s.expedition ??= null;
+    s.expeditionProgress ??= {};
+    s.daily ??= newDaily(s.updatedAt);
+    if (s.inventory && typeof s.inventory === 'object') s.inventory.provisions ??= 0;
     s.arenaLevel ??= 1;
     s.eggLuck ??= 0;
     s.owedEggs ??= [];
     s.bossEggsClaimed ??= [];
+    // Saves from before rarity: champions hatched from a boss egg are legendary; everything else stays common.
+    for (const d of Array.isArray(s.dinos) ? s.dinos : []) if (d && d.species === 'boss') d.rarity ??= 'legendary';
+    // Saves from before stars: every arena fight already won counts as two stars, so no tier closes again.
+    s.stars ??= Object.fromEntries(
+      (s.cleared ?? []).filter((id) => ENCOUNTERS.some((e) => e.id === id && e.mode === 'arena')).map((id) => [id, STARS_TO_ADVANCE]),
+    );
+    s.starMilestones ??= STAR_MILESTONES.filter((m) => m.stars <= starTotal(s)).length;
+    s.tired ??= {};
     // The five farm levels became three; keep every planted crop and unlocked plot.
     if (
       Number.isInteger(s.farmLevel) && s.farmLevel >= 1 && s.farmLevel <= 5 &&
@@ -1204,6 +1557,13 @@ export function parseSave(text: string): Save {
     !Array.isArray(s.owedEggs) ||
     s.owedEggs.length > MAX_OWED_EGGS ||
     !Array.isArray(s.bossEggsClaimed) ||
+    !s.stars ||
+    typeof s.stars !== 'object' ||
+    Object.entries(s.stars).some(([id, n]) => !ENCOUNTERS.some((e) => e.id === id && e.mode === 'arena') || !integer(n, 3) || n < 1) ||
+    !integer(s.starMilestones, STAR_MILESTONES.length) ||
+    !s.tired ||
+    typeof s.tired !== 'object' ||
+    Object.values(s.tired).some((t) => !integer(t)) ||
     new Set(s.bossEggsClaimed).size !== s.bossEggsClaimed.length ||
     s.bossEggsClaimed.some(e => !element(e)) ||
     s.owedEggs.some((e) => !e || !species(e.species) || !element(e.element))
@@ -1222,6 +1582,7 @@ export function parseSave(text: string): Save {
       d.level < 1 ||
       !['baby', 'juvenile', 'adult'].includes(d.stage) ||
       (d.species === 'boss' && d.stage !== 'adult') ||
+      (d.rarity !== undefined && !RARITIES.includes(d.rarity)) ||
       typeof d.nickname !== 'string' ||
       d.nickname.length > 40 ||
       (d.stage === 'baby' ? d.level > 9 : d.stage === 'juvenile' ? d.level < 10 || d.level > 24 : d.level < 25)
@@ -1238,6 +1599,7 @@ export function parseSave(text: string): Save {
   for (const e of s.eggs)
     if (
       !e ||
+      (e.rarity !== undefined && !RARITIES.includes(e.rarity)) ||
       typeof e.id !== 'string' ||
       eggIds.has(e.id) ||
       !species(e.species) ||
@@ -1281,6 +1643,33 @@ export function parseSave(text: string): Save {
     const jobs = s.crafting.filter((j) => (j.lane ?? 0) === lane);
     if (jobs.some((j, i) => i > 0 && j.startedAt < jobs[i - 1].endsAt)) throw Error('Overlapping crafting jobs');
   }
+  if (!validDaily(s.daily)) throw Error('Invalid daily rewards');
+  if (!s.expeditionProgress || typeof s.expeditionProgress !== 'object' || Array.isArray(s.expeditionProgress) ||
+    Object.entries(s.expeditionProgress).some(([id, progress]) =>
+      !ENCOUNTERS.some(e => e.id === id && e.mode === 'expedition') || !integer(progress, expeditionStageCount(id))))
+    throw Error('Invalid expedition progress');
+  if (s.expedition !== null) {
+    const x = s.expedition,
+      encounter = x && ENCOUNTERS.find((e) => e.id === x.encounterId && e.mode === 'expedition');
+    if (
+      !x ||
+      !encounter ||
+      !s.dinos.some((d) => d.id === x.dinoId) ||
+      !integer(x.startedAt, 1e14) ||
+      !integer(x.endsAt, 1e14) ||
+      (x.stage === undefined
+        ? x.endsAt - x.startedAt !== (x.encounterId === 'training' ? 30_000 :
+          (ENCOUNTERS.filter(e => e.mode === 'expedition').findIndex(e => e.id === x.encounterId) + 1) * 60_000)
+        : !integer(x.stage, expeditionStageCount(x.encounterId) - 1) ||
+          x.stage !== Math.min(s.cleared.includes(x.encounterId) ? expeditionStageCount(x.encounterId) : s.expeditionProgress[x.encounterId] ?? 0, expeditionStageCount(x.encounterId) - 1) ||
+          x.endsAt - x.startedAt !== expeditionMs(x.encounterId, x.stage)) ||
+      !integer(x.reward.gold, 100000) ||
+      !integer(x.reward.food, 100000) ||
+      Object.entries(x.reward.materials).some(([id, n]) => !(id in s.inventory) || !integer(n, 100000)) ||
+      (x.reward.egg !== undefined && !isPlayableDinosaur(x.reward.egg.species, x.reward.egg.element))
+    )
+      throw Error('Invalid expedition');
+  }
   if (s.battle !== null) {
     const b = s.battle,
       d = b && s.dinos.find((x) => x.id === b.dinoId);
@@ -1305,6 +1694,15 @@ export function parseSave(text: string): Save {
       !integer(b.cooldown, 2) ||
       !integer(b.burn, 2) ||
       !integer(b.round, 31) ||
+      (b.enemyEnergy !== undefined && !integer(b.enemyEnergy, 100)) ||
+      (b.report !== undefined &&
+        (!['basic', 'skill', 'defend', 'ultimate'].includes(b.report.ally) ||
+          !['attack', 'defend', 'ultimate', 'none'].includes(b.report.foe) ||
+          !integer(b.report.dealt, 10000) ||
+          !integer(b.report.enemyAfterStrike, b.enemyMax) ||
+          !integer(b.report.taken, 10000) ||
+          !integer(b.report.reflected, 10000) ||
+          typeof b.report.dodged !== 'boolean')) ||
       b.round < 1 ||
       ![null, 'victory', 'defeat', 'draw'].includes(b.result) ||
       !['start', 'basic', 'skill', 'defend', 'ultimate'].includes(b.log) ||

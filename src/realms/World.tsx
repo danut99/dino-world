@@ -1,8 +1,12 @@
+import { RARITY_CANVAS } from './Rarity';
 import { drawPortal, PORTAL_ART, PORTAL_GROUND } from './animatedPortal';
+import { drawHatchery, hatcheryState } from './animatedHatchery';
+import { drawWorkshopTier, workshopState } from './workshopTiers';
+import { drawArena, arenaState } from './animatedArena';
 import { drawWorkshop, WORKSHOP_ART, WORKSHOP_GROUND } from './animatedWorkshop';
 import { drawFarm, farmGround, isAnimatedFarm } from './animatedFarm';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { advance, canPlace, ELEMENTS, farmNextAt, type Building, type Save, type RealmId } from './game';
+import { advance, canPlace, ELEMENTS, farmNextAt, rarityOf, type Building, type Save, type RealmId } from './game';
 import { constrainPan, constrainHomePan, SCENE } from './camera';
 import { buildingLevel, groundLine, LEVELED, measureGround, TIERED, tierArt } from './buildingTiers';
 import { worldArt } from './worldArt';
@@ -53,9 +57,19 @@ const MAX_ZOOM = 2.5;
 const BUTTON_ZOOM_STEP = 0.1;
 /** Insula principală e mare: pornește micșorată, cu tot platoul în cadru. */
 const HOME_ZOOM = 0.8;
-/** Drawn building size; 260 was the original. The lift keeps the base on the same 3×3 footprint. */
-const BUILDING_SIZE = 192,
+/**
+ * Drawn building size, in scene pixels. 192 is the exact width of the 3×3 footprint; buildings are drawn a
+ * quarter larger so they read clearly at the island's default zoom. The ground line keeps the base anchored on
+ * the footprint's corners whatever the size, so the plate only overflows the cells visually.
+ */
+const BUILDING_SIZE = 240,
   BUILDING_LIFT = Math.round((BUILDING_SIZE * 205) / 260);
+const HATCHERY_SIZE = 288;
+/**
+ * The farm sprites leave wider empty margins (content spans 90% of the frame, against 98% for the other
+ * buildings) and the farm itself is low, so at the common size it reads smaller. It is drawn larger to match.
+ */
+const FARM_SIZE = Math.round(BUILDING_SIZE * 1.2);
 export function drawBuilding(
   ctx: CanvasRenderingContext2D,
   b: Building,
@@ -64,6 +78,14 @@ export function drawBuilding(
   animationMs = 0,
 ) {
   const p = project(b.x + 1.5, b.y + 1.5);
+  if (b.kind === 'workshop' && texture && standalone) {
+    const state = workshopState(texture);
+    if (state) {
+      const size = BUILDING_SIZE * .9 * 240 / state.width;
+      drawWorkshopTier(ctx, texture, animationMs, Math.round(p.x-size/2), Math.round(p.y-state.ground*size), size);
+      return;
+    }
+  }
   if (b.kind === 'portal' && texture && standalone && texture.src.endsWith(PORTAL_ART)) {
     drawPortal(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - PORTAL_GROUND * BUILDING_SIZE), BUILDING_SIZE);
     return;
@@ -73,10 +95,24 @@ export function drawBuilding(
     return;
   }
   if (b.kind === 'farm' && texture && standalone && isAnimatedFarm(texture)) {
-    drawFarm(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - farmGround(texture) * BUILDING_SIZE), BUILDING_SIZE);
+    drawFarm(ctx, texture, animationMs, Math.round(p.x - FARM_SIZE / 2), Math.round(p.y - farmGround(texture) * FARM_SIZE), FARM_SIZE);
     return;
   }
 
+  if (b.kind === 'hatchery' && texture && standalone) {
+    const state = hatcheryState(texture);
+    if (state) {
+      const size = HATCHERY_SIZE;
+      drawHatchery(ctx, texture, animationMs, Math.round(p.x - size / 2), Math.round(p.y - state.ground * size), size);
+      return;
+    }
+  }
+  if (b.kind === 'arena' && texture && standalone && arenaState(texture)) {
+    const ground = groundLine(texture);
+    const top = ground === undefined ? BUILDING_LIFT : Math.round(ground * BUILDING_SIZE);
+    drawArena(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - top), BUILDING_SIZE);
+    return;
+  }
   if (texture && (standalone || b.kind === 'market')) {
     const ground = groundLine(texture);
     const top = ground === undefined ? BUILDING_LIFT : Math.round(ground * BUILDING_SIZE);
@@ -529,7 +565,9 @@ export default function World({
       .reverse()
       .find((b) => {
         const q = project(b.x + 1.5, b.y + 1.5);
-        return Math.abs(p.x - q.x) < BUILDING_SIZE / 2 && p.y < q.y + 40 && p.y > q.y - BUILDING_LIFT;
+        const size = b.kind === 'hatchery' ? HATCHERY_SIZE : b.kind === 'farm' ? FARM_SIZE : BUILDING_SIZE;
+        const lift = BUILDING_LIFT * size / BUILDING_SIZE;
+        return Math.abs(p.x - q.x) < size / 2 && p.y < q.y + 40 * size / BUILDING_SIZE && p.y > q.y - lift;
       });
   // Target top-left cell for the held building, keeping the grab point under the pointer.
   const heldCell = (p: { x: number; y: number }, h: { ox: number; oy: number }) => {
@@ -800,6 +838,12 @@ export default function World({
           ctx.translate(Math.round(p.x), Math.round(p.y));
           if (returning) ctx.scale(-1, 1);
           const clipTime = walking ? (phase - (returning ? 8 : 3)) * 1000 : time + i * 137;
+          // Rare, epic and legendary residents glow in their rarity's colour; the glow breathes unless motion is reduced.
+          const glow = RARITY_CANVAS[rarityOf(x)].glow;
+          if (glow) {
+            ctx.shadowColor = glow;
+            ctx.shadowBlur = (rarityOf(x) === 'rare' ? 6 : 12) + (reducedMotion ? 0 : 4 * Math.sin(time / 400 + i));
+          }
           drawSprite(ctx, sheet, clip, frameAt(clip, reducedMotion ? 0 : clipTime),
             -m.pivot.x * factor, -m.pivot.y * factor, m.sourceSize.width * factor, size);
           ctx.restore();
@@ -808,9 +852,15 @@ export default function World({
         ctx.font = "600 13px 'Pixelify Sans', sans-serif";
         ctx.textAlign = 'center';
         const width = ctx.measureText(label).width + 16;
-        ctx.fillStyle = '#183342';
+        const tone = RARITY_CANVAS[rarityOf(x)];
+        ctx.fillStyle = tone.bg;
         ctx.fillRect(p.x - width / 2, p.y + 4, width, 22);
-        ctx.fillStyle = '#f6dfae';
+        if (tone.glow) {
+          ctx.strokeStyle = tone.glow;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(p.x - width / 2 + 1, p.y + 5, width - 2, 20);
+        }
+        ctx.fillStyle = tone.text;
         ctx.fillText(label, p.x, p.y + 19);
       });
     if (cell && showGhost) {
@@ -1058,7 +1108,7 @@ export default function World({
             return Math.abs(p.x - dp.x) < 60 && p.y > dp.y - STAGE_HEIGHT[x.stage] && p.y < dp.y + 25;
           });
           if (picked) return onSelect(`dino:${picked.id}`);
-          if (realm !== 'home') return onSelect('collection');
+          if (realm !== 'home') return onSelect('habitat');
           const b = buildingAt(p);
           if (b) onSelect(b.id);
         }}

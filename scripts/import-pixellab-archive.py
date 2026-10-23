@@ -19,7 +19,7 @@ parser.add_argument('--prefer', action='append', default=[], help='clip=name for
 parser.add_argument('--state', action='append', default=[], help='stage=folder override for character groups')
 parser.add_argument('--stage', action='append', choices=['baby', 'juvenile', 'adult'], help='Import only selected ages')
 args = parser.parse_args()
-if not re.fullmatch(r'(boss|trex|raptor|triceratops|ankylosaurus|brachiosaurus|ignasaur|thalassaur)_(fire|water|earth|nature|ice|lightning|wind|dark|light|arcane)', args.variant):
+if not re.fullmatch(r'(boss|trex|raptor|triceratops|ankylosaurus|brachiosaurus|ignasaur|thalassaur|terrasaur)_(fire|water|earth|nature|ice|lightning|wind|dark|light|arcane)', args.variant):
     parser.error('Unknown species/element variant')
 preferred = dict(value.split('=', 1) for value in args.prefer)
 state_names = dict(value.split('=', 1) for value in args.state)

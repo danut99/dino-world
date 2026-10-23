@@ -1,11 +1,26 @@
 import type { Clip, SpriteManifest } from './animation';
+import type { RoundReport } from './game';
 
 /** Actions the battle reducer understands; `skill` has no clip and is no longer offered in the UI. */
 export type BattleAction = 'basic' | 'skill' | 'defend' | 'ultimate';
 export type Unit = 'ally' | 'enemy';
-export type Impact = { on: Unit; kind: 'hit' | 'guard' | 'ultimate' };
-/** One beat of the fight. `ms` is Infinity for the resting pose that closes a sequence. */
-export type Step = { ally: Clip; enemy: Clip; ms: number; reveal?: Unit; impact?: Impact };
+export type Impact = { on: Unit; kind: 'hit' | 'guard' | 'ultimate' | 'reflect' };
+/** An on-screen announcement over one fighter: what just happened to it, with the damage when there is some. */
+export type Callout = { on: Unit; kind: 'damage' | 'guard' | 'blocked' | 'dodge' | 'reflect' | 'ultimate' | 'ko'; amount?: number };
+/**
+ * One beat of the fight. `ms` is Infinity for the resting pose that closes a sequence. `reveal` shows the unit's
+ * HP on this beat (`revealHp` when it is not yet the round's final value); `dodge` makes the unit leap aside.
+ */
+export type Step = {
+  ally: Clip;
+  enemy: Clip;
+  ms: number;
+  reveal?: Unit;
+  revealHp?: number;
+  impact?: Impact;
+  say?: Callout[];
+  dodge?: Unit;
+};
 export type Fighter = { clips: Set<Clip>; ms: (clip: Clip) => number; impactMs: (clip: Clip) => number };
 
 const FALLBACK_MS = 600;
@@ -44,46 +59,86 @@ export function entrance(ally: Fighter, enemy: Fighter, alive: { ally: boolean; 
 }
 
 /**
- * One resolved round, told in order: the ally strikes (or raises a guard), the blow lands, then the
- * surviving enemy answers and its hit lands. HP is revealed on the beat where the hit connects.
+ * One resolved round, told in order from the reducer's report: the ally strikes (into the opponent's guard, if
+ * it raised one) or raises its own guard; the surviving opponent answers with its attack or ultimate, which the
+ * ally takes, blocks (turning part of it back) or dodges. HP is revealed on the beat where each blow connects.
  */
-export function exchange(
-  action: BattleAction,
-  ally: Fighter,
-  enemy: Fighter,
-  alive: { ally: boolean; enemy: boolean },
-): Step[] {
+export function exchange(r: RoundReport, ally: Fighter, enemy: Fighter, alive: { ally: boolean; enemy: boolean }): Step[] {
   const steps: Step[] = [];
-  if (action !== 'defend') {
-    const strike: Clip = action === 'ultimate' && ally.clips.has('ultimate') ? 'ultimate' : 'attack';
-    const windup = ally.impactMs(strike),
-      landing: Clip = alive.enemy ? 'hurt' : 'death',
-      landingMs = enemy.ms(landing);
-    steps.push({ ally: strike, enemy: 'idle', ms: windup });
+  const foeGuards = r.foe === 'defend';
+  const fellToStrike = r.enemyAfterStrike === 0;
+  if (r.ally !== 'defend') {
+    const ult = r.ally === 'ultimate';
+    const strike: Clip = ult && ally.clips.has('ultimate') ? 'ultimate' : 'attack';
+    const windup = ally.impactMs(strike);
+    const landing: Clip = foeGuards ? 'defend' : fellToStrike ? 'death' : 'hurt';
+    steps.push({
+      ally: strike,
+      enemy: foeGuards ? 'defend' : 'idle',
+      ms: windup,
+      say: ult ? [{ on: 'ally', kind: 'ultimate' }] : foeGuards ? [{ on: 'enemy', kind: 'guard' }] : undefined,
+    });
     steps.push({
       ally: strike,
       enemy: landing,
-      ms: Math.max(ally.ms(strike) - windup, landingMs, MIN_BEAT_MS),
+      ms: Math.max(ally.ms(strike) - windup, enemy.ms(landing), MIN_BEAT_MS),
       reveal: 'enemy',
-      impact: { on: 'enemy', kind: action === 'ultimate' ? 'ultimate' : 'hit' },
+      revealHp: r.enemyAfterStrike,
+      impact: { on: 'enemy', kind: foeGuards ? 'guard' : ult ? 'ultimate' : 'hit' },
+      say: [
+        { on: 'enemy', kind: foeGuards ? 'blocked' : 'damage', amount: r.dealt },
+        ...(fellToStrike ? [{ on: 'enemy', kind: 'ko' } as Callout] : []),
+      ],
+    });
+  } else if (foeGuards) {
+    // Both raise their guard: a tense standoff, nobody strikes.
+    steps.push({
+      ally: 'defend',
+      enemy: 'defend',
+      ms: Math.max(ally.ms('defend'), enemy.ms('defend'), MIN_BEAT_MS),
+      say: [{ on: 'ally', kind: 'guard' }, { on: 'enemy', kind: 'guard' }],
     });
   }
-  if (alive.enemy) {
-    const guard = action === 'defend',
-      stance: Clip = guard ? 'defend' : 'idle',
-      windup = enemy.impactMs('attack'),
-      landing: Clip = !alive.ally ? 'death' : guard ? stance : 'hurt',
-      landingMs = !alive.ally ? ally.ms('death') : guard ? MIN_BEAT_MS : ally.ms('hurt');
+  if (r.foe === 'attack' || r.foe === 'ultimate') {
+    const guard = r.ally === 'defend';
+    const foeUlt = r.foe === 'ultimate';
+    const blow: Clip = foeUlt && enemy.clips.has('ultimate') ? 'ultimate' : 'attack';
+    const stance: Clip = guard ? 'defend' : 'idle';
+    const windup = enemy.impactMs(blow);
+    const landing: Clip = !alive.ally ? 'death' : guard ? 'defend' : r.dodged ? 'idle' : 'hurt';
     // A short breather so the riposte reads as an answer rather than one blur.
-    if (action !== 'defend') steps.push({ ally: 'idle', enemy: 'idle', ms: 250 });
-    steps.push({ ally: stance, enemy: 'attack', ms: windup });
+    if (r.ally !== 'defend') steps.push({ ally: 'idle', enemy: 'idle', ms: 250 });
+    steps.push({
+      ally: stance,
+      enemy: blow,
+      ms: windup,
+      say: foeUlt ? [{ on: 'enemy', kind: 'ultimate' }] : guard ? [{ on: 'ally', kind: 'guard' }] : undefined,
+    });
     steps.push({
       ally: landing,
-      enemy: 'attack',
-      ms: Math.max(enemy.ms('attack') - windup, landingMs, MIN_BEAT_MS),
+      enemy: blow,
+      ms: Math.max(enemy.ms(blow) - windup, !alive.ally ? ally.ms('death') : guard || r.dodged ? MIN_BEAT_MS : ally.ms('hurt'), MIN_BEAT_MS),
       reveal: 'ally',
-      impact: { on: 'ally', kind: guard ? 'guard' : 'hit' },
+      impact: r.dodged ? undefined : { on: 'ally', kind: guard ? 'guard' : foeUlt ? 'ultimate' : 'hit' },
+      dodge: r.dodged ? 'ally' : undefined,
+      say: r.dodged
+        ? [{ on: 'ally', kind: 'dodge' }]
+        : [
+            { on: 'ally', kind: guard ? 'blocked' : 'damage', amount: r.taken },
+            ...(!alive.ally ? [{ on: 'ally', kind: 'ko' } as Callout] : []),
+          ],
     });
+    if (r.reflected > 0) {
+      const hit: Clip = alive.enemy ? 'hurt' : 'death';
+      steps.push({
+        ally: alive.ally ? 'defend' : 'death',
+        enemy: hit,
+        ms: Math.max(enemy.ms(hit), MIN_BEAT_MS),
+        reveal: 'enemy',
+        impact: { on: 'enemy', kind: 'reflect' },
+        say: [{ on: 'enemy', kind: 'reflect', amount: r.reflected }, ...(!alive.enemy ? [{ on: 'enemy', kind: 'ko' } as Callout] : [])],
+      });
+    }
   }
   steps.push(rest(alive));
   return steps;

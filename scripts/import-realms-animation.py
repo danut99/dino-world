@@ -22,7 +22,7 @@ parser.add_argument('stage', choices=['baby', 'juvenile', 'adult'])
 parser.add_argument('receipt', type=Path)
 parser.add_argument('--variant', default='trex_fire', help='Species_element ID, e.g. raptor_earth')
 args = parser.parse_args()
-if not re.fullmatch(r'(boss|trex|raptor|triceratops|ankylosaurus|brachiosaurus|ignasaur|thalassaur)_(fire|water|earth|nature|ice|lightning|wind|dark|light|arcane)', args.variant):
+if not re.fullmatch(r'(boss|trex|raptor|triceratops|ankylosaurus|brachiosaurus|ignasaur|thalassaur|terrasaur)_(fire|water|earth|nature|ice|lightning|wind|dark|light|arcane)', args.variant):
     parser.error('Unknown species/element variant')
 receipt = args.receipt.read_text(encoding='utf-8')
 allowed = ['idle', 'walk'] + ([] if args.stage == 'baby' else ['attack', 'defend', 'hurt', 'death']) + (['ultimate'] if args.stage == 'adult' else [])

@@ -1,3 +1,4 @@
+import { RarityBadge, rarityClass } from './Rarity';
 import { ARENA_BOSSES } from './arenaBosses';
 import { useState } from 'react';
 import { ELEMENTS, type Dino, type RealmId, type Stage } from './game';
@@ -32,8 +33,8 @@ export function DinosaurCollection({ lang, dinos, openOwned, openMarket, initial
       })}
       {dinos.filter(d => d.species === 'boss' && d.element === element).map(d => (
         <article className="realm-collection-card owned" key={d.id} data-dinosaur={`boss_${element}`}>
-          <DinosaurArt species="boss" element={element} stage="adult" />
-          <h3>BOSS {ARENA_BOSSES[element].name}</h3>
+          <DinosaurArt species="boss" element={element} stage="adult" className={rarityClass('legendary')} />
+          <h3>BOSS {ARENA_BOSSES[element].name} <RarityBadge rarity="legendary" lang={lang} /></h3>
           <p>{tr('Recompens? din lupta cu bossul ? Adult', 'Boss battle reward ? Adult')}</p>
           <button className="realm-button secondary" onClick={() => openOwned(d.id)}>{d.nickname}</button>
         </article>

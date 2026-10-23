@@ -18,8 +18,17 @@ REALMS = os.path.join(os.path.dirname(__file__), '..', 'public', 'realms')
 GROUPS = ['worlds', 'home', 'bosses', 'buildings', 'gameplay']
 parser = argparse.ArgumentParser(description='Build WebP variants of the Dino Realms runtime artwork.')
 parser.add_argument('--only', nargs='+', choices=GROUPS, help='Rebuild only these groups.')
+parser.add_argument('--file', help='Rebuild one PNG source relative to art/realms (for example gameplay/workshop-interior-pixel-v3.png).')
+parser.add_argument('--lossless', action='store_true', help='Preserve exact pixel colors and alpha, without resizing.')
 args = parser.parse_args()
 groups = args.only or GROUPS
+if args.file:
+    source = os.path.abspath(os.path.join(ART, args.file))
+    if os.path.commonpath([os.path.abspath(ART), source]) != os.path.abspath(ART) or not os.path.isfile(source):
+        parser.error('--file must name an existing PNG inside art/realms.')
+    if not source.lower().endswith('.png'):
+        parser.error('--file must be a PNG source.')
+    groups = ['gameplay']
 before = after = 0
 
 
@@ -27,13 +36,15 @@ def save(src, im, name, quality):
     global before, after
     out = os.path.join(REALMS, os.path.relpath(os.path.dirname(src), ART), name)
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    im.save(out, 'WEBP', quality=quality, method=6)
+    im.save(out, 'WEBP', quality=quality, method=6, lossless=args.lossless, exact=args.lossless)
     before += os.path.getsize(src)
     after += os.path.getsize(out)
     print(f'{os.path.relpath(out, REALMS):42} {os.path.getsize(src) / 1e6:5.2f} MB -> {os.path.getsize(out) / 1e6:5.2f} MB')
 
 
 def same_size(path, quality):
+    if args.file and os.path.normcase(os.path.abspath(path)) != os.path.normcase(os.path.abspath(os.path.join(ART, args.file))):
+        return None
     im = Image.open(path)
     save(path, im, os.path.splitext(os.path.basename(path))[0] + '.webp', quality)
     return im
@@ -43,6 +54,11 @@ def square(path, size, quality):
     im = Image.open(path).convert('RGBA').resize((size, size), Image.LANCZOS)
     save(path, im, os.path.splitext(os.path.basename(path))[0] + '.webp', quality)
 
+
+if args.file:
+    same_size(source, 90)
+    print(f'total {before / 1e6:.1f} MB -> {after / 1e6:.1f} MB')
+    raise SystemExit(0)
 
 if 'worlds' in groups:
     for path in sorted(glob(os.path.join(ART, 'worlds', '*-wide-v1.png'))):

@@ -34,8 +34,9 @@ describe('egg drops and selling', () => {
   it('awards the defeated boss once, including previously cleared leagues, and hatches an adult', () => {
     let s = arena();
     s.cleared = ['arena-fire-1', 'arena-fire-2', 'arena-fire-3'];
+    s.stars = { 'arena-fire-1': 2, 'arena-fire-2': 2, 'arena-fire-3': 2 };
     s = win(s, 'arena-fire-3');
-    expect(s.battle?.reward.egg).toEqual({ species: 'boss', element: 'fire' });
+    expect(s.battle?.reward.egg).toEqual({ species: 'boss', element: 'fire', rarity: 'legendary' });
     roundTrip(s);
     s = run(s, { type: 'claim' });
     const egg = s.eggs.at(-1)!;
@@ -57,11 +58,12 @@ describe('egg drops and selling', () => {
   it('reserves boss rewards while both the egg shelf and normal waiting queue are full', () => {
     let s = arena();
     s.cleared = ['arena-nature-1', 'arena-nature-2'];
+    s.stars = { 'arena-nature-1': 2, 'arena-nature-2': 2 };
     while (s.eggs.length < BALANCE.maxEggs) s = run(s, { type: 'buyEgg', species: 'trex', element: 'fire' });
     s.owedEggs = Array.from({ length: 20 }, () => ({ species: 'triceratops' as const, element: 'nature' as const }));
     s = run(win(s, 'arena-nature-3'), { type: 'claim' });
     expect(s.owedEggs).toHaveLength(21);
-    expect(s.owedEggs.at(-1)).toEqual({ species: 'boss', element: 'nature' });
+    expect(s.owedEggs.at(-1)).toEqual({ species: 'boss', element: 'nature', rarity: 'legendary' });
     roundTrip(s);
   });
   it('loads old saves without marking bosses as already rewarded and rejects a baby boss', () => {
@@ -81,6 +83,7 @@ describe('egg drops and selling', () => {
   it('always drops an egg of its element from a boss the first time', () => {
     let s = arena();
     s.cleared = ['arena-nature-1', 'arena-nature-2'];
+    s.stars = { 'arena-nature-1': 2, 'arena-nature-2': 2 };
     s = win(s, 'arena-nature-3');
     expect(s.battle?.reward.egg?.element).toBe('nature');
     roundTrip(s);

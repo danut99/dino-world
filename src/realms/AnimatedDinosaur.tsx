@@ -12,6 +12,7 @@ export function AnimatedDinosaur({
   label,
   bounds = false,
   bossElement,
+  speed = 1,
 }: {
   manifest: SpriteManifest;
   clip?: Clip;
@@ -22,6 +23,8 @@ export function AnimatedDinosaur({
   label: string;
   bounds?: boolean;
   bossElement?: string;
+  /** Playback rate: 2 plays the clip twice as fast (the battle's ×2 button). */
+  speed?: number;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
@@ -41,7 +44,7 @@ export function AnimatedDinosaur({
         if (!alive) return;
         const paint = (now: number) => {
           if (!alive) return;
-          if (!document.hidden && !paused && !reduced && previous) time += Math.min(now - previous, 100);
+          if (!document.hidden && !paused && !reduced && previous) time += Math.min(now - previous, 100) * speed;
           previous = now;
           const index =
             frame === undefined
@@ -72,7 +75,7 @@ export function AnimatedDinosaur({
       alive = false;
       cancelAnimationFrame(raf);
     };
-  }, [selected, paused, reduced, frame, bounds, manifest]);
+  }, [selected, paused, reduced, frame, bounds, manifest, speed]);
   if (!selected || failed)
     return (
       <span className="realm-note" role="status">

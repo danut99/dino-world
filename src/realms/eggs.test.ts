@@ -189,7 +189,8 @@ describe('arena leagues', () => {
     s = run(s, { type: 'build', kind: 'arena', x: 1, y: 8 });
     expect(() => run(s, { type: 'battle', encounterId: 'arena-water-1' })).toThrow('locked');
     expect(run(s, { type: 'battle', encounterId: 'arena-fire-1' }).battle?.encounterId).toBe('arena-fire-1');
-    expect(() => run(s, { type: 'battle', encounterId: 'arena-fire-2' })).toThrow('locked');
+    // The next tier opens with two stars on the previous one.
+    expect(() => run(s, { type: 'battle', encounterId: 'arena-fire-2' })).toThrow('stars');
     s = run(s, { type: 'unlockHabitat', realm: 'water' });
     expect(run(s, { type: 'battle', encounterId: 'arena-water-1' }).battle?.encounterId).toBe('arena-water-1');
     expect(() => run(s, { type: 'battle', encounterId: 'arena-ice-1' })).toThrow('locked');

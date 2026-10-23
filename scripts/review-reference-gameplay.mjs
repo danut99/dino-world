@@ -45,8 +45,8 @@ try {
       [
         'utility-buildings-pixel',
         'all-worlds-map-pixel',
-        'arena-scene-pixel',
-        'workshop-scene-pixel',
+        'arena-interior-pixel',
+        'workshop-interior-pixel-v3',
         'ice-sentinel-pixel',
       ].map((id) => {
         const img = new Image();

@@ -1,0 +1,53 @@
+/* Rarity: a tag beside the name, and a glow on the dinosaur that grows with the rarity. */
+.rarity-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+  font: 700 10px/1.4 'Realms Pixel', 'Pixelify Sans', sans-serif;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: 1px solid;
+  border-radius: 2px;
+}
+.rarity-badge.rarity-common { color: #d6d0c4; background: #4a4540; border-color: #8a837a; }
+.rarity-badge.rarity-rare { color: #d8ecff; background: #1d4a86; border-color: #6fb6ff; }
+.rarity-badge.rarity-epic { color: #f3e2ff; background: #5a2a8f; border-color: #c48bff; box-shadow: 0 0 8px #b26bff99; }
+.rarity-badge.rarity-legendary {
+  color: #2f2108;
+  background: linear-gradient(90deg, #f0b93a, #ffe68a, #f0b93a);
+  background-size: 200% 100%;
+  border-color: #fff1b8;
+  box-shadow: 0 0 10px #ffc94acc;
+  animation: rarity-shine 2.4s linear infinite;
+}
+
+/* The glow on the art: none for common, an outline for rare, a pulse for epic, a golden shimmer for legendary. */
+.realms-app .dinosaur-art.rarity-rare { filter: drop-shadow(0 0 3px #4aa3ff) drop-shadow(0 0 1px #4aa3ff); }
+.realms-app .dinosaur-art.rarity-epic { animation: rarity-epic-pulse 2s ease-in-out infinite; }
+.realms-app .dinosaur-art.rarity-legendary { animation: rarity-legendary-glow 1.6s ease-in-out infinite; }
+.realms-app .realm-egg.rarity-rare > img { filter: drop-shadow(0 0 4px #4aa3ff); }
+.realms-app .realm-egg.rarity-epic > img { animation: rarity-epic-pulse 2s ease-in-out infinite; }
+.realms-app .realm-egg.rarity-legendary > img { animation: rarity-legendary-glow 1.6s ease-in-out infinite; }
+
+@keyframes rarity-epic-pulse {
+  0%, 100% { filter: drop-shadow(0 0 3px #b26bff) drop-shadow(0 0 1px #b26bff); }
+  50% { filter: drop-shadow(0 0 10px #c48bff) drop-shadow(0 0 3px #e2c8ff); }
+}
+@keyframes rarity-legendary-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px #ffc94a) drop-shadow(0 0 1px #fff1b8); }
+  50% { filter: drop-shadow(0 0 14px #ffd36b) drop-shadow(0 0 4px #fff1b8) brightness(1.08); }
+}
+@keyframes rarity-shine {
+  from { background-position: 0% 0; }
+  to { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rarity-badge.rarity-legendary,
+  .realms-app .dinosaur-art.rarity-epic,
+  .realms-app .dinosaur-art.rarity-legendary,
+  .realms-app .realm-egg.rarity-epic > img,
+  .realms-app .realm-egg.rarity-legendary > img { animation: none; }
+  .realms-app .dinosaur-art.rarity-epic { filter: drop-shadow(0 0 6px #b26bff); }
+  .realms-app .dinosaur-art.rarity-legendary { filter: drop-shadow(0 0 8px #ffc94a); }
+}

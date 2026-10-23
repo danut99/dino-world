@@ -15,6 +15,7 @@ export function DinosaurArt({
   paused,
   frame,
   bounds,
+  speed,
 }: {
   species: Species;
   element: RealmId;
@@ -25,6 +26,7 @@ export function DinosaurArt({
   paused?: boolean;
   frame?: number;
   bounds?: boolean;
+  speed?: number;
 }) {
   const [manifest, setManifest] = useState<SpriteManifest | null>(null);
   useEffect(() => {
@@ -46,6 +48,7 @@ export function DinosaurArt({
         paused={paused}
         frame={frame}
         bounds={bounds}
+        speed={speed}
         className={className}
         label={species === 'boss' ? ARENA_BOSSES[element].name : `${element} ${SPECIES_NAMES[species]} ${stage}`}
         bossElement={species === 'boss' ? element : undefined}

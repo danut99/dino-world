@@ -2155,3 +2155,8 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
   .realm-recenter > span { display: inline; font-size: 12px; font-weight: 600; }
   .realm-recenter > svg { flex-shrink: 0; color: #d7a94c; }
 }
+
+/* The habitat a world click opens: its name, level, spots and income above the residents. */
+.realm-habitat-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 12px; padding: 10px 12px; background: #2f2520; border: 1px solid #cdbfa855; color: #cdbfa8; font-size: 13px; }
+.realm-habitat-summary b { color: #fff1b8; }
+.realm-habitat-summary .realm-link { margin-left: auto; }

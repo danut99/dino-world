@@ -84,7 +84,7 @@ describe('reference utility systems', () => {
     expect(s.inventory.wood).toBe(45);
     expect(() => command(s, { type: 'claim' }, now)).toThrow();
     expect(command(s, { type: 'battle' }, now).battle?.reward.gold).toBe(50);
-    expect(command(s, { type: 'battle', encounterId: 'ruins' }, now).battle?.encounterId).toBe('ruins');
+    expect(() => command(s, { type: 'battle', encounterId: 'ruins' }, now)).toThrow('timedExpedition');
   });
   it('migrates v2 progress and live battles without deleting resources', () => {
     let s = withHero(built());

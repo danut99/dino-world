@@ -375,7 +375,7 @@
   min-height: 51px;
 }
 .arena-lobby-scene {
-  background: url('/realms/gameplay/arena-scene-pixel.webp') center / cover;
+  background: #303452;
   position: relative;
   min-width: 0;
   border-right: 2px solid #9c8763;
@@ -450,7 +450,7 @@
   overflow: auto;
   background:
     linear-gradient(#241c1870, #241c1860),
-    url('/realms/gameplay/workshop-scene-pixel.webp') center / cover;
+    url('/realms/gameplay/workshop-interior-pixel-v3.webp') center / cover;
 }
 .craft-inventory,
 .craft-use {
@@ -666,7 +666,7 @@
   flex: 1;
   min-height: 0;
   position: relative;
-  background: url('/realms/gameplay/arena-scene-pixel.webp') center / cover;
+  background: #303452;
   overflow: hidden;
 }
 .battle-round {
@@ -1575,3 +1575,256 @@
 @media (prefers-reduced-motion: reduce) {
   .battle-unit[data-motion] { animation: none; }
 }
+
+/* Automatic fights: the command bar becomes a strip of the moves already shown in this fight. */
+.battle-auto .battle-command {
+  cursor: default;
+  opacity: 0.55;
+  transition: opacity 0.3s, border-color 0.3s;
+}
+.battle-auto .battle-command.played {
+  opacity: 1;
+  border-color: #e0a96a;
+}
+.battle-auto .battle-command.played > small {
+  color: #9be38f;
+}
+
+/* Battle callouts: one or two big words popping in the middle of the arena, tinted by the side they concern. */
+.battle-callout {
+  --row: 0;
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: calc(34% + var(--row) * 64px);
+  translate: -50% -50%;
+  pointer-events: none;
+  white-space: nowrap;
+  font: 700 clamp(30px, 6vw, 58px) / 1 'Realms Pixel', 'Pixelify Sans', sans-serif;
+  letter-spacing: 2px;
+  color: #fff1b8;
+  -webkit-text-stroke: 2px #2f2520;
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 #2f2520, 0 0 22px #f2733a99;
+  animation: battle-callout-pop 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+/* The ally's hits land on the opponent; blows the ally takes read in red. */
+.battle-callout.on-enemy.kind-damage { color: #fff1a8; }
+.battle-callout.on-ally.kind-damage { color: #ff8a7a; text-shadow: 0 4px 0 #2f2520, 0 0 22px #e0403a99; }
+.battle-callout.kind-guard,
+.battle-callout.kind-blocked { color: #bfe9ff; text-shadow: 0 4px 0 #2f2520, 0 0 22px #4ab8ff99; }
+.battle-callout.kind-dodge { color: #b8ffcf; text-shadow: 0 4px 0 #2f2520, 0 0 22px #3fdc8a99; }
+.battle-callout.kind-reflect { color: #e2c8ff; text-shadow: 0 4px 0 #2f2520, 0 0 22px #a46bff99; }
+.battle-callout.kind-ultimate {
+  font-size: clamp(40px, 9vw, 86px);
+  color: #ffd36b;
+  text-shadow: 0 5px 0 #2f2520, 0 0 36px #ff7a1fcc;
+  animation-name: battle-callout-ultimate;
+  animation-duration: 1.2s;
+}
+.battle-callout.kind-ko { font-size: clamp(44px, 10vw, 96px); color: #ff5e4d; text-shadow: 0 5px 0 #2f2520, 0 0 30px #ff2a1acc; }
+@keyframes battle-callout-pop {
+  0% { opacity: 0; scale: 0.3; }
+  25% { opacity: 1; scale: 1.15; }
+  40% { scale: 1; }
+  80% { opacity: 1; translate: -50% -50%; }
+  100% { opacity: 0; translate: -50% -90%; }
+}
+@keyframes battle-callout-ultimate {
+  0% { opacity: 0; scale: 2.2; rotate: -6deg; }
+  20% { opacity: 1; scale: 1; rotate: 0deg; }
+  30% { scale: 1.08; }
+  40% { scale: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; scale: 1.1; }
+}
+/* A dodge: the ally leaps back and comes down where it stood. */
+.battle-unit[data-dodge] {
+  animation: battle-dodge var(--motion-ms) ease-out both;
+}
+@keyframes battle-dodge {
+  0% { transform: translate(0, 0); }
+  35% { transform: translate(-22%, -12%); }
+  70% { transform: translate(-22%, 0); }
+  100% { transform: translate(0, 0); }
+}
+.battle-impact.kind-reflect { color: #e2c8ff; text-shadow: 0 0 25px #a46bff; }
+@media (prefers-reduced-motion: reduce) {
+  .battle-callout { animation: none; }
+  .battle-unit[data-dodge] { animation: none; }
+}
+
+/* A dinosaur away on a timed expedition: who, where, and how long until it is back. */
+.expedition-trip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: #2f2520e8;
+  border: 1px solid #e0a96a99;
+}
+.expedition-trip strong { color: #fff1b8; font-size: 13px; }
+.expedition-trip small { color: #cdbfa8; font-size: 11px; }
+.expedition-trip .realm-meter > i { background: #d7a94c; transition: width 1s linear; }
+.expedition-trip .adventure-start { margin-top: 4px; }
+.expedition-guide {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  margin-bottom: 24px;
+  border: 2px solid #7a6a5a;
+  background: #241c18;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.expedition-guide p { margin: 0; }
+.expedition-guide .expedition-guide-title { margin: 0; font-size: 18px; line-height: 1.4; }
+.expedition-guide small { color: #cdbfa8; line-height: 1.6; }
+.expedition-guide .gameplay-section-label { margin: 0; }
+.expedition-stages,
+.expedition-checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.expedition-stages li { padding: 7px 10px; background: #3d332d; color: #a39380; border-left: 3px solid #574a40; }
+.expedition-stages .current { color: #fff1b8; border-color: #eda233; }
+.expedition-stages .done { color: #c3d893; border-color: #8faa58; }
+.expedition-checklist li { display: flex; gap: 9px; align-items: baseline; }
+.expedition-checklist span { flex: 0 0 14px; }
+.expedition-checklist .done { color: #c3d893; }
+.expedition-checklist .missing { color: #e2d3b2; }
+.expedition-next-step,
+.expedition-travel { display: grid; gap: 12px; padding: 12px; background: #3d332d; border: 1px solid #7a6a5a; }
+.expedition-next-step > strong { color: #eda233; }
+.expedition-guide .realm-button { width: 100%; min-height: 44px; margin: 0; padding: 6px 8px; font-size: 13px !important; }
+.expedition-guide .realm-meter > i { background: #eda233; }
+.expedition-preparation-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.expedition-preparation-links button { min-height: 44px; }
+.craft-inputs { flex-wrap: wrap; }
+
+/* Keep the complete floating arena and its fighters in one shared coordinate space. */
+.battle-environment {
+  container-type: size;
+  background: #303452;
+}
+.battle-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: url('/realms/gameplay/arena-interior-pixel.webp') center / cover no-repeat;
+  image-rendering: pixelated;
+}
+.battle-stage .battle-unit {
+  width: 32%;
+  height: 42%;
+  bottom: 22%;
+}
+.battle-stage .battle-unit.ally { left: 15%; }
+.battle-stage .battle-unit.enemy { right: 15%; }
+.battle-stage .battle-unit > .dinosaur-art,
+.battle-stage .battle-unit > .dinosaur-opponent {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.battle-stage .battle-vitals {
+  position: absolute;
+  top: 90px;
+  width: 30%;
+  max-width: 230px;
+}
+.battle-stage .battle-vitals.ally { left: 31%; transform: translateX(-50%); }
+.battle-stage .battle-vitals.enemy { right: 31%; transform: translateX(50%); }
+.arena-lobby-scene {
+  container-type: size;
+}
+.arena-preview-stage .arena-lobby-enemy.realm-hero {
+  width: 28%;
+  height: 38%;
+  left: 36%;
+  bottom: 30%;
+  image-rendering: pixelated;
+}
+.arena-embedded-battle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.arena-lobby-scene .arena-challenge-title {
+  top: 78px;
+  z-index: 1;
+}
+.arena-lobby-scene .arena-challenge-title h2 {
+  font-size: clamp(18px, 2vw, 30px);
+}
+.arena-preview-stage {
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  .battle-stage .battle-vitals {
+    width: 36%;
+  }
+  .battle-stage .battle-callout {
+    font-size: clamp(20px, 6vw, 36px);
+    letter-spacing: 0;
+  }
+}
+
+/* Battle controls: double speed and skip to the result, top right of the arena. */
+.battle-controls {
+  position: absolute;
+  z-index: 5;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  gap: 8px;
+}
+.battle-controls button {
+  min-height: 40px;
+  padding: 6px 14px;
+  font: 700 14px 'Realms Pixel', 'Pixelify Sans', sans-serif;
+  color: #fff1b8;
+  background: #3a2e27e8;
+  border: 2px solid #c9b48e99;
+  cursor: pointer;
+}
+.battle-controls button.active {
+  background: #e0a96a;
+  color: #2f2520;
+  border-color: #fff1b8;
+}
+.battle-controls button:disabled { opacity: 0.45; cursor: not-allowed; }
+/* At ×2 the one-off effects run twice as fast too. */
+.battle-environment .battle-callout { animation-duration: calc(0.9s / var(--battle-speed, 1)); }
+.battle-environment .battle-callout.kind-ultimate { animation-duration: calc(1.2s / var(--battle-speed, 1)); }
+.battle-environment .battle-impact { animation-duration: calc(0.45s / var(--battle-speed, 1)); }
+.battle-environment .battle-impact.kind-ultimate { animation-duration: calc(0.7s / var(--battle-speed, 1)); }
+
+/* Arena progression: element edge, forecast, stars. */
+.edge-badge { display: inline-block; padding: 2px 8px; font: 700 11px 'Realms Pixel', 'Pixelify Sans', sans-serif; letter-spacing: 1px; border: 1px solid; }
+.edge-badge.edge-up { color: #9be38f; border-color: #9be38f88; background: #1f3a1f99; }
+.edge-badge.edge-down { color: #ff8a7a; border-color: #ff8a7a88; background: #3a1f1f99; }
+.edge-badge.edge-even { color: #cdbfa8; border-color: #cdbfa855; }
+.battle-vitals .edge-badge { margin-top: 6px; }
+.arena-outlook { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; padding: 10px 12px; background: #2f2520e8; border: 1px solid #c9b48e55; }
+.arena-outlook-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: #fff1b8; }
+.arena-forecast { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 6px 10px; border-left: 4px solid; }
+.arena-forecast strong { font-size: 13px; }
+.arena-forecast small { color: #f6d77a; letter-spacing: 2px; }
+.forecast-easy { border-color: #9be38f; color: #c9f5bf; }
+.forecast-even { border-color: #f6d77a; color: #fff1b8; }
+.forecast-tough { border-color: #f0a35a; color: #ffd0a0; }
+.forecast-hard { border-color: #ff6a5a; color: #ffb3a8; }
+.arena-outlook-hint { color: #ffb3a8; font-size: 11px; }
+.arena-outlook-stars { color: #cdbfa8; font-size: 11px; }
+.arena-tier-stars { color: #f6d77a; letter-spacing: 1px; }
+.result-stars { font-size: 44px; color: #f6d77a; letter-spacing: 6px; text-shadow: 0 3px 0 #2f2520, 0 0 18px #f2a33a99; margin: -6px 0 10px; animation: result-egg-in 0.5s ease-out; }
+.result-rest { font-size: 13px !important; color: #ffb3a8 !important; max-width: 340px; margin: 0 auto 16px; }
+.result-milestone { font-size: 14px !important; color: #f6d77a !important; margin: 0 0 8px; }
+.workshop-levels { display: grid; gap: 8px; margin-bottom: 16px; }
+.workshop-level { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid #786044; background: #251e18; }
+.workshop-level.current { border-color: #e9ba62; background: #3b2c1b; }
+.workshop-level > canvas.utility-sprite { width: 80px; height: 80px; flex: 0 0 80px; }
+.workshop-level strong, .workshop-level small { display: block; }
+.workshop-level small { font-size: 11px; margin-top: 5px; color: #d5c3a2; }

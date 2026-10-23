@@ -11,6 +11,8 @@ import { BuildingSprite } from './BuildingSprite';
 import { GameplayScreen, BattleScreen, type GameplayView } from './GameplayScreens';
 import { ITEMS, UTILITY_BUILDINGS, RECIPES, type ItemId, type UtilityKind } from './content';
 import { FarmPanel } from './FarmPanel';
+import { DailyPanel } from './DailyPanel';
+import { dailyState, dailyQuests, DAILY_QUESTS } from './daily';
 import { DevPanel, DinoPanel, EggArt, HabitatsPanel, HatcheryPanel, MarketPanel } from './DinoPanels';
 import {
   advance,
@@ -38,6 +40,7 @@ import './pixel-theme.css';
 import { Icon, type IconName } from './ui/Icon';
 
 type Panel =
+  | 'daily'
   | 'dino'
   | 'hatchery'
   | 'habitat'
@@ -140,7 +143,7 @@ export default function RealmsApp() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [save, setSave] = useState(load),
     [now, setNow] = useState(Date.now()),
-    [panel, setPanel] = useState<Panel>(null);
+    [panel, setPanel] = useState<Panel>(() => save.battle?.encounterId.startsWith('arena') ? 'arena' : null);
   const [realm, setRealm] = useState<'home' | RealmId>(() => {
     try {
       const last = localStorage.getItem('dino-realms-current-world');
@@ -159,6 +162,8 @@ export default function RealmsApp() {
   const [placing, setPlacing] = useState(false),
     [moving, setMoving] = useState<string | null>(null),
     [message, setMessage] = useState('');
+  const [expeditionPreparation, setExpeditionPreparation] = useState(false);
+  const [workshopRecipe, setWorkshopRecipe] = useState('planks');
   // The bottom bar can fold down to just the Collect button; phones start folded, where it covers more island.
   const [navOpen, setNavOpen] = useState(() => {
     if (window.matchMedia('(max-width: 760px), (max-height: 500px) and (orientation: landscape)').matches) return false;
@@ -217,6 +222,16 @@ export default function RealmsApp() {
   }, []);
   const [selectedDino, setSelectedDino] = useState<string | null>(null),
     [devOpen, setDevOpen] = useState(false);
+  /** When the dinosaur window was opened from a world, the habitat it shows; null shows every dinosaur. */
+  const [dinoRealm, setDinoRealm] = useState<RealmId | null>(null);
+  const [dinoFromHatchery, setDinoFromHatchery] = useState(false);
+  // The habitat filter belongs to one opening of the window: closing it, or opening anything else, clears it.
+  useEffect(() => {
+    if (panel !== 'dino') {
+      setDinoRealm(null);
+      setDinoFromHatchery(false);
+    }
+  }, [panel]);
   const [storageError, setStorageError] = useState(false);
   const [placementKind, setPlacementKind] = useState<UtilityKind>('farm');
   const [offline, setOffline] = useState(() => {
@@ -243,6 +258,8 @@ export default function RealmsApp() {
   const saveRef = useRef(save);
   saveRef.current = save;
   const tr = (ro: string, en: string) => text(lang, ro, en);
+  const today = dailyState(save, now);
+  const dailyReady = today.spin === null || dailyQuests(today.day).some(id => !today.claimed.includes(id) && today.progress[id] >= DAILY_QUESTS[id].target) || (!today.bonus && dailyQuests(today.day).every(id => today.claimed.includes(id)));
   const activeElement = ELEMENTS.find((el) => el.id === realm);
   /** Locked worlds open the world list instead, where they can be unlocked. */
   const visitRealm = (next: 'home' | RealmId) => {
@@ -341,6 +358,16 @@ export default function RealmsApp() {
             locked: tr('Încă nu e deblocat.', 'Not unlocked yet.'),
             maxLevel: tr('Clădirea e la nivelul maxim.', 'The building is at max level.'),
             gate: tr('Îmbunătățește Poarta arenei la nivelul 2.', 'Upgrade the Arena Gate to level 2.'),
+            away: tr('Campionul e plecat în expediție.', 'Your champion is away on an expedition.'),
+            stars: tr('Ai nevoie de 2★ la treapta precedentă.', 'You need 2★ on the previous tier.'),
+            tired: tr('Campionul se odihnește după înfrângere. Alege alt dinozaur sau așteaptă.', 'Your champion is resting after the defeat. Pick another dinosaur or wait.'),
+            busy: tr('Un dinozaur e deja plecat în expediție.', 'A dinosaur is already away on an expedition.'),
+            expedition: tr('Expediția nu s-a terminat încă.', 'The expedition is not over yet.'),
+            dailyClaimed: tr('Premiul a fost deja colectat azi.', 'This reward was already claimed today.'),
+            dailyIncomplete: tr('Termină misiunea înainte de colectare.', 'Finish the mission before claiming.'),
+            provisions: tr('Pregătește provizii în Atelier înainte de plecare.', 'Prepare supplies in the Workshop before departing.'),
+            level: tr('Crește campionul până la nivelul cerut pentru această etapă.', 'Raise your champion to the level required for this stage.'),
+            timedExpedition: tr('Pornește această călătorie din Expediții.', 'Start this trip from Expeditions.'),
             fightEgg: tr(
               'Ouăle acestui element se câștigă în lupte, nu din Piață.',
               "This element's eggs are won in fights, not bought.",
@@ -416,7 +443,7 @@ export default function RealmsApp() {
       'Hrănește-l până la nivelul 9, apoi evoluează-l în juvenil.',
       'Feed Ignis to level 9, then evolve him into a juvenile.',
     ),
-    tr('Intră în poiana de antrenament și câștigă prima luptă.', 'Enter the training glade and win your first battle.'),
+    tr('Trimite-l în prima expediție, în tărâmul focului.', 'Send him on his first expedition, into the fire realm.'),
     tr('Construiește o fermă pentru o sursă constantă de hrană.', 'Build a farm for a steady supply of food.'),
     tr(
       'Cultivă, strânge aur și crește-l pe Ignis până la adult.',
@@ -430,9 +457,14 @@ export default function RealmsApp() {
   const openBuilding = (id: string) => {
     if (id === 'collection') return setPanel('collection');
     if (id === 'income') return setPanel('habitat');
-    if (id === 'dino') return setPanel('dino');
-    if (id.startsWith('dino:')) {
-      setSelectedDino(id.slice(5));
+    if (id === 'dino') {
+      setDinoRealm(null);
+      return setPanel('dino');
+    }
+    // A click on a world opens its habitat: the residents, with the one clicked selected.
+    if (id === 'habitat' || id.startsWith('dino:')) {
+      setDinoRealm(realm === 'home' ? null : realm);
+      if (id.startsWith('dino:')) setSelectedDino(id.slice(5));
       return setPanel('dino');
     }
     const b = save.buildings.find((b) => b.id === id);
@@ -445,9 +477,16 @@ export default function RealmsApp() {
     setMoving(id);
     setPlacing(true);
   };
-  const beginBattle = () => {
-    if (save.battle || run({ type: 'battle' })) setPanel(null);
-  };
+  // Tell the player once when a dinosaur is back from its expedition, wherever they are in the game.
+  const announcedTrip = useRef<number | null>(null);
+  useEffect(() => {
+    const trip = save.expedition;
+    if (!trip || now < trip.endsAt || announcedTrip.current === trip.startedAt) return;
+    announcedTrip.current = trip.startedAt;
+    const who = save.dinos.find((x) => x.id === trip.dinoId)?.nickname ?? '';
+    setMessage(tr(`${who} s-a întors din expediție! Colectează recompensa.`, `${who} is back from the expedition! Collect the reward.`));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, save.expedition]);
   const exportSave = () => {
     const blob = new Blob([JSON.stringify(advance(saveRef.current, Date.now()), null, 2)], {
       type: 'application/json',
@@ -506,7 +545,7 @@ export default function RealmsApp() {
                 <Resource icon="star" value={d?.level ?? 1} label={tr('Nivel', 'Level')} color="gold" />
               </div>
               <footer>
-                <button onClick={() => { setProfileOpen(false); setPanel('dino'); }}>{tr('Dinozauri', 'Dinosaurs')}</button>
+                <button onClick={() => { setProfileOpen(false); setDinoRealm(null); setPanel('dino'); }}>{tr('Dinozauri', 'Dinosaurs')}</button>
                 <button onClick={() => { setProfileOpen(false); setPanel('settings'); }}>{tr('Setări', 'Settings')}</button>
                 <button onClick={() => { setProfileOpen(false); setPanel('wiki'); }}>Wikipedia</button>
               </footer>
@@ -558,6 +597,7 @@ export default function RealmsApp() {
           <Icon name="settings" />
         </button>
       </header>
+      {!panel && !placing && !save.battle && <button className="realm-daily-access" onClick={() => setPanel('daily')} aria-label={tr('Premii și misiuni zilnice', 'Daily rewards and missions')}>★ {tr('Zilnic', 'Daily')} {dailyReady && <b>!</b>}</button>}
       {devOpen && (
         <DevPanel
           lang={lang}
@@ -756,10 +796,21 @@ export default function RealmsApp() {
             <span className="realm-nav-toggle-label">{tr('Meniu', 'Menu')}</span>
           </button>
           <Nav icon="build" label={tr('Construiește', 'Build')} onClick={() => setPanel('build')} />
-          <Nav icon="dino" label={tr('Dinozauri', 'Dinosaurs')} onClick={() => setPanel('dino')} />
+          <Nav icon="dino" label={tr('Dinozauri', 'Dinosaurs')} onClick={() => { setDinoRealm(null); setPanel('dino'); }} />
           <Nav icon="collection" label={tr('Colecție', 'Collection')} onClick={() => setPanel('collection')} />
           <Nav icon="realms" label={tr('Tărâmuri', 'Realms')} onClick={() => setPanel('realms')} />
-          <Nav icon="expedition" label={tr('Expediții', 'Expeditions')} onClick={() => setPanel('expedition')} featured />
+          <Nav
+            icon="expedition"
+            label={
+              save.expedition
+                ? now >= save.expedition.endsAt
+                  ? tr('Expediție gata ✓', 'Expedition back ✓')
+                  : tr('În expediție…', 'On expedition…')
+                : tr('Expediții', 'Expeditions')
+            }
+            onClick={() => setPanel('expedition')}
+            featured
+          />
           <Nav icon="arena" label={tr('Arena PvE', 'PvE Arena')} onClick={() => setPanel('arena')} />
           <Nav icon="workshop" label={tr('Atelier', 'Workshop')} onClick={() => setPanel('workshop')} />
           <button
@@ -802,9 +853,10 @@ export default function RealmsApp() {
         <Window
           title={
             {
-              dino: tr('Dinozaurii tăi', 'Your dinosaurs'),
+              dino: dinoRealm ? `${tr('Habitat', 'Habitat')} · ${REALM_NAMES[dinoRealm][lang]}` : tr('Dinozaurii tăi', 'Your dinosaurs'),
               hatchery: tr('Incubatorul', 'The hatchery'),
               habitat: tr('Habitate', 'Habitats'),
+              daily: tr('Premii și misiuni zilnice', 'Daily rewards and missions'),
               market: tr('Piața', 'The market'),
               wiki: 'Wikipedia · Dino Realms',
               farm: tr('Ferma', 'The farm'),
@@ -820,10 +872,16 @@ export default function RealmsApp() {
           }
           eyebrow="DINO REALMS"
           close={() => setPanel(null)}
-          wide={['collection', 'realms', 'assets', 'build', 'dino', 'hatchery', 'market', 'habitat', 'wiki'].includes(
+          wide={['daily', 'collection', 'realms', 'assets', 'build', 'dino', 'hatchery', 'market', 'habitat', 'wiki'].includes(
             panel,
           )}
         >
+          {expeditionPreparation && (
+            <button className="realm-button secondary realm-back-to-hatchery" onClick={() => { setExpeditionPreparation(false); setPanel('expedition'); }}>
+              ← {tr('Înapoi la expediție', 'Back to expedition')}
+            </button>
+          )}
+          {panel === 'daily' && <DailyPanel save={save} now={now} lang={lang} run={run} navigate={setPanel} />}
           {panel === 'hatchery' && (
             <HatcheryPanel
               save={save}
@@ -837,6 +895,8 @@ export default function RealmsApp() {
                 setMessage(`${tr('Bun venit', 'Welcome')}, ${born.nickname}!`);
                 setRealm(born.element);
                 setSelectedDino(born.id);
+                setDinoRealm(born.element);
+                setDinoFromHatchery(true);
                 setPanel('dino');
               }}
             />
@@ -863,6 +923,9 @@ export default function RealmsApp() {
               selected={selectedDino}
               select={setSelectedDino}
               openHatchery={() => setPanel('hatchery')}
+              realm={dinoRealm}
+              openHabitats={() => setPanel('habitat')}
+              fromHatchery={dinoFromHatchery}
             />
           )}
           {panel === 'habitat' && (
@@ -1124,11 +1187,17 @@ export default function RealmsApp() {
           lang={lang}
           run={run}
           close={() => setPanel(null)}
-          navigate={setPanel}
-          build={() => setPanel('build')}
+          navigate={(next) => {
+            if (gameplayView === 'expedition' && ['farm', 'dino', 'workshop'].includes(next)) setExpeditionPreparation(true);
+            setPanel(next);
+          }}
+          build={() => { setExpeditionPreparation(gameplayView === 'expedition'); setPanel('build'); }}
+          prepareSupplies={() => { setWorkshopRecipe('provisions'); setExpeditionPreparation(true); setPanel('workshop'); }}
+          initialRecipe={workshopRecipe}
+          returnToExpeditions={expeditionPreparation ? () => { setExpeditionPreparation(false); setPanel('expedition'); } : undefined}
         />
       )}
-      {save.battle && !panel && (
+      {save.battle && !panel && !save.battle.encounterId.startsWith('arena') && (
         <BattleScreen
           save={save}
           lang={lang}

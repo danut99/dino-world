@@ -17,3 +17,5 @@ docs/*-import.txt
 docs/managed-192-*.json
 docs/pixellab-animation-jobs.json
 docs/*-enhanced-animations.json
+docs/terrasaur-*.json
+docs/egg-hatching-import.json

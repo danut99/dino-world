@@ -3,8 +3,8 @@ import { AnimatedDinosaur } from './AnimatedDinosaur';
 import { loadBossAnimation, loadSpriteImage, type Clip, type SpriteManifest } from './animation';
 import type { RealmId } from './game';
 
-export function AnimatedBoss({ element, name, animation, className, paused }: {
-  element: RealmId; name: string; animation: Clip; className: string; paused?: boolean;
+export function AnimatedBoss({ element, name, animation, className, paused, speed }: {
+  element: RealmId; name: string; animation: Clip; className: string; paused?: boolean; speed?: number;
 }) {
   const [manifest, setManifest] = useState<SpriteManifest | null>(null);
   useEffect(() => {
@@ -19,6 +19,6 @@ export function AnimatedBoss({ element, name, animation, className, paused }: {
   }, [element]);
   return manifest?.variantId === `boss_${element}`
       ? <AnimatedDinosaur manifest={manifest} clip={manifest.clips.se?.[animation] ? animation : 'idle'} label={`${name} arena boss`}
-          bossElement={element} className={`arena-boss-art ${className}`} paused={paused} />
+          bossElement={element} className={`arena-boss-art ${className}`} paused={paused} speed={speed} />
       : <span role="status" aria-label={name} />;
 }

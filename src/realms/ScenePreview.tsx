@@ -15,7 +15,8 @@ import {
   type Step,
   type Unit,
 } from './battleChoreography';
-import { ELEMENTS, REALM_NAMES, SPECIES_NAMES, type RealmId } from './game';
+import { ELEMENTS, REALM_NAMES, SPECIES_NAMES, type RealmId, type RoundReport } from './game';
+import { calloutText } from './battleCallouts';
 import {
   BOSSES,
   FAMILIES,
@@ -250,6 +251,7 @@ function ArenaScene({
   const [index, setIndex] = useState(0);
   const [alive, setAlive] = useState({ ally: true, enemy: true });
   const [hp, setHp] = useState({ ally: 100, enemy: 100 });
+  const [foeMoveChoice, setFoeMoveChoice] = useState<'attack' | 'defend' | 'ultimate' | 'dodge'>('attack');
   useEffect(() => {
     let active = true;
     Promise.all([loadCombatant(ally), loadCombatant(foe)]).then(([a, e]) => {
@@ -271,8 +273,8 @@ function ArenaScene({
     if (!step) return;
     if (step.reveal) {
       const unit = step.reveal;
-      const fallen = step[unit] === 'death';
-      setHp((h) => ({ ...h, [unit]: fallen ? 0 : Math.max(5, h[unit] - (step.impact?.kind === 'guard' ? 8 : step.impact?.kind === 'ultimate' ? 35 : 18)) }));
+      const amount = step.say?.find((c) => c.on === unit && c.amount !== undefined)?.amount ?? 0;
+      setHp((h) => ({ ...h, [unit]: step[unit] === 'death' ? 0 : Math.max(1, h[unit] - amount) }));
     }
     if (!Number.isFinite(step.ms)) return;
     const timer = setTimeout(() => setIndex((i) => i + 1), step.ms);
@@ -288,7 +290,22 @@ function ArenaScene({
     setHp({ ally: 100, enemy: 100 });
     play(entrance(fighters.ally, fighters.enemy, { ally: true, enemy: true }), { ally: true, enemy: true });
   };
-  const round = (action: BattleAction, next = alive) => fighters && play(exchange(action, fighters.ally, fighters.enemy, next), next);
+  // A made-up report: the preview has no reducer, only the beats and callouts of a round to judge.
+  const round = (action: BattleAction, next = alive) => {
+    if (!fighters) return;
+    const foe: RoundReport['foe'] = !next.enemy && action !== 'defend' ? 'none' : foeMoveChoice === 'dodge' ? 'attack' : foeMoveChoice;
+    const guarding = action === 'defend' && foe !== 'none' && foe !== 'defend';
+    const report: RoundReport = {
+      ally: action,
+      foe,
+      dealt: action === 'defend' ? 0 : foe === 'defend' ? 9 : action === 'ultimate' ? 35 : 18,
+      enemyAfterStrike: !next.enemy && !guarding ? 0 : Math.max(1, hp.enemy - 18),
+      taken: foe === 'none' || foe === 'defend' || (foeMoveChoice === 'dodge' && action !== 'defend') ? 0 : guarding ? 8 : foe === 'ultimate' ? 27 : 18,
+      dodged: foeMoveChoice === 'dodge' && action !== 'defend' && foe === 'attack',
+      reflected: guarding ? 5 : 0,
+    };
+    play(exchange(report, fighters.ally, fighters.enemy, next), next);
+  };
   const solo = (clip: Clip) => {
     if (!fighters) return;
     const next = { ally: clip !== 'death', enemy: alive.enemy };
@@ -307,8 +324,6 @@ function ArenaScene({
     foeName = combatantName(foe, lang);
   const level = (c: Combatant) => (c.kind === 'boss' ? 30 : c.entry.stage === 'baby' ? 1 : c.entry.stage === 'juvenile' ? 8 : 20);
   const stage = combatantStage(ally);
-  const describe = (s: Step | undefined) =>
-    !s ? tr('Se încarcă…', 'Loading…') : Number.isFinite(s.ms) ? `${allyName}: ${s.ally} · ${foeName}: ${s.enemy} · ${Math.round(s.ms)} ms` : `${tr('Repaus', 'Idle')} · ${s.ally} / ${s.enemy}`;
   const commands: BattleAction[] = stage === 'adult' ? ['basic', 'defend', 'ultimate'] : ['basic', 'defend'];
   const opponentOption = (c: Combatant, label: string) => (
     <option key={combatantId(c)} value={combatantId(c)} disabled={combatantId(c) === combatantId(ally)}>
@@ -325,7 +340,7 @@ function ArenaScene({
               {allyName} → {foeName} · 1v1
             </small>
           </div>
-          <div className="battle-unit ally" data-motion={a.clip} style={a.style}>
+          <div className="battle-unit ally" data-motion={a.clip} data-dodge={step?.dodge === 'ally' || undefined} style={a.style}>
             <div className="battle-vitals">
               <strong>
                 {allyEl.symbol} {allyName} <small>Lv. {level(ally)}</small>
@@ -355,12 +370,14 @@ function ArenaScene({
           </div>
           {step?.impact && (
             <div className={`battle-impact on-${step.impact.on} kind-${step.impact.kind}`} key={index} aria-hidden="true">
-              {step.impact.kind === 'guard' ? '◇' : step.impact.kind === 'ultimate' ? '✹' : '╱'}
+              {step.impact.kind === 'guard' ? '🛡' : step.impact.kind === 'ultimate' ? '✹' : step.impact.kind === 'reflect' ? '↩' : '╱'}
             </div>
           )}
-          <div className="battle-narration" aria-live="polite">
-            {describe(step)}
-          </div>
+          {step?.say?.map((c, i) => (
+            <div key={`${index}-${i}`} className={`battle-callout on-${c.on} kind-${c.kind}`} style={{ '--row': i } as CSSProperties}>
+              {calloutText(c, c.on === 'ally' ? allyName : foeName, lang)}
+            </div>
+          ))}
         </div>
         <div className="battle-command-bar">
           {commands.map((name) => (
@@ -388,6 +405,15 @@ function ArenaScene({
         <button type="button" disabled={!fighters || busy || !alive.ally || !alive.enemy} onClick={() => round('basic', { ally: false, enemy: true })}>
           {tr('Aliatul cade', 'Ally falls')}
         </button>
+        <label>
+          {tr('Adversarul', 'Opponent move')}
+          <select aria-label={tr('Mișcarea adversarului', 'Opponent move')} value={foeMoveChoice} onChange={(ev) => setFoeMoveChoice(ev.target.value as typeof foeMoveChoice)}>
+            <option value="attack">{tr('atacă', 'attacks')}</option>
+            <option value="defend">{tr('se apără', 'guards')}</option>
+            <option value="ultimate">{tr('ultimate', 'ultimate')}</option>
+            <option value="dodge">{tr('atacă, aliatul se eschivează', 'attacks, ally dodges')}</option>
+          </select>
+        </label>
         <label>
           {tr('Clip direct', 'Play clip')}
           <select

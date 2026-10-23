@@ -1,4 +1,6 @@
 import { AnimatedWorkshopSprite } from './AnimatedWorkshopSprite';
+import { AnimatedHatcherySprite } from './AnimatedHatcherySprite';
+import { AnimatedArenaSprite } from './AnimatedArenaSprite';
 import type { UtilityKind } from './content';
 import type { Save } from './game';
 import { tierArt } from './buildingTiers';
@@ -13,6 +15,9 @@ export function BuildingSprite({ kind, save }: { kind: UtilityKind; save?: Save 
   if (kind === 'farm' && upgraded && isAnimatedFarm(upgraded)) {
     return <AnimatedFarmSprite art={upgraded} />;
   }
+  if (kind === 'hatchery' && upgraded) return <AnimatedHatcherySprite art={upgraded} />;
+  if (kind === 'workshop' && upgraded) return <AnimatedWorkshopSprite art={upgraded} />;
+  if (kind === 'arena' && upgraded) return <AnimatedArenaSprite art={upgraded} />;
   if (upgraded) return (
     <svg className="utility-sprite pixel" viewBox="0 0 1 1" aria-hidden="true">
       <image href={upgraded} width="1" height="1" style={{ imageRendering: 'pixelated' }} />

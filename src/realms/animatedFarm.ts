@@ -1,10 +1,10 @@
 import rigData from '../../public/realms/buildings/windmill/rig.json';
 export const FARM_ART = '/realms/buildings/windmill/building.png';
 export const FARM_GROUND = 0.655;
-export const FARM_LEVEL_ONE_ART = '/realms/buildings/farm-states/level-1.png';
+export const FARM_LEVEL_ONE_ART = '/realms/buildings/farm-states/level-1.webp';
 export const FARM_LEVEL_ONE_GROUND = 0.595;
-export const FARM_LEVEL_TWO_ART = '/realms/buildings/farm-states/level-2.png';
-export const FARM_LEVEL_THREE_ART = '/realms/buildings/farm-states/level-3.png';
+export const FARM_LEVEL_TWO_ART = '/realms/buildings/farm-states/level-2.webp';
+export const FARM_LEVEL_THREE_ART = '/realms/buildings/farm-states/level-3.webp';
 const levelOneRig: typeof rigData = {
   canvas: { width: 400, height: 400 }, image: 'level-1.png',
   rotor: { x: 304, y: 142, radius: 45, squash: 0.95, shear: 0.12, phase: -0.6, secondsPerTurn: 12 },

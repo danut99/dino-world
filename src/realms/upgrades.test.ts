@@ -11,30 +11,34 @@ function rich(): Save {
 }
 
 describe('workshop and arena gate upgrades', () => {
-  it('workshop levels add queue slots, 25% speed, then a second job running at once', () => {
+  it('workshop levels add queue slots, 25% speed and one, two then three parallel jobs', () => {
     let s = rich();
     for (let i = 0; i < 3; i++) s = run(s, { type: 'craft', recipeId: 'planks' });
     expect(() => run(s, { type: 'craft', recipeId: 'planks' })).toThrow('queue');
     s = run(s, { type: 'upgradeWorkshop' }, { type: 'craft', recipeId: 'planks' });
     const fast = s.crafting.at(-1)!;
+    expect(fast.lane).toBe(1);
+    expect(fast.startedAt).toBe(now);
     expect(fast.endsAt - fast.startedAt).toBe(22_500);
     s = run(s, { type: 'craft', recipeId: 'blocks' });
     expect(() => run(s, { type: 'craft', recipeId: 'blocks' })).toThrow('queue');
     roundTrip(s);
-    // Level 3: the next job starts right away on the free second lane, beside the running one.
+    // Level 3 starts the first three jobs immediately on distinct lanes.
     s = run(newSave(now), { type: 'devResources' }, { type: 'devResources' }, { type: 'build', kind: 'workshop', x: 6, y: 1 });
     s = run(s, { type: 'upgradeWorkshop' }, { type: 'upgradeWorkshop' });
     s = run(s, { type: 'craft', recipeId: 'planks' }, { type: 'craft', recipeId: 'blocks' }, { type: 'craft', recipeId: 'planks' });
     expect(s.crafting.map((j) => [j.lane, j.startedAt - now])).toEqual([
       [0, 0],
       [1, 0],
-      [0, 22_500],
+      [2, 0],
     ]);
     // Cancelling a queued job only moves the later jobs of its own lane.
-    s = run(s, { type: 'craft', recipeId: 'blocks' }, { type: 'cancelCraft', jobId: s.crafting[2].id });
+    s = run(s, { type: 'craft', recipeId: 'blocks' }, { type: 'craft', recipeId: 'blocks' });
+    s = run(s, { type: 'cancelCraft', jobId: s.crafting[3].id });
     expect(s.crafting.map((j) => [j.lane, j.startedAt - now])).toEqual([
       [0, 0],
       [1, 0],
+      [2, 0],
       [1, 22_500],
     ]);
     roundTrip(s);

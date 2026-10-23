@@ -50,7 +50,7 @@ try {
     return results;
   });
   for (const state of results) {
-    assert.ok(state.art.endsWith(`level-${state.level}.png`));
+    assert.ok(state.art.endsWith(`level-${state.level}.webp`));
     assert.ok(state.rotorChanges > 100, 'Rotor must animate');
     assert.ok(state.smokeChanges > 20, 'Smoke must animate');
   }

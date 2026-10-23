@@ -1,4 +1,6 @@
 import { WORKSHOP_ART, WORKSHOP_GROUND } from './animatedWorkshop';
+import { WORKSHOP_STATES } from './workshopTiers';
+import { HATCHERY_STATES } from './animatedHatchery';
 import { FARM_ART, FARM_GROUND, FARM_STATES } from './animatedFarm';
 import { FARM_LEVELS, type UtilityKind } from './content';
 import { ARENA_LEVELS, HATCHERY_LEVELS, WORKSHOP_LEVELS, type Save } from './game';
@@ -10,16 +12,8 @@ import { ARENA_LEVELS, HATCHERY_LEVELS, WORKSHOP_LEVELS, type Save } from './gam
 export const BUILDING_TIERS: Partial<Record<UtilityKind, { from: number; art: string }[]>> = {
   // Clădirile PixelLab (96×96, desenate ×2 pe amprenta 3×3), în stilul insulelor. Nivelurile mai mari vin pe rând.
   farm: FARM_STATES.map(({ from, art }) => ({ from, art })),
-  hatchery: [
-    { from: 1, art: '/realms/buildings/px/hatchery-1.png' },
-    { from: 2, art: '/realms/buildings/px/hatchery-2.png' },
-    { from: 3, art: '/realms/buildings/px/hatchery-3.png' },
-  ],
-  workshop: [
-    { from: 1, art: '/realms/buildings/px/workshop-1.png' },
-    { from: 2, art: '/realms/buildings/px/workshop-2.png' },
-    { from: 3, art: '/realms/buildings/px/workshop-3.png' },
-  ],
+  hatchery: HATCHERY_STATES.map(({ from, art }) => ({ from, art })),
+  workshop: WORKSHOP_STATES.map(({from,art}) => ({from,art})),
   arena: [
     { from: 1, art: '/realms/buildings/px/arena-1.png' },
     { from: 2, art: '/realms/buildings/px/arena-2.png' },
@@ -37,6 +31,7 @@ export const LEVELED: UtilityKind[] = ['farm', 'hatchery', 'workshop', 'arena'];
  */
 export const GROUND_LINE: Record<string, number> = {
   [FARM_ART]: FARM_GROUND,
+  ...Object.fromEntries(HATCHERY_STATES.map(({ art, ground }) => [art, ground])),
   ...Object.fromEntries(FARM_STATES.map(({ art, ground }) => [art, ground])),
   [WORKSHOP_ART]: WORKSHOP_GROUND,
   '/realms/buildings/farm-2.webp': 0.553,

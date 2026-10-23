@@ -1,5 +1,5 @@
 {
-  "status": "correction-requests-submitted",
+  "status": "integrated",
   "styleReference": "gallery:c9bc38c2-3f81-52cd-b05a-fb0c391edea3",
   "reason": "User reports level 1 too small, cropped levels 1/3 and overly fine style across all levels.",
   "validation": [
@@ -49,5 +49,19 @@
       "status": "submitted"
     }
   ],
-  "note": "Review completed outputs on user request; no background polling. Existing game art unchanged pending review."
+  "note": "Review completed outputs on user request; no background polling. Existing game art unchanged pending review.",
+  "runtimeAssets": [
+    "/realms/buildings/hatchery-states/level-1.png",
+    "/realms/buildings/hatchery-states/level-2.png",
+    "/realms/buildings/hatchery-states/level-3.png"
+  ],
+  "runtimeSlots": [
+    1,
+    3,
+    5
+  ],
+  "levelThreeSource": "655020af-88c9-496a-94dc-d61e6562aa1c",
+  "levelThreeCorrection": "Rejected clipped 200px edit; used complete 400px source on 200px nearest-neighbor grid, padded to 240px, exact 2x export. All content inside transparent margins.",
+  "animation": "Procedural pixel flames, embers and statue/crystal/egg glints. Level-three front brazier corrected to source x100,y185.",
+  "validationResult": "Build and 80 tests passed; all three assets load and animation frames differ; browser console has no page errors."
 }

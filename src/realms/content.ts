@@ -53,6 +53,7 @@ export const ITEMS = {
   habitatKit: { name: ['Kit de habitat', 'Habitat kit'], icon: '⌂', color: '#b8c58e' },
   evolutionCrystal: { name: ['Cristal de evoluție', 'Evolution crystal'], icon: '✧', color: '#bca4ed' },
   lamp: { name: ['Lampă ornamentală', 'Ornamental lamp'], icon: '☼', color: '#e2bf76' },
+  provisions: { name: ['Provizii de expediție', 'Expedition supplies'], icon: '◈', color: '#dfbc78' },
 } as const;
 export type ItemId = keyof typeof ITEMS;
 export type Inventory = Record<ItemId, number>;
@@ -66,6 +67,7 @@ export const initialInventory = (): Inventory => ({
   habitatKit: 0,
   evolutionCrystal: 0,
   lamp: 0,
+  provisions: 0,
 });
 /**
  * Farm levels, as in Dino World: each level unlocks one more plot and multiplies the food of every harvest.
@@ -108,6 +110,10 @@ export const CROPS = [
 ] as const;
 export type CropId = (typeof CROPS)[number]['id'];
 export const RECIPES = [
+  {
+    id: 'provisions', name: ['Pachet de provizii', 'Supply pack'],
+    cost: { wood: 2, fiber: 1 }, food: 50, seconds: 60, output: 'provisions', quantity: 1,
+  },
   {
     id: 'planks',
     name: ['Plăci de construcție', 'Building planks'],
@@ -155,7 +161,9 @@ export const RECIPES = [
   seconds: number;
   output: ItemId;
   quantity: number;
+  food?: number;
 }[];
+export const recipeFoodCost = (recipe: { id: string; food?: number }) => recipe.food ?? 0;
 export interface Encounter {
   id: string;
   name: [string, string];
@@ -174,9 +182,10 @@ export interface Encounter {
   league?: string;
 }
 export const ENCOUNTERS: Encounter[] = [
+  // Expeditions follow the realms in order, fire first (the first habitat); each one unlocks the next.
   {
     id: 'training',
-    name: ['Poiana de antrenament', 'The training glade'],
+    name: ['Pasul canionului', 'Canyon crossing'],
     mode: 'expedition',
     level: 10,
     hp: 180,
@@ -184,13 +193,13 @@ export const ENCOUNTERS: Encounter[] = [
     gold: 250,
     food: 150,
     materials: { wood: 15, stone: 10, fiber: 5 },
-    x: 20,
-    y: 75,
-    image: 'nature',
+    x: 78,
+    y: 23,
+    image: 'fire',
   },
   {
     id: 'ruins',
-    name: ['Ruinele străvechi', 'Ancient ruins'],
+    name: ['Reciful de safir', 'Sapphire reef'],
     mode: 'expedition',
     level: 10,
     hp: 230,
@@ -199,43 +208,13 @@ export const ENCOUNTERS: Encounter[] = [
     gold: 200,
     food: 100,
     materials: { wood: 20, stone: 15, crystal: 5 },
-    x: 37,
-    y: 62,
-    image: 'earth',
+    x: 65,
+    y: 75,
+    image: 'water',
   },
   {
     id: 'canyon',
-    name: ['Pasul canionului', 'Canyon crossing'],
-    mode: 'expedition',
-    level: 12,
-    hp: 300,
-    power: 38,
-    requires: 'ruins',
-    gold: 275,
-    food: 125,
-    materials: { stone: 25, fiber: 15, crystal: 8 },
-    x: 78,
-    y: 23,
-    image: 'fire',
-  },
-  {
-    id: 'frost',
-    name: ['Coroana de gheață', 'The frozen crown'],
-    mode: 'expedition',
-    level: 15,
-    hp: 380,
-    power: 42,
-    requires: 'canyon',
-    gold: 350,
-    food: 175,
-    materials: { crystal: 20, fiber: 20 },
-    x: 20,
-    y: 18,
-    image: 'ice',
-  },
-  {
-    id: 'lagoon',
-    name: ['Reciful de safir', 'Sapphire reef'],
+    name: ['Ruinele străvechi', 'Ancient ruins'],
     mode: 'expedition',
     level: 11,
     hp: 260,
@@ -244,51 +223,81 @@ export const ENCOUNTERS: Encounter[] = [
     gold: 220,
     food: 100,
     materials: { crystal: 10, fiber: 15 },
-    x: 65,
-    y: 75,
-    image: 'water',
+    x: 37,
+    y: 62,
+    image: 'earth',
   },
   {
-    id: 'wind',
-    name: ['Arcurile cerului', 'Sky arches'],
+    id: 'frost',
+    name: ['Poiana de antrenament', 'The training glade'],
     mode: 'expedition',
     level: 12,
     hp: 290,
     power: 36,
-    requires: 'ruins',
+    requires: 'canyon',
     gold: 250,
     food: 125,
     materials: { wood: 20, fiber: 20 },
-    x: 45,
-    y: 20,
-    image: 'wind',
+    x: 20,
+    y: 75,
+    image: 'nature',
   },
   {
-    id: 'thunder',
+    id: 'lagoon',
+    name: ['Coroana de gheață', 'The frozen crown'],
+    mode: 'expedition',
+    level: 12,
+    hp: 300,
+    power: 38,
+    requires: 'frost',
+    gold: 275,
+    food: 125,
+    materials: { stone: 25, fiber: 15, crystal: 8 },
+    x: 20,
+    y: 18,
+    image: 'ice',
+  },
+  {
+    id: 'wind',
     name: ['Turnul furtunii', 'Storm spire'],
     mode: 'expedition',
-    level: 16,
-    hp: 390,
-    power: 43,
-    requires: 'canyon',
-    gold: 375,
-    food: 175,
-    materials: { crystal: 25, stone: 20 },
+    level: 14,
+    hp: 340,
+    power: 39,
+    requires: 'lagoon',
+    gold: 300,
+    food: 150,
+    materials: { wood: 25, fiber: 25 },
     x: 86,
     y: 44,
     image: 'lightning',
   },
   {
+    id: 'thunder',
+    name: ['Arcurile cerului', 'Sky arches'],
+    mode: 'expedition',
+    level: 15,
+    hp: 380,
+    power: 42,
+    requires: 'wind',
+    gold: 350,
+    food: 175,
+    materials: { crystal: 20, fiber: 20 },
+    x: 45,
+    y: 20,
+    image: 'wind',
+  },
+  {
     id: 'twilight',
     name: ['Pădurea șoaptelor', 'Whispering forest'],
     mode: 'expedition',
-    level: 14,
-    hp: 340,
-    power: 39,
-    requires: 'ruins',
-    gold: 300,
-    food: 150,
-    materials: { wood: 25, fiber: 25 },
+    level: 16,
+    hp: 390,
+    power: 43,
+    requires: 'thunder',
+    gold: 375,
+    food: 175,
+    materials: { crystal: 25, stone: 20 },
     x: 14,
     y: 48,
     image: 'dark',
@@ -300,7 +309,7 @@ export const ENCOUNTERS: Encounter[] = [
     level: 17,
     hp: 420,
     power: 44,
-    requires: 'lagoon',
+    requires: 'twilight',
     gold: 400,
     food: 200,
     materials: { crystal: 25, stone: 25 },
@@ -340,6 +349,13 @@ const LEAGUES: [string, [string, string], number, Partial<Inventory>][] = [
   ['light', ['Liga zorilor', 'Dawn league'], 21, { crystal: 20, planks: 3, blocks: 3 }],
   ['arcane', ['Liga sigiliilor', 'Sigil league'], 23, { crystal: 30, blocks: 4 }],
 ];
+/**
+ * Arena difficulty per tier, tuned by simulating every fight with every species: at the recommended level an
+ * apprentice is a safe win without an element edge, a veteran a coin flip, a champion needs the edge (or about
+ * five extra levels). A disadvantaged dinosaur loses nearly always.
+ */
+export const ARENA_TIER_HP = [1.1, 1.08, 1.2];
+export const ARENA_TIER_POWER = [1.2, 1.2, 1.3];
 const TIERS: [string, string][] = [
   ['Ucenic', 'Apprentice'],
   ['Veteran', 'Veteran'],
@@ -355,8 +371,8 @@ ENCOUNTERS.push(
         mode: 'arena',
         league,
         level,
-        hp: 180 + level * 14 + t * 40,
-        power: Math.round(24 + level * 1.3 + t * 2),
+        hp: Math.round((180 + level * 14 + t * 40) * ARENA_TIER_HP[t]),
+        power: Math.round((24 + level * 1.3 + t * 2) * ARENA_TIER_POWER[t]),
         ...(t ? { requires: `arena-${league}-${t}` } : {}),
         gold: 120 + level * 12 + t * 60,
         food: 60 + level * 6 + t * 20,

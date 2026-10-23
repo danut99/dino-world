@@ -1,3 +1,4 @@
+import { RarityBadge, rarityClass } from './Rarity';
 import { ARENA_BOSSES } from './arenaBosses';
 import { playableSpecies } from './playableDinosaurs';
 import { useState } from 'react';
@@ -35,6 +36,7 @@ import {
   type Species,
   type Stage,
 } from './game';
+import { rarityOf, type Rarity } from './game';
 
 type Run = (c: Command) => boolean;
 const tr = (lang: number, ro: string, en: string) => (lang ? en : ro);
@@ -44,9 +46,9 @@ const stageName = (s: Stage, lang: number) =>
 /** Un ou PixelLab pe tărâm (64 px), comun tuturor speciilor acelui element; eclozarea are animația lui. */
 export const eggSrc = (realm: RealmId) => `/realms/eggs/${realm}.png`;
 export const hatchSrc = (realm: RealmId) => `/realms/eggs/${realm}-hatch.png`;
-export function EggArt({ realm, species, size = 64, hatching = false }: { species?: Species; realm: RealmId; size?: number; hatching?: boolean }) {
+export function EggArt({ realm, species, size = 64, hatching = false, rarity }: { species?: Species; realm: RealmId; size?: number; hatching?: boolean; rarity?: Rarity }) {
   return (
-    <span className={`realm-egg${hatching ? ' hatching' : ''}`} style={{ width: size, height: size, '--egg-size': `${size}px`, '--hatch-sheet': `url('${hatchSrc(realm)}')` } as React.CSSProperties}>
+    <span className={`realm-egg${hatching ? ' hatching' : ''} ${rarityClass(rarity)}`} style={{ width: size, height: size, '--egg-size': `${size}px`, '--hatch-sheet': `url('${hatchSrc(realm)}')` } as React.CSSProperties}>
       <img src={eggSrc(realm)} alt={species === 'boss' ? `BOSS ${ARENA_BOSSES[realm].name}` : ''} width={size} height={size} draggable={false} />
       {species === 'boss' && <span aria-hidden="true" style={{ position: 'absolute', right: 0, top: 0, color: '#ffe098', fontSize: Math.max(12, size / 4), textShadow: '1px 1px #241832' }}>?</span>}
     </span>
@@ -136,7 +138,7 @@ export function HatcheryPanel({
       ))}
 
       <div className="realm-nests">
-        {HATCHERY_LEVELS.map((level, i) => {
+        {Array.from({ length: HATCHERY_LEVELS[HATCHERY_LEVELS.length - 1].slots }, (_, i) => {
           if (i >= slots)
             return (
               <div key={i} className="realm-nest locked">
@@ -166,9 +168,10 @@ export function HatcheryPanel({
               style={{ '--egg-glow': element(egg.element).color } as React.CSSProperties}
             >
               <span className="realm-nest-bed" />
-              <EggArt species={egg.species} realm={egg.element} size={128} hatching={hatchingId === egg.id} />
+              <EggArt species={egg.species} realm={egg.element} size={128} hatching={hatchingId === egg.id} rarity={egg.rarity} />
               <strong>
                 {(egg.species === 'boss' ? `BOSS ${ARENA_BOSSES[egg.element].name}` : SPECIES_NAMES[egg.species])} · {element(egg.element).name[lang]}
+                <RarityBadge rarity={rarityOf(egg)} lang={lang} />
               </strong>
               {ready ? (
                 <>
@@ -227,9 +230,12 @@ export function HatcheryPanel({
         <div className="realm-egg-shelf">
           {waiting.map((egg) => (
             <div key={egg.id} className="realm-egg-item">
-              <EggArt species={egg.species} realm={egg.element} size={48} />
+              <EggArt species={egg.species} realm={egg.element} size={48} rarity={egg.rarity} />
               <span>
-                <strong>{(egg.species === 'boss' ? `BOSS ${ARENA_BOSSES[egg.element].name}` : SPECIES_NAMES[egg.species])}</strong>
+                <strong>
+                  {(egg.species === 'boss' ? `BOSS ${ARENA_BOSSES[egg.element].name}` : SPECIES_NAMES[egg.species])}
+                  <RarityBadge rarity={rarityOf(egg)} lang={lang} short />
+                </strong>
                 <small>
                   {element(egg.element).symbol} {element(egg.element).name[lang]} · ⏱ {duration(egg.seconds)}
                 </small>
@@ -505,6 +511,9 @@ export function DinoPanel({
   selected,
   select,
   openHatchery,
+  realm,
+  openHabitats,
+  fromHatchery = false,
 }: {
   save: Save;
   lang: number;
@@ -512,11 +521,49 @@ export function DinoPanel({
   selected: string | null;
   select: (id: string) => void;
   openHatchery: () => void;
+  /** Opened from a world: only that habitat's residents, with the habitat's summary on top. */
+  realm?: RealmId | null;
+  openHabitats?: () => void;
+  /** Opened right after a hatch: keep the way back to the hatchery even when a habitat is shown. */
+  fromHatchery?: boolean;
 }) {
+  const roster = realm ? residents(save, realm) : save.dinos;
   const d =
-    save.dinos.find((x) => x.id === selected) ?? save.dinos.find((x) => x.id === save.champion) ?? save.dinos[0];
+    roster.find((x) => x.id === selected) ?? roster.find((x) => x.id === save.champion) ?? roster[0];
+  const habitat = realm ? (
+    <div className="realm-habitat-summary">
+      <span className="realm-tag" style={{ color: element(realm).color, borderColor: element(realm).color }}>
+        {element(realm).symbol} {REALM_NAMES[realm][lang]}
+      </span>
+      <span>
+        {tr(lang, 'Nivel', 'Level')} <b>{save.habitats[realm] ?? 0}</b>
+      </span>
+      <span>
+        {tr(lang, 'Locuri', 'Spots')} <b>{residents(save, realm).length} / {habitatCapacity(save, realm)}</b>
+      </span>
+      <span>
+        ● <b>{residents(save, realm).reduce((n, x) => n + dinoIncome(save, x), 0)}</b> / h
+      </span>
+      {openHabitats && (
+        <button className="realm-link" onClick={openHabitats}>
+          {tr(lang, 'Îmbunătățește habitatul', 'Upgrade the habitat')} →
+        </button>
+      )}
+    </div>
+  ) : null;
   if (!d)
-    return (
+    return realm ? (
+      <>
+        {habitat}
+        <div className="realm-empty">
+          <h3>{tr(lang, 'Habitatul e gol', 'The habitat is empty')}</h3>
+          <p>{tr(lang, 'Eclozează un ou de acest element ca să-l populezi.', 'Hatch an egg of this element to fill it.')}</p>
+          <button className="realm-button" onClick={openHatchery}>
+            {tr(lang, 'Deschide incubatorul', 'Open hatchery')}
+          </button>
+        </div>
+      </>
+    ) : (
       <div className="realm-empty">
         <h3>{tr(lang, 'Un erou te așteaptă', 'A hero is waiting')}</h3>
         <button className="realm-button" onClick={openHatchery}>
@@ -529,16 +576,20 @@ export function DinoPanel({
     inBattle = save.battle?.dinoId === d.id;
   return (
     <>
-      <button className="realm-button secondary realm-back-to-hatchery" onClick={openHatchery}>
-        ← {tr(lang, 'Înapoi la incubator', 'Back to hatchery')}
-      </button>
+      {(!habitat || fromHatchery) && (
+        <button className="realm-button secondary realm-back-to-hatchery" onClick={openHatchery}>
+          ← {tr(lang, 'Înapoi la incubator', 'Back to hatchery')}
+        </button>
+      )}
+      {habitat}
       <div className="realm-roster">
-        {save.dinos.map((x) => (
+        {roster.map((x) => (
           <button key={x.id} aria-pressed={x.id === d.id} onClick={() => select(x.id)}>
-            <DinosaurArt species={x.species} element={x.element} stage={x.stage} />
+            <DinosaurArt species={x.species} element={x.element} stage={x.stage} className={rarityClass(x.rarity)} />
             <strong>
               {x.id === save.champion && '★ '}
               {x.nickname}
+              <RarityBadge rarity={rarityOf(x)} lang={lang} short />
             </strong>
             <small>
               {element(x.element).symbol} {tr(lang, 'Nv.', 'Lv.')} {x.level}
@@ -548,7 +599,7 @@ export function DinoPanel({
       </div>
       <div className="realm-dino-layout">
         <div className="realm-character-card">
-          <DinosaurArt species={d.species} element={d.element} stage={d.stage} />
+          <DinosaurArt species={d.species} element={d.element} stage={d.stage} className={rarityClass(d.rarity)} />
           <span className="realm-concept-label">
             {stageName(d.stage, lang)}
           </span>
@@ -559,6 +610,7 @@ export function DinoPanel({
           </span>
           <h3>
             {d.nickname} <small>· {SPECIES_NAMES[d.species]}</small>
+            <RarityBadge rarity={rarityOf(d)} lang={lang} />
           </h3>
           <div className="realm-level">
             <strong>{d.level}</strong>
@@ -583,7 +635,7 @@ export function DinoPanel({
           </p>
           {d.stage !== 'baby' && (
             <div className="realm-stat-row">
-              {Object.entries(stats(d.level, d.stage, d.species)).map(([key, value]) => (
+              {Object.entries(stats(d.level, d.stage, d.species, rarityOf(d))).map(([key, value]) => (
                 <span key={key}>
                   <small>{key.toUpperCase()}</small>
                   <b>{value}</b>
@@ -658,6 +710,10 @@ export function DevPanel({ lang, run, close }: { lang: number; run: Run; close: 
         ＋ {tr(lang, 'Adaugă resurse', 'Add resources')}
       </button>
       <small>+5000 ● · +5000 ❧ · +50 {tr(lang, 'materii prime', 'raw materials')} · +20 ▤ ▦ · +3 ⌂ · +3 ✧</small>
+      <button className="realm-button secondary" onClick={() => run({ type: 'devRarityEggs' })}>
+        ✦ {tr(lang, 'Ou rar + ou epic', 'Rare + epic egg')}
+      </button>
+      <small>{tr(lang, 'Două ouă de T-Rex de foc, pe raftul incubatorului.', 'Two fire T-Rex eggs, on the hatchery shelf.')}</small>
     </div>
   );
 }
