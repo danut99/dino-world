@@ -223,13 +223,14 @@
 .realm-quest-top {
   background: #2f2520e8;
   border: 1px solid #e0a96a;
-  padding: 12px 14px;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-weight: 700;
   font-size: 10px;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
+  white-space: nowrap;
 }
 .realm-quest-top > span {
   color: #f6d77a;
@@ -237,6 +238,7 @@
 }
 .realm-quest-top small {
   margin-left: auto;
+  flex-shrink: 0;
   color: #c9b48e;
   font-size: 10px;
   letter-spacing: 0;
@@ -1811,7 +1813,7 @@
 .realm-nav > button.realm-nav-toggle {
   flex: 0 0 auto;
   min-width: 0;
-  width: 30px;
+  width: 26px;
   padding: 0;
   gap: 9px;
   margin-right: 6px;
@@ -1828,25 +1830,16 @@
   outline: 2px solid #f6d77a;
   outline-offset: 1px;
 }
-/* A pixel chevron: points left to fold the bar, right to open it again */
+/* Pixel menu icon: three bars */
 .realm-nav-toggle > .realm-nav-chevron {
-  width: 9px;
-  height: 9px;
-  border-left: 3px solid #c9b48e;
-  border-bottom: 3px solid #c9b48e;
-  transform: translateX(2px) rotate(45deg);
-  transition: transform 0.2s;
-}
-.realm-nav.collapsed .realm-nav-toggle > .realm-nav-chevron {
-  transform: translateX(-2px) rotate(-135deg);
+  width: 12px;
+  height: 2px;
+  color: #c9b48e;
+  background: currentColor;
+  box-shadow: 0 -4px 0 currentColor, 0 4px 0 currentColor;
 }
 .realm-nav-toggle:hover > .realm-nav-chevron {
-  border-color: #f6d77a;
-}
-.realm-nav-toggle > .realm-nav-grip {
-  width: 4px;
-  height: 16px;
-  background: radial-gradient(circle, #c9b48e70 1.5px, transparent 2px) 0 0 / 4px 6px;
+  color: #f6d77a;
 }
 .realm-nav.collapsed > button:not(.realm-collect):not(.realm-nav-toggle) {
   display: none;
@@ -1860,7 +1853,9 @@
 .realm-nav.collapsed > .realm-collect {
   margin-left: 0;
   border-left: 0;
-  height: 52px;
+  min-width: 0;
+  gap: 8px;
+  padding: 0 10px 0 4px;
 }
 
 /* Eggs: sell from the shelf (second click confirms), the market note, fight drops */
@@ -1882,7 +1877,7 @@
 
 /* Story card: the header folds the card down to itself */
 button.realm-quest-top { width: 100%; color: inherit; font-family: inherit; text-align: left; cursor: pointer; transition: background 0.15s; }
-.realm-quest-top > .realm-quest-label { font-size: inherit; color: inherit; }
+.realm-quest-top > .realm-quest-label { font-size: inherit; color: inherit; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 button.realm-quest-top:hover { background: #3d332df0; }
 button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offset: 2px; }
 .realm-quest-chevron { width: 8px; height: 8px; margin: -4px 2px 0 4px; border-right: 2px solid #c9b48e; border-bottom: 2px solid #c9b48e; transform: rotate(-135deg); transition: transform 0.2s; }
@@ -2099,6 +2094,8 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
   .realm-nav.collapsed .realm-nav-toggle > .realm-nav-chevron {
     border: 0;
     transform: none;
+    background: none;
+    box-shadow: none;
     width: 18px;
     height: 20px;
     margin: 0;

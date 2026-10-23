@@ -525,6 +525,135 @@
   .realms-app .world-resident-book {
     bottom: 170px;
   }
+  /* compact bottom bar; 9px = the frame's native 1x pixel size */
+  .realms-app .realm-nav {
+    bottom: 12px;
+    border-width: 9px;
+    border-image-width: 9px;
+  }
+  .realms-app .realm-nav > button.realm-nav-toggle {
+    height: auto;
+  }
+  /* zoom buttons sit above the open bar (70px tall, 12px from the bottom) */
+  .realms-app:has(.realm-nav:not(.collapsed)) .realm-camera {
+    bottom: 94px;
+  }
+  .realms-app .realm-nav > button:not(.realm-nav-toggle) {
+    min-width: 84px;
+    height: 52px;
+    padding: 2px 8px;
+    gap: 3px;
+  }
+  .realms-app .realm-nav > button > strong {
+    font-size: 11px;
+  }
+  .realms-app .realm-nav > .realm-collect {
+    flex: none;
+    min-width: 0;
+    gap: 8px;
+    margin-left: 4px;
+    padding-right: 12px;
+    white-space: nowrap;
+  }
+  .realms-app .realm-nav.collapsed > .realm-collect {
+    min-width: 0;
+    height: 40px;
+    border: 0;
+  }
+  .realms-app .realm-nav.collapsed .realm-collect svg {
+    width: 22px;
+    height: 22px;
+  }
+  .realms-app .realm-nav.collapsed .realm-collect small {
+    margin-top: 2px;
+  }
+}
+/* phones: the open bar is one low row of icons, labels live in the tooltips */
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  .realms-app .realm-nav:not(.collapsed) {
+    display: flex;
+    width: max-content;
+    max-width: calc(100% - 16px);
+    padding: 0;
+    gap: 2px;
+    border-width: 9px;
+    border-image-width: 9px;
+    border-radius: 0;
+  }
+  .realms-app .realm-nav:not(.collapsed) > button {
+    flex: 0 1 44px;
+    width: 44px;
+    min-width: 0;
+    height: 44px;
+    padding: 0;
+    border-width: 4px;
+  }
+  .realms-app .realm-nav:not(.collapsed) > button.realm-nav-toggle {
+    flex: 0 0 32px;
+    width: 32px;
+  }
+  .realms-app .realm-nav:not(.collapsed) > button.realm-nav-toggle > .realm-nav-toggle-label,
+  .realms-app .realm-nav:not(.collapsed) .realm-collect > div {
+    display: none;
+  }
+  .realms-app:has(.realm-nav:not(.collapsed)) .realm-camera {
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 72px);
+  }
+  /* folded: same thin frame, just ☰ and Collect side by side */
+  .realms-app .realm-nav.collapsed {
+    width: max-content;
+    padding: 0;
+    gap: 2px;
+    border: 9px solid transparent;
+    border-image: var(--frame-panel);
+    border-image-width: 9px;
+    border-radius: 0;
+    box-shadow: 0 6px 0 #1a141299;
+  }
+  .realms-app .realm-nav.collapsed > button.realm-nav-toggle,
+  .realms-app .realm-nav.collapsed > .realm-collect {
+    min-width: 0;
+    height: 40px;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+  .realms-app .realm-nav.collapsed > button.realm-nav-toggle {
+    flex: 0 0 32px;
+    width: 32px;
+    padding: 0;
+    background: #241c18;
+  }
+  .realms-app .realm-nav.collapsed > button.realm-nav-toggle > .realm-nav-toggle-label {
+    display: none;
+  }
+  .realms-app .realm-nav.collapsed > .realm-collect {
+    padding: 0 10px 0 6px;
+  }
+}
+/* wide screens: icon beside label, so the bar is long and low */
+@media (min-width: 1100px) {
+  /* left:50% would otherwise cap the shrink-to-fit width at half the screen */
+  .realms-app .realm-nav {
+    width: max-content;
+    max-width: calc(100% - 32px);
+  }
+  .realms-app .realm-nav > button:not(.realm-nav-toggle) {
+    flex-direction: row;
+    height: 40px;
+    min-width: 0;
+    padding: 0 12px;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .realms-app .realm-nav > .realm-collect {
+    min-width: 0;
+    padding-right: 14px;
+  }
+  .realms-app .realm-nav > .realm-collect small {
+    margin-top: 2px;
+  }
 }
 .realms-app .world-resident-book {
   background: none;

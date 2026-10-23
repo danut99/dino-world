@@ -813,7 +813,6 @@ export default function RealmsApp() {
             title={navOpen ? tr('Restrânge meniul', 'Collapse menu') : tr('Extinde meniul', 'Expand menu')}
           >
             <span className="realm-nav-chevron" aria-hidden />
-            <span className="realm-nav-grip" aria-hidden />
             <span className="realm-nav-toggle-label">{tr('Meniu', 'Menu')}</span>
           </button>
           <Nav icon="build" label={tr('Construiește', 'Build')} onClick={() => setPanel('build')} />
@@ -845,10 +844,6 @@ export default function RealmsApp() {
           </button>
         </nav>
       )}
-      <div className="realm-version">
-        {tr('PREVIZUALIZARE P1', 'P1 PREVIEW')} <span>·</span>{' '}
-        <button onClick={() => setPanel('assets')}>{tr('Artă & referințe', 'Art & references')}</button>
-      </div>
       {storageError && (
         <div className="realm-storage" role="alert">
           {tr(

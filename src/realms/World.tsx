@@ -12,7 +12,7 @@ import { UTILITY_BUILDINGS, type UtilityKind } from './content';
 import { SPECIES, SPECIES_NAMES } from './dinosaurs';
 import { BUILDABLE_CELLS, GRID, project, unproject } from './grid';
 import { drawSprite, frameAt, loadAnimation, loadSpriteImage, type SpriteManifest } from './animation';
-import { drawBuildingEffect, drawRealmAtmosphere } from './worldEffects';
+import { drawRealmAtmosphere } from './worldEffects';
 import { useReducedMotion } from './useMotion';
 
 export { project, unproject };
@@ -680,8 +680,6 @@ export default function World({
       }
       ctx.globalAlpha = 1;
     }
-    // insula plutește ușor (2 px de scenă = 1 pixel de artă, deci rămâne pe grilă)
-    const bob = reducedMotion || realm === 'home' ? 0 : Math.round(Math.sin(time / 1400) * 2) * 2;
     if (realm === 'home') {
       if (image.current)
         ctx.drawImage(image.current, HOME_ISLAND.offset[0], HOME_ISLAND.offset[1], HOME_ISLAND.size[0] * 2, HOME_ISLAND.size[1] * 2);
@@ -689,7 +687,7 @@ export default function World({
       const environment = worlds.current[realm];
       if (environment) {
         const isl = ISLANDS[realm];
-        ctx.drawImage(environment, isl.offset[0], isl.offset[1] + bob, isl.size[0] * isl.scale, isl.size[1] * isl.scale);
+        ctx.drawImage(environment, isl.offset[0], isl.offset[1], isl.size[0] * isl.scale, isl.size[1] * isl.scale);
       }
     }
     ctx.imageSmoothingEnabled = false;
@@ -715,7 +713,6 @@ export default function World({
         .forEach((b) => {
           if (b.id === held?.id) ctx.globalAlpha = 0.3;
           drawBuilding(ctx, b, ...artFor(b.kind as UtilityKind), reducedMotion ? 0 : time);
-          if (b.kind !== 'farm' && b.kind !== 'workshop' && b.kind !== 'portal') drawBuildingEffect(ctx, b.kind, project(b.x + 1.5, b.y + 1.5).x, project(b.x + 1.5, b.y + 1.5).y, reducedMotion ? 0 : time);
           ctx.globalAlpha = 1;
         });
     if (realm === 'home')
