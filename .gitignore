@@ -10,3 +10,10 @@ tmp/
 art/
 output/
 __pycache__/
+# Chitanțele PixelLab (joburi, importuri): doar locale, în art/realms/pixellab/receipts/.
+docs/*-production.json
+docs/pixellab-192-*.txt
+docs/*-import.txt
+docs/managed-192-*.json
+docs/pixellab-animation-jobs.json
+docs/*-enhanced-animations.json

@@ -1,3 +1,4 @@
+import { ARENA_BOSSES } from './arenaBosses';
 import inventory from './animation-inventory.json';
 import type { RealmId, Species } from './game';
 
@@ -11,6 +12,6 @@ export const PLAYABLE_DINOSAURS = inventory.filter(id => id.endsWith('_adult'))
   })
   .filter(({ species, element }) => stages.every(stage => ids.has(`${species}_${element}_${stage}`)));
 export const isPlayableDinosaur = (species: Species, element: RealmId) =>
-  PLAYABLE_DINOSAURS.some(d => d.species === species && d.element === element);
+  species === 'boss' ? Object.hasOwn(ARENA_BOSSES, element) : PLAYABLE_DINOSAURS.some(d => d.species === species && d.element === element);
 export const playableSpecies = (element: RealmId) =>
   PLAYABLE_DINOSAURS.filter(d => d.element === element).map(d => d.species);

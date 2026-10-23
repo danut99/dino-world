@@ -1,5 +1,7 @@
 # Asset backlog
 
+Current first-family delivery: all age-appropriate South-East clips are imported for T-Rex fire, including baby idle/walk. There are 164 local frames across three stages. SE is the default; no requested SE jobs remain pending. See [animation pipeline](REALMS_ANIMATION_PIPELINE.md). Other families remain in the backlog.
+
 ## Current concepts
 
 Reference 03/05 update: pixel-art Workshop, Expedition Portal and Arena Gate sprites are integrated in `public/realms/gameplay/utility-buildings-pixel.png`. Full pixel-art arena/workshop scenes, the ten-world adventure map and a static ice-knight enemy are also integrated. Exact prompts/paths: [gameplay-art-prompts.json](gameplay-art-prompts.json). These replace rejected smooth candidates; static characters are not completed animations.
@@ -11,13 +13,13 @@ Elemental environments now use individual full landscapes in `public/realms/worl
 ## P1 visual acceptance gate
 
 1. Approve a model sheet for fire T-Rex child/juvenile/adult, keeping snout, crest, coal markings, red scarf and equipment family recognizable.
-2. Redraw at logical 192×192, or explicitly approve one consistent larger contract for sword/tail bounds. Clean pixel clusters and remove concept-strip edge contamination.
-3. Produce SE and NE idle (8 frames) and walk (12 frames) for all three stages.
-4. Produce juvenile/adult attack (12), defend (6), hurt (4), death (10); adult ultimate (20). Minimum reference volume: 204 body frames across all stages and views.
-5. Make editable body/outfit/weapon/occlusion/VFX layers. Export packed atlas + frame timings + ground pivots + trim offsets + impact events. Weapon is fixed identity, not interchangeable equipment.
-6. Add manifest validation, frame player (play/pause/step), true pivot/bounds validation, and loop/contact QA. The current static inspector does not satisfy this animation gate.
+2. Models use 192×192; runtime animation frames share a padded 256×256 contract. Continue pixel-cluster cleanup and weapon/tail-bound review.
+3. SE idle (8 frames) and walk (12 frames) are imported for all three ages. The user's latest direction prioritises SE; older NE clips remain optional and partial.
+4. Juvenile/adult combat clips and adult ultimate are imported. Prototype attack/death use 8 frames rather than the initial 12/10 estimates; defend uses 6, hurt 4, ultimate 20. Review timing and motion before marking production-ready.
+5. Packed atlases, timings, shared ground pivot and impact metadata are exported. Editable body/outfit/weapon/occlusion/VFX source layers remain missing. Weapon is fixed identity, not interchangeable equipment.
+6. Manifest validation, play/pause/step viewer, pivot/bounds overlays and all imported-clip browser checks are implemented. Continue detailed foot-contact/loop cleanup and final art review.
 7. Replace primitive building fallbacks and prototype ice-sentinel geometry with consistent exported sprites. Separate shadows and VFX. Validate collision/access against actual art.
-8. Integrate real wandering, foot contact/stride timing, animation events and visibility lifecycle; test desktop and an explicitly named mobile target before claiming FPS.
+8. SE wandering/mirrored return and visibility/reduced-motion lifecycle are integrated. Tune foot contact/stride timing, synchronise battle impact events, and measure desktop/mobile FPS on an explicitly named target.
 
 ## After first family validation
 

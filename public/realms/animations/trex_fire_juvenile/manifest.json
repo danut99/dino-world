@@ -52,7 +52,7 @@
         "loop": true
       },
       "attack": {
-        "sheet": "/realms/animations/trex_fire_juvenile/attack-se.png",
+        "sheet": "/realms/animations/trex_fire_juvenile/attack-fire-enhanced-se.png",
         "frameWidth": 256,
         "frameHeight": 256,
         "columns": 8,
@@ -78,7 +78,7 @@
         "impactFrame": 8
       },
       "defend": {
-        "sheet": "/realms/animations/trex_fire_juvenile/defend-se.png",
+        "sheet": "/realms/animations/trex_fire_juvenile/defend-fire-enhanced-se.png",
         "frameWidth": 256,
         "frameHeight": 256,
         "columns": 8,

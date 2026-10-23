@@ -1,6 +1,39 @@
 import rigData from '../../public/realms/buildings/windmill/rig.json';
 export const FARM_ART = '/realms/buildings/windmill/building.png';
 export const FARM_GROUND = 0.655;
+export const FARM_LEVEL_ONE_ART = '/realms/buildings/farm-states/level-1.png';
+export const FARM_LEVEL_ONE_GROUND = 0.595;
+export const FARM_LEVEL_TWO_ART = '/realms/buildings/farm-states/level-2.png';
+export const FARM_LEVEL_THREE_ART = '/realms/buildings/farm-states/level-3.png';
+const levelOneRig: typeof rigData = {
+  canvas: { width: 400, height: 400 }, image: 'level-1.png',
+  rotor: { x: 304, y: 142, radius: 45, squash: 0.95, shear: 0.12, phase: -0.6, secondsPerTurn: 12 },
+  chimney: { x: 98, y: 125 },
+};
+export const FARM_STATES = [
+  { from: 1, art: FARM_LEVEL_ONE_ART, ground: FARM_LEVEL_ONE_GROUND, rig: levelOneRig },
+  {
+    from: 2, art: FARM_LEVEL_TWO_ART, ground: 0.56,
+    rig: {
+      canvas: { width: 400, height: 400 }, image: 'level-2.png',
+      rotor: { x: 307, y: 124, radius: 44, squash: 0.95, shear: 0.12, phase: -0.6, secondsPerTurn: 12 },
+      chimney: { x: 119, y: 91 },
+    },
+  },
+  {
+    from: 3, art: FARM_LEVEL_THREE_ART, ground: 0.62,
+    rig: {
+      canvas: { width: 400, height: 400 }, image: 'level-3.png',
+      rotor: { x: 307, y: 151, radius: 46, squash: 0.95, shear: 0.12, phase: -0.6, secondsPerTurn: 12 },
+      chimney: { x: 117, y: 115 },
+    },
+  },
+];
+const farmSource = (image: HTMLImageElement | string) => typeof image === 'string' ? image : image.src;
+export const isAnimatedFarm = (image: HTMLImageElement | string) =>
+  farmSource(image).endsWith(FARM_ART) || FARM_STATES.some(state => farmSource(image).endsWith(state.art));
+export const farmGround = (image: HTMLImageElement | string) =>
+  FARM_STATES.find(state => farmSource(image).endsWith(state.art))?.ground ?? FARM_GROUND;
 // Reusable, deterministic building animation. Coordinates are native asset pixels.
 export class Windmill {
   constructor(public image: HTMLImageElement, public rig: typeof rigData = rigData) { this.image = image; this.rig = rig; }
@@ -52,5 +85,6 @@ export class Windmill {
 }
 
 export function drawFarm(ctx: CanvasRenderingContext2D, image: HTMLImageElement, ms: number, x: number, y: number, size: number) {
-  new Windmill(image).draw(ctx, ms / 1000, { x, y, scale: size / rigData.canvas.width, smoke: ms > 0 });
+  const rig = FARM_STATES.find(state => image.src.endsWith(state.art))?.rig ?? rigData;
+  new Windmill(image, rig).draw(ctx, ms / 1000, { x, y, scale: size / rig.canvas.width, smoke: ms > 0 });
 }

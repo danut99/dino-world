@@ -1,10 +1,9 @@
 // Erorile jocului: ultimele câteva se țin în browser, ca jucătorul să le poată trimite într-un raport
-// („Trimite o problemă” din Setări sau ecranul „Ceva n-a mers”). Nimic nu pleacă singur din browser.
+// (ecranul „Ceva n-a mers”). Nimic nu pleacă singur din browser.
 
-import { t } from '../i18n';
+import { SAVE_KEY } from '../realms/game';
 
 const LOG_KEY = 'dino-world:errors';
-const SAVE_KEY = 'dino-world-save-v3';
 const MAX = 15;
 
 export interface LoggedError {
@@ -38,14 +37,6 @@ export function logError(error: unknown, extra?: string) {
   }
 }
 
-export const clearErrors = () => {
-  try {
-    localStorage.removeItem(LOG_KEY);
-  } catch {
-    // vezi mai sus
-  }
-};
-
 /** Erorile din afara React (evenimente, promisiuni, cod încărcat la cerere). */
 export function watchErrors() {
   window.addEventListener('error', (e) => logError(e.error ?? e.message));
@@ -67,7 +58,7 @@ export function downloadSave(): boolean {
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `dino-world-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `dino-realms-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   return true;
@@ -75,30 +66,27 @@ export function downloadSave(): boolean {
 
 /** Raportul: ce a scris jucătorul, dispozitivul și ultimele erori. Fără salvarea întreagă (e mare). */
 export function buildReport(note: string): string {
-  let summary = 'fără salvare';
+  let summary = 'no save';
   try {
     const s = JSON.parse(savedGame() ?? 'null');
-    if (s)
-      summary = `${s.dinos?.length ?? 0} dinozauri · ${s.buildings?.filter((b: { kind: string }) => b.kind === 'habitat').length ?? 0} lumi · obiective ${s.goalsClaimed?.length ?? 0}`;
+    if (s) summary = `${s.dinos?.length ?? 0} dinosaurs · ${Object.keys(s.habitats ?? {}).length} worlds · level ${s.arenaLevel ?? 1} arena`;
   } catch {
-    summary = 'salvare ilizibilă';
+    summary = 'unreadable save';
   }
   const errors = readErrors();
   return [
-    note.trim() || '(fără descriere)',
+    note.trim() || '(no description)',
     '',
     '---',
-    `Versiune: ${__APP_VERSION__}`,
-    `Data: ${new Date().toISOString()}`,
+    `Version: ${__APP_VERSION__}`,
+    `Date: ${new Date().toISOString()}`,
     `Browser: ${navigator.userAgent}`,
-    `Ecran: ${window.innerWidth}×${window.innerHeight} @${window.devicePixelRatio}x`,
-    `Joc: ${summary}`,
+    `Screen: ${window.innerWidth}×${window.innerHeight} @${window.devicePixelRatio}x`,
+    `Game: ${summary}`,
     '',
-    errors.length ? `Erori recente (${errors.length}):` : 'Erori recente: niciuna',
+    errors.length ? `Recent errors (${errors.length}):` : 'Recent errors: none',
     ...errors.map((e) => `[${e.at}] ${e.message}\n${e.stack ?? ''}`),
-  ]
-    .map((line) => t(line))
-    .join('\n');
+  ].join('\n');
 }
 
 /**
@@ -121,7 +109,7 @@ export async function sendReport(note: string): Promise<'mail' | 'form' | 'copie
   if (REPORT_EMAIL) {
     // linkurile mailto lungi sunt tăiate de unele aplicații: corpul are cel mult ~1800 de caractere
     const body = encodeURIComponent(text.slice(0, 1800));
-    window.location.href = `mailto:${REPORT_EMAIL}?subject=${encodeURIComponent(t('Dino World · problemă'))}&body=${body}`;
+    window.location.href = `mailto:${REPORT_EMAIL}?subject=${encodeURIComponent('Dino Realms · problem report')}&body=${body}`;
     return 'mail';
   }
   if (REPORT_URL) {

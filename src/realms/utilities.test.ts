@@ -120,7 +120,7 @@ describe('reference utility systems', () => {
 });
 describe('farm levels, plots and crops', () => {
   const farm = () => command(newSave(now), { type: 'build', x: 5, y: 8 }, now);
-  it('unlocks one plot per level, pays gold and materials, and raises every harvest', () => {
+  it('has three levels, preserves five final plots, and raises every harvest', () => {
     let s = farm();
     expect(s.plots).toHaveLength(1);
     s.gold = 10_000;
@@ -128,13 +128,10 @@ describe('farm levels, plots and crops', () => {
     s.inventory.blocks = 20;
     s.inventory.crystal = 0;
     s = command(s, { type: 'upgradeFarm' }, now);
-    expect(s).toMatchObject({ farmLevel: 2, gold: 9750, plots: [null, null] });
+    expect(s).toMatchObject({ farmLevel: 2, gold: 9750, plots: [null, null, null] });
     s = command(s, { type: 'upgradeFarm' }, now);
     expect(s.inventory.planks).toBe(16);
-    s = command(s, { type: 'upgradeFarm' }, now);
-    expect(() => command(s, { type: 'upgradeFarm' }, now)).toThrow('materials');
-    s.inventory.crystal = 10;
-    s = command(s, { type: 'upgradeFarm' }, now);
+    expect(s.farmLevel).toBe(3);
     expect(s.plots).toHaveLength(5);
     expect(() => command(s, { type: 'upgradeFarm' }, now)).toThrow('maxLevel');
     for (let i = 0; i < 5; i++) s = command(s, { type: 'plant' }, now);
@@ -158,5 +155,24 @@ describe('farm levels, plots and crops', () => {
     const s = parseSave(JSON.stringify(v3));
     expect(s).toMatchObject({ schemaVersion: 5, farmLevel: 1, plots: [{ crop: 'ferns', readyAt: now + 5000 }] });
     expect('farmAt' in s).toBe(false);
+  });
+  it('migrates former farm levels without losing crops and remains stable on reload', () => {
+    for (const level of [1, 2, 3, 4, 5]) {
+      const old = farm();
+      old.farmLevel = level;
+      old.plots = Array.from({ length: level }, () => ({ crop: 'ferns' as const, readyAt: now + 5000 }));
+      const migrated = parseSave(JSON.stringify(old));
+      expect(migrated.farmLevel).toBe(Math.min(level, 3));
+      expect(migrated.plots.filter(Boolean)).toHaveLength(level);
+      expect(parseSave(JSON.stringify(migrated))).toEqual(migrated);
+    }
+  });
+  it('unlocks every crop within the three farm levels', () => {
+    let s = farm();
+    s.gold = 10_000;
+    s.inventory.planks = 4;
+    s = command(command(s, { type: 'upgradeFarm' }, now), { type: 'upgradeFarm' }, now);
+    expect(() => command(s, { type: 'plant', crop: 'amber' }, now)).not.toThrow();
+    expect(() => command(s, { type: 'plant', crop: 'feast' }, now)).not.toThrow();
   });
 });

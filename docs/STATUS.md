@@ -1,6 +1,16 @@
 # Dino Realms adaptation status
 
-Updated 17 October 2026. Default: Dino Realms preview. Classic Dino World remains at `?mode=classic`, with separate saves.
+## South-East animation delivery — 17 October 2026
+
+All requested SE clips for the first T-Rex fire family are now imported: baby idle/walk (20 frames), juvenile idle/walk/attack/defend/hurt/defeat, and adult clips including ultimate. Total imported coverage is 164 frames across three stages, including previously completed optional NE clips. SE is the default viewer and gameplay direction; island patrols use the SE sprite mirrored on return. No required SE generation jobs remain pending. Assets remain marked prototype pending full art/foot-contact approval. See [REALMS_ANIMATION_PIPELINE.md](REALMS_ANIMATION_PIPELINE.md) and [job inventory](pixellab-animation-jobs.json).
+
+## Earlier partial PixelLab batch — 17 October 2026
+
+The current visual/animation work is documented in [REALMS_ANIMATION_PIPELINE.md](REALMS_ANIMATION_PIPELINE.md). Three native pixel-art T-Rex fire models now share a consistent identity. The first imported juvenile atlas batch contains 34 real frames (NE idle, SE attack/defend/hurt/defeat), marked prototype. Further juvenile/adult jobs are processing in PixelLab; baby animation requests and adult idle were refused while all ten job slots were occupied. This is not completion of the first-family gate or the full catalog.
+
+The runtime now supports atlas playback, stage-restricted clips, one-shot defeat, frame stepping, pivot/bounds, comparison and reduced motion. Utility buildings and all realms have separate procedural pixel VFX. A local pixel display font and plum/violet/mint UI theme are integrated. See the linked report for canvas-size changes, validation commands and remaining scope. Historical sections below predate this animation batch.
+
+Updated 17 October 2026. Default: Dino Realms preview. The classic Dino World game was removed from the tree on 23 October 2026 (see git history).
 
 ## Wide elemental worlds
 

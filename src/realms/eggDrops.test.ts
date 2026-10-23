@@ -31,6 +31,47 @@ function win(s: Save, encounterId: string, at = now) {
 }
 
 describe('egg drops and selling', () => {
+  it('awards the defeated boss once, including previously cleared leagues, and hatches an adult', () => {
+    let s = arena();
+    s.cleared = ['arena-fire-1', 'arena-fire-2', 'arena-fire-3'];
+    s = win(s, 'arena-fire-3');
+    expect(s.battle?.reward.egg).toEqual({ species: 'boss', element: 'fire' });
+    roundTrip(s);
+    s = run(s, { type: 'claim' });
+    const egg = s.eggs.at(-1)!;
+    expect(egg.species).toBe('boss');
+    expect(s.bossEggsClaimed).toEqual(['fire']);
+    expect(() => run(s, { type: 'sellEgg', eggId: egg.id })).toThrow('egg');
+    expect(() => run(s, { type: 'buyEgg', species: 'boss', element: 'fire' })).toThrow('egg');
+    s = run(s, { type: 'incubate', eggId: egg.id });
+    s = command(s, { type: 'hatch', eggId: egg.id }, now + egg.seconds * 1000);
+    const boss = s.dinos.find(d => d.species === 'boss')!;
+    expect(boss).toMatchObject({ element: 'fire', stage: 'adult', level: 25, nickname: 'Ignaroth' });
+    roundTrip(s);
+    s = command(s, { type: 'setChampion', dinoId: boss.id }, now + egg.seconds * 1000);
+    expect(s.champion).toBe(boss.id);
+    s.champion = s.dinos[0].id;
+    s = win(s, 'arena-fire-3', now + egg.seconds * 1000);
+    expect(s.battle?.reward.egg?.species).not.toBe('boss');
+  });
+  it('reserves boss rewards while both the egg shelf and normal waiting queue are full', () => {
+    let s = arena();
+    s.cleared = ['arena-nature-1', 'arena-nature-2'];
+    while (s.eggs.length < BALANCE.maxEggs) s = run(s, { type: 'buyEgg', species: 'trex', element: 'fire' });
+    s.owedEggs = Array.from({ length: 20 }, () => ({ species: 'triceratops' as const, element: 'nature' as const }));
+    s = run(win(s, 'arena-nature-3'), { type: 'claim' });
+    expect(s.owedEggs).toHaveLength(21);
+    expect(s.owedEggs.at(-1)).toEqual({ species: 'boss', element: 'nature' });
+    roundTrip(s);
+  });
+  it('loads old saves without marking bosses as already rewarded and rejects a baby boss', () => {
+    const s = arena();
+    const raw = JSON.parse(JSON.stringify(s));
+    delete raw.bossEggsClaimed;
+    expect(parseSave(JSON.stringify(raw)).bossEggsClaimed).toEqual([]);
+    raw.dinos.push({ id: 'invalid-boss', species: 'boss', element: 'fire', level: 1, stage: 'baby', nickname: 'Boss' });
+    expect(() => parseSave(JSON.stringify(raw))).toThrow('Invalid dinosaur');
+  });
   it('sells only fire, water and earth eggs at the market', () => {
     const s = arena();
     expect(() => run(s, { type: 'buyEgg', species: 'triceratops', element: 'nature' })).toThrow('fightEgg');

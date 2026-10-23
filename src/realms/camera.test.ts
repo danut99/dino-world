@@ -1,11 +1,39 @@
 import { describe, expect, it } from 'vitest';
-import { constrainPan, HOME_ART, SCENE } from './camera';
+import { constrainPan, constrainHomePan, HOME_ART, SCENE } from './camera';
+import home from './islands/home.json';
 
 describe('world camera coverage', () => {
-  it('allows sideways movement at 1x within the wider centered home art', () => {
+  it('keeps normal drags moving at maximum home zoom-out', () => {
+    for (const viewport of [SCENE, { width: 1536, height: 864 }, { width: 710, height: 1024 }]) {
+      for (const direction of [-1, 1]) {
+        const target = { x: direction * 500, y: direction * 300 };
+        expect(constrainHomePan(target, 0.7, viewport)).toEqual(target);
+      }
+    }
+  });
+  it('keeps part of the home island visible at extreme drag limits', () => {
+    for (const direction of [-1, 1]) {
+      const pan = constrainHomePan({ x: direction * 10000, y: direction * 10000 }, 0.7, SCENE);
+      const left = (home.offset[0] - SCENE.width / 2) * 0.7 + pan.x;
+      const right = left + home.size[0] * home.scale * 0.7;
+      const top = (home.offset[1] - SCENE.height / 2) * 0.7 + pan.y;
+      const bottom = top + home.size[1] * home.scale * 0.7;
+      expect(Math.min(right, SCENE.width / 2) - Math.max(left, -SCENE.width / 2)).toBeGreaterThanOrEqual(127.9);
+      expect(Math.min(bottom, SCENE.height / 2) - Math.max(top, -SCENE.height / 2)).toBeGreaterThanOrEqual(127.9);
+    }
+  });
+
+  it('uses the enlarged island dimensions and allows dragging at the initial 0.8 zoom', () => {
+    expect(HOME_ART.width).toBeGreaterThanOrEqual(home.size[0] * home.scale);
+    expect(HOME_ART.height).toBeGreaterThanOrEqual(home.size[1] * home.scale);
+    const pan = constrainPan({ x: 160, y: 0 }, 0.8, SCENE, HOME_ART);
+    expect(pan.x).toBe(160);
+  });
+
+  it('allows movement at 1x across the current home art', () => {
     const pan = constrainPan({ x: 9999, y: -9999 }, 1, SCENE, HOME_ART);
     expect(pan.x).toBeCloseTo((HOME_ART.width - SCENE.width) / 2);
-    expect(pan.y).toBeCloseTo(0);
+    expect(pan.y).toBeCloseTo(-(HOME_ART.height - SCENE.height) / 2);
     expect(SCENE.width / 2 + SCENE.width / 2 - pan.x).toBeLessThanOrEqual((SCENE.width + HOME_ART.width) / 2);
     expect(SCENE.width / 2 - SCENE.width / 2 - pan.x).toBeCloseTo((SCENE.width - HOME_ART.width) / 2);
   });

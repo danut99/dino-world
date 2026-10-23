@@ -1,3 +1,4 @@
+import { arenaBoss, ARENA_BOSSES } from './arenaBosses';
 import { isPlayableDinosaur, playableSpecies } from './playableDinosaurs';
 import {
   CROPS,
@@ -60,14 +61,17 @@ export const REALM_NAMES: Record<RealmId, readonly [string, string]> = {
   light: ['Sanctuarul zorilor', 'Dawn Sanctuary'],
   arcane: ['Insula sigiliilor', 'Isle of Sigils'],
 };
-export const SPECIES = ['trex', 'raptor', 'triceratops', 'ankylosaurus', 'brachiosaurus'] as const;
-export type Species = (typeof SPECIES)[number];
+export const SPECIES = ['trex', 'raptor', 'triceratops', 'ankylosaurus', 'brachiosaurus', 'ignasaur', 'thalassaur'] as const;
+export type Species = (typeof SPECIES)[number] | 'boss';
 export const SPECIES_NAMES: Record<Species, string> = {
   trex: 'T-Rex',
   raptor: 'Raptor',
   triceratops: 'Triceratops',
   ankylosaurus: 'Ankylosaurus',
   brachiosaurus: 'Brachiosaurus',
+  ignasaur: 'Ignasaur',
+  thalassaur: 'Thalassaur',
+  boss: 'Boss',
 };
 /** Species stat multipliers from the plan (section 3). */
 const SPECIES_STATS: Record<Species, { hp: number; power: number; defense: number; speed: number }> = {
@@ -76,6 +80,9 @@ const SPECIES_STATS: Record<Species, { hp: number; power: number; defense: numbe
   triceratops: { hp: 1.1, power: 1, defense: 1, speed: 0.9 },
   ankylosaurus: { hp: 1, power: 1, defense: 1.15, speed: 0.85 },
   brachiosaurus: { hp: 1.15, power: 0.9, defense: 1, speed: 1 },
+  ignasaur: { hp: 0.95, power: 1.1, defense: 0.95, speed: 1.1 },
+  thalassaur: { hp: 1, power: 1, defense: 1.05, speed: 1.05 },
+  boss: { hp: 1.15, power: 1.1, defense: 1.1, speed: 0.9 },
 };
 export type Stage = 'baby' | 'juvenile' | 'adult';
 export type BuildingKind = UtilityKind | 'habitat';
@@ -152,6 +159,7 @@ export interface Save {
   eggLuck: number;
   /** Eggs won while the shelf was full; they move to the shelf as soon as there is room. */
   owedEggs: EggKind[];
+  bossEggsClaimed: RealmId[];
   farmLevel: number;
   /** One entry per unlocked plot (see FARM_LEVELS); null = empty. */
   plots: (FarmPlot | null)[];
@@ -237,7 +245,7 @@ export const eggSellPrice = (element: RealmId) => (MARKET_ELEMENTS.includes(elem
  * fight-only element. After `pity` drop-eligible wins without an egg, the next one always drops.
  */
 export const EGG_DROP = { league: 0.1, boss: 0.2, expedition: 0.05, pity: 8 };
-const MAX_OWED_EGGS = 20;
+const MAX_OWED_EGGS = 30;
 /** The chance and elements of the egg a win can drop, or null when this fight never drops one. */
 export function eggOdds(s: Save, encounter: Encounter, firstWin: boolean) {
   if (encounter.id === 'training') return null;
@@ -487,6 +495,7 @@ export function newSave(now: number): Save {
     questEggs: [],
     eggLuck: 0,
     owedEggs: [],
+    bossEggsClaimed: [],
     farmLevel: 1,
     plots: [null],
     battle: null,
@@ -615,9 +624,9 @@ export function command(save: Save, c: Command, now: number): Save {
         id: egg.id === 'egg-ignis' ? 'ignis' : `dino-${s.revision + 1}`,
         species: egg.species,
         element: egg.element,
-        level: 1,
-        stage: 'baby',
-        nickname: nicknameFor(s, egg.species, egg.element),
+        level: egg.species === 'boss' ? 25 : 1,
+        stage: egg.species === 'boss' ? 'adult' : 'baby',
+        nickname: egg.species === 'boss' ? ARENA_BOSSES[egg.element].name : nicknameFor(s, egg.species, egg.element),
       };
       s.dinos.push(dino);
       s.eggs = s.eggs.filter((e) => e !== egg);
@@ -655,7 +664,7 @@ export function command(save: Save, c: Command, now: number): Save {
       break;
     case 'buyEgg': {
       require(s.buildings.some((b) => b.kind === 'market'), 'building');
-      require(isPlayableDinosaur(c.species, c.element), 'egg');
+      require(c.species !== 'boss' && isPlayableDinosaur(c.species, c.element), 'egg');
       require(s.habitats[c.element], 'habitat');
       require(MARKET_ELEMENTS.includes(c.element), 'fightEgg');
       require(s.eggs.length < BALANCE.maxEggs, 'eggsFull');
@@ -672,7 +681,7 @@ export function command(save: Save, c: Command, now: number): Save {
     case 'sellEgg': {
       const egg = s.eggs.find((e) => e.id === c.eggId);
       // The tutorial egg is the first dinosaur, so it cannot be sold.
-      require(egg && egg.hatchAt === null && egg.id !== 'egg-ignis', 'egg');
+      require(egg && egg.hatchAt === null && egg.id !== 'egg-ignis' && egg.species !== 'boss', 'egg');
       s.eggs = s.eggs.filter((e) => e !== egg);
       s.gold += eggSellPrice(egg!.element);
       break;
@@ -974,7 +983,9 @@ export function command(save: Save, c: Command, now: number): Save {
         s.rewardPending = true;
         const encounter = ENCOUNTERS.find((e) => e.id === b.encounterId)!,
           odds = eggOdds(s, encounter, !s.cleared.includes(encounter.id));
-        if (odds) {
+        if (arenaBoss(encounter) && !s.bossEggsClaimed.includes(encounter.league as RealmId)) {
+          b.reward.egg = { species: 'boss', element: encounter.league as RealmId };
+        } else if (odds) {
           const seed = `${s.revision}:${now}:${encounter.id}`;
           if (s.eggLuck >= EGG_DROP.pity || roll(seed) < odds.chance) {
             const element = odds.elements[Math.floor(roll(`${seed}:element`) * odds.elements.length)];
@@ -995,7 +1006,17 @@ export function command(save: Save, c: Command, now: number): Save {
           ([id, count]) => (s.inventory[id] += count),
         );
         if (!s.cleared.includes(s.battle!.encounterId)) s.cleared.push(s.battle!.encounterId);
-        if (s.battle!.reward.egg && s.owedEggs.length < MAX_OWED_EGGS) s.owedEggs.push(s.battle!.reward.egg);
+        if (s.battle!.reward.egg) {
+          const egg = s.battle!.reward.egg;
+          // Twenty regular waiting eggs plus ten reserved slots for the unique boss rewards.
+          if (egg.species === 'boss') {
+            require(s.owedEggs.length < MAX_OWED_EGGS, 'eggsFull');
+            s.owedEggs.push(egg);
+          } else if (s.owedEggs.length < MAX_OWED_EGGS && s.owedEggs.filter(e => e.species !== 'boss').length < 20) {
+            s.owedEggs.push(egg);
+          }
+          if (egg.species === 'boss' && !s.bossEggsClaimed.includes(egg.element)) s.bossEggsClaimed.push(egg.element);
+        }
         s.victories++;
         s.rewardPending = false;
         if (s.battle!.encounterId === 'training') s.rewardedTutorial = true;
@@ -1101,6 +1122,16 @@ export function parseSave(text: string): Save {
     s.arenaLevel ??= 1;
     s.eggLuck ??= 0;
     s.owedEggs ??= [];
+    s.bossEggsClaimed ??= [];
+    // The five farm levels became three; keep every planted crop and unlocked plot.
+    if (
+      Number.isInteger(s.farmLevel) && s.farmLevel >= 1 && s.farmLevel <= 5 &&
+      Array.isArray(s.plots) && s.plots.length === s.farmLevel
+    ) {
+      s.farmLevel = Math.min(s.farmLevel, FARM_LEVELS.length);
+      const slots = FARM_LEVELS[s.farmLevel - 1].plots;
+      s.plots.push(...Array<null>(slots - s.plots.length).fill(null));
+    }
     // Story eggs moved to worlds players reach early (wind → fire, ice → nature); claimed ones stay claimed.
     const STORY_RENAMED: Record<string, string> = {
       raptor_wind: 'raptor_fire',
@@ -1116,7 +1147,7 @@ export function parseSave(text: string): Save {
     typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= max;
   const integer = (n: unknown, max = 1e9): n is number => finite(n, max) && Number.isInteger(n);
   const element = (id: unknown): id is RealmId => ELEMENTS.some((e) => e.id === id);
-  const species = (id: unknown): id is Species => SPECIES.includes(id as Species);
+  const species = (id: unknown): id is Species => (id === 'boss' || SPECIES.includes(id as (typeof SPECIES)[number]));
   if (
     !s ||
     s.schemaVersion !== 5 ||
@@ -1172,6 +1203,9 @@ export function parseSave(text: string): Save {
     !integer(s.eggLuck, EGG_DROP.pity) ||
     !Array.isArray(s.owedEggs) ||
     s.owedEggs.length > MAX_OWED_EGGS ||
+    !Array.isArray(s.bossEggsClaimed) ||
+    new Set(s.bossEggsClaimed).size !== s.bossEggsClaimed.length ||
+    s.bossEggsClaimed.some(e => !element(e)) ||
     s.owedEggs.some((e) => !e || !species(e.species) || !element(e.element))
   )
     throw Error('Invalid habitats');
@@ -1187,6 +1221,7 @@ export function parseSave(text: string): Save {
       !integer(d.level, 50) ||
       d.level < 1 ||
       !['baby', 'juvenile', 'adult'].includes(d.stage) ||
+      (d.species === 'boss' && d.stage !== 'adult') ||
       typeof d.nickname !== 'string' ||
       d.nickname.length > 40 ||
       (d.stage === 'baby' ? d.level > 9 : d.stage === 'juvenile' ? d.level < 10 || d.level > 24 : d.level < 25)

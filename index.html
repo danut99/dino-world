@@ -85,7 +85,7 @@
       // Ecranul de încărcare doar când fișierele nu sunt în cache: prima vizită sau o versiune nouă (scriptul
       // principal își schimbă numele la fiecare build). WorldLoader ține minte versiunea după o încărcare completă.
       try {
-        if (localStorage.getItem('dino-world-language') === 'ro') {
+        if (localStorage.getItem('dino-realms-language') !== 'en') {
           document.documentElement.lang = 'ro';
           document.querySelector('#boot-loader p').textContent = 'Se încarcă lumea…';
         }

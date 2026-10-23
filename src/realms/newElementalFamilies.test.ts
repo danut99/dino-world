@@ -1,0 +1,24 @@
+import { expect, it } from 'vitest';
+import { command, newSave, parseSave, type Species, type RealmId } from './game';
+import { isPlayableDinosaur, playableSpecies } from './playableDinosaurs';
+
+it('offers both new families at the market and preserves them through save loading', () => {
+  const now = 1_800_000_000_000;
+  for (const [species, element] of [['ignasaur', 'fire'], ['thalassaur', 'water']] as [Species, RealmId][]) {
+    expect(isPlayableDinosaur(species, element)).toBe(true);
+    expect(playableSpecies(element)).toContain(species);
+    const save = newSave(now);
+    save.gold = 100_000;
+    save.buildings.push({ id: 'market', kind: 'market', x: 6, y: 1 });
+    save.habitats.water = 1;
+    const bought = command(save, { type: 'buyEgg', species, element }, now);
+    expect(bought.eggs.at(-1)).toMatchObject({ species, element });
+    bought.dinos.push({ id: `new-${species}`, species, element, level: 25, stage: 'adult', nickname: species });
+    bought.champion = `new-${species}`;
+    const loaded = parseSave(JSON.stringify(bought));
+    expect(loaded.eggs.at(-1)).toMatchObject({ species, element });
+    expect(loaded.dinos.find(d => d.id === `new-${species}`)).toMatchObject({ species, element, stage: 'adult' });
+  }
+  expect(isPlayableDinosaur('ignasaur', 'water')).toBe(false);
+  expect(isPlayableDinosaur('thalassaur', 'fire')).toBe(false);
+});

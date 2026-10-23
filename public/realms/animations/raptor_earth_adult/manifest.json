@@ -44,11 +44,21 @@
         "loop": false
       },
       "defend": {
-        "sheet": "/realms/animations/raptor_earth_adult/defend-se.png",
+        "sheet": "/realms/animations/raptor_earth_adult/defend-earth-enhanced-se.png",
         "frameWidth": 256,
         "frameHeight": 256,
-        "columns": 6,
+        "columns": 8,
         "durationsMs": [
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
+          100,
           100,
           100,
           100,
@@ -59,7 +69,7 @@
         "loop": false
       },
       "attack": {
-        "sheet": "/realms/animations/raptor_earth_adult/attack-se.png",
+        "sheet": "/realms/animations/raptor_earth_adult/attack-earth-enhanced-se.png",
         "frameWidth": 256,
         "frameHeight": 256,
         "columns": 8,
@@ -71,10 +81,18 @@
           83,
           83,
           83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
+          83,
           83
         ],
         "loop": false,
-        "impactFrame": 4
+        "impactFrame": 8
       },
       "idle": {
         "sheet": "/realms/animations/raptor_earth_adult/idle-se.png",
@@ -115,7 +133,7 @@
         "loop": true
       },
       "ultimate": {
-        "sheet": "/realms/animations/raptor_earth_adult/ultimate-se.png",
+        "sheet": "/realms/animations/raptor_earth_adult/ultimate-earth-enhanced-se.png",
         "frameWidth": 256,
         "frameHeight": 256,
         "columns": 8,
@@ -139,10 +157,14 @@
           83,
           83,
           83,
+          83,
+          83,
+          83,
+          83,
           83
         ],
         "loop": false,
-        "impactFrame": 10
+        "impactFrame": 12
       }
     }
   }

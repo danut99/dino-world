@@ -78,10 +78,8 @@ export const FARM_LEVELS: {
   materials: Partial<Record<ItemId, number>>;
 }[] = [
   { plots: 1, yield: 1, gold: 0, materials: {} },
-  { plots: 2, yield: 1.2, gold: 250, materials: {} },
-  { plots: 3, yield: 1.4, gold: 600, materials: { planks: 4 } },
-  { plots: 4, yield: 1.7, gold: 1200, materials: { planks: 6, blocks: 6 } },
-  { plots: 5, yield: 2, gold: 2500, materials: { planks: 10, blocks: 10, crystal: 10 } },
+  { plots: 3, yield: 1.4, gold: 250, materials: {} },
+  { plots: 5, yield: 2, gold: 600, materials: { planks: 4 } },
 ];
 /** Crops: more food costs more gold and takes longer. Better crops unlock at higher farm levels. */
 export const CROPS = [
@@ -96,7 +94,7 @@ export const CROPS = [
     cost: 350,
     seconds: 3 * 3600,
     food: 1500,
-    level: 4,
+    level: 3,
   },
   {
     id: 'feast',
@@ -105,7 +103,7 @@ export const CROPS = [
     cost: 800,
     seconds: 8 * 3600,
     food: 3200,
-    level: 5,
+    level: 3,
   },
 ] as const;
 export type CropId = (typeof CROPS)[number]['id'];

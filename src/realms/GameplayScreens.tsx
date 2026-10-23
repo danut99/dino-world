@@ -1,3 +1,4 @@
+import { ARENA_BOSSES } from './arenaBosses';
 import { PLAYABLE_DINOSAURS, isPlayableDinosaur } from './playableDinosaurs';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ENCOUNTERS, ITEMS, RECIPES, type Encounter, type ItemId } from './content';
@@ -499,7 +500,7 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
                 disabled: save.lanterns >= 4,
               },
             ].map((item) => (
-              <div key={item.id}>
+              <div className="craft-item-card" key={item.id}>
                 <span>{ITEMS[item.id].icon}</span>
                 <strong>
                   {ITEMS[item.id].name[lang]} · {save.inventory[item.id]}
@@ -934,7 +935,7 @@ export function BattleScreen({ save, lang, run, close }: Pick<Props, 'save' | 'l
               {battle.reward.egg && (
                 <div className="result-egg">
                   <strong>
-                    <Icon name="egg" scale={1} /> {tr('Ou găsit!', 'Egg found!')} {SPECIES_NAMES[battle.reward.egg.species]} ·{' '}
+                    <Icon name="egg" scale={1} /> {tr('Ou găsit!', 'Egg found!')} {(battle.reward.egg.species === 'boss' ? `BOSS ${ARENA_BOSSES[battle.reward.egg.element].name}` : SPECIES_NAMES[battle.reward.egg.species])} ·{' '}
                     {ELEMENTS.find((e) => e.id === battle.reward.egg!.element)!.name[lang]}
                   </strong>
                   {save.eggs.length >= BALANCE.maxEggs && (

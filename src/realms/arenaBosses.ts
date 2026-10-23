@@ -7,14 +7,14 @@ export const ARENA_BOSSES: Record<RealmId, { name: string; species: Species; art
   water: { name: 'Thalassion', species: 'trex', animated: true },
   earth: { name: 'Terragor', species: 'raptor', animated: true },
   nature: { name: 'Sylvaraa', species: 'triceratops', animated: true },
-  ice: { name: 'Glacier Colossus', species: 'ankylosaurus', art: '/realms/bosses/ice.webp' },
+  ice: { name: 'Criothar', species: 'ankylosaurus', animated: true },
   lightning: { name: 'Zevoltus', species: 'brachiosaurus', animated: true },
-  wind: { name: 'Sky Marshal', species: 'trex', art: '/realms/bosses/wind.webp' },
-  dark: { name: 'Eclipse Stalker', species: 'raptor', art: '/realms/bosses/dark.webp' },
-  light: { name: 'Dawn Hierarch', species: 'triceratops', art: '/realms/bosses/light.webp' },
-  arcane: { name: 'Sigil Overlord', species: 'ankylosaurus', art: '/realms/bosses/arcane.webp' },
+  wind: { name: 'Aerion', species: 'trex', animated: true },
+  dark: { name: 'Noxar', species: 'raptor', animated: true },
+  light: { name: 'Solarius', species: 'triceratops', animated: true },
+  arcane: { name: 'Arcanith', species: 'ankylosaurus', animated: true },
 };
 export function arenaBoss(encounter: Encounter) {
-  return ['fire', 'water', 'earth', 'nature', 'ice', 'lightning'].includes(encounter.league ?? '') && encounter.mode === 'arena' && encounter.id === `arena-${encounter.league}-3`
+  return Object.hasOwn(ARENA_BOSSES, encounter.league ?? '') && encounter.mode === 'arena' && encounter.id === `arena-${encounter.league}-3`
     ? ARENA_BOSSES[encounter.league as RealmId] : undefined;
 }

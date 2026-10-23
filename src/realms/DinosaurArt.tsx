@@ -1,3 +1,4 @@
+import { ARENA_BOSSES } from './arenaBosses';
 import { SPECIES_NAMES, type Species } from './dinosaurs';
 import type { RealmId, Stage } from './game';
 import { useEffect, useState } from 'react';
@@ -46,7 +47,8 @@ export function DinosaurArt({
         frame={frame}
         bounds={bounds}
         className={className}
-        label={`${element} ${SPECIES_NAMES[species]} ${stage}`}
+        label={species === 'boss' ? ARENA_BOSSES[element].name : `${element} ${SPECIES_NAMES[species]} ${stage}`}
+        bossElement={species === 'boss' ? element : undefined}
       />
     );
   return <span className={`dinosaur-art ${className}`} role="status" aria-label="Loading animation" />;

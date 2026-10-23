@@ -1,0 +1,119 @@
+/* Reset de bază și ecranul „Ceva n-a mers” (restul stilurilor vin din src/realms). */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: radial-gradient(ellipse at 50% 40%, #1d5f7a 0%, #123f52 55%, #0b2633 100%);
+  overflow: hidden;
+}
+
+#root {
+  overflow: auto;
+}
+.button {
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  background: linear-gradient(#ffcd5e, var(--accent));
+  color: var(--accent-ink);
+  cursor: pointer;
+  box-shadow: 0 3px 0 #a8761d;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+.button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #a8761d;
+}
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.button.small {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+}
+.button.ghost {
+  background: var(--panel-2);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.crash {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: radial-gradient(circle at 50% 35%, #21382f, #0d1712);
+  color: #f4ead2;
+}
+.crash-card {
+  display: grid;
+  justify-items: center;
+  gap: 0.9rem;
+  width: min(420px, 100%);
+  padding: 1.6rem 1.3rem;
+  border-radius: 24px;
+  border: 1px solid #f2c14e66;
+  background: #111b16;
+  box-shadow: 0 30px 80px #000c;
+  text-align: center;
+}
+.crash-icon {
+  font-size: 3rem;
+}
+.crash-card h1 {
+  font-size: 1.4rem;
+  color: #fff3d0;
+}
+.crash-card p {
+  margin: 0;
+  color: #c9c2a6;
+  line-height: 1.45;
+}
+.crash-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+.report {
+  display: grid;
+  gap: 0.45rem;
+  width: 100%;
+  text-align: left;
+}
+.report textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 10px;
+  border: 1px solid #ffffff33;
+  background: #0d1712;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+.report .button {
+  justify-self: start;
+}
+.report.compact .button {
+  justify-self: center;
+}
+.report-result {
+  color: #ffe08a;
+  font-size: 0.8rem;
+}

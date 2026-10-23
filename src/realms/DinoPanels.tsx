@@ -1,3 +1,4 @@
+import { ARENA_BOSSES } from './arenaBosses';
 import { playableSpecies } from './playableDinosaurs';
 import { useState } from 'react';
 import { Icon } from './ui/Icon';
@@ -43,10 +44,11 @@ const stageName = (s: Stage, lang: number) =>
 /** Un ou PixelLab pe tărâm (64 px), comun tuturor speciilor acelui element; eclozarea are animația lui. */
 export const eggSrc = (realm: RealmId) => `/realms/eggs/${realm}.png`;
 export const hatchSrc = (realm: RealmId) => `/realms/eggs/${realm}-hatch.png`;
-export function EggArt({ realm, size = 64, hatching = false }: { species?: Species; realm: RealmId; size?: number; hatching?: boolean }) {
+export function EggArt({ realm, species, size = 64, hatching = false }: { species?: Species; realm: RealmId; size?: number; hatching?: boolean }) {
   return (
     <span className={`realm-egg${hatching ? ' hatching' : ''}`} style={{ width: size, height: size, '--egg-size': `${size}px`, '--hatch-sheet': `url('${hatchSrc(realm)}')` } as React.CSSProperties}>
-      <img src={eggSrc(realm)} alt="" width={size} height={size} draggable={false} />
+      <img src={eggSrc(realm)} alt={species === 'boss' ? `BOSS ${ARENA_BOSSES[realm].name}` : ''} width={size} height={size} draggable={false} />
+      {species === 'boss' && <span aria-hidden="true" style={{ position: 'absolute', right: 0, top: 0, color: '#ffe098', fontSize: Math.max(12, size / 4), textShadow: '1px 1px #241832' }}>?</span>}
     </span>
   );
 }
@@ -166,7 +168,7 @@ export function HatcheryPanel({
               <span className="realm-nest-bed" />
               <EggArt species={egg.species} realm={egg.element} size={128} hatching={hatchingId === egg.id} />
               <strong>
-                {SPECIES_NAMES[egg.species]} · {element(egg.element).name[lang]}
+                {(egg.species === 'boss' ? `BOSS ${ARENA_BOSSES[egg.element].name}` : SPECIES_NAMES[egg.species])} · {element(egg.element).name[lang]}
               </strong>
               {ready ? (
                 <>
@@ -227,7 +229,7 @@ export function HatcheryPanel({
             <div key={egg.id} className="realm-egg-item">
               <EggArt species={egg.species} realm={egg.element} size={48} />
               <span>
-                <strong>{SPECIES_NAMES[egg.species]}</strong>
+                <strong>{(egg.species === 'boss' ? `BOSS ${ARENA_BOSSES[egg.element].name}` : SPECIES_NAMES[egg.species])}</strong>
                 <small>
                   {element(egg.element).symbol} {element(egg.element).name[lang]} · ⏱ {duration(egg.seconds)}
                 </small>
@@ -240,7 +242,7 @@ export function HatcheryPanel({
                 >
                   {busy >= slots ? tr(lang, 'Cuiburi pline', 'Nests full') : tr(lang, 'Incubează', 'Incubate')}
                 </button>
-                {egg.id !== 'egg-ignis' && (
+                {egg.id !== 'egg-ignis' && egg.species !== 'boss' && (
                   <button
                     className={`realm-egg-sell${selling === egg.id ? ' confirm' : ''}`}
                     onClick={() => {
@@ -527,6 +529,9 @@ export function DinoPanel({
     inBattle = save.battle?.dinoId === d.id;
   return (
     <>
+      <button className="realm-button secondary realm-back-to-hatchery" onClick={openHatchery}>
+        ← {tr(lang, 'Înapoi la incubator', 'Back to hatchery')}
+      </button>
       <div className="realm-roster">
         {save.dinos.map((x) => (
           <button key={x.id} aria-pressed={x.id === d.id} onClick={() => select(x.id)}>

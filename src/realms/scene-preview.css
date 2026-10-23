@@ -1,0 +1,150 @@
+/* Pagina de previzualizare a scenelor (?mode=preview): lista modelelor în stânga, arena sau habitatul în dreapta. */
+.realms-app.scene-preview {
+  height: auto;
+  min-height: 100dvh;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  background: #2f2520;
+}
+.scene-preview-roster {
+  position: sticky;
+  top: 0;
+  max-height: 100dvh;
+  overflow-y: auto;
+  padding: 16px 14px;
+  border-right: 2px solid #c9b48e55;
+  background: #3a2e27;
+}
+.scene-preview-roster header h1 {
+  font-size: 20px;
+  margin: 4px 0;
+}
+.scene-preview-roster header .realm-note {
+  margin: 0 0 8px;
+}
+.scene-preview-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+.scene-preview-family {
+  margin-bottom: 14px;
+}
+.scene-preview-family h3 {
+  font-size: 12px;
+  margin: 0 0 6px;
+  letter-spacing: 0.02em;
+}
+.scene-preview-stages {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.realms-app .scene-preview-stage {
+  min-height: 0;
+  padding: 4px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: #2f2520;
+  border: 2px solid #c9b48e55;
+  color: #cdbfa8;
+  font-size: 10px;
+}
+.realms-app .scene-preview-stage:hover {
+  border-color: #e0a96a99;
+}
+.realms-app .scene-preview-stage.selected {
+  border-color: #e0a96a;
+  background: #4a3a30;
+  color: #fff1b8;
+}
+.scene-preview-stage .dinosaur-art {
+  width: 80px;
+  height: 80px;
+  max-width: 100%;
+  image-rendering: pixelated;
+}
+.scene-preview-roster footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #c9b48e33;
+  font-size: 12px;
+}
+.scene-preview-roster footer label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.scene-preview-main {
+  min-width: 0;
+  padding: 16px 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.scene-preview-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.scene-preview-head h2 {
+  margin: 2px 0 0;
+  font-size: 22px;
+}
+.scene-preview-tabs {
+  display: flex;
+  gap: 8px;
+}
+/* The battle screen normally covers the viewport; here it sits in the page flow at a fixed height. */
+.scene-preview .gameplay-screen.scene-arena {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  height: auto;
+  border: 2px solid #c9b48e55;
+}
+.scene-preview .scene-arena .battle-environment {
+  flex: none;
+  height: clamp(380px, 62vh, 640px);
+}
+/* The world canvas normally covers the viewport; here it covers this box instead, keeping its 3:2 scene. */
+.scene-habitat {
+  position: relative;
+  container-type: size;
+  height: clamp(360px, 62vh, 640px);
+  overflow: hidden;
+  border: 2px solid #c9b48e55;
+  background: #10223d;
+}
+.scene-habitat .realm-world canvas {
+  width: max(100cqw, 150cqh);
+  height: max(66.6667cqw, 100cqh);
+}
+@media (max-width: 900px) {
+  .realms-app.scene-preview {
+    grid-template-columns: 1fr;
+  }
+  .scene-preview-roster {
+    position: static;
+    max-height: 42dvh;
+    border-right: 0;
+    border-bottom: 2px solid #c9b48e55;
+  }
+  .scene-preview-stages {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .scene-preview-main {
+    padding: 12px 12px 24px;
+  }
+}

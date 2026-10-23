@@ -1,0 +1,53 @@
+{
+  "status": "correction-requests-submitted",
+  "styleReference": "gallery:c9bc38c2-3f81-52cd-b05a-fb0c391edea3",
+  "reason": "User reports level 1 too small, cropped levels 1/3 and overly fine style across all levels.",
+  "validation": [
+    "Full alpha bounds with minimum 14px margins",
+    "Exactly 1/3/5 nests",
+    "Visibly chunky farm-matched pixel art",
+    "Level 1 occupies useful canvas area"
+  ],
+  "jobs": [
+    {
+      "level": 1,
+      "slots": 1,
+      "canvas": [
+        200,
+        200
+      ],
+      "displayPlan": "Nearest-neighbor 2x to 400px after review; never smooth scaling.",
+      "description": "Restyle this dinosaur hatchery to match the FARM reference's visibly chunky, hand-placed retro pixel art, NOT its farm subject. Keep hatchery orange roofs, sandstone, ivory tusks and attached stone dinosaur statue. Output genuine native 200x200 pixel art with sharp square pixels, bold stepped silhouettes, selective dark-brown outlines, short 3-tone shading ramps, simplified readable masonry and foliage. No smooth painting, gradients, antialiasing or tiny ornate noise. One isolated coherent complete building on transparent background. EXACTLY 1 separate visible egg nests with one egg each. Enlarge the small level-one building to occupy about 160 pixels of canvas width; do not leave it as a tiny central icon. Low broad roof and baby dinosaur stone statue. Recompose to keep ALL foundation corners, steps, roof and statue tips inside x=14..186,y=14..186. At least 14 clear transparent pixels on EVERY side, including bottom. Whole diamond foundation fully drawn; nothing cropped or touching border. Preserve same isometric angle as farm. Static architecture and braziers, no baked smoke or glow clouds; eyes and crystal can animate later. No text, panels or extra buildings.",
+      "receipt": "id: 714cde7d-a8c7-4c4d-9641-730568b91308\njob_id: 714cde7d-a8c7-4c4d-9641-730568b91308\nmode: reference\nframes: 1\nsize: 200x200px\ntransparent: True\nedit: Restyle this dinosaur hatchery to match the FARM reference's visibly chunky, hand-placed retro pixel art, NOT its farm subject. Keep hatchery orange roofs, sandstone, ivory tusks and attached stone dinosaur statue. Output genuine native 200x200 pixel art with sharp square pixels, bold stepped silhouettes, selective dark-brown outlines, short 3-tone shading ramps, simplified readable masonry and foliage. No smooth painting, gradients, antialiasing or tiny ornate noise. One isolated coherent complete building on transparent background. EXACTLY 1 separate visible egg nests with one egg each. Enlarge the small level-one building to occupy about 160 pixels of canvas width; do not leave it as a tiny central icon. Low broad roof and baby dinosaur stone statue. Recompose to keep ALL foundation corners, steps, roof and statue tips inside x=14..186,y=14..186. At least 14 clear transparent pixels on EVERY side, including bottom. Whole diamond foundation fully drawn; nothing cropped or touching border. Preserve same isometric angle as farm. Static architecture and braziers, no baked smoke or glow clouds; eyes and crystal can animate later. No text, panels or extra buildings.\nasset_id: 8368ff6c-5e50-5d80-ac0d-6fac23d6a5b4\nasset_status: pending (saved when generation completes)\ncost: ~10 generations\nstatus: processing (~30-90s)\n\nhint: get_image(job_id=\"714cde7d-a8c7-4c4d-9641-730568b91308\")",
+      "jobId": "714cde7d-a8c7-4c4d-9641-730568b91308",
+      "status": "submitted"
+    },
+    {
+      "level": 2,
+      "slots": 3,
+      "canvas": [
+        200,
+        200
+      ],
+      "displayPlan": "Nearest-neighbor 2x to 400px after review; never smooth scaling.",
+      "description": "Restyle this dinosaur hatchery to match the FARM reference's visibly chunky, hand-placed retro pixel art, NOT its farm subject. Keep hatchery orange roofs, sandstone, ivory tusks and attached stone dinosaur statue. Output genuine native 200x200 pixel art with sharp square pixels, bold stepped silhouettes, selective dark-brown outlines, short 3-tone shading ramps, simplified readable masonry and foliage. No smooth painting, gradients, antialiasing or tiny ornate noise. One isolated coherent complete building on transparent background. EXACTLY 3 separate visible egg nests with one egg each. Expanded two-wing temple, horned dinosaur stone guardian, about 168 pixels wide. Recompose to keep ALL foundation corners, steps, roof and statue tips inside x=14..186,y=14..186. At least 14 clear transparent pixels on EVERY side, including bottom. Whole diamond foundation fully drawn; nothing cropped or touching border. Preserve same isometric angle as farm. Static architecture and braziers, no baked smoke or glow clouds; eyes and crystal can animate later. No text, panels or extra buildings.",
+      "receipt": "id: d4366b1c-f3b2-4505-accb-eca5aea9284a\njob_id: d4366b1c-f3b2-4505-accb-eca5aea9284a\nmode: reference\nframes: 1\nsize: 200x200px\ntransparent: True\nedit: Restyle this dinosaur hatchery to match the FARM reference's visibly chunky, hand-placed retro pixel art, NOT its farm subject. Keep hatchery orange roofs, sandstone, ivory tusks and attached stone dinosaur statue. Output genuine native 200x200 pixel art with sharp square pixels, bold stepped silhouettes, selective dark-brown outlines, short 3-tone shading ramps, simplified readable masonry and foliage. No smooth painting, gradients, antialiasing or tiny ornate noise. One isolated coherent complete building on transparent background. EXACTLY 3 separate visible egg nests with one egg each. Expanded two-wing temple, horned dinosaur stone guardian, about 168 pixels wide. Recompose to keep ALL foundation corners, steps, roof and statue tips inside x=14..186,y=14..186. At least 14 clear transparent pixels on EVERY side, including bottom. Whole diamond foundation fully drawn; nothing cropped or touching border. Preserve same isometric angle as farm. Static architecture and braziers, no baked smoke or glow clouds; eyes and crystal can animate later. No text, panels or extra buildings.\nasset_id: 284997a4-5c9a-5968-8c31-9debd7a075bb\nasset_status: pending (saved when generation completes)\ncost: ~10 generations\nstatus: processing (~30-90s)\n\nhint: get_image(job_id=\"d4366b1c-f3b2-4505-accb-eca5aea9284a\")",
+      "jobId": "d4366b1c-f3b2-4505-accb-eca5aea9284a",
+      "status": "submitted"
+    },
+    {
+      "level": 3,
+      "slots": 5,
+      "canvas": [
+        200,
+        200
+      ],
+      "displayPlan": "Nearest-neighbor 2x to 400px after review; never smooth scaling.",
+      "description": "Restyle this dinosaur hatchery to match the FARM reference's visibly chunky, hand-placed retro pixel art, NOT its farm subject. Keep hatchery orange roofs, sandstone, ivory tusks and attached stone dinosaur statue. Output genuine native 200x200 pixel art with sharp square pixels, bold stepped silhouettes, selective dark-brown outlines, short 3-tone shading ramps, simplified readable masonry and foliage. No smooth painting, gradients, antialiasing or tiny ornate noise. One isolated coherent complete building on transparent background. EXACTLY 5 separate visible egg nests with one egg each. Grand three-wing temple, longneck dinosaur STONE statue holding turquoise crystal, five nests arranged three plus two; simplify statue height to keep whole structure comfortably inside canvas, about 172 pixels wide. Recompose to keep ALL foundation corners, steps, roof and statue tips inside x=14..186,y=14..186. At least 14 clear transparent pixels on EVERY side, including bottom. Whole diamond foundation fully drawn; nothing cropped or touching border. Preserve same isometric angle as farm. Static architecture and braziers, no baked smoke or glow clouds; eyes and crystal can animate later. No text, panels or extra buildings.",
+      "receipt": "id: a90b78c6-7466-4de2-9596-067907d6cf96\njob_id: a90b78c6-7466-4de2-9596-067907d6cf96\nmode: reference\nframes: 1\nsize: 200x200px\ntransparent: True\nedit: Restyle this dinosaur hatchery to match the FARM reference's visibly chunky, hand-placed retro pixel art, NOT its farm subject. Keep hatchery orange roofs, sandstone, ivory tusks and attached stone dinosaur statue. Output genuine native 200x200 pixel art with sharp square pixels, bold stepped silhouettes, selective dark-brown outlines, short 3-tone shading ramps, simplified readable masonry and foliage. No smooth painting, gradients, antialiasing or tiny ornate noise. One isolated coherent complete building on transparent background. EXACTLY 5 separate visible egg nests with one egg each. Grand three-wing temple, longneck dinosaur STONE statue holding turquoise crystal, five nests arranged three plus two; simplify statue height to keep whole structure comfortably inside canvas, about 172 pixels wide. Recompose to keep ALL foundation corners, steps, roof and statue tips inside x=14..186,y=14..186. At least 14 clear transparent pixels on EVERY side, including bottom. Whole diamond foundation fully drawn; nothing cropped or touching border. Preserve same isometric angle as farm. Static architecture and braziers, no baked smoke or glow clouds; eyes and crystal can animate later. No text, panels or extra buildings.\nasset_id: afe5b659-c4de-53c7-8704-8cef57f0c32a\nasset_status: pending (saved when generation completes)\ncost: ~10 generations\nstatus: processing (~30-90s)\n\nhint: get_image(job_id=\"a90b78c6-7466-4de2-9596-067907d6cf96\")",
+      "jobId": "a90b78c6-7466-4de2-9596-067907d6cf96",
+      "status": "submitted"
+    }
+  ],
+  "note": "Review completed outputs on user request; no background polling. Existing game art unchanged pending review."
+}

@@ -1,3 +1,4 @@
+import { ARENA_BOSSES } from './arenaBosses';
 import { useState } from 'react';
 import { ELEMENTS, type Dino, type RealmId, type Stage } from './game';
 import { DINOSAURS, STAGES } from './dinosaurs';
@@ -29,6 +30,14 @@ export function DinosaurCollection({ lang, dinos, openOwned, openMarket, initial
             : <button className="realm-link" onClick={openMarket}>{tr('NEDESCOPERIT · Piață →', 'UNDISCOVERED · Market →')}</button>}
         </article>;
       })}
+      {dinos.filter(d => d.species === 'boss' && d.element === element).map(d => (
+        <article className="realm-collection-card owned" key={d.id} data-dinosaur={`boss_${element}`}>
+          <DinosaurArt species="boss" element={element} stage="adult" />
+          <h3>BOSS {ARENA_BOSSES[element].name}</h3>
+          <p>{tr('Recompens? din lupta cu bossul ? Adult', 'Boss battle reward ? Adult')}</p>
+          <button className="realm-button secondary" onClick={() => openOwned(d.id)}>{d.nickname}</button>
+        </article>
+      ))}
     </div>
   </div>;
 }

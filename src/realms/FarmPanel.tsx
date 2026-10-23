@@ -70,7 +70,7 @@ export function FarmPanel({
       </div>
 
       <div className="realm-farm-plots">
-        {FARM_LEVELS.map((_, i) => {
+        {Array.from({ length: FARM_LEVELS.at(-1)!.plots }, (_, i) => {
           if (i >= save.plots.length) {
             const unlock = FARM_LEVELS.findIndex((l) => l.plots > i) + 1;
             return (

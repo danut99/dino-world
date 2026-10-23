@@ -11,14 +11,14 @@ import { BuildingSprite } from './BuildingSprite';
 import { GameplayScreen, BattleScreen, type GameplayView } from './GameplayScreens';
 import { ITEMS, UTILITY_BUILDINGS, RECIPES, type ItemId, type UtilityKind } from './content';
 import { FarmPanel } from './FarmPanel';
-import { BUILDABLE_CELLS } from './grid';
 import { DevPanel, DinoPanel, EggArt, HabitatsPanel, HatcheryPanel, MarketPanel } from './DinoPanels';
 import {
   advance,
   champion,
   command,
   ELEMENTS,
-  farmNextAt,
+  HABITAT_LEVELS,
+  habitatCapacity,
   farmReadyFood,
   incubating,
   storyChapter,
@@ -31,7 +31,6 @@ import {
   WORLD_UNLOCK,
   type Command,
   type Save,
-  type Stage,
   type RealmId,
 } from './game';
 import './realms.css';
@@ -55,8 +54,6 @@ type Panel =
   | 'wiki'
   | null;
 const text = (lang: number, ro: string, en: string) => (lang ? en : ro);
-const stageName = (s: Stage, lang: number) =>
-  ({ baby: ['Copil', 'Baby'], juvenile: ['Juvenil', 'Juvenile'], adult: ['Adult', 'Adult'] })[s][lang];
 function load(): Save {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -358,10 +355,7 @@ export default function RealmsApp() {
   const d = champion(save),
     live = advance(save, now),
     hatching = incubating(save),
-    ready = hatching.some((e) => now >= e.hatchAt!),
-    nextHatch = hatching.reduce<number | null>((at, e) => (at === null || e.hatchAt! < at ? e.hatchAt : at), null),
     storyEggs = hatcheryStoryEggs(save);
-  const remaining = (at: number | null) => `${Math.max(0, Math.ceil(((at ?? now) - now) / 1000))}s`;
   const quest =
     !save.dinos.length && !hatching.length
       ? 0
@@ -724,60 +718,6 @@ export default function RealmsApp() {
           </div>
         )}
       </aside>
-      <div className="realm-island-badge">
-        <i />
-        {realm === 'home'
-          ? tr('REFUGIU NEUTRU', 'NEUTRAL HAVEN')
-          : `${activeElement?.name[lang]} · ${tr('LUME SEPARATĂ', 'SEPARATE WORLD')}`}
-        <span>
-          {realm === 'home'
-            ? `${BUILDABLE_CELLS.length} ${tr('celule', 'tiles')}`
-            : `🦖 ${save.dinos.filter((x) => x.element === realm).length} · ${tr('Nv.', 'Lv.')} ${save.habitats[realm] ?? 0}`}
-        </span>
-      </div>
-      {!placing && (
-        <div className="realm-building-shortcuts">
-          {realm === 'home' ? (
-            <>
-              <button onClick={() => setPanel('hatchery')}>
-                ◈ {tr('Incubator', 'Hatchery')}
-                {ready || storyEggs.length > 0 ? <b>!</b> : nextHatch !== null && <b>{remaining(nextHatch)}</b>}
-              </button>
-              <button onClick={() => visitRealm('fire')}>♨ {tr('Lumea de foc', 'Fire world')} →</button>
-              {save.buildings.some((b) => b.kind === 'farm') && (
-                <button onClick={() => setPanel('farm')}>
-                  ❧ {tr('Fermă', 'Farm')}
-                  {farmReadyFood(save, now) > 0 ? (
-                    <b>!</b>
-                  ) : (
-                    farmNextAt(save) !== null && <b>{remaining(farmNextAt(save))}</b>
-                  )}
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <button onClick={() => setPanel('realms')}>⌘ {tr('Schimbă lumea', 'Switch world')} →</button>
-              {save.habitats[realm] ? (
-                <>
-                  <button onClick={() => setPanel('habitat')}>
-                    ● {tr('Producție', 'Production')} <b>{Math.floor(live.storedGold)} ●</b>
-                  </button>
-                  {save.dinos
-                    .filter((x) => x.element === realm)
-                    .map((x) => (
-                      <button key={x.id} onClick={() => openBuilding(`dino:${x.id}`)}>
-                        {x.nickname} · {stageName(x.stage, lang)} →
-                      </button>
-                    ))}
-                </>
-              ) : (
-                <button onClick={() => setPanel('habitat')}>⌂ {tr('Construiește habitat', 'Build a habitat')} →</button>
-              )}
-            </>
-          )}
-        </div>
-      )}
       {placing ? (
         <div className="realm-placement">
           <div>
@@ -1017,15 +957,20 @@ export default function RealmsApp() {
               <div className="realm-realms-grid">
                 {ELEMENTS.map((el) => {
                   const open = !!save.habitats[el.id],
+                    level = save.habitats[el.id] ?? 0,
+                    next = open ? HABITAT_LEVELS[level] : undefined,
                     cost = WORLD_UNLOCK[el.id],
                     affordable =
                       save.gold >= cost.gold &&
                       Object.entries(cost.materials).every(([id, n]) => save.inventory[id as ItemId] >= n!);
                   return (
-                    <button
+                    <article
                       key={el.id}
                       className={`realm-realm-card ${realm === el.id ? 'active' : ''} ${open ? '' : 'locked'}`}
                       style={{ '--realm-color': el.color } as React.CSSProperties}
+                    >
+                    <button
+                      className="realm-world-entry"
                       onClick={() =>
                         open
                           ? visitRealm(el.id)
@@ -1046,7 +991,8 @@ export default function RealmsApp() {
                       <p>{REALM_NAMES[el.id][lang]}</p>
                       {open ? (
                         <small>
-                          🦖 {save.dinos.filter((x) => x.element === el.id).length} · {tr('INTRĂ', 'ENTER')} →
+                          {tr('Nivel', 'Level')} {level} · 🦖 {save.dinos.filter((x) => x.element === el.id).length}/{habitatCapacity(save, el.id)}
+                          <span className="realm-world-enter-label">{tr('Intră în tărâm', 'Enter world')} →</span>
                         </small>
                       ) : (
                         <small className="realm-world-cost">
@@ -1060,6 +1006,33 @@ export default function RealmsApp() {
                         </small>
                       )}
                     </button>
+                    {open && (
+                      <div className="realm-world-upgrade">
+                        {next ? (
+                          <>
+                            <strong>{tr('Nivel', 'Level')} {level + 1} · {next.capacity} {tr('locuri', 'spots')}</strong>
+                            {next.capacity === habitatCapacity(save, el.id) && (
+                              <small>{tr('Crește depozitul și venitul', 'More storage and income')}</small>
+                            )}
+                            <span>{next.gold.toLocaleString(lang ? 'en-US' : 'ro-RO')} {tr('aur', 'gold')} + 1 {tr('kit habitat', 'habitat kit')}</span>
+                            <button
+                              className="realm-button secondary"
+                              disabled={save.gold < next.gold || save.inventory.habitatKit < 1}
+                              onClick={() => run({ type: 'upgradeHabitat', realm: el.id })}
+                              aria-label={`${tr('Îmbunătățește', 'Upgrade')}: ${el.name[lang]}`}
+                            >
+                              {tr('Îmbunătățește', 'Upgrade')}
+                            </button>
+                            {save.inventory.habitatKit < 1 && (
+                              <button className="realm-link" onClick={() => setPanel('workshop')}>
+                                {tr('Fă un kit în Atelier', 'Make a kit in the Workshop')} →
+                              </button>
+                            )}
+                          </>
+                        ) : <strong>{tr('Nivel maxim', 'Max level')}</strong>}
+                      </div>
+                    )}
+                    </article>
                   );
                 })}
               </div>
@@ -1129,6 +1102,9 @@ export default function RealmsApp() {
               <button className="realm-link" onClick={() => setPanel('assets')}>
                 {tr('Status artă & referințe', 'Art & reference status')}
               </button>
+              <a className="realm-link" href="?mode=preview" target="_blank" rel="noreferrer">
+                {tr('Previzualizare animații în arenă și habitat', 'Preview animations in the arena and habitat')} ↗
+              </a>
               <p className="realm-note">
                 {tr(
                   'Prototip local fără audio. Animațiile finale și performanța mobilă nu sunt încă validate.',

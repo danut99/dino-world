@@ -3,7 +3,6 @@
 #   worlds/<lume>-wide-v1.webp      aceeași mărime, calitate 92 (jocul le mărește deja puțin, deci nu le micșorăm)
 #   worlds/<lume>-thumb.webp        480 px lățime, cardurile din lista de lumi și coperta expedițiilor
 #   home-island-wide-v1.webp         insula principală, aceeași mărime
-#   dinosaurs/<element>.webp         foile de dinozauri, aceeași mărime (decupajele din dinosaur-crop-data rămân valide)
 #   bosses/<element>.webp            768×768: pe ecran apar la cel mult ~600 px
 #   buildings/<clădire>-<n>.webp     768×768: clădirile se desenează la 220 px (×3 pe ecrane dense)
 #   gameplay/*.webp, building-concepts.webp   scene și foi de clădiri, aceeași mărime
@@ -16,7 +15,7 @@ from PIL import Image
 
 ART = os.path.join(os.path.dirname(__file__), '..', 'art', 'realms')
 REALMS = os.path.join(os.path.dirname(__file__), '..', 'public', 'realms')
-GROUPS = ['worlds', 'home', 'dinosaurs', 'bosses', 'buildings', 'gameplay']
+GROUPS = ['worlds', 'home', 'bosses', 'buildings', 'gameplay']
 parser = argparse.ArgumentParser(description='Build WebP variants of the Dino Realms runtime artwork.')
 parser.add_argument('--only', nargs='+', choices=GROUPS, help='Rebuild only these groups.')
 args = parser.parse_args()
@@ -52,12 +51,10 @@ if 'worlds' in groups:
         save(path, thumb, os.path.basename(path).replace('-wide-v1.png', '-thumb.webp'), 80)
 if 'home' in groups:
     same_size(os.path.join(ART, 'home-island-wide-v1.png'), 92)
-if 'dinosaurs' in groups:
-    for path in sorted(glob(os.path.join(ART, 'dinosaurs', '*.png'))):
-        same_size(path, 92)
 if 'bosses' in groups:
     for path in sorted(glob(os.path.join(ART, 'bosses', '*.png'))):
-        square(path, 768, 92)
+        if os.path.basename(path) not in ['fire.png', 'water.png', 'earth.png', 'nature.png']:
+            square(path, 768, 92)
 if 'buildings' in groups:
     for path in sorted(glob(os.path.join(ART, 'buildings', '*.png'))):
         square(path, 768, 90)

@@ -1,0 +1,19 @@
+{
+  "status": "corrections-submitted",
+  "mode": "skeleton-v3",
+  "direction": "south-east",
+  "animationName": "walk-grounded-corrected",
+  "jobs": [
+    {
+      "name": "Ignasaur",
+      "characterId": "26f0e434-49ca-4857-9c97-2a5171604c71",
+      "receipt": "character: 26f0e434-49ca-4857-9c97-2a5171604c71\nanimation: Seamless grounded adult raptor walk IN PLACE. Left and right feet alternate with clear planted stance, lifted swing and toe contact; knees and ankles articulate, body has small controlled vertical bob only, arms counter-swing and tail balances. Stay anchored, fixed size and silhouette, no skating, foot sliding, forward/back teleport, turning, hopping or floating. Preserve face, crest, scarf and leather accessories in every frame. No elemental attack or particles. Fixed South-East view, transparent background.\nmode: skeleton-v3\ndirections: south-east (1 jobs)\njob_ids: south-east=23a0d048-ae24-4fce-877a-38302d763593\ngroup: 85a44e06-903d-4d6c-ae36-d0d8bf9dd018\ncost: 3 generations (3/dir x 1)\neta: ~3-5 min/direction\nadd more directions to this group: animate_character(character_id=\"26f0e434-49ca-4857-9c97-2a5171604c71\", template_animation_id=\"walking\", animation_group_id=\"85a44e06-903d-4d6c-ae36-d0d8bf9dd018\", directions=[...])\n\nhint: get_character(character_id=\"26f0e434-49ca-4857-9c97-2a5171604c71\")"
+    },
+    {
+      "name": "Thalassaur",
+      "characterId": "c00f3da3-4cdd-4367-a2c1-51db168c11f0",
+      "receipt": "character: c00f3da3-4cdd-4367-a2c1-51db168c11f0\nanimation: Seamless grounded adult raptor walk IN PLACE. Left and right feet alternate with clear planted stance, lifted swing and toe contact; knees and ankles articulate, body has small controlled vertical bob only, arms counter-swing and tail balances. Stay anchored, fixed size and silhouette, no skating, foot sliding, forward/back teleport, turning, hopping or floating. Preserve face, crest, scarf and leather accessories in every frame. No elemental attack or particles. Fixed South-East view, transparent background.\nmode: skeleton-v3\ndirections: south-east (1 jobs)\njob_ids: south-east=4269861b-697d-4b5c-90af-c5f2814edf0b\ngroup: 9bb89a09-f652-471a-b47c-ba6763552cee\ncost: 3 generations (3/dir x 1)\neta: ~3-5 min/direction\nadd more directions to this group: animate_character(character_id=\"c00f3da3-4cdd-4367-a2c1-51db168c11f0\", template_animation_id=\"walking\", animation_group_id=\"9bb89a09-f652-471a-b47c-ba6763552cee\", directions=[...])\n\nhint: get_character(character_id=\"c00f3da3-4cdd-4367-a2c1-51db168c11f0\")"
+    }
+  ],
+  "note": "Use skeleton-guided walking to keep footfall mechanics and identity steadier. Existing runtime walk remains until completed corrections reviewed. No automatic polling."
+}

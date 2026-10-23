@@ -1,19 +1,19 @@
 import { drawPortal, PORTAL_ART, PORTAL_GROUND } from './animatedPortal';
 import { drawWorkshop, WORKSHOP_ART, WORKSHOP_GROUND } from './animatedWorkshop';
-import { drawFarm, FARM_ART, FARM_GROUND } from './animatedFarm';
-import { useEffect, useRef, useState } from 'react';
+import { drawFarm, farmGround, isAnimatedFarm } from './animatedFarm';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { advance, canPlace, ELEMENTS, farmNextAt, type Building, type Save, type RealmId } from './game';
-import { constrainPan, HOME_ART, SCENE } from './camera';
+import { constrainPan, constrainHomePan, SCENE } from './camera';
 import { buildingLevel, groundLine, LEVELED, measureGround, TIERED, tierArt } from './buildingTiers';
 import { worldArt } from './worldArt';
 import { ISLANDS, SKIES } from './islands';
 import HOME_ISLAND from './islands/home.json';
 import { UTILITY_BUILDINGS, type UtilityKind } from './content';
-import { SPECIES, SPECIES_NAMES } from './dinosaurs';
 import { BUILDABLE_CELLS, GRID, project, unproject } from './grid';
 import { drawSprite, frameAt, loadAnimation, loadSpriteImage, type SpriteManifest } from './animation';
 import { drawRealmAtmosphere } from './worldEffects';
 import { useReducedMotion } from './useMotion';
+import { Icon } from './ui/Icon';
 
 export { project, unproject };
 /**
@@ -47,9 +47,10 @@ const HOME_SRC = HOME_ISLAND.art,
   CONCEPTS_SRC = '/realms/building-concepts.webp';
 const utilitySrc = (kind: UtilityKind) =>
   kind === 'portal' ? PORTAL_ART : kind === 'market' ? '/realms/gameplay/market-building-pixel.webp' : '/realms/gameplay/utility-buildings-pixel.webp';
-/** Camera zoom range; the wheel moves in small steps, the buttons in bigger ones. Zooming out stops while the
+/** Camera zoom range; buttons move in ten percentage point steps. Zooming out stops while the
  *  artwork still fills the screen (see `minZoom`). */
 const MAX_ZOOM = 2.5;
+const BUTTON_ZOOM_STEP = 0.1;
 /** Insula principală e mare: pornește micșorată, cu tot platoul în cadru. */
 const HOME_ZOOM = 0.8;
 /** Drawn building size; 260 was the original. The lift keeps the base on the same 3×3 footprint. */
@@ -71,8 +72,8 @@ export function drawBuilding(
     drawWorkshop(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - WORKSHOP_GROUND * BUILDING_SIZE), BUILDING_SIZE);
     return;
   }
-  if (b.kind === 'farm' && texture && standalone && texture.src.endsWith(FARM_ART)) {
-    drawFarm(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - FARM_GROUND * BUILDING_SIZE), BUILDING_SIZE);
+  if (b.kind === 'farm' && texture && standalone && isAnimatedFarm(texture)) {
+    drawFarm(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - farmGround(texture) * BUILDING_SIZE), BUILDING_SIZE);
     return;
   }
 
@@ -452,6 +453,33 @@ export default function World({
     [cell, setCell] = useState<{ x: number; y: number } | null>(null);
   const [zoom, setZoom] = useState(realm === 'home' ? HOME_ZOOM : 1),
     [pan, setPan] = useState({ x: 0, y: 0 });
+  // Keep active dragging on the animation frame path, without a React render per pointer event.
+  const livePan = useRef(pan);
+  const committedPan = useRef(pan);
+  const cameraDirty = useRef(false);
+  const overlay = useRef<HTMLDivElement>(null);
+  const displayScale = useRef(1);
+  const drawNow = useRef<((time: number) => void) | null>(null);
+  const pendingPan = useRef<{ x: number; y: number } | null>(null);
+  const panFrame = useRef<number | null>(null);
+  const queuePan = (point: { x: number; y: number }) => {
+    livePan.current = point;
+    pendingPan.current = point;
+    cameraDirty.current = true;
+    if (reducedMotion && panFrame.current === null) {
+      panFrame.current = requestAnimationFrame(time => {
+        panFrame.current = null;
+        drawNow.current?.(time);
+      });
+    }
+  };
+  const commitPan = () => {
+    if (panFrame.current !== null) cancelAnimationFrame(panFrame.current);
+    panFrame.current = null;
+    if (pendingPan.current) setPan(pendingPan.current);
+    pendingPan.current = null;
+  };
+  useEffect(() => () => { if (panFrame.current !== null) cancelAnimationFrame(panFrame.current); }, []);
   const [viewport, setViewport] = useState({ width: SCENE.width, height: SCENE.height });
   // Canvas pixels per scene pixel, so the canvas matches the screen instead of being stretched by CSS.
   const [resolution, setResolution] = useState(1);
@@ -473,13 +501,19 @@ export default function World({
     }
   };
   // Elemental worlds are a whole island on a night sky that fills the scene; the camera keeps the scene in view.
-  const artSize = realm === 'home' ? HOME_ART : SCENE;
   const boundPan = (point: { x: number; y: number }, scale: number, view: { width: number; height: number }) =>
-    constrainPan(point, scale, view, artSize);
+    realm === 'home' ? constrainHomePan(point, scale, view) : constrainPan(point, scale, view);
   const cameraPan = boundPan(pan, zoom, viewport);
+  useLayoutEffect(() => {
+    livePan.current = cameraPan;
+    committedPan.current = cameraPan;
+    cameraDirty.current = true;
+    if (overlay.current) overlay.current.style.translate = '';
+  }, [cameraPan.x, cameraPan.y, zoom, realm]);
+
   // Zooming out stops while the artwork still covers the whole screen, so no empty margin ever shows.
   // Cerul de noapte se întinde dincolo de scenă, deci se poate micșora până se vede toată insula.
-  const minZoom = 0.7;
+  const minZoom = realm === 'home' ? 0.4 : 0.7;
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
   // Press and hold a building on the home island to pick it up and drag it to a new spot.
   const holdTimer = useRef<number | null>(null);
@@ -510,8 +544,9 @@ export default function World({
     if (!canvas || !host) return;
     const measure = () => {
       const rect = canvas.getBoundingClientRect();
+      displayScale.current = rect.width / SCENE.width;
       if (rect.width)
-        setResolution(Math.min(3, Math.max(1, Math.ceil((rect.width * (window.devicePixelRatio || 1)) / SCENE.width))));
+        setResolution(Math.min(2, Math.max(1, (rect.width * (window.devicePixelRatio || 1)) / SCENE.width)));
       if (rect.width && rect.height)
         setViewport({
           width: (host.clientWidth / rect.width) * SCENE.width,
@@ -639,15 +674,26 @@ export default function World({
     setHeld(null);
     cancelHold();
   }, [realm]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const canvas = ref.current,
       ctx = canvas?.getContext('2d');
     if (!ctx || !canvas) return;
     const owned = realm === 'home' ? [] : save.dinos.filter((x) => x.element === realm);
     let raf = 0, lastPaint = -Infinity;
     const paint = (time: number) => {
-    if (!document.hidden && (time - lastPaint >= 80 || reducedMotion || covered)) {
+    const cameraPan = livePan.current;
+    const dragging = !!drag.current?.moved;
+    if (!document.hidden && (cameraDirty.current || time - lastPaint >= (dragging || held || placing ? 0 : 80) || reducedMotion || covered)) {
+    cameraDirty.current = false;
     lastPaint = time;
+    const host = canvas.parentElement;
+    if (host) {
+      host.dataset.cameraX = String(cameraPan.x);
+      host.dataset.cameraY = String(cameraPan.y);
+    }
+    if (overlay.current) {
+      overlay.current.style.translate = `${(cameraPan.x - committedPan.current.x) * displayScale.current}px ${(cameraPan.y - committedPan.current.y) * displayScale.current}px`;
+    }
     ctx.setTransform(resolution, 0, 0, resolution, 0, 0);
     ctx.clearRect(0, 0, 1536, 1024);
     // A sky matching the artwork's border, under it in case rounding leaves a sliver at the edge.
@@ -669,7 +715,14 @@ export default function World({
       sky.addColorStop(0, skyTop);
       sky.addColorStop(1, skyBottom);
       ctx.fillStyle = sky;
-      ctx.fillRect(-480, -240, 2496, 1504);
+      if (realm === 'home') {
+        // Fill the entire visible canvas in world coordinates, even at the drag limits.
+        const left = 768 + (-768 - cameraPan.x) / zoom;
+        const top = 512 + (-512 - cameraPan.y) / zoom;
+        ctx.fillRect(left - 2, top - 2, 1536 / zoom + 4, 1024 / zoom + 4);
+      } else {
+        ctx.fillRect(-480, -240, 2496, 1504);
+      }
       // stele pixel, fixe, cu o licărire lentă
       for (let i = 0; i < 110; i++) {
         const twinkle = reducedMotion ? 1 : 0.55 + 0.45 * Math.sin(time / 700 + i * 1.7);
@@ -789,10 +842,11 @@ export default function World({
     }
     if (!reducedMotion && !covered) raf = requestAnimationFrame(paint);
     };
+    drawNow.current = paint;
     paint(performance.now());
     const resume = () => { if (!document.hidden) { cancelAnimationFrame(raf); lastPaint = -Infinity; paint(performance.now()); } };
     document.addEventListener('visibilitychange', resume);
-    return () => { cancelAnimationFrame(raf); document.removeEventListener('visibilitychange', resume); };
+    return () => { cancelAnimationFrame(raf); if (drawNow.current === paint) drawNow.current = null; document.removeEventListener('visibilitychange', resume); };
   }, [
     save.buildings,
     save.dinos,
@@ -802,6 +856,7 @@ export default function World({
     placing,
     moving,
     held,
+    panning,
     resolution,
     placementKind,
     cell,
@@ -813,6 +868,7 @@ export default function World({
     covered,
   ]);
   const here = realm === 'home' ? [] : save.dinos.filter((x) => x.element === realm);
+  const availableGold = Math.floor(advance(save, now).storedGold);
   // Two-finger pinch on phones: the scene point between the fingers stays under them while zooming and moving.
   const fingers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<{ distance: number; zoom: number; wx: number; wy: number } | null>(null);
@@ -839,8 +895,8 @@ export default function World({
   const coords = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     return {
-      x: (((e.clientX - r.left) / r.width) * 1536 - 768 - cameraPan.x) / zoom + 768,
-      y: (((e.clientY - r.top) / r.height) * 1024 - 512 - cameraPan.y) / zoom + 512,
+      x: (((e.clientX - r.left) / r.width) * 1536 - 768 - livePan.current.x) / zoom + 768,
+      y: (((e.clientY - r.top) / r.height) * 1024 - 512 - livePan.current.y) / zoom + 512,
     };
   };
   return (
@@ -864,8 +920,8 @@ export default function World({
       )}
       <canvas
         ref={ref}
-        width={1536 * resolution}
-        height={1024 * resolution}
+        width={Math.round(1536 * resolution)}
+        height={Math.round(1024 * resolution)}
         aria-label={
           realm === 'home'
             ? lang
@@ -902,9 +958,9 @@ export default function World({
             return;
           }
           if (pinched.current) return;
-          drag.current = { x: e.clientX, y: e.clientY, px: cameraPan.x, py: cameraPan.y, moved: false };
+          drag.current = { x: e.clientX, y: e.clientY, px: livePan.current.x, py: livePan.current.y, moved: false };
           const p = coords(e);
-          setCell(unproject(p.x, p.y));
+          if (placing) setCell(unproject(p.x, p.y));
           cancelHold();
           const b = !placing && realm === 'home' && onMove ? buildingAt(p) : undefined;
           if (b) {
@@ -963,7 +1019,13 @@ export default function World({
             }
             if (d.moved) {
               const r = e.currentTarget.getBoundingClientRect();
-              setPan(boundPan({ x: d.px + (dx * 1536) / r.width, y: d.py + (dy * 1024) / r.height }, zoom, viewport));
+              const next = boundPan({ x: d.px + (dx * 1536) / r.width, y: d.py + (dy * 1024) / r.height }, zoom, viewport);
+              // Re-anchor even at a limit: reversing must not replay overshoot before the island moves.
+              d.x = e.clientX;
+              d.y = e.clientY;
+              d.px = next.x;
+              d.py = next.y;
+              queuePan(next);
             }
           }
         }}
@@ -975,6 +1037,7 @@ export default function World({
             return;
           }
           const d = drag.current;
+          commitPan();
           drag.current = null;
           setPanning(false);
           cancelHold();
@@ -1001,6 +1064,7 @@ export default function World({
         }}
         onPointerLeave={() => setHovering(false)}
         onPointerCancel={(e) => {
+          commitPan();
           fingers.current.delete(e.pointerId);
           if (fingers.current.size < 2) pinch.current = null;
           if (fingers.current.size === 0) pinched.current = false;
@@ -1011,18 +1075,8 @@ export default function World({
           setCell(null);
         }}
       />
-      {realm !== 'home' && (
-        <button className="world-resident-book" onClick={() => onSelect('collection')}>
-          {here.length
-            ? `🦖 ${here.length} · ${lang ? 'Your dinosaurs here' : 'Dinozaurii tăi de aici'}`
-            : lang
-              ? 'No dinosaurs here yet · Market →'
-              : 'Niciun dinozaur aici încă · Piață →'}
-          <span className="sr-only">{SPECIES.map((s) => SPECIES_NAMES[s]).join(', ')}</span>
-        </button>
-      )}
       {!showGhost && (
-        <div className="realm-object-overlay">
+        <div ref={overlay} className="realm-object-overlay">
           {realm === 'home' ? (
             save.buildings.map((b) => {
               const p = project(b.x + 1.5, b.y + 1.5),
@@ -1068,7 +1122,8 @@ export default function World({
             })
           ) : save.habitats[realm] ? (
             <button
-              className="production-bubble ready"
+              className="production-bubble habitat-gold"
+              aria-label={lang ? `Collect ${availableGold} gold` : `Colectează ${availableGold} aur`}
               style={{
                 // Top-right of the platform, clear of the dinosaurs' spots.
                 left: `${((768 + (1180 - 768) * zoom + cameraPan.x) / 1536) * 100}%`,
@@ -1076,7 +1131,8 @@ export default function World({
               }}
               onClick={() => onSelect('income')}
             >
-              ● {Math.floor(advance(save, now).storedGold)}
+              <Icon name="gold" scale={1} />
+              <strong>{availableGold.toLocaleString(lang ? 'en-US' : 'ro-RO')}</strong>
             </button>
           ) : null}
         </div>
@@ -1126,10 +1182,10 @@ export default function World({
             </button>
           </div>
         )}
-        <button onClick={() => zoomAt(zoom + 0.5)} disabled={zoom >= MAX_ZOOM} aria-label="Zoom in">
+        <button onClick={() => zoomAt(Math.round((zoom + BUTTON_ZOOM_STEP) * 1000) / 1000)} disabled={zoom >= MAX_ZOOM} aria-label="Zoom in">
           +
         </button>
-        <button onClick={() => zoomAt(zoom - 0.5)} disabled={zoom <= minZoom + 0.001} aria-label="Zoom out">
+        <button onClick={() => zoomAt(Math.round((zoom - BUTTON_ZOOM_STEP) * 1000) / 1000)} disabled={zoom <= minZoom + 0.001} aria-label="Zoom out">
           −
         </button>
         <button

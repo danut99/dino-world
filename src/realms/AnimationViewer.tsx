@@ -169,6 +169,9 @@ export function AnimationViewer({ lang }: { lang: number }) {
         <a href="/realms/references/01_character_evolutions.png" target="_blank" rel="noreferrer">
           {tr('Planșa evoluțiilor', 'Evolution reference')} ↗
         </a>
+        <a href={`?mode=preview&dino=${species}_${element}_${stage}`} target="_blank" rel="noreferrer">
+          {tr('Vezi în arenă și habitat', 'See in the arena and habitat')} ↗
+        </a>
       </div>
     </>
   );

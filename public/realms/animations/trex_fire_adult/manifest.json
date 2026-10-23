@@ -52,7 +52,7 @@
         "loop": true
       },
       "attack": {
-        "sheet": "/realms/animations/trex_fire_adult/attack-se.png",
+        "sheet": "/realms/animations/trex_fire_adult/attack-fire-enhanced-se.png",
         "frameWidth": 256,
         "frameHeight": 256,
         "columns": 8,
@@ -78,7 +78,7 @@
         "impactFrame": 8
       },
       "defend": {
-        "sheet": "/realms/animations/trex_fire_adult/defend-se.png",
+        "sheet": "/realms/animations/trex_fire_adult/defend-fire-enhanced-se.png",
         "frameWidth": 256,
         "frameHeight": 256,
         "columns": 8,
@@ -133,7 +133,7 @@
         "loop": false
       },
       "ultimate": {
-        "sheet": "/realms/animations/trex_fire_adult/ultimate-se.png",
+        "sheet": "/realms/animations/trex_fire_adult/ultimate-fire-enhanced-se.png",
         "frameWidth": 256,
         "frameHeight": 256,
         "columns": 8,

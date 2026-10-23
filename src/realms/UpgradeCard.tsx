@@ -29,7 +29,7 @@ export function UpgradeCard({
     <div className="realm-farm-upgrade realm-upgrade-card">
       {level < max ? (
         <>
-          <div>
+          <div className="realm-upgrade-details">
             <span className="realm-eyebrow">
               {tr('ÎMBUNĂTĂȚIRE', 'UPGRADE')} · {tr('NIVEL', 'LEVEL')} {level} → {level + 1}
             </span>
@@ -39,10 +39,10 @@ export function UpgradeCard({
               ))}
             </ul>
             <div className="realm-farm-costs">
-              <span className={save.gold >= gold ? '' : 'short'}>{gold} ●</span>
+              <span className={save.gold >= gold ? '' : 'short'}>● {gold} {tr('aur', 'gold')}</span>
               {costs.map(([id, n]) => (
                 <span key={id} className={save.inventory[id] >= n ? '' : 'short'} title={ITEMS[id].name[lang]}>
-                  {ITEMS[id].icon} {save.inventory[id]}/{n}
+                  {ITEMS[id].icon} {ITEMS[id].name[lang]} {save.inventory[id]}/{n}
                 </span>
               ))}
             </div>
