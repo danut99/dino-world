@@ -2168,7 +2168,7 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
 .realm-habitat-summary b { color: #fff1b8; }
 .realm-habitat-summary .realm-link { margin-left: auto; }
 
-/* Account window: sign-in form, Google button, sync status; and the two-saves choice. */
+/* Account window: sign-in form, Google button, sync status. */
 .realm-auth { display: flex; flex-direction: column; gap: 14px; max-width: 420px; margin: 0 auto; font-size: 13px; line-height: 1.5; }
 .realm-auth p { margin: 0; }
 .realm-auth label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #cdbfa8; }
@@ -2186,12 +2186,6 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
 .realm-auth-status[data-status='offline'] { border-color: #f0a35a; color: #ffd0a0; }
 .realm-auth-status[data-status='syncing'] { border-color: #e0a96a; color: #fff1b8; }
 .realm-auth small { color: #cdbfa8; }
-.realm-sync-conflict { display: flex; flex-direction: column; gap: 16px; font-size: 13px; line-height: 1.5; }
-.realm-sync-conflict p { margin: 0; }
-.realm-sync-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-.realm-sync-option { display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #241c18; border: 1px solid #a3938066; }
-.realm-sync-option ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; color: #e2d3b2; }
-.realm-sync-option .realm-button { min-height: 44px; }
 /* Sign-in gate: the account window alone, over the game's night sky, before anything else loads. */
 .realm-gate { position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 30%, #3a3156, #17121f 70%); }
 

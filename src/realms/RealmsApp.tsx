@@ -56,7 +56,7 @@ export type SignedIn = {
   recovering: boolean;
   endRecovery: () => void;
 };
-import { AccountPanel, SyncConflictChoice, statusText } from './AccountPanel';
+import { AccountPanel, statusText } from './AccountPanel';
 
 /** The sound a successful command makes. Battle actions are voiced by the battle replay instead. */
 const COMMAND_SOUNDS: Partial<Record<Command['type'], SoundId>> = {
@@ -332,12 +332,19 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
     panel === 'expedition' || panel === 'arena' || panel === 'workshop' ? panel : null;
   const saveRef = useRef(save);
   saveRef.current = save;
-  // A save taken from the cloud (after a conflict) catches up on the time it spent there, like a save loaded at start.
-  const cloudSync = useCloudSync(account?.user.id ?? null, account?.marker ?? null, account?.unsaved ?? false, save, (cloudSave) => {
-    const next = advance(cloudSave, Date.now());
-    saveRef.current = next;
-    setSave(next);
-  });
+  // Progress made on another tab or device replaces this view; like a save loaded at start, it catches up on time.
+  const cloudSync = useCloudSync(
+    account?.user.id ?? null,
+    account?.marker ?? null,
+    account?.unsaved ?? false,
+    save,
+    (cloudSave) => {
+      const next = advance(cloudSave, Date.now());
+      saveRef.current = next;
+      setSave(next);
+    },
+    () => setMessage(tr('Am adus progresul de pe celălalt dispozitiv.', 'Brought in your progress from your other device.')),
+  );
   const [playerName, setPlayerName] = useState(account?.name ?? '');
   const sync = {
     ...cloudSync,
@@ -1032,11 +1039,6 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
         </div>
       )}
 
-      {sync.conflict && (
-        <Window title={tr('Ce progres păstrezi?', 'Which progress do you keep?')} eyebrow="DINO REALMS" close={() => {}} closable={false} wide>
-          <SyncConflictChoice conflict={sync.conflict} lang={lang} resolve={sync.resolve} />
-        </Window>
-      )}
       {panel && !gameplayView && (
         <Window
           title={

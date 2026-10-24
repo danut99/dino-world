@@ -126,15 +126,15 @@ export const isFreshSave = (s: Save) => s.dinos.length === 0 && s.cleared.length
 
 /**
  * What to do when a device's older local progress meets the account's cloud save at sign-in:
- * - `upload`: the account has no save yet (or an empty one), so the local progress moves in;
- * - `download`: the local progress is nothing worth keeping;
- * - `ask`: both hold real progress; the player chooses.
+ * - `upload`: the account has no save yet (or an empty one), or the local progress is the more recent;
+ * - `download`: the local progress is nothing worth keeping, or the cloud's is the more recent.
+ * Between two real saves the one whose last action came later wins, as during play (see useCloudSync).
  */
-export function planSync(local: Save, remote: CloudSave | null): 'upload' | 'download' | 'ask' {
+export function planSync(local: Save, remote: CloudSave | null): 'upload' | 'download' {
   if (!remote) return 'upload';
   if (isFreshSave(local)) return 'download';
   if (isFreshSave(remote.save)) return 'upload';
-  return 'ask';
+  return local.updatedAt >= remote.save.updatedAt ? 'upload' : 'download';
 }
 
 /** A public player name: 3–20 letters (Romanian included), digits, spaces, `_`, `.` or `-`, starting with a letter or digit. */

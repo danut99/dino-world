@@ -20,8 +20,10 @@ describe('cloud sync plan', () => {
   it('replaces an empty cloud save with real progress', () => {
     expect(planSync(played(), remote(fresh()))).toBe('upload');
   });
-  it('asks the player when both the device and the account hold progress', () => {
-    expect(planSync(played(), remote(played()))).toBe('ask');
+  it('keeps the more recent progress when both the device and the account hold some', () => {
+    const older = { ...played(), updatedAt: 1000 }, newer = { ...played(), updatedAt: 2000 };
+    expect(planSync(newer, remote(older))).toBe('upload');
+    expect(planSync(older, remote(newer))).toBe('download');
   });
 });
 
@@ -41,5 +43,14 @@ describe('player names', () => {
     const { validName } = await import('./cloud');
     for (const ok of ['Ion', 'Dino_Rex 7', 'Ștefan-Țepeș', 'a.b.c']) expect(validName(ok), ok).toBe(true);
     for (const bad of ['Io', 'x'.repeat(21), ' Ion', '-Rex', 'Ion<3', 'a@b.ro']) expect(validName(bad), bad).toBe(false);
+  });
+});
+
+describe('same account in two places', () => {
+  it('the save whose last action came later wins', async () => {
+    const { newerSave } = await import('./useCloudSync');
+    const at = (updatedAt: number) => ({ ...played(), updatedAt });
+    expect(newerSave(at(2000), remote(at(1000)))).toBe('local');
+    expect(newerSave(at(1000), remote(at(2000)))).toBe('cloud');
   });
 });

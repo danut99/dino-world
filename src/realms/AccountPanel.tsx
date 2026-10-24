@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react';
-import { starTotal, type Save } from './game';
 import type { User } from '@supabase/supabase-js';
 import {
   cloud,
@@ -14,7 +13,7 @@ import {
   type AuthProblem,
   type NameProblem,
 } from './cloud';
-import type { SyncConflict, SyncStatus } from './useCloudSync';
+import type { SyncStatus } from './useCloudSync';
 
 /** What the account window shows and does: the signed-in player (if any), their save status and a reset in progress. */
 export type AccountState = {
@@ -278,46 +277,5 @@ export function NameForm({ lang, userId, current, onDone }: { lang: number; user
       </button>
       {note && <p className={note.ok ? 'realm-auth-ok' : 'realm-auth-error'} role="status">{note.text}</p>}
     </form>
-  );
-}
-
-const summary = (s: Save) => ({
-  dinos: s.dinos.length,
-  level: Math.max(0, ...s.dinos.map((d) => d.level)),
-  stars: starTotal(s),
-  gold: Math.floor(s.gold),
-});
-
-/** Two devices made different progress on one account: show both and let the player keep one. */
-export function SyncConflictChoice({ conflict, lang, resolve }: { conflict: SyncConflict; lang: number; resolve: (keep: 'local' | 'cloud') => void }) {
-  const tr = (ro: string, en: string) => T(lang, ro, en);
-  const card = (title: string, s: Save, keep: 'local' | 'cloud') => {
-    const x = summary(s);
-    return (
-      <div className="realm-sync-option">
-        <strong>{title}</strong>
-        <ul>
-          <li>🦖 {x.dinos} {tr('dinozauri', 'dinosaurs')} · {tr('nivel max.', 'top level')} {x.level}</li>
-          <li>★ {x.stars} · ● {x.gold} {tr('aur', 'gold')}</li>
-        </ul>
-        <button className="realm-button" onClick={() => resolve(keep)}>
-          {tr('Păstrează asta', 'Keep this one')}
-        </button>
-      </div>
-    );
-  };
-  return (
-    <div className="realm-sync-conflict">
-      <p>
-        {tr(
-          'Contul tău are alt progres decât acest dispozitiv. Alege pe care îl păstrezi; celălalt va fi înlocuit.',
-          'Your account holds different progress from this device. Choose which one to keep; the other is replaced.',
-        )}
-      </p>
-      <div className="realm-sync-options">
-        {card(tr('Pe acest dispozitiv', 'On this device'), conflict.local, 'local')}
-        {card(tr('În cloud (contul tău)', 'In the cloud (your account)'), conflict.remote.save, 'cloud')}
-      </div>
-    </div>
   );
 }
