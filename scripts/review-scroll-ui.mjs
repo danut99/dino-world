@@ -1,3 +1,5 @@
+// Browser checks run the game without accounts (no sign-in gate), whatever .env.local holds.
+process.env.VITE_SUPABASE_URL = '';
 import { createServer } from 'vite';
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';

@@ -4,6 +4,7 @@ dist/
 # Cheile API: doar locale.
 .env
 .env.*
+!.env.example
 # Rezultate temporare (contact sheets, previzualizări).
 tmp/
 # Sursele de artă și imaginile brute generate: doar locale (nu ajung în build).

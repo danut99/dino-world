@@ -2115,24 +2115,31 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
   .realm-nav:not(.collapsed) .realm-collect strong { font-size: 10px; }
 }
 
+/* Champion avatar and its menu: top-left on phones (.realm-mobile-profile), top-right in the desktop HUD (.realm-hud-profile). */
+.realm-avatar { position: relative; display: block; width: 56px; height: 56px; padding: 3px; border: 2px solid #e0a96a; border-radius: 50%; background: radial-gradient(circle, #574a40, #2f2520); box-shadow: 0 3px 12px #241c1866; color: #f6eed9; }
+.realm-avatar .dinosaur-art { width: 100%; height: 100%; border-radius: 50%; pointer-events: none; }
+.realm-avatar > span { position: absolute; right: -2px; bottom: -3px; min-width: 22px; padding: 2px 4px; box-sizing: border-box; border-radius: 8px; border: 1px solid #e0a96a; background: #3a2e27; font-size: 11px; font-weight: 700; }
+.realm-profile-dismiss { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #241c1833; z-index: -1; }
+.realm-profile-card { position: absolute; top: 66px; left: 0; width: min(290px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right))); box-sizing: border-box; max-height: calc(100dvh - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 12px; border-radius: 14px; border: 1px solid #c9b48e77; background: #3a2e27fa; box-shadow: 0 12px 30px #241c1866; }
+.realm-profile-card > header { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; font-size: 14px; }
+.realm-profile-card > header > strong { flex: 1; }
+.realm-profile-card button { min-height: 40px; background: #3d332d; color: #e2d3b2; border: 1px solid #cdbfa844; border-radius: 8px; padding: 6px 10px; }
+.realm-profile-card > header > button { width: 40px; font-size: 22px; }
+.realm-profile-stats { display: grid; gap: 6px; }
+.realm-profile-stats .realm-resource { height: auto; min-height: 44px; border-radius: 8px; padding: 8px 10px; }
+.realm-profile-stats .realm-resource small { display: block; font-size: 10px; }
+.realm-profile-stats .realm-resource > span { width: 24px; text-align: center; }
+.realm-profile-card > footer { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.realm-profile-card > footer button { flex: 1; font-size: 12px; }
+.realm-profile-email { margin: -4px 0 10px; font-size: 11px; color: #cdbfa8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.realm-hud-profile { position: relative; z-index: 20; flex-shrink: 0; }
+.realm-hud-profile .realm-avatar { width: 58px; height: 58px; cursor: pointer; }
+.realm-hud-profile .realm-profile-card { top: 68px; left: auto; right: 0; width: 250px; }
+.realm-hud-profile .realm-profile-card > footer { margin-top: 4px; }
+
 @media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
   .realm-hud { display: none; }
   .realm-mobile-profile { display: block; position: absolute; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); z-index: 5; }
-  .realm-avatar { position: relative; display: block; width: 56px; height: 56px; padding: 3px; border: 2px solid #e0a96a; border-radius: 50%; background: radial-gradient(circle, #574a40, #2f2520); box-shadow: 0 3px 12px #241c1866; color: #f6eed9; }
-  .realm-avatar .dinosaur-art { width: 100%; height: 100%; border-radius: 50%; pointer-events: none; }
-  .realm-avatar > span { position: absolute; right: -2px; bottom: -3px; min-width: 22px; padding: 2px 4px; box-sizing: border-box; border-radius: 8px; border: 1px solid #e0a96a; background: #3a2e27; font-size: 11px; font-weight: 700; }
-  .realm-profile-dismiss { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #241c1833; z-index: -1; }
-  .realm-profile-card { position: absolute; top: 66px; left: 0; width: min(290px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right))); box-sizing: border-box; max-height: calc(100dvh - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 12px; border-radius: 14px; border: 1px solid #c9b48e77; background: #3a2e27fa; box-shadow: 0 12px 30px #241c1866; }
-  .realm-profile-card > header { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; font-size: 14px; }
-  .realm-profile-card > header > strong { flex: 1; }
-  .realm-profile-card button { min-height: 40px; background: #3d332d; color: #e2d3b2; border: 1px solid #cdbfa844; border-radius: 8px; padding: 6px 10px; }
-  .realm-profile-card > header > button { width: 40px; font-size: 22px; }
-  .realm-profile-stats { display: grid; gap: 6px; }
-  .realm-profile-stats .realm-resource { height: auto; min-height: 44px; border-radius: 8px; padding: 8px 10px; }
-  .realm-profile-stats .realm-resource small { display: block; font-size: 10px; }
-  .realm-profile-stats .realm-resource > span { width: 24px; text-align: center; }
-  .realm-profile-card > footer { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-  .realm-profile-card > footer button { flex: 1; font-size: 12px; }
   .realm-quest { top: calc(max(10px, env(safe-area-inset-top)) + 68px); }
   .realm-location { top: max(14px, env(safe-area-inset-top)); max-width: calc(100% - 94px); }
 }
@@ -2160,3 +2167,30 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
 .realm-habitat-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 12px; padding: 10px 12px; background: #2f2520; border: 1px solid #cdbfa855; color: #cdbfa8; font-size: 13px; }
 .realm-habitat-summary b { color: #fff1b8; }
 .realm-habitat-summary .realm-link { margin-left: auto; }
+
+/* Account window: sign-in form, Google button, sync status; and the two-saves choice. */
+.realm-auth { display: flex; flex-direction: column; gap: 14px; max-width: 420px; margin: 0 auto; font-size: 13px; line-height: 1.5; }
+.realm-auth p { margin: 0; }
+.realm-auth label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #cdbfa8; }
+.realm-auth input { min-height: 44px; padding: 10px 12px; font: inherit; font-size: 15px; color: #fff1b8; background: #241c18; border: 1px solid #a393805e; }
+.realm-auth input:focus { outline: 2px solid #e0a96a; outline-offset: 1px; }
+.realm-auth .realm-button { min-height: 44px; width: 100%; }
+.realm-google b { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 6px; border-radius: 50%; background: #fff; color: #4285f4; font: 700 14px/1 sans-serif; }
+.realm-auth-or { display: flex; align-items: center; gap: 10px; color: #a39380; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+.realm-auth-or::before, .realm-auth-or::after { content: ''; flex: 1; border-top: 1px solid #a3938055; }
+.realm-auth-modes { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; }
+.realm-auth-modes button { min-height: 44px; padding: 0 4px; background: none; border: 0; color: #e0a96a; font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+.realms-app .realm-auth .realm-auth-ok { color: #9be38f; }
+.realms-app .realm-auth .realm-auth-error { color: #ff8a7a; }
+.realm-auth-status { padding: 8px 12px; border-left: 3px solid #9be38f; background: #241c18; color: #c9f5bf; }
+.realm-auth-status[data-status='offline'] { border-color: #f0a35a; color: #ffd0a0; }
+.realm-auth-status[data-status='syncing'] { border-color: #e0a96a; color: #fff1b8; }
+.realm-auth small { color: #cdbfa8; }
+.realm-sync-conflict { display: flex; flex-direction: column; gap: 16px; font-size: 13px; line-height: 1.5; }
+.realm-sync-conflict p { margin: 0; }
+.realm-sync-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.realm-sync-option { display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #241c18; border: 1px solid #a3938066; }
+.realm-sync-option ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; color: #e2d3b2; }
+.realm-sync-option .realm-button { min-height: 44px; }
+/* Sign-in gate: the account window alone, over the game's night sky, before anything else loads. */
+.realm-gate { position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 30%, #3a3156, #17121f 70%); }

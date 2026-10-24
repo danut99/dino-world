@@ -39,6 +39,20 @@ import './realms.css';
 import './pixel-theme.css';
 import { Icon, type IconName } from './ui/Icon';
 import { playSound, setSoundEnabled, soundEnabled, type SoundId } from './sound';
+import { useCloudSync } from './useCloudSync';
+import type { User } from '@supabase/supabase-js';
+
+/** The signed-in player handed over by the sign-in gate (SignInGate), with where their cloud save stood. */
+export type SignedIn = {
+  user: User;
+  /** Cloud time of the save the game starts from; null when the account has no save row yet. */
+  marker: string | null;
+  /** True when the starting save is not in the cloud yet (a new game, or progress moved in from this device). */
+  unsaved: boolean;
+  recovering: boolean;
+  endRecovery: () => void;
+};
+import { AccountPanel, SyncConflictChoice, statusText } from './AccountPanel';
 
 /** The sound a successful command makes. Battle actions are voiced by the battle replay instead. */
 const COMMAND_SOUNDS: Partial<Record<Command['type'], SoundId>> = {
@@ -88,6 +102,7 @@ type Panel =
   | 'arena'
   | 'market'
   | 'wiki'
+  | 'account'
   | null;
 const text = (lang: number, ro: string, en: string) => (lang ? en : ro);
 function load(): Save {
@@ -106,18 +121,21 @@ function load(): Save {
   }
   return newSave(Date.now());
 }
-function Window({
+export function Window({
   title,
   eyebrow,
   children,
   close,
   wide = false,
+  closable = true,
 }: {
   title: string;
   eyebrow?: string;
   children: ReactNode;
   close: () => void;
   wide?: boolean;
+  /** False for a choice the player must make: no close button, Escape and the backdrop do nothing. */
+  closable?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -129,7 +147,7 @@ function Window({
     <div
       className="realm-backdrop"
       onPointerDown={(e) => {
-        if (e.target === e.currentTarget) close();
+        if (closable && e.target === e.currentTarget) close();
       }}
     >
       <div
@@ -140,7 +158,7 @@ function Window({
         aria-label={title}
         className={`realm-window ${wide ? 'wide' : ''}`}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') close();
+          if (closable && e.key === 'Escape') close();
           if (e.key === 'Tab') {
             const nodes = Array.from(
               ref.current?.querySelectorAll<HTMLElement>(
@@ -162,9 +180,11 @@ function Window({
         <header>
           {eyebrow && <span className="realm-eyebrow">{eyebrow}</span>}
           <h2>{title}</h2>
-          <button className="realm-close" onClick={close} aria-label="Close">
-            <Icon name="close" />
-          </button>
+          {closable && (
+            <button className="realm-close" onClick={close} aria-label="Close">
+              <Icon name="close" />
+            </button>
+          )}
         </header>
         <div className="realm-window-body">{children}</div>
       </div>
@@ -172,9 +192,13 @@ function Window({
   );
 }
 
-export default function RealmsApp() {
+/**
+ * The game. With accounts (`account`), it starts from the save the sign-in gate loaded from the cloud and keeps it
+ * only there. Without accounts configured (local development), it keeps the save in this browser as before.
+ */
+export default function RealmsApp({ initialSave, account }: { initialSave?: Save; account?: SignedIn } = {}) {
   const [profileOpen, setProfileOpen] = useState(false);
-  const [save, setSave] = useState(load),
+  const [save, setSave] = useState(() => (initialSave ? advance(initialSave, Date.now()) : load())),
     [now, setNow] = useState(Date.now()),
     [panel, setPanel] = useState<Panel>(() => save.battle?.encounterId.startsWith('arena') ? 'arena' : null);
   const [realm, setRealm] = useState<'home' | RealmId>(() => {
@@ -279,10 +303,10 @@ export default function RealmsApp() {
   const [placementKind, setPlacementKind] = useState<UtilityKind>('farm');
   const [offline, setOffline] = useState(() => {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return null;
-      const old = parseSave(raw),
-        current = advance(old, Date.now());
+      const raw = initialSave ? null : localStorage.getItem(SAVE_KEY);
+      const old = initialSave ?? (raw ? parseSave(raw) : null);
+      if (!old) return null;
+      const current = advance(old, Date.now());
       const elapsed = Date.now() - old.updatedAt;
       return elapsed >= 60_000
         ? {
@@ -300,6 +324,21 @@ export default function RealmsApp() {
     panel === 'expedition' || panel === 'arena' || panel === 'workshop' ? panel : null;
   const saveRef = useRef(save);
   saveRef.current = save;
+  // A save taken from the cloud (after a conflict) catches up on the time it spent there, like a save loaded at start.
+  const cloudSync = useCloudSync(account?.user.id ?? null, account?.marker ?? null, account?.unsaved ?? false, save, (cloudSave) => {
+    const next = advance(cloudSave, Date.now());
+    saveRef.current = next;
+    setSave(next);
+  });
+  const sync = {
+    ...cloudSync,
+    user: account?.user ?? null,
+    recovering: account?.recovering ?? false,
+    endRecovery: account?.endRecovery ?? (() => {}),
+  };
+  useEffect(() => {
+    if (sync.recovering) setPanel('account');
+  }, [sync.recovering]);
   const tr = (ro: string, en: string) => text(lang, ro, en);
   const today = dailyState(save, now);
   const dailyReady = today.spin === null || dailyQuests(today.day).some(id => !today.claimed.includes(id) && today.progress[id] >= DAILY_QUESTS[id].target) || (!today.bonus && dailyQuests(today.day).every(id => today.claimed.includes(id)));
@@ -374,6 +413,8 @@ export default function RealmsApp() {
     };
   }, []);
   useEffect(() => {
+    // Signed in, the save lives in the cloud only (useCloudSync).
+    if (account) return;
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(save));
       setStorageError(false);
@@ -561,18 +602,46 @@ export default function RealmsApp() {
     setMessage(tr(`${who} s-a întors din expediție! Colectează recompensa.`, `${who} is back from the expedition! Collect the reward.`));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, save.expedition]);
-  const exportSave = () => {
-    const blob = new Blob([JSON.stringify(advance(saveRef.current, Date.now()), null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob),
-      a = document.createElement('a');
-    a.href = url;
-    a.download = 'dino-realms-save.json';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-
+  /**
+   * The champion avatar and its menu: top-left on phones, with resources and shortcuts (phones have no HUD); top-right
+   * in the desktop HUD (`desk`), where resources already show, with just the account and settings.
+   */
+  const profileMenu = (id: string, desk = false) => (
+    <>
+      <button
+        className="realm-avatar"
+        aria-label={tr('Resurse', 'Resources')}
+        aria-expanded={profileOpen}
+        aria-controls={id}
+        onClick={() => setProfileOpen((open) => !open)}
+      >
+        <Hero stage={d?.stage ?? 'baby'} />
+        <span>{d?.level ?? 1}</span>
+      </button>
+      {profileOpen && (
+        <>
+          <button className="realm-profile-dismiss" aria-label="Close resources" onClick={() => setProfileOpen(false)} />
+          <section className="realm-profile-card" id={id} aria-label={tr('Resurse', 'Resources')} onKeyDown={(event) => { if (event.key === 'Escape') setProfileOpen(false); }}>
+            <header><strong>{badge.title}</strong><button aria-label="Close resources" onClick={() => setProfileOpen(false)}>×</button></header>
+            {sync.user?.email && <p className="realm-profile-email">{sync.user.email}</p>}
+            {!desk && (
+              <div className="realm-profile-stats">
+                <Resource icon="gold" value={Math.floor(save.gold)} label={tr('Aur', 'Gold')} color="gold" />
+                <Resource icon="food" value={save.food} label={tr('Hrană', 'Food')} color="food" />
+                <Resource icon="star" value={d?.level ?? 1} label={tr('Nivel', 'Level')} color="gold" />
+              </div>
+            )}
+            <footer>
+              {!desk && <button onClick={() => { setProfileOpen(false); setDinoRealm(null); setPanel('dino'); }}>{tr('Dinozauri', 'Dinosaurs')}</button>}
+              <button onClick={() => { setProfileOpen(false); setPanel('account'); }}>{tr('Cont', 'Account')}</button>
+              <button onClick={() => { setProfileOpen(false); setPanel('settings'); }}>{tr('Setări', 'Settings')}</button>
+              {!desk && <button onClick={() => { setProfileOpen(false); setPanel('wiki'); }}>Wikipedia</button>}
+            </footer>
+          </section>
+        </>
+      )}
+    </>
+  );
   return (
     <main className="realms-app">
       <World
@@ -603,36 +672,7 @@ export default function RealmsApp() {
           </button>
         )}
       />
-      <div className="realm-mobile-profile">
-        <button
-          className="realm-avatar"
-          aria-label={tr('Resurse', 'Resources')}
-          aria-expanded={profileOpen}
-          aria-controls="realm-mobile-stats"
-          onClick={() => setProfileOpen((open) => !open)}
-        >
-          <Hero stage={d?.stage ?? 'baby'} />
-          <span>{d?.level ?? 1}</span>
-        </button>
-        {profileOpen && (
-          <>
-            <button className="realm-profile-dismiss" aria-label="Close resources" onClick={() => setProfileOpen(false)} />
-            <section className="realm-profile-card" id="realm-mobile-stats" aria-label={tr('Resurse', 'Resources')} onKeyDown={(event) => { if (event.key === 'Escape') setProfileOpen(false); }}>
-              <header><strong>{badge.title}</strong><button aria-label="Close resources" onClick={() => setProfileOpen(false)}>×</button></header>
-              <div className="realm-profile-stats">
-                <Resource icon="gold" value={Math.floor(save.gold)} label={tr('Aur', 'Gold')} color="gold" />
-                <Resource icon="food" value={save.food} label={tr('Hrană', 'Food')} color="food" />
-                <Resource icon="star" value={d?.level ?? 1} label={tr('Nivel', 'Level')} color="gold" />
-              </div>
-              <footer>
-                <button onClick={() => { setProfileOpen(false); setDinoRealm(null); setPanel('dino'); }}>{tr('Dinozauri', 'Dinosaurs')}</button>
-                <button onClick={() => { setProfileOpen(false); setPanel('settings'); }}>{tr('Setări', 'Settings')}</button>
-                <button onClick={() => { setProfileOpen(false); setPanel('wiki'); }}>Wikipedia</button>
-              </footer>
-            </section>
-          </>
-        )}
-      </div>
+      <div className="realm-mobile-profile">{profileMenu('realm-mobile-stats')}</div>
       <header className="realm-hud">
         <a
           className="realm-brand"
@@ -673,9 +713,7 @@ export default function RealmsApp() {
         <button className="realm-square" onClick={() => setPanel('wiki')} aria-label="Wikipedia" title="Wikipedia">
           <Icon name="wiki" />
         </button>
-        <button className="realm-square" onClick={() => setPanel('settings')} aria-label={tr('Setări', 'Settings')}>
-          <Icon name="settings" />
-        </button>
+        <div className="realm-hud-profile">{profileMenu('realm-hud-menu', true)}</div>
       </header>
       {devOpen && (
         <DevPanel
@@ -928,6 +966,11 @@ export default function RealmsApp() {
         </div>
       )}
 
+      {sync.conflict && (
+        <Window title={tr('Ce progres păstrezi?', 'Which progress do you keep?')} eyebrow="DINO REALMS" close={() => {}} closable={false} wide>
+          <SyncConflictChoice conflict={sync.conflict} lang={lang} resolve={sync.resolve} />
+        </Window>
+      )}
       {panel && !gameplayView && (
         <Window
           title={
@@ -944,6 +987,7 @@ export default function RealmsApp() {
               realms: tr('Dincolo de orizont', 'Beyond the horizon'),
               expedition: tr('Prima aventură', 'The first adventure'),
               settings: tr('Setări', 'Settings'),
+              account: tr('Cont', 'Account'),
               assets: tr('Atelierul vizual', 'The visual workshop'),
               workshop: tr('Atelier', 'Workshop'),
               arena: tr('Arena PvE', 'PvE Arena'),
@@ -1187,8 +1231,18 @@ export default function RealmsApp() {
             </>
           )}
           {panel === 'wiki' && <RealmsWiki lang={lang} />}
+          {panel === 'account' && <AccountPanel lang={lang} sync={sync} />}
           {panel === 'settings' && (
             <div className="realm-settings">
+              <div className="realm-setting-row">
+                <span>
+                  {tr('Cont', 'Account')}
+                  <small>{sync.user?.email ?? statusText(sync.status, lang)}</small>
+                </span>
+                <button className="realm-button secondary" onClick={() => setPanel('account')}>
+                  {sync.user ? tr('Detalii', 'Details') : tr('Conectează-te', 'Sign in')}
+                </button>
+              </div>
               <button className="realm-button secondary" onClick={() => setPanel('wiki')}>
                 📖 Wikipedia
               </button>
@@ -1213,60 +1267,6 @@ export default function RealmsApp() {
                   {sound ? tr('Pornite', 'On') : tr('Oprite', 'Off')}
                 </button>
               </div>
-              <div className="realm-setting-row">
-                <span>
-                  {tr('Salvare locală · schemă v5', 'Local save · schema v5')}
-                  <small>
-                    {tr('Progresul Dino World este păstrat separat.', 'Dino World progress is stored separately.')}
-                  </small>
-                </span>
-                <button className="realm-button secondary" onClick={exportSave}>
-                  {tr('Exportă', 'Export')}
-                </button>
-              </div>
-              <label className="realm-import">
-                {tr('Importă o salvare JSON', 'Import a JSON save')}
-                <input
-                  type="file"
-                  accept="application/json,.json"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      if (file.size > 1_000_000) throw Error('large');
-                      const imported = parseSave(await file.text());
-                      localStorage.setItem(`${SAVE_KEY}-before-import`, JSON.stringify(saveRef.current));
-                      const next = advance(imported, Date.now());
-                      saveRef.current = next;
-                      setSave(next);
-                      setMessage(tr('Salvare importată.', 'Save imported.'));
-                    } catch {
-                      setMessage(
-                        tr(
-                          'Fișier invalid. Progresul curent este păstrat.',
-                          'Invalid file. Current progress is preserved.',
-                        ),
-                      );
-                    }
-                    e.target.value = '';
-                  }}
-                />
-              </label>
-              <a className="realm-button secondary" href="?mode=classic">
-                {tr('Deschide Dino World clasic', 'Open classic Dino World')} ↗
-              </a>
-              <button className="realm-link" onClick={() => setPanel('assets')}>
-                {tr('Status artă & referințe', 'Art & reference status')}
-              </button>
-              <a className="realm-link" href="?mode=preview" target="_blank" rel="noreferrer">
-                {tr('Previzualizare animații în arenă și habitat', 'Preview animations in the arena and habitat')} ↗
-              </a>
-              <p className="realm-note">
-                {tr(
-                  'Prototip local fără audio. Animațiile finale și performanța mobilă nu sunt încă validate.',
-                  'Local prototype without audio. Final animations and mobile performance are not yet validated.',
-                )}
-              </p>
             </div>
           )}
           {panel === 'assets' && <AnimationViewer lang={lang} />}
