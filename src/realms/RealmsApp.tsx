@@ -8,6 +8,7 @@ import { worldThumb } from './worldArt';
 import { Hero } from './Hero';
 import { DinosaurCollection } from './DinosaurCollection';
 import { DinosaurArt } from './DinosaurArt';
+import { HeroVision } from './HeroVision';
 import { AnimationViewer } from './AnimationViewer';
 import { SPECIES_NAMES, type Species } from './dinosaurs';
 import { BuildingSprite } from './BuildingSprite';
@@ -39,6 +40,7 @@ import {
   type Command,
   type Save,
   type RealmId,
+  type Dino,
 } from './game';
 import './realms.css';
 import './pixel-theme.css';
@@ -175,7 +177,10 @@ export function Window({
         aria-label={title}
         className={`realm-window ${wide ? 'wide' : ''}`}
         onKeyDown={(e) => {
-          if (closable && e.key === 'Escape') close();
+          if (closable && e.key === 'Escape') {
+            e.stopPropagation();
+            close();
+          }
           if (e.key === 'Tab') {
             const nodes = Array.from(
               ref.current?.querySelectorAll<HTMLElement>(
@@ -215,6 +220,7 @@ export function Window({
  */
 export default function RealmsApp({ initialSave, account, guest = false }: { initialSave?: Save; account?: SignedIn; guest?: boolean } = {}) {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [heroVision, setHeroVision] = useState<Dino | null>(null);
   /** Another player's world being looked at (read only), and which of its worlds is shown. */
   const [visit, setVisit] = useState<{ name: string; save: Save } | null>(null);
   const [visitView, setVisitView] = useState<'home' | RealmId>('home');
@@ -419,7 +425,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
   const dailyReady = today.spin === null || dailyQuests(today.day).some(id => !today.claimed.includes(id) && today.progress[id] >= DAILY_QUESTS[id].target) || (!today.bonus && dailyQuests(today.day).every(id => today.claimed.includes(id)));
   const dailyOpened = useRef<string | null>(null);
   useEffect(() => {
-    if (panel || placing || save.battle || save.dinos.length === 0 || dailyOpened.current === today.day) return;
+    if (heroVision || panel || placing || save.battle || save.dinos.length === 0 || dailyOpened.current === today.day) return;
     try {
       if (localStorage.getItem('dino-realms-daily-opened') === today.day) return;
       localStorage.setItem('dino-realms-daily-opened', today.day);
@@ -428,7 +434,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
     }
     dailyOpened.current = today.day;
     setPanel('daily');
-  }, [today.day, panel, placing, save.battle, save.dinos.length]);
+  }, [today.day, panel, placing, save.battle, save.dinos.length, heroVision]);
   const activeElement = ELEMENTS.find((el) => el.id === realm);
   /** Locked worlds open the world list instead, where they can be unlocked. */
   const visitRealm = (next: 'home' | RealmId) => {
@@ -514,6 +520,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (heroVision) return; // The vision's dialog returns to the hero sheet itself.
         setVisit(null);
         setPanel(null);
         setPlacing(false);
@@ -522,7 +529,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [heroVision]);
   const run = (c: Command) => {
     try {
       const next = command(saveRef.current, c, Date.now());
@@ -1147,7 +1154,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
         </div>
       )}
 
-      {askAccount && !panel && (
+      {askAccount && !panel && !heroVision && (
         <Window
           title={askAccount === 'return' ? tr('Bine ai revenit!', 'Welcome back!') : tr('Salvează-ți progresul', 'Save your progress')}
           eyebrow="DINO REALMS"
@@ -1170,7 +1177,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
           </button>
         </Window>
       )}
-      {panel && !gameplayView && (
+      {panel && !gameplayView && !heroVision && (
         <Window
           title={
             {
@@ -1222,6 +1229,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
                 setDinoRealm(born.element);
                 setDinoFromHatchery(true);
                 setPanel('dino');
+                if (save.dinos.length === 0) setHeroVision(born);
               }}
             />
           )}
@@ -1247,6 +1255,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
               selected={selectedDino}
               select={setSelectedDino}
               openHatchery={() => setPanel('hatchery')}
+              previewHero={dino => setHeroVision(dino)}
               realm={dinoRealm}
               openHabitats={() => setPanel('habitat')}
               fromHatchery={dinoFromHatchery}
@@ -1387,6 +1396,13 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
           </button>
         </div>
       )}
+      {heroVision && <Window title={tr('Un erou se trezește', 'A hero awakens')} eyebrow="DINO REALMS" wide close={() => {
+        setSelectedDino(heroVision.id); setDinoRealm(heroVision.element); setHeroVision(null); setPanel('dino');
+      }}>
+        <HeroVision dino={heroVision} lang={lang} finish={() => {
+          setSelectedDino(heroVision.id); setDinoRealm(heroVision.element); setHeroVision(null); setPanel('dino');
+        }} />
+      </Window>}
     </main></ResourceHelpContext.Provider>
   );
 }

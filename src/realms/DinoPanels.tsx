@@ -475,6 +475,7 @@ export function DinoPanel({
   realm,
   openHabitats,
   fromHatchery = false,
+  previewHero,
 }: {
   save: Save;
   lang: number;
@@ -487,6 +488,7 @@ export function DinoPanel({
   openHabitats?: () => void;
   /** Opened right after a hatch: keep the way back to the hatchery even when a habitat is shown. */
   fromHatchery?: boolean;
+  previewHero?: (dino: Dino) => void;
 }) {
   const roster = realm ? residents(save, realm) : save.dinos;
   const d =
@@ -641,6 +643,10 @@ export function DinoPanel({
             <div className="dino-sheet-income">
               <Icon name="gold" scale={1} /> <b>{Math.round(dinoIncome(save, d))}</b> {tr(lang, 'aur pe oră în habitat', 'gold per hour in the habitat')}
             </div>
+
+            {previewHero && <button className="realm-link" onClick={() => previewHero(d)}>
+              ✦ {tr(lang, 'Vezi potențialul eroului', 'See your hero’s potential')}
+            </button>}
 
             <ResourceHelp save={save} lang={lang} food={cost} /><div className="dino-sheet-actions">
               <button

@@ -2350,4 +2350,3 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
   box-shadow: inset 0 0 0 1px #f6d77a44, 0 0 10px #e0a96a44;
 }
 .realms-app .realm-nav.collapsed > button.realm-nav-hub { display: flex; }
-}
