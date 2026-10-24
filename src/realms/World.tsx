@@ -1,4 +1,6 @@
 import { RARITY_CANVAS } from './Rarity';
+import { drawIslandAtmosphere, islandBaseImage } from './islandAtmosphere';
+import { drawElementalAtmosphere } from './elementalAtmosphere';
 import { drawPortal, PORTAL_ART, PORTAL_GROUND } from './animatedPortal';
 import { drawHatchery, hatcheryState } from './animatedHatchery';
 import { drawWorkshopTier, workshopState } from './workshopTiers';
@@ -723,7 +725,8 @@ export default function World({
     const paint = (time: number) => {
     const cameraPan = livePan.current;
     const dragging = !!drag.current?.moved;
-    if (!document.hidden && (cameraDirty.current || time - lastPaint >= (dragging || held || placing ? 0 : 80) || reducedMotion || covered)) {
+    const paintInterval = realm === 'arcane' || realm === 'lightning' ? 1000 / 30 - 0.5 : 80;
+    if (!document.hidden && (cameraDirty.current || time - lastPaint >= (dragging || held || placing ? 0 : paintInterval) || reducedMotion || covered)) {
     cameraDirty.current = false;
     lastPaint = time;
     const host = canvas.parentElement;
@@ -774,13 +777,22 @@ export default function World({
       ctx.globalAlpha = 1;
     }
     if (realm === 'home') {
-      if (image.current)
+      if (image.current) {
         ctx.drawImage(image.current, HOME_ISLAND.offset[0], HOME_ISLAND.offset[1], HOME_ISLAND.size[0] * 2, HOME_ISLAND.size[1] * 2);
+        if (!reducedMotion) {
+          drawIslandAtmosphere(ctx, image.current, 'home', time, HOME_ISLAND.offset, HOME_ISLAND.size[0] * 2 / image.current.naturalWidth);
+        }
+      }
     } else {
       const environment = worlds.current[realm];
       if (environment) {
         const isl = ISLANDS[realm];
-        ctx.drawImage(environment, isl.offset[0], isl.offset[1], isl.size[0] * isl.scale, isl.size[1] * isl.scale);
+        ctx.drawImage(realm === 'fire' && !reducedMotion ? islandBaseImage(environment, 'fire') : environment,
+          isl.offset[0], isl.offset[1], isl.size[0] * isl.scale, isl.size[1] * isl.scale);
+        if (!reducedMotion) {
+          if (realm === 'water' || realm === 'fire') drawIslandAtmosphere(ctx, environment, realm, time, isl.offset, isl.scale);
+          else drawElementalAtmosphere(ctx, environment, realm, time, isl.offset, isl.scale);
+        }
       }
     }
     ctx.imageSmoothingEnabled = false;

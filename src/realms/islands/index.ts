@@ -12,6 +12,7 @@ import wind from './wind.json';
 
 /** One elemental world: a whole floating island generated with PixelLab (scripts/fit-island.py fitted its grid). */
 export interface Island {
+  plateau: { top: number[]; right: number[]; bottom: number[]; left: number[] };
   art: string;
   /** Art size in art pixels; drawn at `scale` scene pixels per art pixel, at `offset` in the 1536×1024 scene. */
   size: number[];
