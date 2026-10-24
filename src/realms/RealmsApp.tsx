@@ -794,10 +794,17 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
               <div className="realm-profile-stats">
                 <Resource icon="gold" value={Math.floor(save.gold)} label={tr('Aur', 'Gold')} color="gold" />
                 <Resource icon="food" value={save.food} label={tr('Hrană', 'Food')} color="food" />
+                <button className="realm-resource gems realm-gems-chip" onClick={closeThen(() => setPanel('shop'))}>
+                  <span aria-hidden="true">💎</span>
+                  <div>
+                    <small>{tr('Diamante', 'Diamonds')}</small>
+                    <strong>{save.gems.toLocaleString('en-GB')}</strong>
+                  </div>
+                </button>
                 <Resource icon="star" value={d?.level ?? 1} label={tr('Nivel', 'Level')} color="gold" />
               </div>
               <footer>
-                <button onClick={closeThen(() => setPanel('shop'))}>💎 {save.gems} · {tr('Magazin', 'Shop')}</button>
+                <button onClick={closeThen(() => setPanel('shop'))}>💎 {tr('Magazin', 'Shop')}</button>
                 <button onClick={closeThen(() => { setDinoRealm(null); setPanel('dino'); })}>{tr('Dinozauri', 'Dinosaurs')}</button>
                 {account && <button onClick={closeThen(() => setPanel('players'))}>{tr('Jucători', 'Players')}</button>}
                 <button onClick={closeThen(() => setPanel('account'))}>{guest ? tr('Creează cont', 'Create account') : tr('Cont', 'Account')}</button>

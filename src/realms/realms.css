@@ -2350,3 +2350,11 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
   box-shadow: inset 0 0 0 1px #f6d77a44, 0 0 10px #e0a96a44;
 }
 .realms-app .realm-nav.collapsed > button.realm-nav-hub { display: flex; }
+/* Phones: folded, the worlds button is as low as ☰ and Collect beside it (no label). */
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  .realms-app .realm-nav.collapsed > button.realm-nav-hub:not(.realm-nav-toggle) { flex: 0 0 44px; width: 44px; min-width: 0; height: 40px; padding: 0; gap: 0; }
+  .realms-app .realm-nav.collapsed > button.realm-nav-hub > strong { display: none; }
+  /* The story button sits right under the champion avatar. */
+  main.realms-app .realm-quest { top: calc(max(10px, env(safe-area-inset-top)) + 64px); }
+}
+.realm-profile-stats .realm-resource.gems { width: 100%; }

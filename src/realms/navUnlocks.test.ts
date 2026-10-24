@@ -21,6 +21,14 @@ describe('bottom bar unlocks', () => {
     s.buildings.push({ id: 'workshop', kind: 'workshop', x: 6, y: 1 });
     expect([...unlockedNav(s)].sort()).toEqual([...NAV_KEYS].sort());
   });
+  it('shows an existing player every main button at once', () => {
+    const s = newSave(0);
+    s.dinos = [ignis()];
+    s.buildings.push({ id: 'farm', kind: 'farm', x: 4, y: 4 });
+    expect(unlockedNav(s).has('expedition')).toBe(false);
+    s.dinos.push({ ...ignis(), id: 'second' });
+    expect([...unlockedNav(s)].sort()).toEqual(['build', 'collect', 'collection', 'dino', 'expedition', 'realms']);
+  });
   it('always shows the button the story card points to', () => {
     expect(unlockedNav(newSave(0), 'build').has('build')).toBe(true);
     expect([...unlockedNav(newSave(0), 'hatchery')]).toEqual(['realms']);
