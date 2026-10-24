@@ -65,7 +65,7 @@ export const REALM_NAMES: Record<RealmId, readonly [string, string]> = {
   light: ['Sanctuarul zorilor', 'Dawn Sanctuary'],
   arcane: ['Insula sigiliilor', 'Isle of Sigils'],
 };
-export const SPECIES = ['trex', 'raptor', 'triceratops', 'ankylosaurus', 'brachiosaurus', 'ignasaur', 'thalassaur', 'terrasaur'] as const;
+export const SPECIES = ['trex', 'raptor', 'triceratops', 'ankylosaurus', 'brachiosaurus', 'ignasaur', 'thalassaur', 'terrasaur', 'therizinosaurus', 'quetzalcoatlus', 'dilophosaurus', 'ankylobiped', 'solarraptor', 'cryptoraptor'] as const;
 export type Species = (typeof SPECIES)[number] | 'boss';
 export const SPECIES_NAMES: Record<Species, string> = {
   trex: 'T-Rex',
@@ -76,6 +76,12 @@ export const SPECIES_NAMES: Record<Species, string> = {
   ignasaur: 'Ignasaur',
   thalassaur: 'Thalassaur',
   terrasaur: 'Terrasaur',
+  therizinosaurus: 'Therizinosaurus',
+  quetzalcoatlus: 'Quetzalcoatlus',
+  dilophosaurus: 'Dilophosaurus',
+  ankylobiped: 'Ankylosaurus Biped',
+  solarraptor: 'Solar Raptor',
+  cryptoraptor: 'Cryptoraptor',
   boss: 'Boss',
 };
 /** Species stat multipliers from the plan (section 3). */
@@ -88,6 +94,12 @@ const SPECIES_STATS: Record<Species, { hp: number; power: number; defense: numbe
   ignasaur: { hp: 0.95, power: 1.1, defense: 0.95, speed: 1.1 },
   thalassaur: { hp: 1, power: 1, defense: 1.05, speed: 1.05 },
   terrasaur: { hp: 1.1, power: 1, defense: 1.15, speed: 0.8 },
+  therizinosaurus: { hp: 1, power: 1.1, defense: 1, speed: 1 },
+  quetzalcoatlus: { hp: 0.95, power: 1.05, defense: 0.95, speed: 1.15 },
+  dilophosaurus: { hp: 0.9, power: 1.1, defense: 0.9, speed: 1.2 },
+  ankylobiped: { hp: 1.1, power: 1, defense: 1.15, speed: 0.8 },
+  solarraptor: { hp: 1, power: 1.05, defense: 1.1, speed: 0.95 },
+  cryptoraptor: { hp: 1, power: 1.1, defense: 0.95, speed: 1.05 },
   boss: { hp: 1.15, power: 1.1, defense: 1.1, speed: 0.9 },
 };
 export type Stage = 'baby' | 'juvenile' | 'adult';

@@ -1,10 +1,14 @@
 import { expect, it } from 'vitest';
-import { command, newSave, parseSave, type Species, type RealmId } from './game';
+import { command, MARKET_ELEMENTS, newSave, parseSave, type Species, type RealmId } from './game';
 import { isPlayableDinosaur, playableSpecies } from './playableDinosaurs';
 
-it('offers both new families at the market and preserves them through save loading', () => {
+it('preserves all new families and their existing market or battle egg acquisition rules', () => {
   const now = 1_800_000_000_000;
-  for (const [species, element] of [['ignasaur', 'fire'], ['thalassaur', 'water'], ['terrasaur', 'earth']] as [Species, RealmId][]) {
+  for (const [species, element] of [
+    ['ignasaur', 'fire'], ['thalassaur', 'water'], ['terrasaur', 'earth'],
+    ['therizinosaurus', 'ice'], ['quetzalcoatlus', 'wind'], ['dilophosaurus', 'dark'],
+    ['ankylobiped', 'lightning'], ['solarraptor', 'light'], ['cryptoraptor', 'arcane'],
+  ] as [Species, RealmId][]) {
     expect(isPlayableDinosaur(species, element)).toBe(true);
     expect(playableSpecies(element)).toContain(species);
     const save = newSave(now);
@@ -12,7 +16,12 @@ it('offers both new families at the market and preserves them through save loadi
     save.buildings.push({ id: 'market', kind: 'market', x: 6, y: 1 });
     save.habitats.water = 1;
     save.habitats.earth = 1;
-    const bought = command(save, { type: 'buyEgg', species, element }, now);
+    save.habitats[element] = 1;
+    const bought = MARKET_ELEMENTS.includes(element)
+      ? command(save, { type: 'buyEgg', species, element }, now)
+      : { ...save, eggs: [...save.eggs, { id: `reward-${species}`, species, element, seconds: 300, hatchAt: null }] };
+    if (!MARKET_ELEMENTS.includes(element))
+      expect(() => command(save, { type: 'buyEgg', species, element }, now)).toThrow('fightEgg');
     expect(bought.eggs.at(-1)).toMatchObject({ species, element });
     bought.dinos.push({ id: `new-${species}`, species, element, level: 25, stage: 'adult', nickname: species });
     bought.champion = `new-${species}`;

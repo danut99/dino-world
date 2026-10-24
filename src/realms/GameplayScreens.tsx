@@ -27,7 +27,6 @@ import {
   opponentAdult,
   foeHasUltimate,
   workshop,
-  SPECIES,
   SPECIES_NAMES,
   type Command,
   type RealmId,
@@ -73,7 +72,7 @@ export function opponentOf(encounter: Encounter) {
   const tier = Number(encounter.id.split('-')[2] ?? 1) - 1,
     league = ELEMENTS.findIndex((e) => e.id === encounter.league);
   // Keep existing league rotations stable when adding the new earth family.
-  const rotation = SPECIES.filter(species => species !== 'terrasaur');
+  const rotation: Species[] = ['trex', 'raptor', 'triceratops', 'ankylosaurus', 'brachiosaurus', 'ignasaur', 'thalassaur'];
   const [species, element] =
     OPPONENTS[encounter.id] ??
     (league >= 0 ? [rotation[(league + tier * 2) % rotation.length], encounter.league as RealmId] : ['raptor', 'ice']);

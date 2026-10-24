@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "variantId": "solarraptor_light",
+  "stage": "baby",
+  "status": "prototype",
+  "sourceSize": {
+    "width": 256,
+    "height": 256
+  },
+  "pivot": {
+    "x": 128,
+    "y": 216
+  },
+  "clips": {
+    "se": {
+      "idle": {
+        "sheet": "/realms/animations/solarraptor_light_baby/idle-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 8,
+        "durationsMs": [
+          125,
+          125,
+          125,
+          125,
+          125,
+          125,
+          125,
+          125
+        ],
+        "loop": true
+      },
+      "walk": {
+        "sheet": "/realms/animations/solarraptor_light_baby/walk-se.png",
+        "frameWidth": 256,
+        "frameHeight": 256,
+        "columns": 6,
+        "durationsMs": [
+          83,
+          83,
+          83,
+          83,
+          83,
+          83
+        ],
+        "loop": true
+      }
+    }
+  }
+}
