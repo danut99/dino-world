@@ -644,7 +644,7 @@ export function DinoPanel({
               <Icon name="gold" scale={1} /> <b>{Math.round(dinoIncome(save, d))}</b> {tr(lang, 'aur pe oră în habitat', 'gold per hour in the habitat')}
             </div>
 
-            {previewHero && <button className="realm-link" onClick={() => previewHero(d)}>
+            {previewHero && d.id === save.dinos[0]?.id && d.stage !== 'adult' && <button className="realm-link" onClick={() => previewHero(d)}>
               ✦ {tr(lang, 'Vezi potențialul eroului', 'See your hero’s potential')}
             </button>}
 
