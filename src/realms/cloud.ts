@@ -125,16 +125,15 @@ export function clearLegacySave() {
 export const isFreshSave = (s: Save) => s.dinos.length === 0 && s.cleared.length === 0;
 
 /**
- * What to do when a device's older local progress meets the account's cloud save at sign-in:
- * - `upload`: the account has no save yet (or an empty one), or the local progress is the more recent;
- * - `download`: the local progress is nothing worth keeping, or the cloud's is the more recent.
- * Between two real saves the one whose last action came later wins, as during play (see useCloudSync).
+ * What to do with progress played on this device without an account when the player signs in:
+ * - `upload`: the account has no save yet (or an empty one), so the guest progress becomes the account's;
+ * - `download`: the account already has progress of its own, which is kept (a few guest minutes must never
+ *   replace it), or the guest progress is nothing worth keeping.
  */
 export function planSync(local: Save, remote: CloudSave | null): 'upload' | 'download' {
   if (!remote) return 'upload';
   if (isFreshSave(local)) return 'download';
-  if (isFreshSave(remote.save)) return 'upload';
-  return local.updatedAt >= remote.save.updatedAt ? 'upload' : 'download';
+  return isFreshSave(remote.save) ? 'upload' : 'download';
 }
 
 /** A public player name: 3–20 letters (Romanian included), digits, spaces, `_`, `.` or `-`, starting with a letter or digit. */
@@ -186,4 +185,68 @@ export async function listPlayers(search = ''): Promise<PlayerSummary[]> {
   const { data, error } = await query.order('updated_at', { ascending: false, nullsFirst: false }).limit(50);
   if (error) throw error;
   return (data ?? []) as PlayerSummary[];
+}
+
+const GUEST_NOUNS = ['Raptor', 'Rex', 'Tricera', 'Bronto', 'Stego', 'Ptero', 'Dino', 'Anky'];
+const GUEST_ADJECTIVES = ['Curajos', 'Iute', 'Vesel', 'Isteț', 'Fioros', 'Zglobiu', 'Voinic', 'Sprinten'];
+/** A random guest name such as "Raptor Curajos 482": always a valid player name (see validName). */
+export function randomGuestName(random = Math.random) {
+  const pick = <T,>(list: T[]) => list[Math.floor(random() * list.length)];
+  return `${pick(GUEST_NOUNS)} ${pick(GUEST_ADJECTIVES)} ${100 + Math.floor(random() * 900)}`;
+}
+/** The guest's name on this device, made up on first use. */
+export function guestName() {
+  try {
+    const kept = localStorage.getItem('dino-realms-guest-name');
+    if (kept && validName(kept)) return kept;
+    const made = randomGuestName();
+    localStorage.setItem('dino-realms-guest-name', made);
+    return made;
+  } catch {
+    return randomGuestName();
+  }
+}
+
+/**
+ * Starts an anonymous account, so a newcomer's progress is in the cloud from the first second. False when refused
+ * (anonymous sign-ins off in Supabase, the hourly limit, offline): the game then keeps the save on the device.
+ */
+export async function startAnonymous() {
+  if (!cloud) return false;
+  const { error } = await cloud.auth.signInAnonymously();
+  return !error;
+}
+const PENDING_PASSWORD = 'dino-realms-pending-password';
+/** An anonymous account linked an e-mail and still has to choose its password once the e-mail is confirmed. */
+export function pendingPassword() {
+  try {
+    return localStorage.getItem(PENDING_PASSWORD) === 'yes';
+  } catch {
+    return false;
+  }
+}
+export function clearPendingPassword() {
+  try {
+    localStorage.removeItem(PENDING_PASSWORD);
+  } catch {
+    /* Nothing stored. */
+  }
+}
+/**
+ * Turns the anonymous account into a permanent one, keeping its id and so its progress. Supabase takes the e-mail
+ * first and the password only once the e-mail is confirmed: `confirm` means the player must open the e-mail link,
+ * after which the game asks for the password.
+ */
+export async function linkEmail(email: string, password: string): Promise<{ problem: AuthProblem | null; confirm: boolean }> {
+  if (!cloud) return { problem: 'other', confirm: false };
+  const first = await cloud.auth.updateUser({ email }, { emailRedirectTo: returnUrl() });
+  if (first.error) return { problem: problem(first.error), confirm: false };
+  const second = await cloud.auth.updateUser({ password });
+  if (!second.error) return { problem: null, confirm: false };
+  try {
+    localStorage.setItem(PENDING_PASSWORD, 'yes');
+  } catch {
+    /* The player can still set a password through "forgot password". */
+  }
+  return { problem: null, confirm: true };
 }

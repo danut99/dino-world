@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import type { User } from '@supabase/supabase-js';
 import {
   cloud,
+  linkEmail,
   savePlayerName,
   sendPasswordReset,
   setNewPassword,
@@ -26,6 +27,8 @@ export type AccountState = {
   /** The public player name, and what to do once the player changes it. */
   name?: string;
   onRename?: (name: string) => void;
+  /** Keeps the progress played so far on the device before signing into another account (see SignInGate). */
+  stash?: () => void;
 };
 const T = (lang: number, ro: string, en: string) => (lang ? en : ro);
 
@@ -54,9 +57,9 @@ export function statusText(status: SyncStatus, lang: number) {
 }
 
 /** Account window: sign in or create an account (e-mail or Google), reset a password, or sign out. */
-export function AccountPanel({ lang, sync }: { lang: number; sync: AccountState }) {
+export function AccountPanel({ lang, sync, startWith = 'signin', intro = true }: { lang: number; sync: AccountState; startWith?: 'signin' | 'signup'; /** False where the surrounding window already explains why to sign up. */ intro?: boolean }) {
   const tr = (ro: string, en: string) => T(lang, ro, en);
-  const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>(startWith);
   const [email, setEmail] = useState(''),
     [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -109,7 +112,8 @@ export function AccountPanel({ lang, sync }: { lang: number; sync: AccountState 
       </form>
     );
 
-  if (sync.user)
+  // An anonymous account is still a guest: it gets the sign-up form, which links an e-mail to it.
+  if (sync.user && !sync.user.is_anonymous)
     return (
       <div className="realm-auth">
         <p>
@@ -151,27 +155,47 @@ export function AccountPanel({ lang, sync }: { lang: number; sync: AccountState 
       );
     else if (mode === 'signup')
       void attempt(async () => {
+        if (sync.user?.is_anonymous) {
+          const linked = await linkEmail(email, password);
+          return fail(
+            linked.problem,
+            linked.confirm
+              ? tr('Ți-am trimis un email. Deschide linkul ca să-l confirmi, apoi îți alegi parola.', 'We sent you an e-mail. Open the link to confirm it, then choose your password.')
+              : undefined,
+          );
+        }
         const r = await signUp(email, password);
         return fail(
           r.problem,
           r.confirm ? tr('Cont creat! Deschide linkul din email ca să-l confirmi.', 'Account created! Open the link in your e-mail to confirm it.') : undefined,
         );
       });
-    else void attempt(async () => fail(await signIn(email, password)));
+    else
+      void attempt(async () => {
+        sync.stash?.();
+        return fail(await signIn(email, password));
+      });
   };
 
   return (
     <form className="realm-auth" onSubmit={submit}>
-      <p>
-        {tr(
-          'Intră în cont sau creează unul ca să joci. Progresul tău e salvat în cloud și îl continui pe orice telefon sau calculator.',
-          'Sign in or create an account to play. Your progress is saved in the cloud and continues on any phone or computer.',
-        )}
-      </p>
-      <button type="button" className="realm-button realm-google" disabled={busy} onClick={() => void attempt(async () => fail(await signInWithGoogle()))}>
-        <b aria-hidden="true">G</b> {tr('Continuă cu Google', 'Continue with Google')}
-      </button>
-      <div className="realm-auth-or">{tr('sau cu email', 'or with e-mail')}</div>
+      {intro && (
+        <p>
+          {tr(
+            'Cu un cont, progresul tău e salvat în cloud și îl continui pe orice telefon sau calculator.',
+            'With an account, your progress is saved in the cloud and continues on any phone or computer.',
+          )}
+        </p>
+      )}
+      {/* Google sign-in shows only once it is set up in Supabase (VITE_GOOGLE_LOGIN=true, see docs/SUPABASE.md). */}
+      {import.meta.env.VITE_GOOGLE_LOGIN === 'true' && (
+        <>
+          <button type="button" className="realm-button realm-google" disabled={busy} onClick={() => void attempt(async () => fail(await signInWithGoogle()))}>
+            <b aria-hidden="true">G</b> {tr('Continuă cu Google', 'Continue with Google')}
+          </button>
+          <div className="realm-auth-or">{tr('sau cu email', 'or with e-mail')}</div>
+        </>
+      )}
       <label>
         Email
         <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -230,9 +254,16 @@ function nameProblemText(p: NameProblem, lang: number) {
  * The public player name others see in the player list. With `current` it renames; without, it is the required
  * first step after creating an account.
  */
-export function NameForm({ lang, userId, current, onDone }: { lang: number; userId: string; current?: string; onDone: (name: string) => void }) {
+export function NameForm({ lang, userId, current, suggested, onDone }: {
+  lang: number;
+  userId: string;
+  current?: string;
+  /** Prefilled when choosing a name for the first time (the guest name played under so far). */
+  suggested?: string;
+  onDone: (name: string) => void;
+}) {
   const tr = (ro: string, en: string) => T(lang, ro, en);
-  const [name, setName] = useState(current ?? '');
+  const [name, setName] = useState(current ?? suggested ?? '');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const clean = name.trim().replace(/\s+/g, ' ');

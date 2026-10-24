@@ -126,7 +126,28 @@ export function drawSprite(
   y: number,
   width: number,
   height: number,
+  manifest?: SpriteManifest,
 ) {
+  // Match visible character sizes rather than their transparent 256px frames.
+  // Keep the ground pivot fixed so walking and combat do not move their feet.
+  const species = manifest?.variantId.split('_')[0];
+  const scale = manifest?.variantId === 'boss_ice' ? 1.4 : ({
+    thalassaur: 1.3,
+    ankylosaurus: 1.03,
+    ankylobiped: manifest?.stage === 'baby' ? 1.4 : manifest?.stage === 'juvenile' ? 1.65 : 1.7,
+    cryptoraptor: 1.18,
+    dilophosaurus: 1.22,
+    quetzalcoatlus: 1.17,
+    terrasaur: 1.35,
+    therizinosaurus: 1.35,
+    triceratops: manifest?.variantId === 'triceratops_nature' ? 1.22 : 1.05,
+  } as Record<string, number>)[species ?? ''] ?? 1;
+  if (manifest && scale !== 1) {
+    x -= width * (scale - 1) * manifest.pivot.x / manifest.sourceSize.width;
+    y -= height * (scale - 1) * manifest.pivot.y / manifest.sourceSize.height;
+    width *= scale;
+    height *= scale;
+  }
   ctx.drawImage(
     image,
     (frame % clip.columns) * clip.frameWidth,

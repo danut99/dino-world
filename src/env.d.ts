@@ -10,4 +10,6 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL?: string;
   /** Cheia publică a proiectului (publishable / anon key), nu cheia secretă. */
   readonly VITE_SUPABASE_KEY?: string;
+  /** "true" once Google sign-in is set up in Supabase; until then the Google button stays hidden. */
+  readonly VITE_GOOGLE_LOGIN?: string;
 }

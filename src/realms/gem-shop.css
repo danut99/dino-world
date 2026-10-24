@@ -1,0 +1,69 @@
+/* Diamond shop: balance on top, things to finish now, ways to speed up, and the diamond packs. */
+.gem-shop { display: flex; flex-direction: column; gap: 16px; }
+.gem-shop .realm-farm-title { margin: 0 0 8px; }
+.gem-icon { filter: drop-shadow(0 0 6px #7fd8ff99); }
+.gem-balance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 14px 16px;
+  background: radial-gradient(ellipse at 10% 50%, #2a4a63, #1b1411 70%);
+  border: 2px solid #4aa3ff88;
+  box-shadow: inset 0 0 0 2px #1b1411, 0 0 18px #4aa3ff33;
+}
+.gem-balance > .gem-icon { font-size: 38px; }
+.gem-balance > div { display: flex; flex-direction: column; }
+.gem-balance strong { font-size: 30px; line-height: 1; color: #e8f7ff; text-shadow: 2px 2px 0 #1b1411; }
+.gem-balance small { font-size: 11px; color: #9fd4f2; }
+.gem-balance p { flex: 1 1 220px; margin: 0; font-size: 12px; line-height: 1.5; color: #cdbfa8; }
+.gem-balance .realm-button { min-height: 40px; }
+.gem-empty { margin: 0; padding: 10px 12px; font-size: 12px; color: #a39380; background: #1b1411; border: 1px dashed #3d332d; }
+.gem-running { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.gem-running li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 10px; background: #241c18; border: 1px solid #3d332d; }
+.gem-running li > span:not(.gem-run-icon) { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gem-running strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: #fff1b8; }
+.gem-running small { font-size: 11px; color: #cdbfa8; }
+.gem-run-icon { display: grid; place-items: center; width: 36px; height: 36px; font-size: 22px; color: #e0a96a; background: #1b1411; border: 1px solid #574a40; }
+.gem-running .realm-button, .gem-offers .realm-button { min-height: 38px; padding: 4px 12px; font-size: 12px !important; }
+.gem-offers { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.gem-offers article { display: flex; flex-direction: column; gap: 6px; padding: 12px; background: #241c18; border: 2px solid #3d332d; }
+.gem-offers article.active { border-color: #9be38f; box-shadow: 0 0 14px #9be38f33; }
+.gem-offers strong { font-size: 13px; color: #fff1b8; }
+.gem-offers small { flex: 1; font-size: 11px; line-height: 1.5; color: #cdbfa8; }
+.gem-offer-icon { display: grid; place-items: center; width: 40px; height: 40px; font-size: 20px; font-weight: 700; color: #f6d77a; background: #1b1411; border: 2px solid #574a40; }
+.gem-offer-icon.gold { color: #f6d77a; }
+.gem-offer-icon.food { color: #9be38f; }
+.gem-offer-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.gem-packs { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.gem-pack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 18px 10px 12px;
+  font: inherit;
+  color: #e8f7ff;
+  cursor: pointer;
+  background: linear-gradient(#2a4a63, #1b2633);
+  border: 2px solid #4aa3ff88;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.gem-pack:hover { transform: translateY(-2px); box-shadow: 0 0 16px #4aa3ff66; }
+.gem-pack .gem-icon { font-size: 34px; }
+.gem-pack strong { font-size: 20px; }
+.gem-pack small { font-size: 11px; color: #9be38f; }
+.gem-pack b { margin-top: 6px; padding: 4px 12px; font-size: 13px; color: #2f2520; background: #f6d77a; }
+.gem-pack em { position: absolute; top: -9px; left: 50%; translate: -50% 0; padding: 1px 8px; font-style: normal; font-size: 10px; font-weight: 700; color: #2f2520; background: #9be38f; white-space: nowrap; }
+.gem-notice { margin: 8px 0 0; padding: 8px 10px; font-size: 12px; color: #9fd4f2; background: #1b2633; border: 1px solid #4aa3ff66; }
+
+/* The diamond count in the HUD and the profile menu. */
+/* Same frame as gold and food; only the button behaviour is added. */
+.realm-gems-chip { font: inherit; text-align: left; cursor: pointer; }
+.realm-gems-chip > span { font-size: 22px; line-height: 1; }
+.realm-gems-chip:hover { filter: brightness(1.12); }
+/* "Finish now" next to a timer. */
+.realm-gem-finish { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 30px; padding: 2px 10px; font: inherit; font-size: 11px; font-weight: 700; color: #e8f7ff; cursor: pointer; background: linear-gradient(#2a4a63, #1b2633); border: 1px solid #4aa3ff88; }
+.realm-gem-finish:hover:not(:disabled) { box-shadow: 0 0 10px #4aa3ff66; }
+.realm-gem-finish:disabled { opacity: 0.45; cursor: not-allowed; }

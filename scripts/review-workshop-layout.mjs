@@ -35,22 +35,18 @@ try {
     await layout.evaluate(el => { el.scrollTop = 0; });
     const overflow = await layout.evaluate(el => el.scrollWidth - el.clientWidth);
     assert.ok(overflow <= 1, `Horizontal overflow at ${viewport.width}: ${overflow}`);
-    if (viewport.width <= 760) {
-      const tabs = page.locator('.craft-recipe-tabs button');
-      for (const tab of await tabs.all()) {
-        await tab.scrollIntoViewIfNeeded();
-        await tab.click();
-        assert.ok(await tab.evaluate(el => el.classList.contains('active')));
-      }
-    }
+    // Every recipe shows as its own card with its own craft button (no tabs to switch between).
+    const cards = page.locator('.craft-card');
+    assert.ok((await cards.count()) >= 6, 'Every recipe must have a card');
+    for (const card of await cards.all()) assert.equal(await card.locator('.realm-button').count(), 1);
     await page.screenshot({ path: `output/workshop-layout/${viewport.width}-recipe.png` });
     const card = page.locator('.craft-use .realm-upgrade-card');
     await card.scrollIntoViewIfNeeded();
     const details = await card.locator('.realm-upgrade-details').boundingBox();
-    const button = await card.locator('button').boundingBox();
+    const button = await card.locator(':scope > .realm-button').boundingBox();
     assert.ok(button.y >= details.y + details.height, 'Upgrade button must sit below costs');
     assert.ok(button.height >= 44, 'Upgrade touch target too small');
-    assert.ok(details.width >= 200, 'Upgrade copy is squeezed');
+    assert.ok(details.width >= 200, 'Upgrade copy is squeezed at ' + viewport.width + ': ' + Math.round(details.width));
     await page.screenshot({ path: `output/workshop-layout/${viewport.width}-upgrade.png` });
     results.push({ viewport, overflow, details, button });
   }

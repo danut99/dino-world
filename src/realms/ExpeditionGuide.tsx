@@ -1,6 +1,9 @@
+import type { ReactNode } from 'react';
 import { ENCOUNTERS, recipeFoodCost, RECIPES, type ItemId } from './content';
 import { EXPEDITION_STAGES, expeditionPlan } from './expeditionRules';
-import type { Command, Save } from './game';
+import { gemsToFinish, type Command, type Save } from './game';
+import { DinosaurArt } from './DinosaurArt';
+import { Icon } from './ui/Icon';
 
 export function tripTime(ms: number) {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
@@ -9,10 +12,16 @@ export function tripTime(ms: number) {
   return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60} min` : ''}`;
 }
 
-export function ExpeditionGuide({ save, now, lang, destination, select, run, navigate, build, prepareSupplies }: {
+/**
+ * The selected destination as one compact card that fits without scrolling: the stage and its cost, the rewards,
+ * whether the champion is ready (only what is missing is listed, with the way to fix it), then the departure button.
+ */
+export function ExpeditionGuide({ save, now, lang, destination, select, run, navigate, build, prepareSupplies, rewards }: {
   save: Save; now: number; lang: number; destination: string; select: (id: string) => void;
   run: (c: Command) => boolean; navigate: (to: 'dino' | 'farm' | 'workshop') => void;
   build: () => void; prepareSupplies: () => void;
+  /** The reward tiles for this stage, drawn by the gameplay screen. */
+  rewards?: ReactNode;
 }) {
   const tr = (ro: string, en: string) => lang ? en : ro;
   const plan = expeditionPlan(save, destination);
@@ -24,13 +33,13 @@ export function ExpeditionGuide({ save, now, lang, destination, select, run, nav
   const materials = (Object.entries(recipe.cost) as [ItemId, number][]).every(([id, n]) => save.inventory[id] >= n);
   const jobs = save.crafting.filter(j => j.recipeId === 'provisions');
   const ready = jobs.some(j => j.endsAt <= now);
-  const checks = [
-    { done: plan.previous, text: previous ? tr(`Termină ${previous.name[0]}`, `Finish ${previous.name[1]}`) : tr('Prima destinație este deschisă', 'First destination is open') },
-    { done: plan.trained, text: tr(`Campion evoluat, nivel ${plan.level}+`, `Evolved champion, level ${plan.level}+`) },
-    { done: plan.portal, text: destination === 'training' ? tr('Fără portal pentru introducere', 'No portal needed for the introduction') : tr('Portal de expediții construit', 'Expedition Portal built') },
-    { done: plan.stocked, text: plan.supplies ? tr(`Provizii: ${save.inventory.provisions}/${plan.supplies} pachete`, `Supplies: ${save.inventory.provisions}/${plan.supplies} packs`) : tr('Fără provizii pentru introducere', 'No supplies needed for the introduction') },
-    { done: plan.available, text: tr('Campion disponibil pentru plecare', 'Champion available to depart') },
-  ];
+  const missing = [
+    { done: plan.previous, text: previous ? tr(`Termină mai întâi ${previous.name[0]}`, `Finish ${previous.name[1]} first`) : '' },
+    { done: plan.trained, text: tr(`Campionul trebuie să fie juvenil, nivel ${plan.level}+`, `Champion must be a juvenile, level ${plan.level}+`) },
+    { done: plan.portal, text: tr('Construiește Portalul de expediții', 'Build the Expedition Portal') },
+    { done: plan.stocked, text: tr(`Provizii: ${save.inventory.provisions}/${plan.supplies} pachete`, `Supplies: ${save.inventory.provisions}/${plan.supplies} packs`) },
+    { done: plan.available, text: tr('Campionul e ocupat acum', 'The champion is busy right now') },
+  ].filter(c => !c.done);
   let action: { label: string; detail: string; click: () => void } | null = null;
   if (!plan.previous && previous) action = { label: tr('Vezi destinația precedentă', 'View previous destination'), detail: tr('Finalizează toate etapele de acolo pentru a deschide acest traseu.', 'Finish its stages to open this route.'), click: () => select(previous.id) };
   else if (!plan.trained) action = { label: tr('Pregătește dinozaurul', 'Prepare your dinosaur'), detail: tr('Hrănește campionul. La nivelul 9, evoluează-l la juvenil; apoi atinge nivelul cerut.', 'Feed your champion. At level 9 evolve it to juvenile, then reach the required level.'), click: () => navigate('dino') };
@@ -45,6 +54,8 @@ export function ExpeditionGuide({ save, now, lang, destination, select, run, nav
 
   const trip = save.expedition;
   const tripDestination = trip && chain.find(e => e.id === trip.encounterId);
+  const done = plan.completed >= plan.total;
+  const hero = plan.hero;
   return (
     <section className="expedition-guide" aria-label={tr('Pașii expediției', 'Expedition steps')}>
       {trip && tripDestination && (
@@ -52,28 +63,55 @@ export function ExpeditionGuide({ save, now, lang, destination, select, run, nav
           <strong>{tripDestination.name[lang]} · {tr('Pe drum', 'Travelling')}</strong>
           <p>{trip.stage === undefined ? tr('Călătorie începută anterior', 'Previously started trip') : EXPEDITION_STAGES[trip.stage][lang]}</p>
           <div className="realm-meter"><i style={{ width: `${Math.max(0, Math.min(100, (now - trip.startedAt) / (trip.endsAt - trip.startedAt) * 100))}%` }} /></div>
-          {now < trip.endsAt ? <strong>{tr('Revine în', 'Returns in')} {tripTime(trip.endsAt - now)}</strong> : <button className="realm-button" onClick={() => run({ type: 'claimExpedition' })}>{tr('Colectează și continuă', 'Collect and continue')} ✓</button>}
-          <small>{tr('Călătoria continuă offline. Recompensa te așteaptă până revii.', 'The trip continues offline. Your reward waits until you return.')}</small>
-          <div className="expedition-preparation-links">
-            <button className="realm-link" onClick={() => navigate('farm')}>{tr('Pregătește hrană', 'Prepare food')}</button>
-            <button className="realm-link" onClick={prepareSupplies}>{tr('Pregătește provizii', 'Prepare supplies')}</button>
-          </div>
+          {now < trip.endsAt ? <>
+            <strong>{tr('Revine în', 'Returns in')} {tripTime(trip.endsAt - now)}</strong>
+            <button className="realm-gem-finish" disabled={save.gems < gemsToFinish(trip.endsAt - now)} onClick={() => run({ type: 'gemFinish', target: 'expedition' })} title={tr('Adu-l înapoi acum cu diamante', 'Bring it back now with diamonds')}>
+              ⚡ {tr('Înapoi acum', 'Back now')} · {gemsToFinish(trip.endsAt - now)} 💎
+            </button>
+          </> : <button className="realm-button" onClick={() => run({ type: 'claimExpedition' })}>{tr('Colectează și continuă', 'Collect and continue')} ✓</button>}
+          <small>{tr('Călătoria continuă offline.', 'The trip continues offline.')}</small>
         </div>
       )}
-      <div className="gameplay-section-label">{tr('PLANUL EXPEDIȚIEI', 'EXPEDITION PLAN')}</div>
-      <h3 className="expedition-guide-title">{plan.encounter.name[lang]}</h3>
-      <strong>{plan.completed >= plan.total ? tr('Traseu finalizat', 'Route complete') : tr(`Etapa ${plan.stage + 1}/${plan.total}`, `Stage ${plan.stage + 1}/${plan.total}`)}</strong>
-      <ol className="expedition-stages">
-        {EXPEDITION_STAGES.slice(0, plan.total).map((label, i) => <li key={i} className={i < plan.completed ? 'done' : i === plan.stage ? 'current' : ''} aria-current={i === plan.stage && plan.completed < plan.total ? 'step' : undefined}>{i < plan.completed ? '✓' : i + 1} · {label[lang]}</li>)}
-      </ol>
-      <p>{tr('Durata etapei', 'Stage duration')}: <b>{tripTime(plan.duration)}</b> · {tr('Cost la plecare', 'Departure cost')}: <b>{plan.supplies} {plan.supplies === 1 ? tr('pachet', 'pack') : tr('pachete', 'packs')}</b></p>
-      <ul className="expedition-checklist">
-        {checks.map(check => <li key={check.text} className={check.done ? 'done' : 'missing'}><span aria-hidden>{check.done ? '✓' : '○'}</span>{check.text}</li>)}
+
+      <div className="expedition-stage-row">
+        <strong>{done ? tr('Traseu finalizat ✓', 'Route complete ✓') : tr(`Etapa ${plan.stage + 1} din ${plan.total}`, `Stage ${plan.stage + 1} of ${plan.total}`)}</strong>
+        <ol className="expedition-pips" aria-label={tr('Etape', 'Stages')}>
+          {EXPEDITION_STAGES.slice(0, plan.total).map((label, i) => (
+            <li key={i} title={label[lang]} className={i < plan.completed ? 'done' : i === plan.stage && !done ? 'current' : ''} />
+          ))}
+        </ol>
+      </div>
+      <ul className="expedition-facts">
+        <li><Icon name="clock" scale={1} /> {tripTime(plan.duration)}</li>
+        <li><Icon name="chest" scale={1} /> {plan.supplies ? `${plan.supplies} ${plan.supplies === 1 ? tr('pachet provizii', 'supply pack') : tr('pachete provizii', 'supply packs')}` : tr('fără provizii', 'no supplies')}</li>
+        {!done && plan.stage === plan.total - 1 && next && <li><Icon name="arrow" scale={1} /> {tr('deschide', 'opens')} {next.name[lang]}</li>}
       </ul>
-      {plan.completed < plan.total && <small>{tr('Fiecare etapă oferă recompense. Ultima deschide destinația următoare și poate aduce un ou.', 'Every stage grants rewards. The final stage opens the next destination and may bring an egg.')}</small>}
-      {!trip && action && <div className="expedition-next-step"><strong>{tr('Următorul pas', 'Next step')}</strong><p>{action.detail}</p><button className="realm-button secondary" onClick={action.click}>{action.label} →</button></div>}
-      {!trip && plan.completed >= plan.total && next && <button className="realm-button" onClick={() => select(next.id)}>{tr('Următoarea destinație', 'Next destination')}: {next.name[lang]} →</button>}
-      {!trip && <button className="realm-button adventure-start" disabled={!plan.canSend} onClick={() => run({ type: 'expedition', encounterId: destination })}>{plan.completed >= plan.total ? tr('Repetă traseul', 'Repeat route') : tr('Pornește etapa', 'Start stage')} · {tripTime(plan.duration)} →</button>}
+
+      {rewards}
+
+      {hero && (
+        <div className={`expedition-hero ${plan.trained ? 'ok' : 'low'}`}>
+          <span className="expedition-hero-art"><DinosaurArt species={hero.species} element={hero.element} stage={hero.stage} paused frame={0} /></span>
+          <span>
+            <strong>{hero.nickname}</strong>
+            <small>{tr('Nivel', 'Level')} {hero.level} · {tr('cerut', 'needed')} {plan.level}+</small>
+          </span>
+          <b aria-hidden>{plan.trained ? '✓' : '!'}</b>
+        </div>
+      )}
+
+      {!trip && (missing.length === 0
+        ? <p className="expedition-ready">✓ {tr('Gata de plecare', 'Ready to go')}</p>
+        : <div className="expedition-missing">
+            <ul>{missing.map(m => <li key={m.text}>○ {m.text}</li>)}</ul>
+            {action && <>
+              <p>{action.detail}</p>
+              <button className="realm-button secondary" onClick={action.click}>{action.label} →</button>
+            </>}
+          </div>)}
+
+      {!trip && done && next && <button className="realm-button secondary" onClick={() => select(next.id)}>{tr('Următoarea destinație', 'Next destination')}: {next.name[lang]} →</button>}
+      {!trip && <button className="realm-button adventure-start" disabled={!plan.canSend} onClick={() => run({ type: 'expedition', encounterId: destination })}>{done ? tr('Repetă traseul', 'Repeat route') : tr('Pornește etapa', 'Start stage')} · {tripTime(plan.duration)} →</button>}
     </section>
   );
 }

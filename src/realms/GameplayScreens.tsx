@@ -1,3 +1,5 @@
+import { ResourceHelp, RequirementLink } from './ResourceHelp';
+import { WorkshopPanel, time } from './WorkshopPanel';
 import { RarityBadge, rarityClass } from './Rarity';
 import { ARENA_BOSSES } from './arenaBosses';
 import { PLAYABLE_DINOSAURS, isPlayableDinosaur } from './playableDinosaurs';
@@ -28,6 +30,7 @@ import {
   foeHasUltimate,
   workshop,
   SPECIES_NAMES,
+  REALM_NAMES,
   type Command,
   type RealmId,
   type Save,
@@ -108,10 +111,6 @@ function EdgeBadge({ edge, lang }: { edge: -1 | 0 | 1; lang: number }) {
     </span>
   );
 }
-const time = (ms: number) => {
-  const seconds = Math.ceil(Math.max(0, ms) / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-};
 function Frame({
   title,
   view,
@@ -292,13 +291,20 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
   const [league, setLeague] = useState<RealmId>('fire');
   const [selected, setSelected] = useState('training'),
     [recipeId, setRecipe] = useState('planks');
+  const detailRef = useRef<HTMLElement>(null);
   const selectDestination = (id: string) => {
     setSelected(id);
+    if (window.matchMedia('(max-width: 760px)').matches) requestAnimationFrame(() => detailRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
     try { localStorage.setItem('dino-expedition-destination', id); } catch { /* Optional navigation memory. */ }
   };
   useEffect(() => {
     if (view === 'workshop') setRecipe(props.initialRecipe ?? 'planks');
   }, [view, props.initialRecipe]);
+  useEffect(() => {
+    if (view !== 'workshop') return;
+    const frame = requestAnimationFrame(() => document.querySelector('.craft-card.focus')?.scrollIntoView({ block: 'center' }));
+    return () => cancelAnimationFrame(frame);
+  }, [view, recipeId]);
   const mapRef = useRef<HTMLDivElement>(null),
     mapDrag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
   const [mapZoom, setMapZoom] = useState(1),
@@ -354,13 +360,31 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
     !locked &&
     (encounter.id === 'training' || hasBuilding);
   const arenaBattle = view === 'arena' && !!save.battle?.encounterId.startsWith('arena');
+  const rewards = (
+    <>
+      <div className="gameplay-section-label">
+        {tr('RECOMPENSE', 'REWARDS')}{' '}
+        <small>{repeat ? tr('REJUCARE', 'REPLAY') : expedition ? tr('ACEASTĂ ETAPĂ', 'THIS STAGE') : tr('PRIMA VICTORIE', 'FIRST VICTORY')}</small>
+      </div>
+      <Rewards
+        encounter={expedition && !repeat ? { ...encounter,
+          gold: Math.max(1, Math.floor(encounter.gold / expedition.total)),
+          food: Math.max(1, Math.floor(encounter.food / expedition.total)),
+          materials: Object.fromEntries(Object.entries(encounter.materials).map(([id, n]) => [id, Math.max(1, Math.floor(n! / expedition.total))])),
+        } : encounter}
+        repeat={repeat}
+        lang={lang}
+        eggChance={expedition && expedition.stage < expedition.total - 1 ? undefined : save.eggLuck >= EGG_DROP.pity ? 1 : eggOdds(save, encounter, !repeat)?.chance}
+        bonus={encounter.mode === 'arena' ? ARENA_LEVELS[save.arenaLevel - 1].bonus : 0}
+      />
+    </>
+  );
   const start = () => {
     if (save.battle || run({ type: 'battle', encounterId: encounter.id })) {
       if (view !== 'arena' || (save.battle && !arenaBattle)) close();
     }
   };
   // Expeditions are timed trips: the champion leaves, and its rewards are collected when it is back.
-  const recipe = RECIPES.find((r) => r.id === recipeId)!;
   const ready = advance(save, now);
   const activeJobs = save.crafting.filter((j) => j.endsAt > now).length;
   return (
@@ -378,227 +402,15 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
       lang={lang}
     >
       {view === 'workshop' ? (
-        <div className="crafting-layout">
-          <aside className="craft-inventory">
-            <div className="gameplay-section-label">{tr('RESURSE', 'RESOURCES')}</div>
-            <div className="craft-material-grid">
-              {(Object.keys(ITEMS) as ItemId[]).map((id) => (
-                <div key={id}>
-                  <span style={{ color: ITEMS[id].color }}>{ITEMS[id].icon}</span>
-                  <strong>{ready.inventory[id]}</strong>
-                  <small>{ITEMS[id].name[lang]}</small>
-                </div>
-              ))}
-            </div>
-            <p className="gameplay-small">
-              {tr(
-                'Materialele vin din expediții și luptele din arenă.',
-                'Materials come from expeditions and arena battles.',
-              )}
-            </p>
-          </aside>
-          <div className="craft-workspace">
-            {props.returnToExpeditions && <button className="realm-button secondary realm-back-to-hatchery" onClick={props.returnToExpeditions}>← {tr('Înapoi la expediție', 'Back to expedition')}</button>}
-            <div className="craft-recipe-tabs">
-              {RECIPES.map((r) => (
-                <button className={r.id === recipeId ? 'active' : ''} onClick={() => setRecipe(r.id)} key={r.id}>
-                  {ITEMS[r.output].icon} {r.name[lang]}
-                </button>
-              ))}
-            </div>
-            <div className="craft-parchment">
-              <span className="realm-eyebrow">{tr('REȚETĂ DE ATELIER', 'WORKSHOP RECIPE')}</span>
-              <h2>{recipe.name[lang]}</h2>
-              <div className="craft-transformation">
-                <div className="craft-inputs">
-                  {recipeFoodCost(recipe) > 0 && <div><span className="food">❧</span><strong className={save.food < recipeFoodCost(recipe) ? 'missing' : ''}>{save.food} / {recipeFoodCost(recipe)}</strong><small>{tr('Hrană', 'Food')}</small></div>}
-                  {(Object.entries(recipe.cost) as [ItemId, number][]).map(([id, count]) => (
-                    <div key={id}>
-                      <span style={{ color: ITEMS[id].color }}>{ITEMS[id].icon}</span>
-                      <strong className={save.inventory[id] < count ? 'missing' : ''}>
-                        {save.inventory[id]} / {count}
-                      </strong>
-                      <small>{ITEMS[id].name[lang]}</small>
-                    </div>
-                  ))}
-                </div>
-                <span className="craft-arrow">→</span>
-                <div className="craft-output">
-                  <span style={{ color: ITEMS[recipe.output].color }}>{ITEMS[recipe.output].icon}</span>
-                  <strong>×{recipe.quantity}</strong>
-                  <small>{ITEMS[recipe.output].name[lang]}</small>
-                </div>
-              </div>
-              <p>
-                {time(Math.round(recipe.seconds * 1000 * workshop(save).speed))} ·{' '}
-                {workshop(save).lanes > 1
-                  ? tr(`${workshop(save).lanes} procese deodată`, `${workshop(save).lanes} jobs at once`)
-                  : tr('Un proces activ', 'One active job')}{' '}
-                + {workshop(save).slots - workshop(save).lanes} {tr('în așteptare', 'queued')}
-              </p>
-              <button
-                className="realm-button"
-                disabled={
-                  !hasBuilding ||
-                  save.food < recipeFoodCost(recipe) ||
-                  activeJobs >= workshop(save).slots ||
-                  !(Object.entries(recipe.cost) as [ItemId, number][]).every(
-                    ([id, count]) => save.inventory[id] >= count,
-                  )
-                }
-                onClick={() => run({ type: 'craft', recipeId: recipe.id })}
-              >
-                ⚒ {tr('Fabrică', 'Craft')}
-              </button>
-              {!hasBuilding && (
-                <button className="realm-link" onClick={build}>
-                  {tr('Construiește atelierul · 200 aur', 'Build the workshop · 200 gold')}
-                </button>
-              )}
-            </div>
-            <div className="craft-queue">
-              <div className="gameplay-section-label">
-                {tr('COADA ATELIERULUI', 'WORKSHOP QUEUE')}{' '}
-                <small>
-                  {activeJobs} / {workshop(save).slots} · {tr('Nv.', 'Lv.')} {save.workshopLevel}
-                </small>
-              </div>
-              {save.crafting.length === 0 ? (
-                <p className="gameplay-small">{tr('Alege o rețetă pentru a începe.', 'Choose a recipe to begin.')}</p>
-              ) : (
-                save.crafting.map((job) => {
-                  const r = RECIPES.find((r) => r.id === job.recipeId)!;
-                  const finished = now >= job.endsAt,
-                    queued = now < job.startedAt;
-                  return (
-                    <div className="craft-job" key={job.id}>
-                      <span>{ITEMS[r.output].icon}</span>
-                      <div>
-                        <strong>
-                          {r.name[lang]} ×{r.quantity}
-                        </strong>
-                        <small>
-                          {finished
-                            ? tr('Gata de colectat', 'Ready to collect')
-                            : queued
-                              ? tr('În așteptare', 'Queued')
-                              : time(job.endsAt - now)}
-                        </small>
-                        <i>
-                          <b
-                            style={{
-                              width: `${Math.max(0, Math.min(100, ((now - job.startedAt) / (job.endsAt - job.startedAt)) * 100))}%`,
-                            }}
-                          />
-                        </i>
-                      </div>
-                      {finished ? (
-                        <button className="realm-button" onClick={() => run({ type: 'claimCraft', jobId: job.id })}>
-                          {tr('Colectează', 'Collect')}
-                        </button>
-                      ) : queued ? (
-                        <button className="realm-link" onClick={() => run({ type: 'cancelCraft', jobId: job.id })}>
-                          {tr('Anulează', 'Cancel')}
-                        </button>
-                      ) : (
-                        <small>{tr('În lucru', 'Working')}</small>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-          <aside className="craft-use">
-            <div className="gameplay-section-label">{tr('NIVELURILE ATELIERULUI', 'WORKSHOP LEVELS')}</div>
-            <div className="workshop-levels">
-              {WORKSHOP_LEVELS.map((level, index) => {
-                const current = save.workshopLevel === index + 1;
-                const unlocked = hasBuilding && save.workshopLevel >= index + 1;
-                return <div key={index} className={`workshop-level${current && hasBuilding ? ' current' : ''}`}>
-                  <AnimatedWorkshopSprite art={WORKSHOP_STATES[index].art} />
-                  <div>
-                    <strong>{tr('Nivel', 'Level')} {index + 1} {current && hasBuilding ? '✓' : unlocked ? '✓' : '🔒'}</strong>
-                    <small>{level.lanes} {tr('producții simultane', 'simultaneous jobs')} · {level.slots} {tr('locuri în coadă', 'queue slots')}</small>
-                    <small>{level.speed === 1 ? tr('Durată standard', 'Standard duration') : tr('Durată de producție −25%', 'Crafting duration −25%')}</small>
-                  </div>
-                </div>;
-              })}
-            </div>
-            {hasBuilding && (
-              <UpgradeCard
-                save={save}
-                lang={lang}
-                level={save.workshopLevel}
-                max={WORKSHOP_LEVELS.length}
-                next={(() => {
-                  const now = workshop(save),
-                    next = WORKSHOP_LEVELS[save.workshopLevel];
-                  if (!next) return [];
-                  return [
-                    next.slots > now.slots && (
-                      <>
-                        ⚒ {now.slots} → <b>{next.slots}</b> {tr('locuri în coadă', 'queue slots')}
-                      </>
-                    ),
-                    next.speed < now.speed && (
-                      <>
-                        ⏱ <b>{Math.round((1 - next.speed) * 100)}%</b> {tr('mai rapid', 'faster crafting')}
-                      </>
-                    ),
-                    next.lanes > now.lanes && (
-                      <>
-                        ⚙ <b>{next.lanes}</b> {tr('procese deodată', 'jobs at once')}
-                      </>
-                    ),
-                  ].filter(Boolean);
-                })()}
-                gold={WORKSHOP_LEVELS[save.workshopLevel]?.gold ?? 0}
-                materials={WORKSHOP_LEVELS[save.workshopLevel]?.materials ?? {}}
-                upgrade={() => run({ type: 'upgradeWorkshop' })}
-              />
-            )}
-            <div className="gameplay-section-label">{tr('OBIECTE UTILE', 'USE YOUR ITEMS')}</div>
-            <p>{tr('Progres pentru lumi și eroi.', 'Progress for worlds and heroes.')}</p>
-            {[
-              {
-                id: 'habitatKit' as const,
-                action: { type: 'upgradeHabitat', realm: hero?.element ?? 'fire' } as Command,
-                label: `${tr('+1 nivel habitat', '+1 habitat level')} · ${
-                  ELEMENTS.find((e) => e.id === (hero?.element ?? 'fire'))!.name[lang]
-                } (${HABITAT_LEVELS[save.habitats[hero?.element ?? 'fire'] ?? 0]?.gold ?? '—'} ●)`,
-                disabled: (save.habitats[hero?.element ?? 'fire'] ?? HABITAT_LEVELS.length) >= HABITAT_LEVELS.length,
-              },
-              {
-                id: 'evolutionCrystal' as const,
-                action: { type: 'useCrystal' } as Command,
-                label: `${tr('+1 nivel pentru', '+1 level for')} ${hero?.nickname ?? '—'}`,
-                disabled: !hero || !!save.battle || hero.level >= 50 || [9, 24].includes(hero.level),
-              },
-              {
-                id: 'lamp' as const,
-                action: { type: 'placeLamp' } as Command,
-                label: tr('Lampă pe insula principală', 'Lamp on your main island'),
-                disabled: save.lanterns >= 4,
-              },
-            ].map((item) => (
-              <div className="craft-item-card" key={item.id}>
-                <span>{ITEMS[item.id].icon}</span>
-                <strong>
-                  {ITEMS[item.id].name[lang]} · {save.inventory[item.id]}
-                </strong>
-                <p>{item.label}</p>
-                <button
-                  className="realm-button secondary"
-                  disabled={item.disabled || save.inventory[item.id] === 0}
-                  onClick={() => run(item.action)}
-                >
-                  {tr('Folosește', 'Use')}
-                </button>
-              </div>
-            ))}
-          </aside>
-        </div>
+        <WorkshopPanel
+          save={save}
+          now={now}
+          lang={lang}
+          run={run}
+          build={build}
+          recipeId={recipeId}
+          returnToExpeditions={props.returnToExpeditions}
+        />
       ) : (
         <div className={`adventure-layout ${arenaBattle ? 'battle-focus' : ''}`}>
           <div
@@ -765,38 +577,32 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
               </>
             )}
           </div>
-          <aside className="adventure-detail">
-            {view === 'expedition' && <button className="realm-button secondary mobile-destination-picker" onClick={() => mapRef.current?.scrollIntoView({ block: 'start' })}>
-              ← {tr('Alege altă destinație', 'Choose another destination')}
-            </button>}
+          <aside ref={detailRef} className={`adventure-detail${view === 'expedition' ? ' expedition-detail' : ''}`}>
             <div
               className="destination-cover"
               style={{ backgroundImage: `url('${worldThumb(encounter.image as RealmId)}')` }}
             >
               <span>{encounter.name[lang]}</span>
+              {view === 'expedition' && (
+                <em>
+                  {ELEMENTS.find((e) => e.id === encounter.image)?.symbol} {REALM_NAMES[encounter.image as RealmId]?.[lang]}
+                </em>
+              )}
             </div>
             <div className="adventure-detail-body">
               {view === 'expedition' && <ExpeditionGuide
                 save={save} now={now} lang={lang} destination={encounter.id}
                 select={selectDestination} run={run} navigate={navigate} build={build}
                 prepareSupplies={props.prepareSupplies ?? (() => navigate('workshop'))}
+                rewards={rewards}
               />}
-              <div className="gameplay-section-label">
-                {tr('RECOMPENSE', 'REWARDS')}{' '}
-                <small>{repeat ? tr('REJUCARE', 'REPLAY') : expedition ? tr('ACEASTĂ ETAPĂ', 'THIS STAGE') : tr('PRIMA VICTORIE', 'FIRST VICTORY')}</small>
-              </div>
-              <Rewards
-                encounter={expedition && !repeat ? { ...encounter,
-                  gold: Math.max(1, Math.floor(encounter.gold / expedition.total)),
-                  food: Math.max(1, Math.floor(encounter.food / expedition.total)),
-                  materials: Object.fromEntries(Object.entries(encounter.materials).map(([id, n]) => [id, Math.max(1, Math.floor(n! / expedition.total))])),
-                } : encounter}
-                repeat={repeat}
-                lang={lang}
-                eggChance={expedition && expedition.stage < expedition.total - 1 ? undefined : save.eggLuck >= EGG_DROP.pity ? 1 : eggOdds(save, encounter, !repeat)?.chance}
-                bonus={encounter.mode === 'arena' ? ARENA_LEVELS[save.arenaLevel - 1].bonus : 0}
-              />
-              <Team save={save} lang={lang} />
+              {view === 'expedition' && (
+                <button className="realm-button secondary mobile-destination-picker" onClick={() => mapRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
+                  ↓ {tr('Toate destinațiile', 'All destinations')}
+                </button>
+              )}
+              {view !== 'expedition' && rewards}
+              {view !== 'expedition' && <Team save={save} lang={lang} />}
               {view !== 'expedition' && (
               <div className="encounter-condition">
                 {opponentOf(encounter).info.symbol}{' '}
@@ -841,9 +647,14 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
                 </p>
               )}
               {view !== 'expedition' && (
+                <>
+                {!hero && <RequirementLink title={tr('Ai nevoie de un campion', 'A champion is required')} detail={tr('Eclozează un dinozaur în Incubator.', 'Hatch a dinosaur in the Hatchery.')} route={{ panel: 'hatchery' }} />}
+                {hero && hero.level < encounter.level && <RequirementLink title={tr(`Nivel necesar: ${encounter.level}`, `Required level: ${encounter.level}`)} detail={tr('Hrănește și evoluează campionul.', 'Feed and evolve your champion.')} route={{ panel: 'dino' }} />}
+                {hero && (save.tired[hero.id] ?? 0) > now && <RequirementLink title={tr('Campionul se odihnește', 'Champion is resting')} detail={tr('Alege alt campion sau așteaptă terminarea odihnei.', 'Choose another champion or wait for recovery.')} route={{ panel: 'dino' }} />}
               <button className="realm-button adventure-start" disabled={arenaBattle || (!save.battle && !canBattle)} onClick={start}>
                   {arenaBattle ? tr('Luptă în desfășurare', 'Battle in progress') : save.battle ? tr('Reia lupta', 'Resume battle') : tr('Începe aventura', 'Begin adventure')} →
                 </button>
+                </>
               )}
               {view !== 'expedition' && !hasBuilding && encounter.id !== 'training' && (
                 <button className="realm-link" onClick={build}>

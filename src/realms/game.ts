@@ -16,7 +16,7 @@ import {
   type UtilityKind,
 } from './content';
 import { buildable } from './grid';
-import { newDaily, dailyState, dailyQuests, DAILY_QUESTS, DAILY_BONUS, WHEEL_PRIZES, wheelPrize, grantDailyReward, addDailyProgress, validDaily, type DailyState, type DailyQuestId } from './daily';
+import { newDaily, dailyState, dailyQuests, DAILY_QUESTS, DAILY_BONUS, WHEEL_PRIZES, wheelPrize, grantDailyReward, addDailyProgress, normalizeDaily, validDaily, type DailyState, type DailyQuestId } from './daily';
 import { expeditionMs, expeditionPlan, expeditionStageCount } from './expeditionRules';
 export { expeditionMs } from './expeditionRules';
 export const SAVE_KEY = 'dino-realms-save-v1';
@@ -28,6 +28,32 @@ export const BALANCE = {
   maxEggs: 12,
   maxDinos: 60,
 };
+/**
+ * Diamonds buy time, never power: finishing a timer now, doubling habitat gold for a while, a quick trade, or
+ * waking a tired champion. Prices are in diamonds.
+ */
+export const GEMS = {
+  /** One diamond for every started five minutes still to wait. */
+  finishPerMs: 5 * 60_000,
+  boost: { 1: 20, 4: 60 } as Record<1 | 4, number>,
+  trade: { gold: { gems: 10, amount: 1000 }, food: { gems: 10, amount: 500 } },
+  rest: 5,
+  /** Another turn of the daily wheel, once the free one is used. */
+  spin: 10,
+  /** The most a single test grant may add. */
+  maxGrant: 10_000,
+};
+/** A crafting job's full length, at the slowest workshop level. */
+const craftMs = (recipe: { seconds: number }) => Math.max(...WORKSHOP_LEVELS.map((l) => Math.round(recipe.seconds * 1000 * l.speed)));
+/** An expedition's full length; trips started before staged expeditions had their own fixed times. */
+const tripMs = (x: Pick<Expedition, 'encounterId' | 'stage'>) =>
+  x.stage === undefined
+    ? x.encounterId === 'training'
+      ? 30_000
+      : (ENCOUNTERS.filter((e) => e.mode === 'expedition').findIndex((e) => e.id === x.encounterId) + 1) * 60_000
+    : expeditionMs(x.encounterId, x.stage);
+/** Diamonds to finish a wait of `ms` right away. */
+export const gemsToFinish = (ms: number) => (ms <= 0 ? 0 : Math.max(1, Math.ceil(ms / GEMS.finishPerMs)));
 export const ELEMENTS = [
   { id: 'fire', name: ['Foc', 'Fire'], role: ['Atacator', 'Attacker'], color: '#ee7541', symbol: '♨' },
   { id: 'water', name: ['Apă', 'Water'], role: ['Vindecător', 'Healer'], color: '#65c8e1', symbol: '≈' },
@@ -192,6 +218,8 @@ export interface Expedition {
   /** Absent only on trips started before staged expeditions. */
   stage?: number;
   reward: { gold: number; food: number; materials: Partial<Inventory>; egg?: EggKind };
+  /** Brought back early with diamonds: shorter than its stage's time. */
+  rushed?: true;
 }
 export interface RoundReport {
   ally: 'basic' | 'skill' | 'defend' | 'ultimate';
@@ -214,6 +242,10 @@ export interface Save {
   updatedAt: number;
   gold: number;
   food: number;
+  /** Diamonds: the premium currency, spent to save time (see GEMS). Older saves have none. */
+  gems: number;
+  /** Until when habitat gold flows twice as fast (a diamond boost); 0 when none. */
+  boostUntil: number;
   /** Gold produced by all habitats, waiting to be collected. */
   storedGold: number;
   buildings: Building[];
@@ -227,8 +259,12 @@ export interface Save {
   arenaLevel: number;
   /** Habitat level per element world; a missing world has no habitat yet. */
   habitats: Partial<Record<RealmId, number>>;
-  /** Story eggs already claimed (see QUEST_EGGS). */
+  /** Story goals already claimed (see STORY_CHAPTERS). */
   questEggs: string[];
+  /** 2: the ten-chapter story. Older saves have their finished goals ticked on load (see parseSave). */
+  storyVersion?: number;
+  /** 2: timers finished with diamonds carry a `rushed` mark. Older saves get it on load (see parseSave). */
+  timersVersion?: number;
   /** Wins that could have dropped an egg but did not, since the last egg (see EGG_DROP.pity). */
   eggLuck: number;
   /** Eggs won while the shelf was full; they move to the shelf as soon as there is room. */
@@ -263,6 +299,8 @@ export interface CraftJob {
   endsAt: number;
   /** Which of the workshop's parallel jobs runs it; older saves have none (lane 0). */
   lane?: number;
+  /** Finished early with diamonds: shorter than its recipe's time. */
+  rushed?: true;
 }
 
 /** Hatchery: eggs incubating at the same time, per level. */
@@ -354,180 +392,174 @@ function roll(seed: string) {
 const bossesBeaten = (s: Save) => s.cleared.filter((id) => /^arena-[a-z]+-3$/.test(id)).length;
 const worldsOpen = (s: Save) => Object.keys(s.habitats).length;
 /**
- * Story rewards. Chapter I gives the four MVP egg variants (plan section 5). From chapter II on, the story card
- * follows five goals per chapter, one at a time: each pays gold and food, and the chapter's last one adds an egg.
+ * The story card: ten chapters of three or four short goals, followed one at a time. Chapter I settles the player
+ * on the island and in the fire world; each later chapter is one world, in the order they unlock: open it, cross
+ * its expedition, win in its arena league (plus one new building or upgrade where the world asks for it). Every
+ * goal pays gold and food when claimed; a chapter's last goal adds an egg of that world's own dinosaur.
  */
-/** A quest goal naming an expedition by its current title, so renaming or reordering never leaves it stale. */
-const clearTask = (id: string): [string, string] => {
-  const name = ENCOUNTERS.find((e) => e.id === id)!.name;
-  return [`Termină expediția ${name[0]}`, `Finish the ${name[1]} expedition`];
-};
-export const QUEST_EGGS: {
+export type StoryStep = {
   id: string;
-  /** The egg this step gives; most chapter steps pay only gold and food. */
+  chapter: number;
+  task: readonly [string, string];
+  /** One line on how to get there. */
+  hint: readonly [string, string];
+  done: (s: Save) => boolean;
+  /** Progress toward the goal as [now, needed], shown as a bar on the story card. */
+  progress?: (s: Save) => [number, number];
+  /** Where the player works on it. */
+  panel: 'hatchery' | 'dino' | 'build' | 'farm' | 'workshop' | 'expedition' | 'arena' | 'realms';
+  gold: number;
+  food: number;
+  /** The egg a chapter's last goal gives. */
   species?: Species;
   element?: RealmId;
-  gold?: number;
-  food?: number;
-  task: readonly [string, string];
-  done: (s: Save) => boolean;
-  chapter?: 2 | 3;
-  /** Progress toward the goal as [now, needed], shown on the story card. */
-  progress?: (s: Save) => [number, number];
-  /** The panel where the player works on it. */
-  panel?: 'dino' | 'habitat' | 'arena' | 'farm' | 'market' | 'workshop';
-}[] = [
+};
+export type StoryChapter = {
+  number: number;
+  /** The world the chapter is about; null for the opening chapter. */
+  world: RealmId | null;
+  rank: readonly [string, string];
+  title: readonly [string, string];
+  steps: StoryStep[];
+};
+const expeditionOf = (world: RealmId) => ENCOUNTERS.find((e) => e.mode === 'expedition' && e.image === world)!;
+const leagueOf = (world: RealmId) => ENCOUNTERS.find((e) => e.id === `arena-${world}-1`)!;
+const has = (kind: UtilityKind) => (s: Save) => s.buildings.some((b) => b.kind === kind);
+/** Rewards grow a little with each chapter. */
+const pay = (chapter: number) => ({ gold: 60 + chapter * 50, food: 40 + chapter * 25 });
+
+function worldChapter(
+  number: number,
+  world: RealmId,
+  rank: readonly [string, string],
+  egg: Species,
+  /** One extra goal, played after the expedition and before the league. */
+  extra?: Omit<StoryStep, 'id' | 'chapter' | 'gold' | 'food'> & { key: string },
+): StoryChapter {
+  const name = REALM_NAMES[world],
+    trip = expeditionOf(world),
+    league = leagueOf(world);
+  const steps: Omit<StoryStep, 'chapter' | 'gold' | 'food'>[] = [
+    {
+      id: `w-${world}-open`,
+      task: [`Deblochează ${name[0]}`, `Unlock ${name[1]}`],
+      hint: ['Costă aur și materiale; le aduci din expediții și arenă.', 'It costs gold and materials from expeditions and the arena.'],
+      done: (s) => !!s.habitats[world],
+      panel: 'realms',
+    },
+    {
+      id: `w-${world}-trip`,
+      task: [`Termină expediția ${trip.name[0]}`, `Finish the ${trip.name[1]} expedition`],
+      hint: [`Campionul are nevoie de nivelul ${trip.level}.`, `Your champion needs level ${trip.level}.`],
+      done: (s) => s.cleared.includes(trip.id),
+      panel: 'expedition',
+    },
+    ...(extra ? [{ ...extra, id: `w-${world}-${extra.key}` }] : []),
+    {
+      id: `w-${world}-league`,
+      task: [`Câștigă o luptă în ${league.name[0].split(' · ')[0]}`, `Win a fight in the ${league.name[1].split(' · ')[0]}`],
+      hint: ['Treapta Ucenic din arenă. Un element avantajat ajută mult.', 'The Apprentice tier of the arena. A strong element helps a lot.'],
+      done: (s) => s.cleared.includes(league.id),
+      panel: 'arena',
+    },
+  ];
+  return {
+    number,
+    world,
+    rank,
+    title: name,
+    steps: steps.map((step, i) => ({
+      ...step,
+      chapter: number,
+      ...pay(number),
+      ...(i === steps.length - 1 ? { species: egg, element: world } : {}),
+    })),
+  };
+}
+
+export const STORY_CHAPTERS: StoryChapter[] = [
   {
-    id: 'raptor_fire',
-    species: 'raptor',
-    element: 'earth',
-    task: ['Termină prima expediție', 'Finish your first expedition'],
-    done: (s) => s.cleared.includes('training'),
+    number: 1,
+    world: null,
+    rank: ['Explorator', 'Explorer'],
+    title: ['Prima scânteie', 'The first spark'],
+    steps: (
+      [
+        {
+          id: 'c1-hatch',
+          task: ['Eclozează primul ou', 'Hatch your first egg'],
+          hint: ['Pune oul de foc în incubator și așteaptă să crape.', 'Put the fire egg in the hatchery and wait for it to crack.'],
+          done: (s) => s.dinos.length > 0,
+          panel: 'hatchery',
+        },
+        {
+          id: 'c1-farm',
+          task: ['Construiește o fermă', 'Build a farm'],
+          hint: ['Ferma crește hrana cu care îți hrănești dinozaurii.', 'The farm grows the food your dinosaurs eat.'],
+          done: has('farm'),
+          panel: 'build',
+        },
+        {
+          id: 'c1-grow',
+          task: ['Crește-ți campionul până la juvenil', 'Raise your champion to juvenile'],
+          hint: ['Hrănește-l până la nivelul 10, apoi evoluează-l.', 'Feed it up to level 10, then evolve it.'],
+          done: (s) => s.dinos.some((d) => d.stage !== 'baby'),
+          progress: (s) => [Math.min(10, Math.max(0, ...s.dinos.map((d) => d.level))), 10],
+          panel: 'dino',
+        },
+        {
+          id: 'c1-trip',
+          task: [`Termină expediția ${expeditionOf('fire').name[0]}`, `Finish the ${expeditionOf('fire').name[1]} expedition`],
+          hint: ['Prima ta aventură, în lumea Focului.', 'Your first adventure, in the fire world.'],
+          done: (s) => s.cleared.includes(expeditionOf('fire').id),
+          panel: 'expedition',
+        },
+      ] satisfies Omit<StoryStep, 'chapter' | 'gold' | 'food'>[]
+    ).map((step, i, all) => ({ ...step, chapter: 1, ...pay(1), ...(i === all.length - 1 ? { species: 'ignasaur' as Species, element: 'fire' as RealmId } : {}) })),
   },
-  {
-    id: 'triceratops_earth',
-    species: 'triceratops',
-    element: 'nature',
-    task: ['Construiește o fermă', 'Build a farm'],
-    done: (s) => s.buildings.some((b) => b.kind === 'farm'),
-  },
-  {
-    id: 'ankylosaurus_nature',
-    species: 'triceratops',
-    element: 'nature',
-    task: clearTask('ruins'),
-    done: (s) => s.cleared.includes('ruins'),
-  },
-  {
-    id: 'brachiosaurus_water',
-    species: 'raptor',
-    element: 'water',
-    task: clearTask('lagoon'),
-    done: (s) => s.cleared.includes('lagoon'),
-  },
-  {
-    id: 'ch2_adult',
-    chapter: 2,
-    gold: 300,
-    food: 150,
-    task: ['Crește un dinozaur până la adult', 'Raise a dinosaur to adult'],
-    done: (s) => s.dinos.some((d) => d.stage === 'adult'),
-    progress: (s) => [s.dinos.filter((d) => d.stage === 'adult').length, 1],
-    panel: 'dino',
-  },
-  {
-    id: 'ch2_worlds4',
-    chapter: 2,
-    gold: 500,
-    food: 200,
-    task: ['Deblochează 4 lumi', 'Unlock 4 worlds'],
-    done: (s) => worldsOpen(s) >= 4,
-    progress: (s) => [worldsOpen(s), 4],
-    panel: 'habitat',
-  },
-  {
-    id: 'ch2_ember_boss',
-    chapter: 2,
-    gold: 600,
-    food: 250,
-    task: ['Învinge bossul Ligii jarului', 'Beat the Ember league boss'],
-    done: (s) => s.cleared.includes('arena-fire-3'),
-    progress: (s) => [s.cleared.filter((id) => id.startsWith('arena-fire-')).length, 3],
-    panel: 'arena',
-  },
-  {
-    id: 'ch2_farm3',
-    chapter: 2,
-    gold: 700,
-    food: 300,
-    task: ['Îmbunătățește ferma la nivelul 3', 'Upgrade the farm to level 3'],
-    done: (s) => s.farmLevel >= 3,
-    progress: (s) => [Math.min(s.farmLevel, 3), 3],
+  worldChapter(2, 'water', ['Navigator', 'Navigator'], 'thalassaur', {
+    key: 'gate',
+    task: ['Construiește Poarta arenei', 'Build the Arena Gate'],
+    hint: ['Arena e locul unde câștigi stele, materiale și ouă.', 'The arena is where you win stars, materials and eggs.'],
+    done: has('arena'),
+    panel: 'build',
+  }),
+  worldChapter(3, 'earth', ['Pionier', 'Pioneer'], 'terrasaur', {
+    key: 'workshop',
+    task: ['Construiește atelierul', 'Build the workshop'],
+    hint: ['Atelierul transformă materialele în scânduri, blocuri și provizii.', 'The workshop turns materials into planks, blocks and supplies.'],
+    done: has('workshop'),
+    panel: 'build',
+  }),
+  worldChapter(4, 'nature', ['Îngrijitor', 'Keeper'], 'brachiosaurus', {
+    key: 'farm2',
+    task: ['Îmbunătățește ferma la nivelul 2', 'Upgrade the farm to level 2'],
+    hint: ['Mai multă hrană, mai repede.', 'More food, faster.'],
+    done: (s) => s.farmLevel >= 2,
     panel: 'farm',
-  },
-  {
-    id: 'ch2_dinos8',
-    chapter: 2,
-    species: 'triceratops',
-    element: 'nature',
-    gold: 900,
-    food: 350,
-    task: ['Adună 8 dinozauri', 'Own 8 dinosaurs'],
-    done: (s) => s.dinos.length >= 8,
-    progress: (s) => [Math.min(s.dinos.length, 8), 8],
-    panel: 'market',
-  },
-  {
-    id: 'ch2_gate',
-    chapter: 3,
-    gold: 1000,
-    food: 400,
+  }),
+  worldChapter(5, 'ice', ['Îmblânzitor', 'Tamer'], 'therizinosaurus'),
+  worldChapter(6, 'lightning', ['Veteran', 'Veteran'], 'ankylobiped', {
+    key: 'gate2',
     task: ['Îmbunătățește Poarta arenei', 'Upgrade the Arena Gate'],
+    hint: ['Nivelul 2 deschide ligile Fulgerului, Vântului, Întunericului, Luminii și Arcanului.', 'Level 2 opens the lightning, wind, dark, light and arcane leagues.'],
     done: (s) => s.arenaLevel >= 2,
-    progress: (s) => [s.arenaLevel - 1, 1],
     panel: 'arena',
-  },
-  {
-    id: 'ch3_workshop3',
-    chapter: 3,
-    gold: 1100,
-    food: 450,
-    task: ['Îmbunătățește atelierul la nivelul 3', 'Upgrade the workshop to level 3'],
-    done: (s) => s.workshopLevel >= 3,
-    progress: (s) => [s.workshopLevel, 3],
-    panel: 'workshop',
-  },
-  {
-    id: 'ch2_bosses3',
-    chapter: 3,
-    gold: 1200,
-    food: 500,
-    task: ['Învinge 3 bossi de ligă', 'Beat 3 league bosses'],
-    done: (s) => bossesBeaten(s) >= 3,
-    progress: (s) => [Math.min(bossesBeaten(s), 3), 3],
+  }),
+  worldChapter(7, 'wind', ['Gardian', 'Guardian'], 'quetzalcoatlus'),
+  worldChapter(8, 'dark', ['Campion', 'Champion'], 'dilophosaurus'),
+  worldChapter(9, 'light', ['Maestru', 'Master'], 'solarraptor'),
+  worldChapter(10, 'arcane', ['Erou', 'Hero'], 'cryptoraptor', {
+    key: 'boss',
+    task: ['Învinge bossul unei ligi', 'Beat a league boss'],
+    hint: ['Treapta Campion a oricărei ligi.', 'The Champion tier of any league.'],
+    done: (s) => bossesBeaten(s) >= 1,
     panel: 'arena',
-  },
-  {
-    id: 'ch3_bosses5',
-    chapter: 3,
-    gold: 1400,
-    food: 550,
-    task: ['Învinge 5 bossi de ligă', 'Beat 5 league bosses'],
-    done: (s) => bossesBeaten(s) >= 5,
-    progress: (s) => [Math.min(bossesBeaten(s), 5), 5],
-    panel: 'arena',
-  },
-  {
-    id: 'ch2_worlds10',
-    chapter: 3,
-    species: 'raptor',
-    element: 'dark',
-    gold: 1500,
-    food: 600,
-    task: ['Deblochează toate cele 10 lumi', 'Unlock all 10 worlds'],
-    done: (s) => worldsOpen(s) >= 10,
-    progress: (s) => [worldsOpen(s), 10],
-    panel: 'habitat',
-  },
+  }),
 ];
-/** Chapters after the tutorial: a rank and title for the header badge, and five goals in story order. */
-export const STORY_CHAPTERS = [
-  {
-    number: 2,
-    rank: ['Îmblânzitor', 'Tamer'] as const,
-    title: ['Stăpânul tărâmurilor', 'Master of the realms'] as const,
-    steps: QUEST_EGGS.filter((q) => q.chapter === 2),
-  },
-  {
-    number: 3,
-    rank: ['Campion', 'Champion'] as const,
-    title: ['Legenda arenei', 'Legend of the arena'] as const,
-    steps: QUEST_EGGS.filter((q) => q.chapter === 3),
-  },
-];
-/** Chapter II goals, in story order. */
-export const CHAPTER_TWO = STORY_CHAPTERS[0].steps;
-/** The chapter being played after the tutorial and its next unclaimed goal; null once every chapter is done. */
+/** Every story goal in play order. Claimed ones are listed in Save.questEggs. */
+export const QUEST_EGGS: StoryStep[] = STORY_CHAPTERS.flatMap((c) => c.steps);
+/** The chapter being played and its next unclaimed goal; null once every chapter is done. */
 export function storyChapter(s: Save) {
   const chapter = STORY_CHAPTERS.find((c) => c.steps.some((q) => !s.questEggs.includes(q.id)));
   if (!chapter) return null;
@@ -568,7 +600,14 @@ export type Command =
   | { type: 'craft'; recipeId: string }
   | { type: 'claimCraft' | 'cancelCraft'; jobId: string }
   | { type: 'move'; id: string; x: number; y: number }
-  | { type: 'action'; action: 'basic' | 'skill' | 'defend' | 'ultimate' };
+  | { type: 'action'; action: 'basic' | 'skill' | 'defend' | 'ultimate' }
+  /** Adds diamonds: the test button now, real purchases later. */
+  | { type: 'addGems'; amount: number }
+  | { type: 'gemFinish'; target: 'egg' | 'craft' | 'expedition' | 'plot'; id?: string; plot?: number }
+  | { type: 'gemBoost'; hours: 1 | 4 }
+  | { type: 'gemTrade'; offer: 'gold' | 'food' }
+  | { type: 'gemRest'; dinoId?: string }
+  | { type: 'gemSpin' };
 export function newSave(now: number): Save {
   return {
     schemaVersion: 5,
@@ -576,6 +615,8 @@ export function newSave(now: number): Save {
     revision: 0,
     updatedAt: now,
     gold: 1200,
+    gems: 0,
+    boostUntil: 0,
     food: 300,
     storedGold: 0,
     buildings: [{ id: 'nest', kind: 'hatchery', x: 2, y: 4 }],
@@ -587,6 +628,8 @@ export function newSave(now: number): Save {
     arenaLevel: 1,
     habitats: { fire: 1 },
     questEggs: [],
+    storyVersion: 2,
+    timersVersion: 2,
     eggLuck: 0,
     owedEggs: [],
     bossEggsClaimed: [],
@@ -646,15 +689,8 @@ const laneFree = (s: Save, lane: number, now: number) =>
 export const incubating = (s: Save) => s.eggs.filter((e) => e.hatchAt !== null);
 export const hatcherySlots = (s: Save) => HATCHERY_LEVELS[s.hatcheryLevel - 1].slots;
 /** Story steps whose task is done but whose reward was not claimed yet. */
-export const questEggsReady = (s: Save) => QUEST_EGGS.filter((q) => q.done(s) && !s.questEggs.includes(q.id));
-type StoryStep = (typeof QUEST_EGGS)[number];
-/** Whether a story step gives an egg. */
+/** Whether a story goal gives an egg. */
 export const storyEgg = (q: StoryStep): q is StoryStep & EggKind => !!q.species && !!q.element;
-/** Chapter I story eggs ready in the hatchery; chapter II is claimed from the story card. */
-export const hatcheryStoryEggs = (s: Save) =>
-  questEggsReady(s)
-    .filter((q) => !q.chapter)
-    .filter(storyEgg);
 export const feedCost = (level: number) => 10 + 5 * (level - 1);
 export const stats = (level: number, stage: Stage, species: Species = 'trex', rarity: Rarity = 'common') => {
   const factor = (1 + 0.05 * (level - 10)) * (stage === 'adult' ? 1.15 : 1) * RARITY_POWER[rarity],
@@ -813,7 +849,9 @@ export function incomingDamage(b: Pick<Battle, 'encounterId'>, d: Pick<Dino, 'le
 export function advance(save: Save, now: number): Save {
   const s = structuredClone(save),
     elapsed = Math.min(Math.max(0, now - s.updatedAt), BALANCE.offlineCap);
-  s.storedGold = Math.max(s.storedGold, Math.min(goldCap(s), s.storedGold + (elapsed / 3_600_000) * goldRate(s)));
+  // While a diamond boost runs, habitat gold flows twice as fast: the boosted part of the wait counts twice.
+  const boosted = Math.max(0, Math.min(elapsed, Math.min(now, s.boostUntil ?? 0) - (now - elapsed)));
+  s.storedGold = Math.max(s.storedGold, Math.min(goldCap(s), s.storedGold + ((elapsed + boosted) / 3_600_000) * goldRate(s)));
   s.updatedAt = Math.max(s.updatedAt, now);
   s.daily = dailyState(s, now);
   return s;
@@ -853,6 +891,16 @@ export function command(save: Save, c: Command, now: number): Save {
   switch (c.type) {
     case 'spinDaily': {
       require(s.daily.spin === null, 'dailyClaimed');
+      const prize = wheelPrize(Math.random());
+      s.daily.spin = prize;
+      grantDailyReward(s, WHEEL_PRIZES[prize].reward);
+      break;
+    }
+    case 'gemSpin': {
+      // The free spin comes first; each extra one costs diamonds and shows its prize on the wheel.
+      require(s.daily.spin !== null, 'dailyFree');
+      require(s.gems >= GEMS.spin, 'gems');
+      s.gems -= GEMS.spin;
       const prize = wheelPrize(Math.random());
       s.daily.spin = prize;
       grantDailyReward(s, WHEEL_PRIZES[prize].reward);
@@ -954,7 +1002,9 @@ export function command(save: Save, c: Command, now: number): Save {
       break;
     }
     case 'claimQuestEgg': {
-      const quest = questEggsReady(s).find((q) => q.id === c.questId);
+      // Story goals are claimed one at a time, in order, once done.
+      const current = storyChapter(s)?.step;
+      const quest = current?.id === c.questId && current.done(s) ? current : undefined;
       require(quest, 'locked');
       if (!quest) break;
       if (quest.species && quest.element) {
@@ -967,8 +1017,8 @@ export function command(save: Save, c: Command, now: number): Save {
           hatchAt: null,
         });
       }
-      s.gold += quest.gold ?? 0;
-      s.food += quest.food ?? 0;
+      s.gold += quest.gold;
+      s.food += quest.food;
       s.questEggs.push(quest.id);
       break;
     }
@@ -1097,6 +1147,75 @@ export function command(save: Save, c: Command, now: number): Save {
       const recipe = RECIPES.find((r) => r.id === job.recipeId)!;
       s.inventory[recipe.output] += recipe.quantity;
       s.crafting = s.crafting.filter((j) => j.id !== job.id);
+      break;
+    }
+    case 'addGems':
+      require(Number.isInteger(c.amount) && c.amount > 0 && c.amount <= GEMS.maxGrant, 'gems');
+      s.gems += c.amount;
+      break;
+    case 'gemFinish': {
+      const spend = (ms: number) => {
+        const cost = gemsToFinish(ms);
+        require(cost > 0, 'timer');
+        require(s.gems >= cost, 'gems');
+        s.gems -= cost;
+      };
+      if (c.target === 'egg') {
+        const egg = s.eggs.find((e) => e.id === c.id && e.hatchAt !== null);
+        require(egg, 'egg');
+        spend(egg!.hatchAt! - now);
+        egg!.hatchAt = now;
+      } else if (c.target === 'plot') {
+        const plot = s.plots[c.plot ?? -1];
+        require(plot && plot.readyAt > now, 'timer');
+        spend(plot!.readyAt - now);
+        plot!.readyAt = now;
+      } else if (c.target === 'expedition') {
+        require(s.expedition, 'expedition');
+        spend(s.expedition!.endsAt - now);
+        s.expedition!.endsAt = now;
+        s.expedition!.rushed = true;
+      } else {
+        // Only a running job; the ones queued behind it in the same lane move up by the time saved.
+        const job = s.crafting.find((j) => j.id === c.id && j.startedAt <= now);
+        require(job, 'running');
+        spend(job!.endsAt - now);
+        const saved = job!.endsAt - now;
+        job!.endsAt = now;
+        job!.rushed = true;
+        s.crafting
+          .filter((j) => j !== job && (j.lane ?? 0) === (job!.lane ?? 0) && j.startedAt >= now)
+          .forEach((j) => {
+            j.startedAt -= saved;
+            j.endsAt -= saved;
+          });
+      }
+      break;
+    }
+    case 'gemBoost': {
+      const cost = GEMS.boost[c.hours];
+      require(cost, 'gems');
+      require(s.gems >= cost, 'gems');
+      s.gems -= cost;
+      // A second boost extends the running one.
+      s.boostUntil = Math.max(s.boostUntil, now) + c.hours * 3_600_000;
+      break;
+    }
+    case 'gemTrade': {
+      const offer = GEMS.trade[c.offer];
+      require(offer, 'gems');
+      require(s.gems >= offer.gems, 'gems');
+      s.gems -= offer.gems;
+      if (c.offer === 'gold') s.gold += offer.amount;
+      else s.food += offer.amount;
+      break;
+    }
+    case 'gemRest': {
+      const id = c.dinoId ?? s.champion ?? '';
+      require(isTired(s, id, now), 'rested');
+      require(s.gems >= GEMS.rest, 'gems');
+      s.gems -= GEMS.rest;
+      delete s.tired[id];
       break;
     }
     case 'cancelCraft': {
@@ -1385,6 +1504,10 @@ export function command(save: Save, c: Command, now: number): Save {
   if (crafted && (c.type === 'claimCraft' || c.type === 'collectAvailable')) addDailyProgress(s, 'craft', crafted);
   if (c.type === 'claim' && save.battle?.result) addDailyProgress(s, 'battle');
   if (c.type === 'claimExpedition') addDailyProgress(s, 'expedition');
+  if (c.type === 'claim' && save.battle?.result === 'victory') addDailyProgress(s, 'win');
+  if (c.type === 'plant') addDailyProgress(s, 'plant');
+  if (c.type === 'craft') addDailyProgress(s, 'startCraft');
+  if ((c.type === 'collect' || c.type === 'collectAvailable') && s.gold > save.gold) addDailyProgress(s, 'collect');
   s.revision++;
   return s;
 }
@@ -1472,9 +1595,33 @@ export function parseSave(text: string): Save {
   const s = (raw && typeof raw.schemaVersion === 'number' ? migrate(raw) : raw) as unknown as Save;
   if (s && typeof s === 'object') {
     s.workshopLevel ??= 1;
+    s.gems ??= 0;
+    s.boostUntil ??= 0;
     s.expedition ??= null;
     s.expeditionProgress ??= {};
-    s.daily ??= newDaily(s.updatedAt);
+    s.daily = normalizeDaily(s.daily ?? newDaily(s.updatedAt));
+    // Saves from before the ten-chapter story: goals already reached count as claimed (their old rewards stand),
+    // and the card picks up at the first goal still ahead.
+    if (s.storyVersion !== 2) {
+      try {
+        s.questEggs = QUEST_EGGS.filter((q) => q.done(s)).map((q) => q.id);
+      } catch {
+        s.questEggs = [];
+      }
+      s.storyVersion = 2;
+    }
+    // Saves from before the `rushed` mark: a job or trip shorter than its full time was finished with diamonds.
+    if (s.timersVersion !== 2) {
+      for (const job of Array.isArray(s.crafting) ? s.crafting : []) {
+        const recipe = RECIPES.find((r) => r.id === job?.recipeId);
+        const length = job && job.endsAt - job.startedAt;
+        if (recipe && length >= 0 && !WORKSHOP_LEVELS.some((l) => length === Math.round(recipe.seconds * 1000 * l.speed)) && length < craftMs(recipe))
+          job.rushed = true;
+      }
+      const trip = s.expedition;
+      if (trip && trip.endsAt >= trip.startedAt && trip.endsAt - trip.startedAt < tripMs(trip)) trip.rushed = true;
+      s.timersVersion = 2;
+    }
     if (s.inventory && typeof s.inventory === 'object') s.inventory.provisions ??= 0;
     s.arenaLevel ??= 1;
     s.eggLuck ??= 0;
@@ -1521,6 +1668,8 @@ export function parseSave(text: string): Save {
     !finite(s.updatedAt, 1e14) ||
     !finite(s.gold) ||
     !finite(s.food) ||
+    !integer(s.gems) ||
+    !finite(s.boostUntil, 1e14) ||
     !integer(s.victories) ||
     typeof s.rewardPending !== 'boolean' ||
     typeof s.rewardedTutorial !== 'boolean' ||
@@ -1644,7 +1793,11 @@ export function parseSave(text: string): Save {
       jobs.has(job.id) ||
       !finite(job.startedAt, 1e14) ||
       !finite(job.endsAt, 1e14) ||
-      !WORKSHOP_LEVELS.some((l) => job.endsAt - job.startedAt === Math.round(recipe.seconds * 1000 * l.speed)) ||
+      // A job lasts exactly its recipe's time at some workshop level, unless diamonds finished it early.
+      !(job.rushed === undefined || job.rushed === true) ||
+      (job.rushed
+        ? job.endsAt < job.startedAt || job.endsAt - job.startedAt > craftMs(recipe)
+        : !WORKSHOP_LEVELS.some((l) => job.endsAt - job.startedAt === Math.round(recipe.seconds * 1000 * l.speed))) ||
       !(job.lane === undefined || integer(job.lane, Math.max(...WORKSHOP_LEVELS.map((l) => l.lanes)) - 1)) ||
       !kinds.has('workshop')
     )
@@ -1669,12 +1822,12 @@ export function parseSave(text: string): Save {
       !s.dinos.some((d) => d.id === x.dinoId) ||
       !integer(x.startedAt, 1e14) ||
       !integer(x.endsAt, 1e14) ||
-      (x.stage === undefined
-        ? x.endsAt - x.startedAt !== (x.encounterId === 'training' ? 30_000 :
-          (ENCOUNTERS.filter(e => e.mode === 'expedition').findIndex(e => e.id === x.encounterId) + 1) * 60_000)
-        : !integer(x.stage, expeditionStageCount(x.encounterId) - 1) ||
-          x.stage !== Math.min(s.cleared.includes(x.encounterId) ? expeditionStageCount(x.encounterId) : s.expeditionProgress[x.encounterId] ?? 0, expeditionStageCount(x.encounterId) - 1) ||
-          x.endsAt - x.startedAt !== expeditionMs(x.encounterId, x.stage)) ||
+      // A trip lasts exactly its stage's time, unless diamonds brought it back early.
+      !(x.rushed === undefined || x.rushed === true) ||
+      (x.rushed ? x.endsAt < x.startedAt || x.endsAt - x.startedAt > tripMs(x) : x.endsAt - x.startedAt !== tripMs(x)) ||
+      (x.stage !== undefined &&
+        (!integer(x.stage, expeditionStageCount(x.encounterId) - 1) ||
+          x.stage !== Math.min(s.cleared.includes(x.encounterId) ? expeditionStageCount(x.encounterId) : s.expeditionProgress[x.encounterId] ?? 0, expeditionStageCount(x.encounterId) - 1))) ||
       !integer(x.reward.gold, 100000) ||
       !integer(x.reward.food, 100000) ||
       Object.entries(x.reward.materials).some(([id, n]) => !(id in s.inventory) || !integer(n, 100000)) ||

@@ -23,8 +23,11 @@ export function useAuth() {
         address.searchParams.delete('code');
         window.history.replaceState(window.history.state, '', address);
       }
-      // A token refresh keeps the same account: only a different one restarts the game.
-      setUser((current) => (current?.id === session?.user?.id ? current : (session?.user ?? null)));
+      // A token refresh keeps the same account; a different account, or an anonymous one linking its e-mail, updates it.
+      setUser((current) => {
+        const next = session?.user ?? null;
+        return current?.id === next?.id && current?.is_anonymous === next?.is_anonymous && current?.email === next?.email ? current : next;
+      });
       setChecked(true);
     });
     return () => data.subscription.unsubscribe();

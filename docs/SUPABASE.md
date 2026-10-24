@@ -51,6 +51,7 @@ Atenție: serverul de email inclus în planul gratuit trimite doar câteva email
    - **Authorized JavaScript origins**: `http://127.0.0.1:5173` (și domeniul jocului publicat).
    - **Authorized redirect URIs**: adresa afișată în Supabase la **Authentication → Sign In / Providers → Google** (arată ca `https://xxxxxxxx.supabase.co/auth/v1/callback`).
 4. Copiază **Client ID** și **Client secret** în Supabase: **Authentication → Sign In / Providers → Google**, activează și salvează.
+5. În `.env.local` adaugă `VITE_GOOGLE_LOGIN=true` și repornește `npm run dev`. Abia acum apare butonul „Continuă cu Google” pe ecranul de login.
 
 Cât timp aplicația Google e în modul „Testing”, doar adresele trecute la **Test users** se pot loga. Pentru toată lumea, apasă **Publish app** pe ecranul de consimțământ.
 
@@ -59,3 +60,28 @@ Cât timp aplicația Google e în modul „Testing”, doar adresele trecute la 
 - Fiecare jucător poate scrie doar rândul lui din `saves` și numele lui din `profiles` (Row Level Security). Jucătorii logați pot citi salvările celorlalți, ca să le viziteze lumile; emailul nu e vizibil nimănui.
 - Serverul pune singur ora fiecărei scrieri; ceasul telefonului nu contează.
 - Salvarea e încă validată doar în joc: un jucător priceput își poate modifica propriul progres. Pasul următor, când apar clasamente sau PvP, este verificarea acțiunilor pe server cu același `command()` din `game.ts` (Supabase Edge Functions).
+
+## 5. Jucători fără cont (conturi anonime)
+
+Un jucător nou intră direct în joc, fără formular: primește automat un **cont anonim** (Supabase → **Authentication → Sign In / Providers → Allow anonymous sign-ins**, pornit). Progresul lui e în cloud din prima secundă. Când își face cont (din invitațiile din joc sau meniul de profil), emailul și parola se leagă de **același cont**, deci nu se mută nimic; apoi își alege numele (pornește de la numele aleator primit, de ex. „Raptor Curajos 482”).
+
+- Dacă login-ul anonim e oprit sau limita e atinsă (implicit 30 conturi noi pe oră pe IP), jocul pornește tot fără cont, cu salvarea pe dispozitiv; la crearea contului progresul se mută în cloud.
+- Cu confirmarea pe email pornită, jucătorul primește linkul de confirmare și abia după aceea își alege parola (așa cere Supabase pentru conturile anonime).
+- Înainte de lansare: pornește **CAPTCHA** (Authentication → Attack Protection, Cloudflare Turnstile), altfel oricine poate crea conturi anonime în masă.
+
+Câți jucători sunt (în **SQL Editor**):
+
+```sql
+select
+  count(*) filter (where is_anonymous) as fara_cont,
+  count(*) filter (where not is_anonymous) as cu_cont
+from auth.users;
+```
+
+Curățenie: conturile anonime abandonate de peste 30 de zile (și salvările lor, prin `on delete cascade`):
+
+```sql
+delete from auth.users where is_anonymous is true and created_at < now() - interval '30 days';
+```
+
+În **Authentication → Users** conturile anonime au eticheta „Anonymous”.

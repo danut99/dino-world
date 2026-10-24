@@ -2040,3 +2040,160 @@
 .workshop-level > canvas.utility-sprite { width: 80px; height: 80px; flex: 0 0 80px; }
 .workshop-level strong, .workshop-level small { display: block; }
 .workshop-level small { font-size: 11px; margin-top: 5px; color: #d5c3a2; }
+
+/*
+ * Expedition card: a short cover, the stage and its cost, rewards, the champion and what is still missing, with the
+ * departure button always in reach. On phones the card comes first and the destinations follow.
+ */
+.realms-app .expedition-detail .destination-cover { height: 96px; display: flex; align-items: flex-end; }
+.realms-app .expedition-detail .destination-cover span {
+  position: static;
+  flex: 1;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 16px;
+  color: #fff1b8;
+  background: linear-gradient(transparent, #1b1411ee 70%);
+  text-shadow: 2px 2px 0 #1b1411;
+}
+.expedition-detail .destination-cover em {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  font-style: normal;
+  font-size: 10px;
+  color: #fff1b8;
+  background: #1b1411cc;
+  border: 1px solid #e0a96a;
+}
+.realms-app .expedition-detail .adventure-detail-body { padding: 12px 0 0; }
+.realms-app .expedition-detail .expedition-guide { gap: 12px; margin: 0; padding: 0; background: none; border: 0; }
+.expedition-stage-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.expedition-stage-row strong { font-size: 14px; color: #fff1b8; }
+.expedition-pips { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.expedition-pips li { width: 22px; height: 8px; background: #3d332d; border: 1px solid #574a40; }
+.expedition-pips li.done { background: #6fa046; border-color: #9be38f; }
+.expedition-pips li.current { background: #e0a96a; border-color: #fff1b8; box-shadow: 0 0 6px #e0a96a88; }
+.expedition-facts { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.expedition-facts li { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; font-size: 11px; color: #e2d3b2; background: #1b1411; border: 1px solid #3d332d; }
+.realms-app .expedition-detail .gameplay-rewards { gap: 4px; margin: 8px 0 0; }
+.realms-app .expedition-detail .gameplay-rewards > span { min-width: 40px; padding: 4px 2px; font-size: 13px; }
+.realms-app .expedition-detail .gameplay-rewards b { font-size: 20px; }
+.realms-app .expedition-detail .gameplay-rewards small { margin-top: 2px; }
+.expedition-hero { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 10px; background: #1b1411; border: 1px solid #3d332d; }
+.expedition-hero-art { display: grid; place-items: center; width: 44px; height: 44px; overflow: hidden; border-radius: 50%; border: 2px solid #574a40; background: radial-gradient(circle, #574a40, #1b1411); }
+.expedition-hero-art .dinosaur-art { width: 150%; height: 150%; max-width: none; margin-top: 20%; }
+.expedition-hero strong { display: block; font-size: 13px; color: #fff1b8; }
+.expedition-hero small { font-size: 10px; color: #cdbfa8; }
+.expedition-hero > b { font-size: 16px; }
+.expedition-hero.ok > b { color: #9be38f; }
+.expedition-hero.low { border-color: #f0a35a; }
+.expedition-hero.low > b { color: #f0a35a; }
+.expedition-ready { margin: 0; padding: 8px 10px; font-size: 12px; font-weight: 700; color: #9be38f; background: #1f3a1f66; border: 1px solid #6fa04688; }
+.expedition-missing { display: grid; gap: 8px; padding: 10px; background: #3a1f1f44; border: 1px solid #f0a35a88; }
+.expedition-missing ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: #ffd0a0; }
+.expedition-missing p { margin: 0; font-size: 11px; line-height: 1.5; color: #cdbfa8; }
+.realms-app .expedition-detail .adventure-start { position: sticky; bottom: 0; z-index: 1; width: 100%; margin-top: 4px; box-shadow: inset 0 0 0 3px #fff1b8, 0 3px #5f4318, 0 -14px 14px #2f2520; }
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  .realms-app .adventure-layout:has(> .expedition-detail) { display: flex; flex-direction: column; }
+  .realms-app .adventure-layout > .expedition-detail { order: -1; flex: none; border-top: 0; border-bottom: 2px solid #786044; }
+  .realms-app .adventure-layout:has(> .expedition-detail) > .adventure-map { flex: none; }
+  .realms-app .adventure-layout:has(> .expedition-detail) .adventure-node { min-height: 56px; padding: 6px 8px; }
+  .realms-app .expedition-detail .adventure-start { position: static; box-shadow: inset 0 0 0 3px #fff1b8, 0 3px #5f4318; }
+  .realms-app .expedition-detail .mobile-destination-picker { margin: 12px 0 0; }
+}
+
+/*
+ * Workshop: stock on top, every recipe as a card you can craft from directly, the queue as a row of slots; the
+ * workshop's level and the items to use stay in a narrow column on the right.
+ */
+.realms-app .crafting-layout:has(> .craft-main) {
+  grid-template-columns: minmax(0, 1fr) 290px;
+  max-width: 1180px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  justify-content: stretch;
+}
+.craft-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 14px; background: #2f2520eb; border: 2px solid #3d332d; }
+.craft-unbuilt { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; font-size: 12px; color: #ffd0a0; background: #3a1f1f55; border: 1px solid #f0a35a88; }
+.craft-stock { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.craft-stock li { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 2px 10px 2px 6px; background: #1b1411; border: 1px solid #574a40; }
+.craft-stock li > span { font-size: 18px; line-height: 1; }
+.craft-stock li > span.food, .craft-stock li.food > span { color: #9be38f; }
+.craft-stock li b { font-size: 14px; color: #fff1b8; }
+.craft-stock li small { font-size: 10px; color: #a39380; }
+.craft-stock li.empty { opacity: 0.45; }
+.craft-recipes { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; align-items: start; }
+.craft-card { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #241c18; border: 2px solid #3d332d; transition: border-color 0.2s, box-shadow 0.2s; }
+.craft-card.ready { border-color: #6fa04688; }
+.craft-card.focus { border-color: #e0a96a; box-shadow: 0 0 0 1px #e0a96a, 0 0 16px #e0a96a44; }
+.craft-card > header { display: flex; align-items: center; gap: 10px; }
+.craft-card-icon { display: grid; place-items: center; flex: none; width: 44px; height: 44px; font-size: 26px; background: #1b1411; border: 2px solid #574a40; }
+.craft-card header strong { display: block; font-size: 13px; color: #fff1b8; }
+.craft-card header small { font-size: 11px; color: #cdbfa8; }
+.craft-cost { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.craft-cost li { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 6px; font-size: 11px; font-weight: 700; color: #c9f5bf; background: #1b1411; border: 1px solid #4f6b3c; }
+.craft-cost li.missing { color: #ffb3a8; border-color: #a0453a; }
+.craft-cost .food { color: #9be38f; }
+.realms-app .craft-card .realm-button { width: 100%; min-height: 40px; margin-top: auto; padding: 6px 10px; font-size: 13px !important; }
+.craft-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 8px; margin-top: 8px; }
+.realms-app .craft-slots .craft-job { display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: center; align-content: center; gap: 10px; min-width: 0; min-height: 112px; padding: 12px; border: 2px solid #3d332d; background: #1b1411; }
+.realms-app .craft-slots .craft-job strong { line-height: 1.5; overflow-wrap: anywhere; }
+.realms-app .craft-slots .craft-job > button { grid-column: 1 / -1; width: 100%; min-width: 0; min-height: 44px; margin: 0; box-sizing: border-box; justify-self: stretch; }
+.realms-app .craft-slots .craft-job.finished { border-color: #e0a96a; box-shadow: 0 0 12px #e0a96a33; }
+.realms-app .craft-slots .craft-job.free { display: grid; place-items: center; grid-template-columns: 1fr; border-style: dashed; border-color: #3d332d; background: transparent; }
+.realms-app .craft-slots .craft-job.free small { font-size: 11px; color: #7a6a5a; }
+.realms-app .craft-slots .craft-job i { height: 5px; margin-top: 5px; background: #2f2520; }
+.realms-app .craft-slots .craft-job i b { height: 5px; background: linear-gradient(90deg, #d7a94c, #f6d77a); }
+
+.realms-app .craft-use { gap: 12px; }
+.realms-app .craft-use > .craft-level { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; gap: 12px; padding: 0; border: 0; text-align: left; }
+.realms-app .craft-level > canvas.utility-sprite, .realms-app .craft-level > .utility-sprite { width: 72px; height: 72px; }
+.craft-level strong { font-size: 15px; color: #fff1b8; }
+.craft-level small { display: block; margin-top: 2px; font-size: 11px; color: #cdbfa8; }
+.realms-app .craft-use > .craft-items { display: grid; gap: 6px; padding: 0; border: 0; text-align: left; }
+.craft-item { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 8px; background: #1b1411; border: 1px solid #3d332d; }
+.craft-item > span { font-size: 22px; text-align: center; }
+.realms-app .craft-item strong { display: block; font-size: 12px; color: #fff1b8; }
+.craft-item strong b { color: #f6d77a; }
+.craft-item small { display: block; font-size: 10px; line-height: 1.4; color: #cdbfa8; }
+.craft-item.empty { opacity: 0.6; }
+.realms-app .craft-item .realm-button { min-height: 32px; padding: 4px 10px; font-size: 11px !important; }
+
+@media (max-width: 1000px) {
+  .realms-app .crafting-layout:has(> .craft-main) { display: flex; flex-direction: column; align-items: stretch; gap: 12px; padding: 12px; }
+  .realms-app .crafting-layout:has(> .craft-main) > .craft-main { width: 100%; box-sizing: border-box; }
+  .realms-app .crafting-layout:has(> .craft-main) > .craft-use { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; box-sizing: border-box; }
+}
+@media (max-width: 760px) {
+  .craft-main { padding: 10px; }
+  .craft-stock { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .craft-stock li { flex: none; }
+  .craft-recipes { grid-template-columns: minmax(0, 1fr); }
+  .craft-slots { grid-template-columns: minmax(0, 1fr); }
+  .realms-app .craft-queue { padding: 10px; }
+  .realms-app .craft-slots .craft-job { grid-template-columns: 24px minmax(0, 1fr); gap: 8px; padding: 10px; }
+}
+
+/* The workshop opens as a window over the island: no full-screen backdrop or fixed height of its own. */
+.realms-app .realm-window .crafting-layout:has(> .craft-main) {
+  flex: none;
+  min-height: auto;
+  max-width: none;
+  padding: 0;
+  overflow: visible;
+  background: none;
+}
+.realms-app .realm-window .craft-main,
+.realms-app .realm-window .craft-use { background: #241c18; }
+/* Inside a window the workshop has less width than the screen: go to one column sooner. */
+@media (max-width: 1180px) {
+  .realms-app .realm-window .crafting-layout:has(> .craft-main) { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+  .realms-app .realm-window .crafting-layout:has(> .craft-main) > * { width: 100%; box-sizing: border-box; }
+}
+@media (max-width: 420px) {
+  .realms-app .realm-window .craft-use { padding: 8px; }
+  .realms-app .realm-window .craft-use .realm-upgrade-card { padding: 10px 8px; }
+}

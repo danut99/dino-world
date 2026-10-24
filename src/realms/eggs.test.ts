@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   advance,
-  CHAPTER_TWO,
   command,
+  QUEST_EGGS,
   STORY_CHAPTERS,
   storyChapter,
   goldRate,
@@ -35,11 +35,9 @@ describe('eggs, hatchery, market and habitats', () => {
     roundTrip(s);
   });
 
-  it('gives the four MVP eggs through story tasks, each once, with their habitat', () => {
+  it('keeps an egg of a locked world waiting until that world is unlocked', () => {
     let s = run(newSave(now), { type: 'build', kind: 'farm', x: 5, y: 8 });
-    expect(() => run(s, { type: 'claimQuestEgg', questId: 'raptor_fire' })).toThrow('locked');
-    s = run(s, { type: 'claimQuestEgg', questId: 'triceratops_earth' });
-    expect(s.eggs.at(-1)).toMatchObject({ species: 'triceratops', element: 'nature', seconds: 300 });
+    s.eggs.push({ id: 'egg-test', species: 'triceratops', element: 'nature', seconds: 300, hatchAt: null });
     // The egg waits: its world stays locked until it is bought with gold and materials.
     expect(s.habitats.nature).toBeUndefined();
     s = run(s, { type: 'incubate', eggId: s.eggs.at(-1)!.id });
@@ -47,14 +45,9 @@ describe('eggs, hatchery, market and habitats', () => {
     s = run(s, { type: 'unlockHabitat', realm: 'nature' });
     expect(s).toMatchObject({ gold: 1100 - 750, habitats: { nature: 1 } });
     expect(s.inventory.fiber).toBeLessThan(30);
-    expect(() => run(s, { type: 'claimQuestEgg', questId: 'triceratops_earth' })).toThrow('locked');
     expect(() => command(s, { type: 'hatch' }, now + 299_999)).toThrow('timer');
     s = command(s, { type: 'hatch' }, now + 300_000);
     expect(s.dinos).toMatchObject([{ species: 'triceratops', element: 'nature', stage: 'baby' }]);
-    s.cleared = ['training'];
-    expect(run(s, { type: 'claimQuestEgg', questId: 'raptor_fire' }).eggs.at(-1)?.element).toBe('earth');
-    // Saves that claimed the old wind story egg keep it claimed under its new id.
-    expect(parseSave(JSON.stringify({ ...s, questEggs: ['raptor_wind'] })).questEggs).toEqual(['raptor_fire']);
     roundTrip(s);
   });
 
@@ -201,43 +194,55 @@ describe('arena leagues', () => {
     expect(old.cleared).toEqual(['training', 'arena-fire-1', 'arena-fire-2']);
   });
 
-  it('splits the story into chapters of five goals, with gold and food per goal and an egg at each finale', () => {
+  it('tells the story in ten chapters: one opening chapter, then one per world in unlock order', () => {
+    expect(STORY_CHAPTERS.map((c) => c.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(STORY_CHAPTERS.map((c) => c.world)).toEqual([null, 'water', 'earth', 'nature', 'ice', 'lightning', 'wind', 'dark', 'light', 'arcane']);
+    expect(new Set(QUEST_EGGS.map((q) => q.id)).size).toBe(QUEST_EGGS.length);
     for (const c of STORY_CHAPTERS) {
-      expect(c.steps).toHaveLength(5);
+      expect(c.steps.length).toBeGreaterThanOrEqual(3);
+      expect(c.steps.length).toBeLessThanOrEqual(4);
+      // Every goal pays gold and food; only the last one of a chapter adds an egg, of that chapter's world.
+      for (const q of c.steps) expect(q.gold > 0 && q.food > 0).toBe(true);
       expect(c.steps.filter((q) => q.species).map((q) => q.id)).toEqual([c.steps.at(-1)!.id]);
+      expect(c.steps.at(-1)!.element).toBe(c.world ?? 'fire');
     }
-    let s = rich();
-    const [first, second] = CHAPTER_TWO;
-    expect(storyChapter(s)).toMatchObject({ chapter: { number: 2 }, index: 0 });
-    expect(() => run(s, { type: 'claimQuestEgg', questId: first.id })).toThrow('locked');
-    s.dinos[0] = { ...s.dinos[0], level: 25, stage: 'adult' };
-    const { gold, food, eggs } = s;
-    s = run(s, { type: 'claimQuestEgg', questId: first.id });
-    expect(s).toMatchObject({ gold: gold + first.gold!, food: food + first.food! });
-    expect(s.eggs).toHaveLength(eggs.length);
-    expect(storyChapter(s)).toMatchObject({ chapter: { number: 2 }, index: 1 });
-    // Finishing chapter II hands over its egg and moves the story to chapter III.
-    const last = CHAPTER_TWO.at(-1)!;
-    const done = {
-      ...s,
-      questEggs: CHAPTER_TWO.slice(0, -1).map((q) => q.id),
-      dinos: Array.from({ length: 8 }, (_, i) => ({ ...s.dinos[0], id: `d${i}`, element: 'fire' as const })),
-      habitats: { fire: 6 },
-    };
-    const finale = run(done, { type: 'claimQuestEgg', questId: last.id });
-    expect(finale.eggs.at(-1)).toMatchObject({ species: last.species, element: last.element });
-    expect(storyChapter(finale)).toMatchObject({ chapter: { number: 3 }, index: 0 });
-    expect(storyChapter({ ...finale, questEggs: STORY_CHAPTERS.flatMap((c) => c.steps.map((q) => q.id)) })).toBeNull();
-    expect(second.progress!(s)).toEqual([1, 4]);
-    s = run(
-      s,
-      { type: 'unlockHabitat', realm: 'water' },
-      { type: 'unlockHabitat', realm: 'earth' },
-      { type: 'unlockHabitat', realm: 'nature' },
-    );
-    expect(second.done(s)).toBe(true);
-    s = run(s, { type: 'claimQuestEgg', questId: second.id });
-    expect(() => run(s, { type: 'claimQuestEgg', questId: second.id })).toThrow('locked');
+  });
+
+  it('pays each goal once, in order, and opens the next chapter after the finale egg', () => {
+    let s = newSave(now);
+    const [hatch, farm, , trip] = STORY_CHAPTERS[0].steps;
+    expect(storyChapter(s)).toMatchObject({ chapter: { number: 1 }, index: 0 });
+    expect(() => run(s, { type: 'claimQuestEgg', questId: hatch.id })).toThrow('locked');
+    s = run(s, { type: 'incubate' }, { type: 'devSkip' }, { type: 'hatch' });
+    const { gold, food } = s;
+    s = run(s, { type: 'claimQuestEgg', questId: hatch.id });
+    expect(s).toMatchObject({ gold: gold + hatch.gold, food: food + hatch.food });
+    expect(() => run(s, { type: 'claimQuestEgg', questId: hatch.id })).toThrow('locked');
+    // Goals are taken one at a time: a later one stays locked even when it is reached.
+    s.cleared = ['training'];
+    expect(() => run(s, { type: 'claimQuestEgg', questId: trip.id })).toThrow('locked');
+    s = run(s, { type: 'build', kind: 'farm', x: 5, y: 8 }, { type: 'claimQuestEgg', questId: farm.id });
+    s.dinos[0] = { ...s.dinos[0], level: 10, stage: 'juvenile' };
+    s = run(s, { type: 'claimQuestEgg', questId: STORY_CHAPTERS[0].steps[2].id });
+    const eggs = s.eggs.length;
+    s = run(s, { type: 'claimQuestEgg', questId: trip.id });
+    expect(s.eggs).toHaveLength(eggs + 1);
+    expect(s.eggs.at(-1)).toMatchObject({ species: trip.species, element: 'fire' });
+    expect(storyChapter(s)).toMatchObject({ chapter: { number: 2, world: 'water' }, index: 0 });
+    expect(storyChapter({ ...s, questEggs: QUEST_EGGS.map((q) => q.id) })).toBeNull();
     roundTrip(s);
+  });
+
+  it('ticks the goals an older save already reached, without paying them again', () => {
+    const s = rich();
+    s.cleared = ['training'];
+    s.dinos[0] = { ...s.dinos[0], level: 12, stage: 'juvenile' };
+    s.buildings.push({ id: 'farm-1', kind: 'farm', x: 5, y: 8 });
+    const old = JSON.parse(JSON.stringify({ ...s, questEggs: ['raptor_fire', 'ch2_adult'] }));
+    delete old.storyVersion;
+    const loaded = parseSave(JSON.stringify(old));
+    expect(loaded.questEggs).toEqual(STORY_CHAPTERS[0].steps.map((q) => q.id));
+    expect(loaded).toMatchObject({ gold: s.gold, food: s.food, storyVersion: 2 });
+    expect(storyChapter(loaded)).toMatchObject({ chapter: { number: 2 }, index: 0 });
   });
 });

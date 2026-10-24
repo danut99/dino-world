@@ -29,7 +29,7 @@ try {
   await page.reload();
   await page.locator('.realm-nav button').filter({ hasText: /expedition/i }).click();
   await page.getByRole('button', { name: /Craft supplies in the Workshop/ }).waitFor();
-  assert.match(await page.locator('.expedition-guide').innerText(), /Stage 1\/3/);
+  assert.match(await page.locator('.expedition-guide').innerText(), /Stage 1 of 3/);
   assert.equal(await page.locator('.expedition-guide .adventure-start').isDisabled(), true);
   await fs.mkdir('output/expedition-progression', { recursive: true });
   for (const width of [1440, 390, 360]) {
@@ -40,8 +40,10 @@ try {
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: /Craft supplies in the Workshop/ }).click();
-  await page.locator('.craft-parchment h2').filter({ hasText: 'Supply pack' }).waitFor();
-  await page.locator('.craft-parchment > .realm-button').click();
+  // The supplies recipe is highlighted when coming from an expedition; craft it from its card.
+  const supplies = page.locator('.craft-card.focus').filter({ hasText: 'Supply pack' });
+  await supplies.waitFor();
+  await supplies.getByRole('button', { name: /Craft/ }).click();
   await page.clock.fastForward(61000);
   await page.locator('.craft-job').getByRole('button', { name: 'Collect', exact: true }).click();
   await page.getByRole('button', { name: /Back to expedition/ }).click();
@@ -59,7 +61,7 @@ try {
   save = await page.evaluate(() => JSON.parse(localStorage.getItem('dino-realms-save-v1')));
   assert.equal(save.expeditionProgress.ruins, 1);
   assert.equal(save.cleared.includes('ruins'), false);
-  assert.match(await page.locator('.expedition-guide').innerText(), /Stage 2\/3/);
+  assert.match(await page.locator('.expedition-guide').innerText(), /Stage 2 of 3/);
   await page.screenshot({ path: 'output/expedition-progression/stage-two.png' });
   assert.deepEqual(errors, []);
   console.log('Supply preparation, exact-recipe navigation, return to selected destination, offline trip reload, staged rewards and mobile overflow checks passed.');

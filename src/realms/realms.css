@@ -1717,10 +1717,6 @@
 .realm-egg-card .realm-meter { height: 6px; }
 .realm-egg-card.incubating { border-color: #e0a96a88; }
 .realm-egg-card.ready { border-color: #d9f08c; background: #2b2421; animation: realm-plot-ready 1.6s ease-in-out infinite; }
-.realm-quest-egg { display: flex; align-items: center; gap: 14px; padding: 12px 14px; background: #2f2520; border: 1px solid #e0a96a; }
-.realm-quest-egg > div { display: flex; flex-direction: column; gap: 2px; }
-.realm-quest-egg small { color: #fff1b8; }
-.realm-quest-egg .realm-button { margin-left: auto; }
 .realm-quest-list { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: #241c18; border: 1px dashed #cdbfa855; }
 .realm-quest-list > div { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .realm-quest-list small { margin-left: auto; color: #cdbfa8; }
@@ -2226,3 +2222,132 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
 .realm-auth-rename input { min-height: 44px; padding: 10px 12px; font: inherit; font-size: 15px; color: #fff1b8; background: #1b1411; border: 1px solid #a393805e; }
 .realms-app .realm-auth-rename .realm-auth-ok { color: #9be38f; }
 .realms-app .realm-auth-rename .realm-auth-error { color: #ff8a7a; }
+
+/* Desktop profile menu: who is playing, then a list of places to go, then signing out. */
+.realm-hud-menu.realm-profile-card { width: 300px; padding: 4px; }
+.realm-hud-menu > header { display: flex; align-items: center; gap: 12px; padding: 4px 4px 12px; }
+.realm-hud-menu-portrait { flex: none; display: grid; place-items: center; width: 60px; height: 60px; overflow: hidden; border-radius: 50%; border: 2px solid #e0a96a; background: radial-gradient(circle at 50% 40%, #6b5646, #241c18); box-shadow: inset 0 0 0 2px #1b1411; }
+.realm-hud-menu-portrait .dinosaur-art { width: 150%; height: 150%; max-width: none; margin-top: 22%; pointer-events: none; }
+.realm-hud-menu > header > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.realm-hud-menu > header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; color: #fff1b8; text-shadow: 2px 2px 0 #1b1411; }
+.realm-hud-menu > header small { font-size: 10px; letter-spacing: 0.5px; color: #e0a96a; }
+.realm-hud-menu-rank { display: block; height: 6px; margin-top: 2px; background: #1b1411; border: 1px solid #574a40; }
+.realm-hud-menu-rank > b { display: block; height: 100%; background: linear-gradient(90deg, #d7a94c, #f6d77a); }
+.realm-hud-menu-email { margin: 0 4px 10px; padding: 6px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #a39380; background: #1b141188; border-left: 2px solid #574a40; }
+.realm-hud-menu > nav { display: flex; flex-direction: column; gap: 6px; }
+.realms-app .realm-hud-menu > nav > button {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  width: 100%; min-height: 54px; padding: 6px 10px; text-align: left; font: inherit; color: #f6eed9; cursor: pointer;
+  background: none; border: 6px solid transparent; border-image: var(--frame-card); border-radius: 0; image-rendering: pixelated;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.realms-app .realm-hud-menu > nav > button:hover,
+.realms-app .realm-hud-menu > nav > button:focus-visible { border-image: var(--frame-card-active); filter: brightness(1.08); transform: translateX(-2px); outline: none; }
+.realm-hud-menu > nav > button > span { display: flex; flex-direction: column; gap: 3px; font-size: 13px; font-weight: 700; }
+.realm-hud-menu > nav > button small { font-size: 10px; font-weight: 400; color: #cdbfa8; }
+.realm-hud-menu > nav > button > em { font-style: normal; font-size: 22px; line-height: 1; color: #e0a96a; }
+.realm-hud-menu > footer { margin-top: 10px; padding-top: 10px; border-top: 2px solid #3d332d; }
+.realms-app .realm-hud-menu .realm-hud-menu-signout { width: 100%; min-height: 38px; font: inherit; font-size: 12px; color: #ffb3a8; background: transparent; border: 1px dashed #ff8a7a66; border-radius: 0; cursor: pointer; }
+.realms-app .realm-hud-menu .realm-hud-menu-signout:hover { color: #fff1b8; background: #5a2a2266; border-style: solid; }
+.realm-hud:has(.realm-hud-menu) { z-index: 30; }
+
+/* Story card: goal, how-to hint, progress toward it, its reward, then the chapter's steps. */
+.realms-app .realm-quest-body h2 { margin: 8px 0 6px; font-size: 18px; line-height: 1.3; }
+.realms-app .realm-quest-body p.realm-quest-hint { margin: 0 0 12px; font-size: 12px; line-height: 1.5; }
+.realm-quest-bar { position: relative; height: 16px; margin-bottom: 12px; background: #1b1411; border: 1px solid #574a40; }
+.realm-quest-bar > i { display: block; height: 100%; background: linear-gradient(#b8e07a, #6fa046); box-shadow: inset 0 -2px 0 #4f7a32; transition: width 0.4s ease; }
+.realm-quest-bar > span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 10px; font-weight: 700; color: #fff1b8; text-shadow: 1px 1px 0 #1b1411; }
+.realm-quest-rewards { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.realm-quest-rewards li { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px 3px 4px; font-size: 11px; font-weight: 700; color: #f6eed9; background: #1b1411; border: 1px solid #574a40; }
+.realm-quest-rewards li.egg { color: #f6d77a; border-color: #e0a96a; box-shadow: 0 0 8px #e0a96a44; }
+.realm-quest-rewards li.egg img, .realm-quest-rewards li.egg canvas { width: 18px; height: 18px; }
+.realms-app .realm-quest-progress { margin: 12px 0; }
+@media (max-height: 480px) and (orientation: landscape) {
+  .realm-quest-rewards { display: none; }
+}
+
+/* Hatchery: a header with the level and the upgrade, every nest on one shelf, your eggs as cards below. */
+.hatch2 { display: flex; flex-direction: column; gap: 12px; }
+.hatch2 .realm-farm-title { margin: 4px 0 0; }
+.hatch2-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 12px; background: #241c18; border: 1px solid #3d332d; }
+.hatch2-head > div { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 2px; }
+.hatch2-head strong { font-size: 14px; color: #fff1b8; }
+.hatch2-head small { font-size: 11px; color: #cdbfa8; }
+.hatch2-upgrade-toggle { min-height: 36px; padding: 4px 12px; font: inherit; font-size: 12px; font-weight: 700; color: #2f2520; background: #e0a96a; border: 1px solid #fff1b8; cursor: pointer; }
+.hatch2-upgrade-toggle.open { background: #f6d77a; }
+.hatch2-max { font-size: 12px; color: #f6d77a; }
+.hatch2-upgrade { margin: 0; }
+
+.hatch2-nests.realm-nests { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.hatch2-nest {
+  flex: 0 0 132px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 168px;
+  padding: 10px 8px;
+  text-align: center;
+  background: #241c18;
+  border: 2px solid #3d332d;
+}
+.hatch2-nest strong { font-size: 12px; color: #fff1b8; }
+.hatch2-nest small { font-size: 11px; color: #cdbfa8; }
+.hatch2-nest .realm-meter { width: 100%; }
+.hatch2-nest .realm-button { width: 100%; min-height: 34px; padding: 4px 8px; font-size: 12px !important; }
+.hatch2-nest.warming { border-color: color-mix(in srgb, var(--egg-glow) 60%, #3d332d); box-shadow: inset 0 -30px 40px color-mix(in srgb, var(--egg-glow) 18%, transparent); }
+.hatch2-nest.ready { border-color: #f6d77a; box-shadow: 0 0 0 1px #f6d77a, 0 0 18px #f6d77a55, inset 0 -30px 40px color-mix(in srgb, var(--egg-glow) 25%, transparent); }
+.hatch2-nest.free { border-style: dashed; }
+.hatch2-nest-bed { width: 72px; height: 22px; border-radius: 50%; background: repeating-linear-gradient(115deg, #a8771e 0 5px, #d7a94c 5px 10px); box-shadow: 0 4px 0 #3a2614; }
+.hatch2-nest.locked { flex-basis: 84px; min-height: 168px; opacity: 0.55; border-style: dashed; }
+.hatch2-nest.locked > span { font-size: 22px; }
+
+.hatch2-note { margin: 0; padding: 8px 10px; font-size: 12px; color: #ffd0a0; background: #3a1f1f44; border: 1px solid #f0a35a66; }
+.hatch2-eggs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.hatch2-egg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  text-align: center;
+  font: inherit;
+  color: #e2d3b2;
+  background: #241c18;
+  border: 2px solid #3d332d;
+  border-top: 3px solid var(--egg-glow, #574a40);
+}
+.hatch2-egg strong { font-size: 13px; color: #fff1b8; }
+.hatch2-egg small { font-size: 10px; color: #cdbfa8; }
+.hatch2-egg .realm-button { width: 100%; min-height: 36px; margin-top: 4px; padding: 4px 8px; font-size: 12px !important; }
+.hatch2-egg .realm-egg-sell { width: 100%; min-height: 28px; font-size: 11px; }
+.hatch2-market { justify-content: center; min-height: 180px; cursor: pointer; border-style: dashed; border-top-style: dashed; }
+.hatch2-market > span { font-size: 34px; line-height: 1; color: #e0a96a; }
+.hatch2-market:hover { border-color: #e0a96a; }
+@media (max-width: 760px) {
+  .hatch2-eggs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hatch2-nest { flex-basis: 118px; }
+}
+.realm-hud-menu-gem { display: grid; place-items: center; width: 30px; font-size: 20px; filter: drop-shadow(0 0 6px #7fd8ff99); }
+.realms-app .realm-hud-menu > nav > button.realm-hud-menu-shop { box-shadow: inset 0 0 0 1px #4aa3ff66; }
+.realm-gate-detail { display: block; padding: 6px 8px; font-family: monospace; font-size: 11px; color: #ffb3a8; background: #1b1411; border: 1px solid #574a40; overflow-wrap: anywhere; }
+/* Guests: the way to play without an account, the save invitation, and the highlighted account entry. */
+.realm-gate-guest { display: block; margin: 12px auto 0; font-size: 12px; }
+.realm-save-invite { max-width: 420px; margin: 0 auto 14px; font-size: 13px; line-height: 1.6; color: #fff1b8; text-align: center; }
+.realms-app .realm-hud-menu > nav > button.realm-hud-menu-guest { border-image: var(--frame-card-active); }
+.realm-guest-alert { position: absolute; top: -4px; right: -4px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: 12px; font-weight: 700; color: #2f2520; background: #f6d77a; box-shadow: 0 0 0 2px #1b1411; }
+/* A bottom-bar button unlocked since the player last looked. */
+.realm-nav > button { position: relative; }
+.realm-nav-new { position: absolute; top: -8px; right: 2px; padding: 1px 6px; font-style: normal; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: #2f2520; background: #9be38f; box-shadow: 0 0 0 2px #1b1411, 0 0 10px #9be38f88; animation: realm-nav-new 1.4s ease-in-out infinite alternate; }
+@keyframes realm-nav-new { to { box-shadow: 0 0 0 2px #1b1411, 0 0 16px #9be38fcc; } }
+@media (prefers-reduced-motion: reduce) { .realm-nav-new { animation: none; } }
+/* The worlds: like the other buttons, set apart only by a gold border; always visible, also when the bar is folded. */
+.realms-app .realm-nav > button.realm-nav-hub:not(.realm-nav-toggle),
+.realms-app .realm-nav > button.realm-nav-hub:not(.realm-nav-toggle):hover {
+  border: 2px solid #e0a96a;
+  border-image: none;
+  box-shadow: inset 0 0 0 1px #f6d77a44, 0 0 10px #e0a96a44;
+}
+.realms-app .realm-nav.collapsed > button.realm-nav-hub { display: flex; }
+}

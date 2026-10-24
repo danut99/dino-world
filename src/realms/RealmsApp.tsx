@@ -1,3 +1,6 @@
+import { ResourceHelpContext } from './ResourceHelp';
+import { RealmsPanel } from './RealmsPanel';
+import { BuildPanel } from './BuildPanel';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import World from './World';
 import { RealmsWiki } from './RealmsWiki';
@@ -9,6 +12,9 @@ import { AnimationViewer } from './AnimationViewer';
 import { SPECIES_NAMES, type Species } from './dinosaurs';
 import { BuildingSprite } from './BuildingSprite';
 import { GameplayScreen, BattleScreen, type GameplayView } from './GameplayScreens';
+import { WorkshopPanel } from './WorkshopPanel';
+import { GemShop } from './GemShop';
+import { unlockedNav, type NavKey } from './navUnlocks';
 import { ITEMS, UTILITY_BUILDINGS, RECIPES, type ItemId, type UtilityKind } from './content';
 import { FarmPanel } from './FarmPanel';
 import { DailyPanel } from './DailyPanel';
@@ -24,7 +30,6 @@ import {
   farmReadyFood,
   incubating,
   storyChapter,
-  hatcheryStoryEggs,
   storyEgg,
   REALM_NAMES,
   newSave,
@@ -40,7 +45,7 @@ import './pixel-theme.css';
 import { Icon, type IconName } from './ui/Icon';
 import { playSound, setSoundEnabled, soundEnabled, type SoundId } from './sound';
 import { useCloudSync } from './useCloudSync';
-import { fetchCloudSave, type PlayerSummary } from './cloud';
+import { fetchCloudSave, guestName, signOut, type PlayerSummary } from './cloud';
 import { PlayersPanel } from './PlayersPanel';
 import type { User } from '@supabase/supabase-js';
 
@@ -88,6 +93,12 @@ const COMMAND_SOUNDS: Partial<Record<Command['type'], SoundId>> = {
   plant: 'pop',
   craft: 'pop',
   move: 'pop',
+  addGems: 'coin',
+  gemFinish: 'pop',
+  gemBoost: 'build',
+  gemTrade: 'coin',
+  gemRest: 'evolve',
+  gemSpin: 'spin',
 };
 
 type Panel =
@@ -108,6 +119,7 @@ type Panel =
   | 'wiki'
   | 'account'
   | 'players'
+  | 'shop'
   | null;
 const text = (lang: number, ro: string, en: string) => (lang ? en : ro);
 function load(): Save {
@@ -201,7 +213,7 @@ export function Window({
  * The game. With accounts (`account`), it starts from the save the sign-in gate loaded from the cloud and keeps it
  * only there. Without accounts configured (local development), it keeps the save in this browser as before.
  */
-export default function RealmsApp({ initialSave, account }: { initialSave?: Save; account?: SignedIn } = {}) {
+export default function RealmsApp({ initialSave, account, guest = false }: { initialSave?: Save; account?: SignedIn; guest?: boolean } = {}) {
   const [profileOpen, setProfileOpen] = useState(false);
   /** Another player's world being looked at (read only), and which of its worlds is shown. */
   const [visit, setVisit] = useState<{ name: string; save: Save } | null>(null);
@@ -239,6 +251,8 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
     [message, setMessage] = useState('');
   const [expeditionPreparation, setExpeditionPreparation] = useState(false);
   const [workshopRecipe, setWorkshopRecipe] = useState('planks');
+  const [helpRealm, setHelpRealm] = useState<RealmId | undefined>();
+  const [helpBuilding, setHelpBuilding] = useState<UtilityKind>('farm');
   // The bottom bar can fold down to just the Collect button; phones start folded, where it covers more island.
   const [navOpen, setNavOpen] = useState(() => {
     if (window.matchMedia('(max-width: 760px), (max-height: 500px) and (orientation: landscape)').matches) return false;
@@ -329,7 +343,7 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
     }
   });
   const gameplayView: GameplayView | null =
-    panel === 'expedition' || panel === 'arena' || panel === 'workshop' ? panel : null;
+    panel === 'expedition' || panel === 'arena' ? panel : null;
   const saveRef = useRef(save);
   saveRef.current = save;
   // Progress made on another tab or device replaces this view; like a save loaded at start, it catches up on time.
@@ -345,11 +359,20 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
     },
     () => setMessage(tr('Am adus progresul de pe celălalt dispozitiv.', 'Brought in your progress from your other device.')),
   );
-  const [playerName, setPlayerName] = useState(account?.name ?? '');
+  // Guests play under a random name until they pick their own with an account.
+  const [playerName, setPlayerName] = useState(() => account?.name ?? (guest ? guestName() : ''));
   const sync = {
     ...cloudSync,
     name: playerName || undefined,
     onRename: setPlayerName,
+    // Before a guest signs into an existing account, its progress is left on the device for that account to adopt.
+    stash: () => {
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(saveRef.current));
+      } catch {
+        /* Nothing to carry over then. */
+      }
+    },
     user: account?.user ?? null,
     recovering: account?.recovering ?? false,
     endRecovery: account?.endRecovery ?? (() => {}),
@@ -357,12 +380,46 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
   useEffect(() => {
     if (sync.recovering) setPanel('account');
   }, [sync.recovering]);
+  /**
+   * A guest is invited to keep the progress in an account at each milestone, once per milestone: the first hatch,
+   * the first juvenile, the first expedition, three dinosaurs. "Later" waits for the next one.
+   */
+  const [askAccount, setAskAccount] = useState<false | 'milestone' | 'return'>(false);
+  // Coming back to the game (a new day) also reminds a guest with progress, once a day.
+  useEffect(() => {
+    if (!guest || save.dinos.length === 0) return;
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const last = localStorage.getItem('dino-realms-save-reminder');
+      localStorage.setItem('dino-realms-save-reminder', today);
+      if (last && last !== today) setAskAccount((a) => a || 'return');
+    } catch {
+      /* Optional reminder. */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const milestones = [
+    save.dinos.length > 0,
+    save.dinos.some((x) => x.stage !== 'baby'),
+    save.cleared.includes('training'),
+    save.dinos.length >= 3,
+  ].filter(Boolean).length;
+  useEffect(() => {
+    if (!guest || milestones === 0) return;
+    try {
+      if (Number(localStorage.getItem('dino-realms-save-prompt') ?? 0) >= milestones) return;
+      localStorage.setItem('dino-realms-save-prompt', String(milestones));
+    } catch {
+      /* Without storage it asks again on the next visit. */
+    }
+    setAskAccount('milestone');
+  }, [guest, milestones]);
   const tr = (ro: string, en: string) => text(lang, ro, en);
   const today = dailyState(save, now);
   const dailyReady = today.spin === null || dailyQuests(today.day).some(id => !today.claimed.includes(id) && today.progress[id] >= DAILY_QUESTS[id].target) || (!today.bonus && dailyQuests(today.day).every(id => today.claimed.includes(id)));
   const dailyOpened = useRef<string | null>(null);
   useEffect(() => {
-    if (panel || placing || save.battle || dailyOpened.current === today.day) return;
+    if (panel || placing || save.battle || save.dinos.length === 0 || dailyOpened.current === today.day) return;
     try {
       if (localStorage.getItem('dino-realms-daily-opened') === today.day) return;
       localStorage.setItem('dino-realms-daily-opened', today.day);
@@ -371,7 +428,7 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
     }
     dailyOpened.current = today.day;
     setPanel('daily');
-  }, [today.day, panel, placing, save.battle]);
+  }, [today.day, panel, placing, save.battle, save.dinos.length]);
   const activeElement = ELEMENTS.find((el) => el.id === realm);
   /** Locked worlds open the world list instead, where they can be unlocked. */
   const visitRealm = (next: 'home' | RealmId) => {
@@ -507,6 +564,8 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
               "This element's eggs are won in fights, not bought.",
             ),
             workshop: tr('Construiește mai întâi atelierul.', 'Build the workshop first.'),
+            gems: tr('Nu ai destule diamante. Vezi Magazinul.', 'Not enough diamonds. Visit the Shop.'),
+            rested: tr('Campionul e deja odihnit.', 'Your champion is already rested.'),
           } as Record<string, string>
         )[code] ?? tr('Acțiunea nu este disponibilă acum.', 'That action is not available yet.'),
       );
@@ -514,83 +573,66 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
     }
   };
   const d = champion(save),
-    live = advance(save, now),
-    hatching = incubating(save),
-    storyEggs = hatcheryStoryEggs(save);
-  const quest =
-    !save.dinos.length && !hatching.length
-      ? 0
-      : !save.dinos.length
-        ? 1
-        : d?.stage === 'baby'
-          ? 2
-          : !save.rewardedTutorial
-            ? 3
-            : !save.buildings.some((b) => b.kind === 'farm')
-              ? 4
-              : !save.dinos.some((x) => x.stage === 'adult')
-                ? 5
-                : 6;
-  // Step 6 means chapter I is finished; the card then follows the next chapters, one goal at a time.
-  const chapterDone = quest === 6;
+    live = advance(save, now);
+  // The story card follows one goal at a time through ten chapters (see STORY_CHAPTERS).
   const current = storyChapter(save),
     steps = current?.chapter.steps ?? [],
     story = current?.step,
     storyIndex = current?.index ?? 0,
-    storyReady = !!story && story.done(save);
-  const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI'];
+    storyReady = !!story && story.done(save),
+    navKeys = unlockedNav(save, story?.panel),
+    storyProgress = story?.progress?.(save);
+  const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
   // The header badge follows the chapter: its numeral, rank, title and how far into it the player is.
-  const badge = !chapterDone
+  const badge = current
     ? {
-        numeral: 'I',
-        rank: tr('Explorator', 'Explorer'),
-        title: tr('Început de legendă', 'A legend begins'),
-        progress: quest / 5,
+        numeral: ROMAN[current.chapter.number],
+        rank: current.chapter.rank[lang],
+        title: current.chapter.title[lang],
+        progress: storyIndex / steps.length,
       }
-    : current
-      ? {
-          numeral: ROMAN[current.chapter.number],
-          rank: current.chapter.rank[lang],
-          title: current.chapter.title[lang],
-          progress: storyIndex / steps.length,
+    : { numeral: '★', rank: tr('Legendă', 'Legend'), title: tr('Toate tărâmurile', 'All the realms'), progress: 1 };
+  // Buttons seen at least once; one unlocked since shows "NOU" until clicked. Existing players start with all seen.
+  const [seenNav, setSeenNav] = useState<Set<string>>(() => {
+    try {
+      const kept = localStorage.getItem('dino-realms-nav-seen');
+      if (kept) return new Set(JSON.parse(kept) as string[]);
+    } catch {
+      /* Fall through to what is open now. */
+    }
+    const now = [...unlockedNav(save)];
+    try {
+      localStorage.setItem('dino-realms-nav-seen', JSON.stringify(now));
+    } catch {
+      /* Optional. */
+    }
+    return new Set(now);
+  });
+  const navItem = (key: NavKey) => ({
+    fresh: !seenNav.has(key),
+    featured: story?.panel === key,
+    seen: () =>
+      setSeenNav((seen) => {
+        if (seen.has(key)) return seen;
+        const next = new Set(seen).add(key);
+        try {
+          localStorage.setItem('dino-realms-nav-seen', JSON.stringify([...next]));
+        } catch {
+          /* Optional. */
         }
-      : { numeral: '★', rank: tr('Legendă', 'Legend'), title: tr('Toate tărâmurile', 'All the realms'), progress: 1 };
-  const quests = [
-    tr('Un început înflăcărat', 'A fiery beginning'),
-    tr('Viață într-un ou', 'Life inside an egg'),
-    tr('Un erou în devenire', 'A hero in the making'),
-    tr('Prima aventură', 'The first adventure'),
-    tr('Rădăcini pentru viitor', 'Room to grow'),
-    tr('Micul tău tărâm', 'Your little realm'),
-    tr('Capitol încheiat!', 'Chapter complete!'),
-  ];
-  const questDetails = [
-    tr(
-      'Pune oul de foc în incubator. Aventura lui Ignis începe aici.',
-      'Place the fire egg in the hatchery. Ignis’s adventure starts here.',
-    ),
-    tr(
-      'Așteaptă eclozarea, apoi întâmpină primul tău T-Rex.',
-      'Wait for the egg to hatch, then welcome your first T-Rex.',
-    ),
-    tr(
-      'Hrănește-l până la nivelul 9, apoi evoluează-l în juvenil.',
-      'Feed Ignis to level 9, then evolve him into a juvenile.',
-    ),
-    tr('Trimite-l în prima expediție, în tărâmul focului.', 'Send him on his first expedition, into the fire realm.'),
-    tr('Construiește o fermă pentru o sursă constantă de hrană.', 'Build a farm for a steady supply of food.'),
-    tr(
-      'Cultivă, strânge aur și crește-l pe Ignis până la adult.',
-      'Grow food, collect gold, and raise Ignis to adulthood.',
-    ),
-    tr(
-      'Ai un dinozaur adult. Acum urcă prin ligile arenei, câștigă ouă rare și deblochează lumi noi.',
-      'You raised an adult dinosaur. Now climb the arena leagues, win rare eggs and unlock new worlds.',
-    ),
-  ];
+        return next;
+      }),
+  });
   const openBuilding = (id: string) => {
     if (id === 'collection') return setPanel('collection');
-    if (id === 'income') return setPanel('habitat');
+    if (id === 'income') {
+      if (Math.floor(live.storedGold) < 1) {
+        setMessage(tr('Nu ai aur de colectat încă.', 'No gold to collect yet.'));
+      } else if (run({ type: 'collect' })) {
+        setMessage(tr('Aur colectat!', 'Gold collected!'));
+      }
+      return;
+    }
     if (id === 'dino') {
       setDinoRealm(null);
       return setPanel('dino');
@@ -638,43 +680,125 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
     }
   };
 
+  /** The champion's own portrait (the T-Rex hero before the first hatch). */
+  const championArt = d ? <DinosaurArt species={d.species} element={d.element} stage={d.stage} /> : <Hero stage="baby" />;
+  const closeThen = (next: () => void) => () => {
+    setProfileOpen(false);
+    next();
+  };
   /**
    * The champion avatar and its menu: top-left on phones, with resources and shortcuts (phones have no HUD); top-right
-   * in the desktop HUD (`desk`), where resources already show, with just the account and settings.
+   * in the desktop HUD (`desk`), where resources already show: who is playing, then players, account and settings.
    */
   const profileMenu = (id: string, desk = false) => (
     <>
       <button
         className="realm-avatar"
-        aria-label={tr('Resurse', 'Resources')}
+        aria-label={desk ? tr('Profil și setări', 'Profile and settings') : tr('Resurse', 'Resources')}
         aria-expanded={profileOpen}
         aria-controls={id}
         onClick={() => setProfileOpen((open) => !open)}
       >
-        <Hero stage={d?.stage ?? 'baby'} />
+        {championArt}
         <span>{d?.level ?? 1}</span>
+        {guest && <b className="realm-guest-alert" title={tr('Progresul nu e salvat în cont', 'Progress is not saved to an account')}>!</b>}
       </button>
       {profileOpen && (
         <>
-          <button className="realm-profile-dismiss" aria-label="Close resources" onClick={() => setProfileOpen(false)} />
-          <section className="realm-profile-card" id={id} aria-label={tr('Resurse', 'Resources')} onKeyDown={(event) => { if (event.key === 'Escape') setProfileOpen(false); }}>
-            <header><strong>{badge.title}</strong><button aria-label="Close resources" onClick={() => setProfileOpen(false)}>×</button></header>
-            {sync.user?.email && <p className="realm-profile-email">{sync.user.email}</p>}
-            {!desk && (
+          <button className="realm-profile-dismiss" aria-label={tr('Închide', 'Close')} onClick={() => setProfileOpen(false)} />
+          {desk ? (
+            <section
+              className="realm-profile-card realm-hud-menu"
+              id={id}
+              aria-label={tr('Profil și setări', 'Profile and settings')}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setProfileOpen(false);
+              }}
+            >
+              <header>
+                <span className="realm-hud-menu-portrait" aria-hidden="true">
+                  {championArt}
+                </span>
+                <div>
+                  <strong>{sync.name ?? d?.nickname ?? tr('Explorator', 'Explorer')}</strong>
+                  <small>
+                    {badge.rank} · {badge.title}
+                  </small>
+                  <i className="realm-hud-menu-rank" aria-hidden="true">
+                    <b style={{ width: `${Math.min(100, badge.progress * 100)}%` }} />
+                  </i>
+                </div>
+              </header>
+              {sync.user?.email && <p className="realm-hud-menu-email">{sync.user.email}</p>}
+              <nav>
+                <button className="realm-hud-menu-shop" onClick={closeThen(() => setPanel('shop'))}>
+                  <span className="realm-hud-menu-gem" aria-hidden="true">💎</span>
+                  <span>
+                    {tr('Magazin', 'Shop')} · {save.gems}
+                    <small>{tr('Diamante pentru a avansa mai repede', 'Diamonds to move faster')}</small>
+                  </span>
+                  <em aria-hidden="true">›</em>
+                </button>
+                {account && (
+                  <button onClick={closeThen(() => setPanel('players'))}>
+                    <Icon name="trophy" />
+                    <span>
+                      {tr('Jucători', 'Players')}
+                      <small>{tr('Vizitează lumile altora', "Visit other players' worlds")}</small>
+                    </span>
+                    <em aria-hidden="true">›</em>
+                  </button>
+                )}
+                <button className={guest ? 'realm-hud-menu-guest' : undefined} onClick={closeThen(() => setPanel('account'))}>
+                  <Icon name="shield" />
+                  <span>
+                    {guest ? tr('Creează cont', 'Create account') : tr('Cont', 'Account')}
+                    <small>{guest ? tr('Salvează progresul în cloud', 'Save your progress in the cloud') : tr('Nume, parolă și salvare', 'Name, password and saving')}</small>
+                  </span>
+                  <em aria-hidden="true">›</em>
+                </button>
+                <button onClick={closeThen(() => setPanel('settings'))}>
+                  <Icon name="settings" />
+                  <span>
+                    {tr('Setări', 'Settings')}
+                    <small>{tr('Limbă și sunete', 'Language and sounds')}</small>
+                  </span>
+                  <em aria-hidden="true">›</em>
+                </button>
+              </nav>
+              {/* An anonymous guest has nothing to sign back into: signing out would lose the progress. */}
+              {account && !guest && (
+                <footer>
+                  <button
+                    className="realm-hud-menu-signout"
+                    onClick={closeThen(() => {
+                      void cloudSync.flush().finally(() => void signOut());
+                    })}
+                  >
+                    {tr('Ieși din cont', 'Sign out')}
+                  </button>
+                </footer>
+              )}
+            </section>
+          ) : (
+            <section className="realm-profile-card" id={id} aria-label={tr('Resurse', 'Resources')} onKeyDown={(event) => { if (event.key === 'Escape') setProfileOpen(false); }}>
+              <header><strong>{badge.title}</strong><button aria-label={tr('Închide', 'Close')} onClick={() => setProfileOpen(false)}>×</button></header>
+              {sync.user?.email && <p className="realm-profile-email">{sync.user.email}</p>}
               <div className="realm-profile-stats">
                 <Resource icon="gold" value={Math.floor(save.gold)} label={tr('Aur', 'Gold')} color="gold" />
                 <Resource icon="food" value={save.food} label={tr('Hrană', 'Food')} color="food" />
                 <Resource icon="star" value={d?.level ?? 1} label={tr('Nivel', 'Level')} color="gold" />
               </div>
-            )}
-            <footer>
-              {!desk && <button onClick={() => { setProfileOpen(false); setDinoRealm(null); setPanel('dino'); }}>{tr('Dinozauri', 'Dinosaurs')}</button>}
-              {account && <button onClick={() => { setProfileOpen(false); setPanel('players'); }}>{tr('Jucători', 'Players')}</button>}
-              <button onClick={() => { setProfileOpen(false); setPanel('account'); }}>{tr('Cont', 'Account')}</button>
-              <button onClick={() => { setProfileOpen(false); setPanel('settings'); }}>{tr('Setări', 'Settings')}</button>
-              {!desk && <button onClick={() => { setProfileOpen(false); setPanel('wiki'); }}>Wikipedia</button>}
-            </footer>
-          </section>
+              <footer>
+                <button onClick={closeThen(() => setPanel('shop'))}>💎 {save.gems} · {tr('Magazin', 'Shop')}</button>
+                <button onClick={closeThen(() => { setDinoRealm(null); setPanel('dino'); })}>{tr('Dinozauri', 'Dinosaurs')}</button>
+                {account && <button onClick={closeThen(() => setPanel('players'))}>{tr('Jucători', 'Players')}</button>}
+                <button onClick={closeThen(() => setPanel('account'))}>{guest ? tr('Creează cont', 'Create account') : tr('Cont', 'Account')}</button>
+                <button onClick={closeThen(() => setPanel('settings'))}>{tr('Setări', 'Settings')}</button>
+                <button onClick={closeThen(() => setPanel('wiki'))}>Wikipedia</button>
+              </footer>
+            </section>
+          )}
         </>
       )}
     </>
@@ -716,7 +840,14 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
     );
   }
   return (
-    <main className="realms-app">
+    <ResourceHelpContext.Provider value={route => {
+      if (route.recipe) setWorkshopRecipe(route.recipe);
+      if (route.realm && ELEMENTS.some(e => e.id === route.realm)) setHelpRealm(route.realm as RealmId);
+      if (route.building) setHelpBuilding(route.building);
+      if (route.panel === 'workshop' && !save.buildings.some(b => b.kind === 'workshop')) { setPanel('build'); return; }
+      if (route.panel === 'farm' && !save.buildings.some(b => b.kind === 'farm')) { setPanel('build'); return; }
+      setPanel(route.panel);
+    }}><main className="realms-app">
       <World
         save={save}
         realm={realm}
@@ -738,7 +869,7 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
         }}
         onSelect={openBuilding}
         onProgress={bootProgress}
-        cameraAction={!panel && !placing && !save.battle && (
+        cameraAction={!panel && !placing && !save.battle && save.dinos.length > 0 && (
           <button className="realm-daily-access" onClick={() => setPanel('daily')} aria-label={tr('Premii și misiuni zilnice', 'Daily rewards and missions')} title={tr('Zilnic', 'Daily')}>
             <span className="realm-daily-wheel" aria-hidden="true"><span>★</span></span>
             {dailyReady && <b aria-hidden="true">!</b>}
@@ -764,6 +895,13 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
         <div className="realm-resources">
           <Resource icon="gold" value={Math.floor(save.gold)} label={tr('Aur', 'Gold')} color="gold" />
           <Resource icon="food" value={save.food} label={tr('Hrană', 'Food')} color="food" />
+          <button className="realm-resource gems realm-gems-chip" onClick={() => setPanel('shop')} title={tr('Magazin de diamante', 'Diamond shop')}>
+            <span aria-hidden="true">💎</span>
+            <div>
+              <small>{tr('Diamante', 'Diamonds')}</small>
+              <strong>{save.gems.toLocaleString('en-GB')}</strong>
+            </div>
+          </button>
           <div className="realm-account">
             <span>{badge.numeral}</span>
             <div>
@@ -835,118 +973,74 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
         >
           <span>✦</span>
           <span className="realm-quest-label">{tr('POVESTEA TA', 'YOUR STORY')}</span>
-          {!storyOpen && (storyReady || storyEggs.length > 0) && (
+          {!storyOpen && storyReady && (
             <b className="realm-quest-alert" aria-label={tr('Recompensă disponibilă', 'Reward ready')}>
               !
             </b>
           )}
-          <small>
-            {!chapterDone ? `${Math.min(quest + 1, 5)} / 5` : story ? `${storyIndex + 1} / ${steps.length}` : '✓'}
-          </small>
+          <small>{current ? `${badge.numeral} · ${storyIndex + 1}/${steps.length}` : '★'}</small>
           <i className="realm-quest-chevron" aria-hidden />
         </button>
-        {chapterDone ? (
-          <div className="realm-quest-body">
-            <span className="realm-eyebrow">
-              {current
-                ? `${tr('CAPITOLUL', 'CHAPTER')} ${badge.numeral} · ${current.chapter.title[lang].toUpperCase()}`
-                : tr('TOATE CAPITOLELE', 'ALL CHAPTERS')}
-            </span>
-            {story ? (
-              <>
-                <h2>{story.task[lang]}</h2>
-                <p className="realm-quest-reward">
-                  {storyEgg(story) && <EggArt species={story.species} realm={story.element} size={30} />}
+        <div className="realm-quest-body">
+          {current && story ? (
+            <>
+              <span className="realm-eyebrow">
+                {tr('CAPITOLUL', 'CHAPTER')} {badge.numeral} · {current.chapter.title[lang].toUpperCase()}
+              </span>
+              <h2>{story.task[lang]}</h2>
+              <p className="realm-quest-hint">{storyReady ? tr('Gata! Ia-ți recompensa.', 'Done! Take your reward.') : story.hint[lang]}</p>
+              {storyProgress && !storyReady && (
+                <div className="realm-quest-bar" role="progressbar" aria-valuemin={0} aria-valuemax={storyProgress[1]} aria-valuenow={storyProgress[0]}>
+                  <i style={{ width: `${Math.min(100, (storyProgress[0] / storyProgress[1]) * 100)}%` }} />
                   <span>
-                    {tr('Recompensă', 'Reward')}: <b>+{story.gold ?? 0} ●</b> · <b>+{story.food ?? 0} ❧</b>
-                    {storyEgg(story) && (
-                      <em>
-                        + <Icon name="egg" scale={1} /> {SPECIES_NAMES[story.species]} · {ELEMENTS.find((e) => e.id === story.element)!.name[lang]}{' '}
-                        ({tr('final de capitol', 'chapter finale')})
-                      </em>
-                    )}
-                    {story.progress && !storyReady && (
-                      <small>
-                        {tr('Progres', 'Progress')}: {Math.min(...story.progress(save))} / {story.progress(save)[1]}
-                      </small>
-                    )}
+                    {Math.min(...storyProgress)} / {storyProgress[1]}
                   </span>
-                </p>
-                <div className="realm-quest-progress">
-                  {steps.map((q, i) => (
-                    <i key={q.id} className={i < storyIndex ? 'done' : i === storyIndex ? 'current' : ''} />
-                  ))}
                 </div>
-                {storyReady ? (
-                  <button className="realm-button" onClick={() => run({ type: 'claimQuestEgg', questId: story.id })}>
-                    {storyEgg(story) ? <Icon name="egg" scale={1} /> : <Icon name="star" scale={1} />}{' '}
-                    {tr('Primește recompensa', 'Claim reward')} <span>→</span>
-                  </button>
-                ) : (
-                  <button className="realm-button" onClick={() => setPanel(story.panel ?? 'arena')}>
-                    {tr('Continuă povestea', 'Continue the story')} <span>→</span>
-                  </button>
+              )}
+              <ul className="realm-quest-rewards" aria-label={tr('Recompensă', 'Reward')}>
+                <li>
+                  <Icon name="gold" scale={1} /> +{story.gold}
+                </li>
+                <li>
+                  <Icon name="food" scale={1} /> +{story.food}
+                </li>
+                {storyEgg(story) && (
+                  <li className="egg" title={`${SPECIES_NAMES[story.species]} · ${ELEMENTS.find((e) => e.id === story.element)!.name[lang]}`}>
+                    <EggArt species={story.species} realm={story.element} size={22} /> {tr('Ou', 'Egg')}
+                  </li>
                 )}
-              </>
-            ) : (
-              <>
-                <h2>{tr('Povestea e completă!', 'Story complete!')}</h2>
-                <p>
-                  {tr(
-                    'Ai terminat toate poveștile. Ouăle rare se câștigă în continuare în arenă și în expediții.',
-                    'You finished every story. Rare eggs keep dropping in the arena and on expeditions.',
-                  )}
-                </p>
-                <button className="realm-button" onClick={() => setPanel('arena')}>
-                  {tr('Spre arenă', 'To the arena')} <span>→</span>
+              </ul>
+              <div className="realm-quest-progress" aria-label={`${storyIndex}/${steps.length}`}>
+                {steps.map((q, i) => (
+                  <i key={q.id} className={i < storyIndex ? 'done' : i === storyIndex ? 'current' : ''} />
+                ))}
+              </div>
+              {storyReady ? (
+                <button className="realm-button" onClick={() => run({ type: 'claimQuestEgg', questId: story.id })}>
+                  <Icon name={storyEgg(story) ? 'egg' : 'star'} scale={1} /> {tr('Ia premiul', 'Claim')} <span>→</span>
                 </button>
-              </>
-            )}
-            {storyEggs.some((q) => q.id !== story?.id) && (
-              <button className="realm-button secondary realm-story-egg" onClick={() => setPanel('hatchery')}>
-                <Icon name="egg" scale={1} /> {tr('Ou nou din poveste!', 'New story egg!')} ({storyEggs.filter((q) => q.id !== story?.id).length}){' '}
-                <span>→</span>
+              ) : (
+                <button className="realm-button" onClick={() => setPanel(story.panel)}>
+                  {tr('Mergi', 'Go')} <span>→</span>
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="realm-eyebrow">{tr('TOATE CAPITOLELE', 'ALL CHAPTERS')}</span>
+              <h2>{tr('Povestea e completă!', 'Story complete!')}</h2>
+              <p className="realm-quest-hint">
+                {tr(
+                  'Ai trecut prin toate cele zece lumi. Ouăle rare se câștigă în continuare în arenă și în expediții.',
+                  'You crossed all ten worlds. Rare eggs keep dropping in the arena and on expeditions.',
+                )}
+              </p>
+              <button className="realm-button" onClick={() => setPanel('arena')}>
+                {tr('Spre arenă', 'To the arena')} <span>→</span>
               </button>
-            )}
-          </div>
-        ) : (
-          <div className="realm-quest-body">
-            <span className="realm-eyebrow">{tr('CAPITOLUL I · PRIMA SCÂNTEIE', 'CHAPTER I · THE FIRST SPARK')}</span>
-            <h2>{quests[quest]}</h2>
-            <p>{questDetails[quest]}</p>
-            <div className="realm-quest-progress">
-              {Array.from({ length: 5 }, (_, i) => (
-                <i key={i} className={i < quest ? 'done' : i === quest ? 'current' : ''} />
-              ))}
-            </div>
-            <button
-              className="realm-button"
-              onClick={() =>
-                setPanel(
-                  quest < 2
-                    ? 'hatchery'
-                    : quest === 2
-                      ? 'dino'
-                      : quest === 3
-                        ? 'expedition'
-                        : quest === 4
-                          ? 'build'
-                          : quest === 5
-                            ? 'farm'
-                            : 'arena',
-                )
-              }
-            >
-              {chapterDone ? tr('Spre arenă', 'To the arena') : tr('Continuă povestea', 'Continue the story')}{' '}
-              <span>→</span>
-            </button>
-            {storyEggs.length > 0 && (
-              <button className="realm-button secondary realm-story-egg" onClick={() => setPanel('hatchery')}>
-                <Icon name="egg" scale={1} /> {tr('Ou nou din poveste!', 'New story egg!')} ({storyEggs.length}) <span>→</span>
-              </button>
-            )}
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </aside>
       {placing ? (
         <div className="realm-placement">
@@ -985,44 +1079,58 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
             <span className="realm-nav-chevron" aria-hidden />
             <span className="realm-nav-toggle-label">{tr('Meniu', 'Menu')}</span>
           </button>
-          <Nav icon="build" label={tr('Construiește', 'Build')} onClick={() => setPanel('build')} />
-          <Nav icon="dino" label={tr('Dinozauri', 'Dinosaurs')} onClick={() => { setDinoRealm(null); setPanel('dino'); }} />
-          <Nav icon="collection" label={tr('Colecție', 'Collection')} onClick={() => setPanel('collection')} />
-          <Nav icon="realms" label={tr('Tărâmuri', 'Realms')} onClick={() => setPanel('realms')} />
-          <Nav
-            icon="expedition"
-            label={
-              save.expedition
-                ? now >= save.expedition.endsAt
-                  ? tr('Expediție gata ✓', 'Expedition back ✓')
-                  : tr('În expediție…', 'On expedition…')
-                : tr('Expediții', 'Expeditions')
-            }
-            onClick={() => setPanel('expedition')}
-            featured
-          />
-          <Nav icon="arena" label={tr('Arena PvE', 'PvE Arena')} onClick={() => setPanel('arena')} />
-          <Nav icon="workshop" label={tr('Atelier', 'Workshop')} onClick={() => setPanel('workshop')} />
-          <button
-            className={`realm-collect${Math.floor(live.storedGold) > 0 ? '' : ' empty'}`}
-            aria-label={tr('Colectează', 'Collect')}
-            title={tr('Colectează', 'Collect')}
-            onClick={() => {
-              if (run({ type: 'collectAvailable' })) setMessage(tr('Resurse colectate!', 'Resources collected!'));
-            }}
-          >
-            <span aria-hidden="true">
-              <Icon name="gold" />
-            </span>
-            <div>
-              <strong>{tr('Colectează', 'Collect')}</strong>
-              <small>
-                {Math.floor(live.storedGold) > 0
-                  ? `${Math.floor(live.storedGold)} ${tr('aur disponibil', 'gold available')}`
-                  : tr('Nimic încă', 'Nothing yet')}
-              </small>
-            </div>
-          </button>
+          {(() => {
+            // Realms is the hub: always there, in the middle; the other unlocked buttons share the two sides.
+            const side = ([
+              ['build', <Nav key="build" icon="build" label={tr('Construiește', 'Build')} onClick={() => setPanel('build')} {...navItem('build')} />],
+              ['dino', <Nav key="dino" icon="dino" label={tr('Dinozauri', 'Dinosaurs')} onClick={() => { setDinoRealm(null); setPanel('dino'); }} {...navItem('dino')} />],
+              ['collection', <Nav key="collection" icon="collection" label={tr('Colecție', 'Collection')} onClick={() => setPanel('collection')} {...navItem('collection')} />],
+              ['expedition', <Nav
+                key="expedition"
+                icon="expedition"
+                label={
+                  save.expedition
+                    ? now >= save.expedition.endsAt
+                      ? tr('Expediție gata ✓', 'Expedition back ✓')
+                      : tr('În expediție…', 'On expedition…')
+                    : tr('Expediții', 'Expeditions')
+                }
+                onClick={() => setPanel('expedition')}
+                {...navItem('expedition')}
+              />],
+              ['arena', <Nav key="arena" icon="arena" label={tr('Arena PvE', 'PvE Arena')} onClick={() => setPanel('arena')} {...navItem('arena')} />],
+              ['workshop', <Nav key="workshop" icon="workshop" label={tr('Atelier', 'Workshop')} onClick={() => setPanel('workshop')} {...navItem('workshop')} />],
+              ['collect', <button
+                key="collect"
+                className={`realm-collect${Math.floor(live.storedGold) > 0 ? '' : ' empty'}`}
+                aria-label={tr('Colectează', 'Collect')}
+                title={tr('Colectează', 'Collect')}
+                onClick={() => {
+                  if (run({ type: 'collectAvailable' })) setMessage(tr('Resurse colectate!', 'Resources collected!'));
+                }}
+              >
+                <span aria-hidden="true">
+                  <Icon name="gold" />
+                </span>
+                <div>
+                  <strong>{tr('Colectează', 'Collect')}</strong>
+                  <small>
+                    {Math.floor(live.storedGold) > 0
+                      ? `${Math.floor(live.storedGold)} ${tr('aur disponibil', 'gold available')}`
+                      : tr('Nimic încă', 'Nothing yet')}
+                  </small>
+                </div>
+              </button>],
+            ] as [NavKey, ReactNode][]).filter(([key]) => navKeys.has(key)).map(([, el]) => el);
+            const half = Math.ceil(side.length / 2);
+            return (
+              <>
+                {side.slice(0, half)}
+                <Nav key="realms" icon="realms" label={tr('Tărâmuri', 'Realms')} onClick={() => setPanel('realms')} hub {...navItem('realms')} />
+                {side.slice(half)}
+              </>
+            );
+          })()}
         </nav>
       )}
       {storageError && (
@@ -1039,6 +1147,29 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
         </div>
       )}
 
+      {askAccount && !panel && (
+        <Window
+          title={askAccount === 'return' ? tr('Bine ai revenit!', 'Welcome back!') : tr('Salvează-ți progresul', 'Save your progress')}
+          eyebrow="DINO REALMS"
+          close={() => setAskAccount(false)}
+        >
+          <p className="realm-save-invite">
+            {askAccount === 'return'
+              ? tr(
+                  `Ai ${save.dinos.length} ${save.dinos.length === 1 ? 'dinozaur' : 'dinozauri'}, dar progresul e doar pe acest dispozitiv. Dacă ștergi datele browserului sau schimbi telefonul, se pierde. Creează un cont ca să-l păstrezi.`,
+                  `You have ${save.dinos.length} ${save.dinos.length === 1 ? 'dinosaur' : 'dinosaurs'}, but your progress lives on this device only. Clearing browser data or switching phones loses it. Create an account to keep it.`,
+                )
+              : tr(
+                  'Progresul tău e acum doar pe acest dispozitiv. Creează un cont ca să nu-l pierzi și să-l continui pe orice telefon sau calculator.',
+                  'Your progress lives on this device only. Create an account to keep it and continue on any phone or computer.',
+                )}
+          </p>
+          <AccountPanel lang={lang} sync={sync} startWith="signup" intro={false} />
+          <button className="realm-link realm-gate-guest" onClick={() => setAskAccount(false)}>
+            {tr('Mai târziu', 'Later')}
+          </button>
+        </Window>
+      )}
       {panel && !gameplayView && (
         <Window
           title={
@@ -1057,6 +1188,7 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
               settings: tr('Setări', 'Settings'),
               account: tr('Cont', 'Account'),
               players: tr('Jucători', 'Players'),
+              shop: tr('Magazin', 'Shop'),
               assets: tr('Atelierul vizual', 'The visual workshop'),
               workshop: tr('Atelier', 'Workshop'),
               arena: tr('Arena PvE', 'PvE Arena'),
@@ -1064,7 +1196,7 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
           }
           eyebrow="DINO REALMS"
           close={() => setPanel(null)}
-          wide={['daily', 'collection', 'realms', 'assets', 'build', 'dino', 'hatchery', 'market', 'habitat', 'wiki'].includes(
+          wide={['farm', 'daily', 'collection', 'realms', 'assets', 'build', 'dino', 'hatchery', 'market', 'habitat', 'wiki', 'workshop', 'shop'].includes(
             panel,
           )}
         >
@@ -1139,168 +1271,20 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
               move={() => startPlacement('farm')}
             />
           )}
-          {panel === 'build' && (
-            <>
-              <p className="realm-intro">
-                {tr(
-                  'Clădiri utilitare pentru insula principală. Habitatele sunt lumi separate.',
-                  'Utility buildings for the main island. Habitats are separate worlds.',
-                )}
-              </p>
-              <div className="realm-build-grid">
-                {(Object.keys(UTILITY_BUILDINGS) as UtilityKind[]).map((kind) => {
-                  const spec = UTILITY_BUILDINGS[kind],
-                    existing = save.buildings.find((b) => b.kind === kind);
-                  return (
-                    <div className="realm-build-card" key={kind}>
-                      <BuildingSprite kind={kind} save={save} />
-                      <div>
-                        <span className="realm-eyebrow">3 × 3 · {tr('UTILITAR', 'UTILITY')}</span>
-                        <h3>{spec.name[lang]}</h3>
-                        <p>{spec.description[lang]}</p>
-                      </div>
-                      {existing ? (
-                        <div className="realm-build-actions">
-                          <button
-                            className="realm-button secondary"
-                            onClick={() => {
-                              if (kind === 'portal') setPanel('expedition');
-                              else setPanel(kind);
-                            }}
-                          >
-                            {tr('Deschide', 'Open')}
-                          </button>
-                          <button className="realm-link" onClick={() => startPlacement(existing.id, kind)}>
-                            {tr('Mută', 'Move')}
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          className="realm-button"
-                          disabled={save.gold < spec.cost}
-                          onClick={() => startPlacement(null, kind)}
-                        >
-                          {spec.cost} ●
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+          {panel === 'build' && <BuildPanel initialKind={helpBuilding} save={save} lang={lang} place={startPlacement} open={kind => setPanel(kind === 'portal' ? 'expedition' : kind)} />}
           {panel === 'collection' && (
             <DinosaurCollection
               lang={lang}
               dinos={save.dinos}
               initialElement={realm === 'home' ? 'fire' : realm}
+              openExpeditions={() => setPanel('expedition')}
               openOwned={(id) => openBuilding(`dino:${id}`)}
               openMarket={() => setPanel('market')}
             />
           )}
-          {panel === 'realms' && (
-            <>
-              <p className="realm-intro">
-                {tr(
-                  'Fiecare habitat este o lume separată. Clădirile utilitare rămân pe insula principală.',
-                  'Each habitat is its own world. Utility buildings stay on the main island.',
-                )}
-              </p>
-              <button className="realm-button secondary realm-home-choice" onClick={() => visitRealm('home')}>
-                ⌂ {tr('Insula principală', 'Main island')} · {tr('Clădiri utilitare', 'Utility buildings')}
-              </button>
-              <div className="realm-realms-grid">
-                {ELEMENTS.map((el) => {
-                  const open = !!save.habitats[el.id],
-                    level = save.habitats[el.id] ?? 0,
-                    next = open ? HABITAT_LEVELS[level] : undefined,
-                    cost = WORLD_UNLOCK[el.id],
-                    affordable =
-                      save.gold >= cost.gold &&
-                      Object.entries(cost.materials).every(([id, n]) => save.inventory[id as ItemId] >= n!);
-                  return (
-                    <article
-                      key={el.id}
-                      className={`realm-realm-card ${realm === el.id ? 'active' : ''} ${open ? '' : 'locked'}`}
-                      style={{ '--realm-color': el.color } as React.CSSProperties}
-                    >
-                    <button
-                      className="realm-world-entry"
-                      onClick={() =>
-                        open
-                          ? visitRealm(el.id)
-                          : affordable &&
-                            run({ type: 'unlockHabitat', realm: el.id }) &&
-                            setMessage(`${tr('Lume deblocată', 'World unlocked')}: ${el.name[lang]}!`)
-                      }
-                      disabled={!open && !affordable}
-                      aria-label={`${open ? tr('Intră în lumea', 'Enter world') : tr('Deblochează lumea', 'Unlock world')}: ${el.name[lang]}`}
-                    >
-                      <div
-                        className="realm-world-thumbnail"
-                        style={{ backgroundImage: `url('${worldThumb(el.id)}')` }}
-                      />
-                      <h3>
-                        {el.symbol} {el.name[lang]}
-                      </h3>
-                      <p>{REALM_NAMES[el.id][lang]}</p>
-                      {open ? (
-                        <small>
-                          {tr('Nivel', 'Level')} {level} · 🦖 {save.dinos.filter((x) => x.element === el.id).length}/{habitatCapacity(save, el.id)}
-                          <span className="realm-world-enter-label">{tr('Intră în tărâm', 'Enter world')} →</span>
-                        </small>
-                      ) : (
-                        <small className="realm-world-cost">
-                          🔒 {cost.gold} ●
-                          {Object.entries(cost.materials).map(([id, n]) => (
-                            <span key={id} className={save.inventory[id as ItemId] >= n! ? '' : 'short'}>
-                              {' '}
-                              · {ITEMS[id as ItemId].icon} {n}
-                            </span>
-                          ))}
-                        </small>
-                      )}
-                    </button>
-                    {open && (
-                      <div className="realm-world-upgrade">
-                        {next ? (
-                          <>
-                            <strong>{tr('Nivel', 'Level')} {level + 1} · {next.capacity} {tr('locuri', 'spots')}</strong>
-                            {next.capacity === habitatCapacity(save, el.id) && (
-                              <small>{tr('Crește depozitul și venitul', 'More storage and income')}</small>
-                            )}
-                            <span>{next.gold.toLocaleString(lang ? 'en-US' : 'ro-RO')} {tr('aur', 'gold')} + 1 {tr('kit habitat', 'habitat kit')}</span>
-                            <button
-                              className="realm-button secondary"
-                              disabled={save.gold < next.gold || save.inventory.habitatKit < 1}
-                              onClick={() => run({ type: 'upgradeHabitat', realm: el.id })}
-                              aria-label={`${tr('Îmbunătățește', 'Upgrade')}: ${el.name[lang]}`}
-                            >
-                              {tr('Îmbunătățește', 'Upgrade')}
-                            </button>
-                            {save.inventory.habitatKit < 1 && (
-                              <button className="realm-link" onClick={() => setPanel('workshop')}>
-                                {tr('Fă un kit în Atelier', 'Make a kit in the Workshop')} →
-                              </button>
-                            )}
-                          </>
-                        ) : <strong>{tr('Nivel maxim', 'Max level')}</strong>}
-                      </div>
-                    )}
-                    </article>
-                  );
-                })}
-              </div>
-              <p className="realm-note">
-                {tr(
-                  'Lumile sunt blocate până le deblochezi cu aur și materiale. Apoi cumpără ouă din Piață sau primește-le din poveste.',
-                  'Worlds stay locked until you unlock them with gold and materials. Then buy eggs at the Market or earn them from the story.',
-                )}
-              </p>
-            </>
-          )}
+          {panel === 'realms' && <RealmsPanel key={helpRealm} initialRealm={helpRealm} save={save} lang={lang} current={realm} visit={visitRealm} run={run} workshop={() => setPanel('workshop')} />}
           {panel === 'wiki' && <RealmsWiki lang={lang} />}
-          {panel === 'account' && <AccountPanel lang={lang} sync={sync} />}
+          {panel === 'account' && <AccountPanel lang={lang} sync={sync} startWith={guest ? 'signup' : 'signin'} />}
           {panel === 'players' && account && <PlayersPanel lang={lang} selfId={account.user.id} onVisit={(p) => void openVisit(p)} />}
           {panel === 'settings' && (
             <div className="realm-settings">
@@ -1310,7 +1294,7 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
                   <small>{sync.user?.email ?? statusText(sync.status, lang)}</small>
                 </span>
                 <button className="realm-button secondary" onClick={() => setPanel('account')}>
-                  {sync.user ? tr('Detalii', 'Details') : tr('Conectează-te', 'Sign in')}
+                  {guest ? tr('Creează cont', 'Create account') : sync.user ? tr('Detalii', 'Details') : tr('Conectează-te', 'Sign in')}
                 </button>
               </div>
               <button className="realm-button secondary" onClick={() => setPanel('wiki')}>
@@ -1338,6 +1322,17 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
                 </button>
               </div>
             </div>
+          )}
+          {panel === 'shop' && <GemShop save={save} now={now} lang={lang} run={run} />}
+          {panel === 'workshop' && (
+            <WorkshopPanel
+              save={save}
+              now={now}
+              lang={lang}
+              run={run}
+              build={() => setPanel('build')}
+              recipeId={workshopRecipe}
+            />
           )}
           {panel === 'assets' && <AnimationViewer lang={lang} />}
         </Window>
@@ -1392,7 +1387,7 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
           </button>
         </div>
       )}
-    </main>
+    </main></ResourceHelpContext.Provider>
   );
 }
 function Resource({ icon, value, label, color }: { icon: IconName; value: number; label: string; color: string }) {
@@ -1413,18 +1408,36 @@ function Nav({
   label,
   onClick,
   featured = false,
+  fresh = false,
+  hub = false,
+  seen,
 }: {
   icon: IconName;
   label: string;
   onClick: () => void;
+  /** The button the story card points to. */
   featured?: boolean;
+  /** Unlocked since the player last looked: shows "NOU" until clicked. */
+  fresh?: boolean;
+  /** The central, always-visible button (the worlds). */
+  hub?: boolean;
+  seen?: () => void;
 }) {
   return (
-    <button className={featured ? 'featured' : ''} onClick={onClick} aria-label={label} title={label}>
+    <button
+      className={`${featured ? 'featured' : ''}${fresh ? ' fresh' : ''}${hub ? ' realm-nav-hub' : ''}`}
+      onClick={() => {
+        seen?.();
+        onClick();
+      }}
+      aria-label={label}
+      title={label}
+    >
       <span>
         <Icon name={icon} scale={2} />
       </span>
       <strong>{label}</strong>
+      {fresh && <em className="realm-nav-new">NOU</em>}
     </button>
   );
 }

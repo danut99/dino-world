@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ITEMS, type ItemId } from './content';
 import type { Save } from './game';
+import { ResourceHelp } from './ResourceHelp';
 
 /** "Next level" card shared by the workshop and the arena gate: what the level adds, its price, and the button. */
 export function UpgradeCard({
@@ -46,6 +47,7 @@ export function UpgradeCard({
                 </span>
               ))}
             </div>
+            <ResourceHelp save={save} lang={lang} gold={gold} materials={materials} />
           </div>
           <button className="realm-button" disabled={!affordable} onClick={upgrade}>
             {tr('Îmbunătățește', 'Upgrade')}

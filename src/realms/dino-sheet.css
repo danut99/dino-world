@@ -1,0 +1,220 @@
+/*
+ * The dinosaur window as a character sheet: the collection down the left, the selected dinosaur standing on its
+ * own world's island, its level, growth, stats and actions beside it, and its three ages along the bottom.
+ */
+.dino-sheet {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-areas: 'roster main' 'roster path';
+  gap: 14px;
+  align-items: start;
+}
+
+/* Collection */
+.dino-sheet-roster {
+  grid-area: roster;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 640px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+.dino-sheet-roster > .realm-eyebrow { padding: 0 2px 4px; }
+.realms-app .dino-sheet-roster > button {
+  position: relative;
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 62px;
+  padding: 6px 10px 6px 8px;
+  text-align: left;
+  font: inherit;
+  color: #e2d3b2;
+  cursor: pointer;
+  background: none;
+  border: 6px solid transparent;
+  border-image: var(--frame-card);
+  border-radius: 0;
+  box-shadow: inset 3px 0 0 var(--el);
+  image-rendering: pixelated;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.realms-app .dino-sheet-roster > button:hover { filter: brightness(1.1); transform: translateX(2px); }
+.realms-app .dino-sheet-roster > button[aria-pressed='true'] { border-image: var(--frame-card-active); color: #fff1b8; }
+.dino-sheet-thumb {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 2px solid #574a40;
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--el) 45%, #2f2520), #120d0b);
+}
+.dino-sheet-thumb .dinosaur-art { width: 150%; height: 150%; max-width: none; margin-top: 20%; }
+.dino-sheet-roster > button[data-rarity='rare'] .dino-sheet-thumb { border-color: #4aa3ff; }
+.dino-sheet-roster > button[data-rarity='epic'] .dino-sheet-thumb { border-color: #b26bff; }
+.dino-sheet-roster > button[data-rarity='legendary'] .dino-sheet-thumb { border-color: #f6d77a; box-shadow: 0 0 10px #f6d77a88; }
+.dino-sheet-roster-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dino-sheet-roster-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.dino-sheet-roster-name small { font-size: 10px; color: #cdbfa8; }
+.dino-sheet-crown { position: absolute; top: -4px; right: -2px; font-size: 14px; color: #f6d77a; text-shadow: 1px 1px 0 #1b1411; }
+
+/* Selected dinosaur */
+.dino-sheet-main {
+  grid-area: main;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 16px;
+  padding: 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--el) 14%, #241c18), #1b1411 70%);
+  border: 2px solid #3d332d;
+}
+.dino-sheet-stage {
+  position: relative;
+  min-height: 330px;
+  overflow: hidden;
+  background:
+    linear-gradient(transparent 70%, #00000055),
+    linear-gradient(color-mix(in srgb, var(--el) 16%, #241c2c), #120d0b);
+  border: 2px solid #574a40;
+  box-shadow: inset 0 0 0 2px #1b1411, inset 0 -40px 60px #00000066;
+}
+.dino-sheet-stage::before {
+  /* a soft glow of the element behind the dinosaur */
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 78%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--el) 38%, transparent), transparent 68%);
+  pointer-events: none;
+}
+.dino-sheet-figure {
+  position: absolute;
+  left: 50%;
+  bottom: 2%;
+  width: min(92%, 300px);
+  aspect-ratio: 1;
+  translate: -50% 0;
+}
+.dino-sheet-pedestal {
+  /* a round stone pedestal with the element's glow on its rim */
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  width: 90%;
+  height: 20%;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 40%, #6b5a48 0 45%, #3d332d 60%, #1b1411 72%, transparent 74%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--el) 70%, transparent), 0 0 22px color-mix(in srgb, var(--el) 55%, transparent), 0 10px 18px #000000aa;
+}
+.dino-sheet-figure > .dinosaur-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.dino-sheet-element,
+.dino-sheet-champion {
+  position: absolute;
+  top: 10px;
+  padding: 3px 8px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  background: #1b1411cc;
+  border: 1px solid var(--el);
+  color: #fff1b8;
+}
+.dino-sheet-element { left: 10px; }
+.dino-sheet-champion { right: 10px; border-color: #f6d77a; color: #f6d77a; }
+
+.dino-sheet-info { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.dino-sheet-info > header { display: flex; align-items: center; gap: 14px; }
+.dino-sheet-level {
+  flex: none;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #3d2f24, #1b1411);
+  box-shadow: 0 0 0 3px #e9c46a, 0 0 0 6px #1b1411, 0 0 16px color-mix(in srgb, var(--el) 60%, transparent);
+}
+.dino-sheet-level strong { font-size: 28px; line-height: 1; color: #fff1b8; text-shadow: 2px 2px 0 #1b1411; }
+.dino-sheet-level small { font-size: 8px; letter-spacing: 1px; color: #e0a96a; }
+.dino-sheet-info h3 { margin: 0; font-size: 24px; color: #fff1b8; text-shadow: 2px 2px 0 #1b1411; }
+.dino-sheet-info header p { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 0; font-size: 12px; color: #cdbfa8; }
+.dino-sheet-bar { height: 10px; background: #120d0b; border: 1px solid #574a40; }
+.dino-sheet-bar > i { display: block; height: 100%; background: linear-gradient(#f6d77a, #d7a94c); box-shadow: inset 0 -2px 0 #a8771e; transition: width 0.4s ease; }
+.dino-sheet-growth { display: flex; flex-direction: column; gap: 6px; }
+.dino-sheet-growth small { font-size: 11px; color: #f6d77a; }
+.dino-sheet-note { margin: 0; padding: 10px 12px; font-size: 12px; line-height: 1.5; color: #cdbfa8; background: #1b1411; border-left: 3px solid var(--el); }
+.dino-sheet-stats { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.dino-sheet-stats li { display: grid; grid-template-columns: 18px 64px minmax(0, 1fr) 40px; align-items: center; gap: 8px; font-size: 11px; color: #cdbfa8; }
+.dino-sheet-stats li b { justify-self: end; font-size: 13px; color: #fff1b8; }
+.dino-sheet-stats .dino-sheet-bar > i { background: linear-gradient(color-mix(in srgb, var(--el) 70%, #fff), var(--el)); box-shadow: none; }
+.dino-sheet-income { display: flex; align-items: center; gap: 6px; padding: 8px 10px; font-size: 12px; color: #cdbfa8; background: #1b1411; border: 1px solid #3d332d; }
+.dino-sheet-income b { color: #f6d77a; font-size: 14px; }
+.dino-sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.dino-sheet-actions .realm-button { flex: 1 1 150px; min-height: 46px; }
+.dino-sheet-cost { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding: 2px 6px; font-size: 11px; background: #00000030; }
+.realms-app .dino-sheet-evolve { background: #f6d77a; box-shadow: inset 0 0 0 3px #fff1b8, 0 3px #5f4318, 0 0 18px #f6d77a99; animation: dino-sheet-pulse 1.2s ease-in-out infinite alternate; }
+.dino-sheet-hint { font-size: 11px; color: #ffb3a8; }
+@keyframes dino-sheet-pulse { to { box-shadow: inset 0 0 0 3px #fff1b8, 0 3px #5f4318, 0 0 28px #fff1b8; } }
+
+/* The three ages */
+.dino-sheet-path { grid-area: path; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; margin: 0; padding: 0; list-style: none; }
+.dino-sheet-path li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px 12px;
+  text-align: center;
+  background: #1b1411;
+  border: 2px solid #3d332d;
+}
+.dino-sheet-path li + li::before {
+  content: '▶';
+  position: absolute;
+  left: -19px;
+  top: 50%;
+  translate: 0 -50%;
+  font-size: 14px;
+  color: #574a40;
+}
+.dino-sheet-path li.reached + li::before { color: #e0a96a; }
+.dino-sheet-path-art { display: grid; place-items: center; width: 100%; height: 96px; }
+.dino-sheet-path-art .dinosaur-art { width: 96px; height: 96px; object-fit: contain; }
+.dino-sheet-path li.locked .dinosaur-art { filter: brightness(0) drop-shadow(0 0 1px #574a40); opacity: 0.6; }
+.dino-sheet-path li strong { font-size: 13px; color: #fff1b8; }
+.dino-sheet-path li.locked strong { color: #a39380; }
+.dino-sheet-path li small { font-size: 10px; color: #a39380; }
+.dino-sheet-path li.current { border-color: #e0a96a; box-shadow: 0 0 0 1px #e0a96a, 0 0 16px #e0a96a33; }
+
+@media (max-width: 900px) {
+  .dino-sheet { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'roster' 'main' 'path'; }
+  .dino-sheet-roster { flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; padding: 0 0 6px; }
+  .dino-sheet-roster > .realm-eyebrow { display: none; }
+  .realms-app .dino-sheet-roster > button { flex: 0 0 170px; }
+  .dino-sheet-main { grid-template-columns: minmax(0, 1fr); padding: 10px; }
+  .dino-sheet-stage { min-height: 260px; }
+  .dino-sheet-path { gap: 14px; }
+  .dino-sheet-path li + li::before { left: -13px; font-size: 10px; }
+  .dino-sheet-path-art, .dino-sheet-path-art .dinosaur-art { height: 70px; width: 70px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .realms-app .dino-sheet-evolve { animation: none; }
+}

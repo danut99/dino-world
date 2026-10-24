@@ -1,0 +1,87 @@
+.realms-app .realms-wiki { --codex-edge: #62533f; --codex-gold: #dfbc78; color: #e7dfcc; }
+.realms-wiki .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.realms-wiki .wiki-toolbar { display:flex; align-items:center; justify-content:space-between; gap:18px; padding-bottom:18px; border-bottom:1px solid var(--codex-edge); }
+.wiki-toolbar > span { display:flex; align-items:center; gap:10px; color:var(--codex-gold); font-size:11px; letter-spacing:2px; }
+.wiki-toolbar .realms-wiki-search { width: min(280px, 45%); }
+.wiki-toolbar input { border:1px solid #746149; background:#201e1b; min-height:44px; }
+.realms-wiki .realms-wiki-layout { grid-template-columns:180px minmax(0,1fr); gap:24px; margin-top:20px; }
+.realms-wiki-layout > nav > small { color:#a7977b; font-size:10px; letter-spacing:2px; padding:6px 10px 12px; }
+.realms-app .realms-wiki-layout > nav > button { display:flex; align-items:center; gap:10px; min-height:54px; padding:12px 10px; border:0; border-left:3px solid transparent; background:transparent; box-shadow:none; font-size:12px; }
+.realms-wiki-layout > nav > button > span:not(.px-icon) { flex:1; }
+.realms-app .realms-wiki-layout > nav > button[aria-pressed=true] { background:#40372a; border-color:var(--codex-gold); color:#ffe7ae; }
+.wiki-sidebar-note { padding:20px 12px; margin-top:24px; border-top:1px solid var(--codex-edge); color:#ac9d83; }
+.wiki-sidebar-note p { font:13px/1.7 Barlow,sans-serif; }
+.realms-wiki .realms-wiki-content { max-height:66dvh; padding:0 8px 20px 0; }
+.realms-app .realm-window .realms-wiki h2, .realms-app .realm-window .realms-wiki h3 { background:none; border:0; border-image:none; box-shadow:none; padding:0; min-height:0; display:block; color:#f3e2bf; }
+.realms-app .realms-wiki h2 { font-size:23px; line-height:1.35; margin:0; }
+.realms-app .realms-wiki h3 { font-size:16px; line-height:1.4; margin:0 0 12px; }
+.realms-wiki .wiki-welcome { display:grid; grid-template-columns:1.1fr .9fr; align-items:center; position:relative; overflow:hidden; min-height:230px; background:radial-gradient(ellipse at 90% 40%,#344a3e,#222b29 60%,#242722); border:1px solid #67735b; padding:26px; }
+.wiki-welcome small { font-size:9px; letter-spacing:2px; color:#b3caa1; }
+.realms-app .wiki-welcome h2 { margin:12px 0; white-space:pre-line; font-size:clamp(21px,2.3vw,30px); }
+.wiki-welcome p { font:14px/1.65 Barlow,sans-serif; color:#c6c9b5; margin:0 0 18px; }
+.wiki-welcome button { min-height:44px; background:#d5b775; border:1px solid #ffdfa0; color:#30271c; padding:10px 14px; font-size:12px; }
+.wiki-welcome-art img { width:145%; max-width:none; margin-left:-15%; image-rendering:pixelated; filter:drop-shadow(0 15px 8px #111b); }
+.wiki-path { margin:24px 0 30px; }
+.wiki-path > div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.wiki-path button { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px; text-align:left; min-height:86px; background:#302c24; border:1px solid #6a5940; color:#e4d5b8; padding:12px; font-size:12px; }
+.wiki-path button b { color:#aa8b52; font-size:11px; }
+.wiki-path button > span:nth-last-child(2) { grid-column:1 / 3; }
+.wiki-list-heading { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin:24px 0; }
+.wiki-list-heading > span { font-size:11px; color:#ad9e83; white-space:nowrap; }
+.wiki-topic { margin-bottom:28px; }
+.wiki-topic > header { display:flex; gap:12px; align-items:center; padding-bottom:12px; border-bottom:1px solid #554a38; margin-bottom:12px; }
+.wiki-topic > header h3 { margin:0!important; }
+.wiki-topic > header p { margin:4px 0 0; color:#a99e8b; font:13px/1.5 Barlow,sans-serif; }
+.realms-wiki .realms-wiki-results { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.realms-wiki .realms-wiki-results > .wiki-entry { display:grid; grid-template-columns:34px minmax(0,1fr) 10px; align-items:start; gap:10px; background:#2e2a23; border:1px solid #554b3a; padding:14px 12px; min-height:108px; color:#eadbc0; }
+.wiki-entry:hover { background:#3a3328!important; border-color:#c19b5b!important; }
+.realms-wiki-results .wiki-entry-icon { display:grid; place-items:center; height:34px; overflow:visible; }
+.realms-wiki-results .wiki-entry-text { display:block; overflow:visible; }
+.realms-wiki-results .wiki-entry-text strong { font:14px/1.4 'Pixelify Sans',sans-serif; margin:0 0 6px; color:#f4e4c5; }
+.realms-wiki-results .wiki-entry-text > span { font:13px/1.5 Barlow,sans-serif; color:#b8ae9b; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.realms-wiki-results .wiki-entry-arrow { color:#b99a61; font-size:20px; }
+.wiki-back { background:none; border:0; color:#c5ad7c; min-height:44px; padding:0; text-align:left; font-size:12px; }
+.wiki-article-title { display:flex; align-items:center; gap:16px; padding:20px 0; border-bottom:1px solid #6f5b3e; }
+.wiki-emblem { display:grid; place-items:center; flex:0 0 64px; height:64px; border:1px solid #9f8251; background:radial-gradient(#50412d,#2d2922); }
+.wiki-article-title small { display:block; color:#bca16d; margin-bottom:6px; font-size:10px; letter-spacing:1px; text-transform:uppercase; }
+.wiki-takeaway { margin:20px 0; padding:16px 18px; border-left:3px solid #bd9d58; background:#383325; }
+.wiki-takeaway > span { color:#d8b972; font-size:10px; letter-spacing:1.5px; }
+.wiki-takeaway p { margin:6px 0 0; color:#f2e6c8; font:15px/1.7 Barlow,sans-serif; }
+.wiki-paragraph { display:grid; grid-template-columns:24px minmax(0,1fr); gap:12px; margin:14px 0; }
+.wiki-paragraph > span { color:#a38854; font:12px/1.8 Barlow,sans-serif; padding-top:2px; }
+.wiki-paragraph p { margin:0; font:15px/1.85 Barlow,sans-serif; color:#cec6b6; }
+.wiki-reference li { display:flex; align-items:baseline; gap:12px; border:1px solid #514735; border-left:0; background:#2b2821; font:14px/1.75 Barlow,sans-serif; }
+.wiki-row-number { flex:0 0 22px; color:#aa8d58; font-size:11px; }
+.wiki-next { padding-top:22px; border-top:1px solid #635238; margin-top:28px; }
+.realms-wiki-related { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.realms-wiki-related button { display:flex; align-items:center; text-align:left; gap:10px; min-height:54px; padding:12px; border:1px solid #5b4e38; background:#332d23; color:#dbc89d; font-size:12px; }
+.realms-wiki-related button > span:not(.px-icon) { flex:1; }
+.wiki-gallery { gap:12px; }
+.wiki-gallery figure { background:radial-gradient(ellipse at 50% 35%,#323d37,#222720 75%); border:1px solid #65644b; padding:16px 8px; }
+.wiki-gallery figcaption strong { color:#eedbb6; }
+.wiki-gallery figcaption { font:13px/1.6 Barlow,sans-serif; }
+.wiki-element-edge { margin:12px 0 0; padding-top:10px; border-top:1px solid #5d5c44; color:#b6bb9b; font:12px/1.5 Barlow,sans-serif; }
+.wiki-element-edge b { display:block; color:#e5c87e; margin-top:4px; }
+@media(max-width:760px) {
+  .wiki-toolbar { flex-direction:column; align-items:stretch!important; gap:12px!important; }
+  .wiki-toolbar .realms-wiki-search { width:100%; }
+  .realms-wiki .realms-wiki-layout { grid-template-columns:minmax(0,1fr); gap:18px; }
+  .realms-wiki-layout > nav { display:flex!important; flex-direction:row; overflow-x:auto!important; gap:6px; padding-bottom:6px; }
+  .realms-wiki-layout > nav > small, .wiki-sidebar-note { display:none; }
+  .realms-app .realms-wiki-layout > nav > button { min-height:44px; padding:8px 10px; flex:0 0 auto; white-space:nowrap; border:1px solid #584a35; font-size:11px; }
+  .realms-wiki-layout > nav > button > small { display:none; }
+  .realms-wiki .realms-wiki-content { overflow:visible; max-height:none; padding:0; }
+  .realms-wiki .wiki-welcome { padding:18px; grid-template-columns:minmax(0,1fr); }
+  .wiki-welcome-art { display:none; }
+  .wiki-welcome h2 { font-size:24px!important; }
+  .wiki-path > div { grid-template-columns:minmax(0,1fr); }
+  .wiki-path button { display:flex; min-height:56px; }
+  .wiki-path button > span:nth-last-child(2) { flex:1; }
+  .realms-wiki .realms-wiki-results { grid-template-columns:minmax(0,1fr); }
+  .realms-wiki .realms-wiki-results > .wiki-entry { min-height:86px; }
+  .realms-wiki-related { grid-template-columns:minmax(0,1fr); }
+  .wiki-article-title { gap:12px; }
+  .wiki-emblem { flex-basis:48px; height:52px; }
+  .wiki-article-title h2 { font-size:21px!important; }
+  .wiki-list-heading h2 { font-size:19px!important; }
+}

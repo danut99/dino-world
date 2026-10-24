@@ -1,32 +1,101 @@
+/* Daily panel: the wheel on the left, today's missions and the chest of the day on the right. */
 .daily-panel { line-height: 1.5; }
 .daily-panel, .daily-panel section, .daily-panel article { min-width: 0; overflow-wrap: anywhere; }
-.daily-quest > div > strong { min-width: 0; }
-.daily-panel .realm-button { box-sizing: border-box; max-width: 100%; }
-.daily-reset { color: #cdbfa8; font-size: 12px; }
-.daily-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-.daily-wheel-card, .daily-quest, .daily-bonus { background: #2b2421; border: 2px solid #574a40; padding: 16px; }
-.daily-wheel-card { text-align: center; }
-.daily-wheel-card h3, .daily-quests h3 { margin: 0 0 8px; }
-.daily-wheel-frame { position: relative; width: 260px; aspect-ratio: 1; max-width: 100%; margin: 26px auto 20px; }
-.daily-wheel { position: absolute; inset: 0; border-radius: 50%; border: 8px solid #ad8751; box-shadow: 0 0 0 4px #21191a, inset 0 0 0 3px #21191a; background: conic-gradient(#775034 0deg 45deg,#3f5941 45deg 90deg,#504365 90deg 135deg,#685d3f 135deg 180deg,#775034 180deg 225deg,#3f5941 225deg 270deg,#504365 270deg 315deg,#685d3f 315deg); transition: transform 3.2s cubic-bezier(.15,.65,.15,1); }
-.daily-wheel > span { position: absolute; transform: translate(-50%, -50%); font-size: clamp(16px, 6vw, 24px); color: #fff1b8; text-shadow: 2px 2px #21191a; }
-.daily-pointer { position: absolute; top: -22px; left: calc(50% - 12px); z-index: 2; color: #f6d77a; font-size: 28px; text-shadow: 2px 2px #21191a; }
-.daily-wheel-hub { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); background: #3d332d; border: 4px solid #c6a363; width: 50px; height: 50px; display: grid; place-items: center; color: #f6d77a; }
-.daily-wheel-clip { position: absolute; inset: -4px; border-radius: 50%; overflow: hidden; }
-.daily-wheel-clip .daily-wheel { inset: 4px; }
-.daily-result { display: grid; gap: 6px; min-height: 76px; padding: 14px 0; }
-.daily-wheel-card details { text-align: left; font-size: 13px; }
-.daily-wheel-card summary { cursor: pointer; padding: 12px 0; color: #f6d77a; }
+.daily-panel .realm-button { box-sizing: border-box; max-width: 100%; min-height: 44px; white-space: normal; }
+.daily-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 16px; }
+.daily-head p { margin: 0; color: #e2d3b2; font-size: 13px; }
+.daily-reset { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 11px; color: #f6d77a; background: #1b1411; border: 1px solid #574a40; white-space: nowrap; }
+.daily-columns { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 18px; align-items: start; }
+.daily-wheel-card, .daily-quests { min-width: 0; }
+.daily-wheel-card h3, .daily-quests h3 { margin: 0 0 4px; font-size: 16px; color: #fff1b8; }
+.daily-wheel-card > p, .daily-quests > p { margin: 0 0 12px; font-size: 12px; color: #cdbfa8; }
+
+/* The wheel */
+.daily-wheel-card { padding: 16px; text-align: center; background: radial-gradient(ellipse at 50% 30%, #3d2f45, #241c18 70%); border: 2px solid #574a40; }
+.daily-wheel-frame {
+  --r: 133px;
+  position: relative; width: 288px; max-width: 100%; aspect-ratio: 1; margin: 18px auto 8px; border-radius: 50%;
+  background: radial-gradient(circle, #6b4a26 62%, #e9c46a 64%, #b8873b 69%, #6b4a26 72%, #3a2614 73%);
+  box-shadow: 0 0 0 4px #1b1411, 0 10px 24px #00000080, 0 0 30px #f6d77a33;
+}
+.daily-wheel {
+  position: absolute; inset: 22px; border-radius: 50%; overflow: hidden;
+  box-shadow: 0 0 0 3px #1b1411, inset 0 0 0 3px #00000040;
+  background:
+    radial-gradient(circle, #ffffff22 0 12%, transparent 13% 60%, #00000040 100%),
+    conic-gradient(#b0623a 0 45deg, #3f7a52 0 90deg, #6b4f95 0 135deg, #c08b37 0 180deg, #b0623a 0 225deg, #3f7a52 0 270deg, #6b4f95 0 315deg, #c08b37 0);
+  transition: transform 3.2s cubic-bezier(0.15, 0.65, 0.15, 1);
+}
+.daily-wheel::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(#1b1411 0 1.4deg, transparent 1.4deg 45deg); pointer-events: none; }
+.daily-wheel > span { position: absolute; z-index: 1; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #1b141155; filter: drop-shadow(0 2px 0 #1b1411); }
+.daily-wheel > span.won { background: #fff1b8; box-shadow: 0 0 0 3px #f6d77a, 0 0 18px #f6d77a; animation: daily-won 1.2s ease-in-out infinite alternate; }
+.daily-bulb {
+  position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px; border-radius: 50%;
+  background: #fff1b8; box-shadow: 0 0 6px #f6d77a;
+  transform: rotate(var(--a)) translateY(calc(-1 * var(--r)));
+}
+.daily-wheel-frame.spinning .daily-bulb { animation: daily-bulb 0.35s steps(1) infinite; animation-delay: calc(var(--n) * 0.175s); }
+.daily-pointer {
+  position: absolute; z-index: 3; left: 50%; top: 2px; translate: -50% 0; width: 0; height: 0;
+  border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 30px solid #f6d77a;
+  filter: drop-shadow(0 3px 0 #1b1411) drop-shadow(0 0 6px #f6d77a88);
+}
+.daily-pointer::after { content: ""; position: absolute; left: -6px; top: -26px; width: 12px; height: 12px; border-radius: 50%; background: #fff1b8; }
+.daily-wheel-hub {
+  position: absolute; z-index: 2; left: 50%; top: 50%; translate: -50% -50%; display: grid; place-items: center;
+  width: 58px; height: 58px; border-radius: 50%; background: radial-gradient(circle, #4a3a2c, #1b1411);
+  box-shadow: 0 0 0 4px #e9c46a, 0 0 0 7px #1b1411, 0 4px 10px #00000080;
+}
+.daily-result { display: grid; place-items: center; gap: 4px; min-height: 64px; padding: 8px 0; }
+.daily-result small { font-size: 11px; color: #cdbfa8; }
+.daily-result-prize { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; color: #fff1b8; background: #1b1411; border: 2px solid #f6d77a; box-shadow: 0 0 16px #f6d77a44; }
+.daily-spin { width: 100%; }
+.daily-wheel-card details { margin-top: 8px; text-align: left; font-size: 12px; }
+.daily-wheel-card summary { cursor: pointer; padding: 10px 0; color: #f6d77a; }
 .daily-prize-list { list-style: none; padding: 0; margin: 0; }
-.daily-prize-list li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid #574a40; }
-.daily-quest { display: grid; gap: 10px; margin-bottom: 12px; }
-.daily-quest > div { display: flex; justify-content: space-between; gap: 12px; }
-.daily-quest > div > span { white-space: nowrap; color: #f6d77a; }
-.daily-quest progress { width: 100%; height: 8px; accent-color: #91b65b; }
-.daily-quest small { color: #cdbfa8; }
-.daily-quest.claimed { border-color: #608348; }
-.daily-bonus { border-color: #ad8751; }
-.daily-panel .realm-button { min-height: 44px; width: 100%; white-space: normal; }
+.daily-prize-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid #3d332d; }
+.daily-prize-list li > span { display: inline-flex; align-items: center; gap: 8px; }
+@keyframes daily-bulb { 0% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes daily-won { to { box-shadow: 0 0 0 3px #f6d77a, 0 0 28px #fff1b8; } }
+
+/* Missions and the chest of the day */
+.daily-quest, .daily-bonus {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  margin-bottom: 10px; padding: 12px; background: #241c18; border: 2px solid #3d332d; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.daily-quest-icon { display: grid; place-items: center; width: 48px; height: 48px; background: #1b1411; border: 2px solid #574a40; box-shadow: inset 0 0 0 2px #2f2520; }
+.daily-quest-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.daily-quest-title { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.daily-quest-title strong { font-size: 13px; color: #fff1b8; }
+.daily-quest-title span { font-size: 12px; color: #f6d77a; white-space: nowrap; }
+.daily-bar { height: 10px; background: #1b1411; border: 1px solid #574a40; }
+.daily-bar > i { display: block; height: 100%; background: linear-gradient(#b8e07a, #6fa046); box-shadow: inset 0 -2px 0 #4f7a32; transition: width 0.4s ease; }
+.daily-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.daily-chips li { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; font-size: 11px; color: #f6eed9; background: #1b1411; border: 1px solid #574a40; }
+.daily-chips li > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.daily-panel .daily-quest > .realm-button, .daily-panel .daily-bonus > .realm-button { min-width: 108px; width: auto; }
+.daily-quest.ready, .daily-bonus.ready { border-color: #e0a96a; box-shadow: 0 0 0 1px #e0a96a, 0 0 18px #e0a96a33; }
+.daily-quest.ready .daily-quest-icon, .daily-bonus.ready .daily-quest-icon { border-color: #f6d77a; animation: daily-won 1s ease-in-out infinite alternate; }
+.daily-quest.claimed, .daily-bonus.claimed { opacity: 0.72; border-color: #4f6b3c; }
+.daily-quest.claimed .daily-bar > i { background: linear-gradient(#8fb86a, #4f7a32); }
+.daily-stamp { padding: 6px 10px; font-size: 12px; font-weight: 700; color: #b8e07a; border: 2px solid #6fa046; transform: rotate(-4deg); white-space: nowrap; }
+.daily-bonus { background: linear-gradient(90deg, #3a2c1c, #241c18); border-color: #7a5a30; }
+.daily-pips { display: flex; gap: 6px; }
+.daily-pips i { width: 26px; height: 8px; background: #1b1411; border: 1px solid #574a40; }
+.daily-pips i.on { background: #f6d77a; border-color: #fff1b8; box-shadow: 0 0 6px #f6d77a88; }
+@media (max-width: 760px) {
+  .daily-columns { grid-template-columns: minmax(0, 1fr); }
+  .daily-wheel-card { padding: 12px; }
+  .daily-wheel-frame { --r: 115px; width: 250px; }
+  .daily-quest, .daily-bonus { grid-template-columns: 44px minmax(0, 1fr); }
+  .daily-quest-icon { width: 44px; height: 44px; }
+  .daily-panel .daily-quest > .realm-button, .daily-panel .daily-bonus > .realm-button, .daily-quest > .daily-stamp, .daily-bonus > .daily-stamp { grid-column: 1 / -1; width: 100%; text-align: center; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .daily-wheel { transition: none; }
+  .daily-wheel-frame.spinning .daily-bulb, .daily-wheel > span.won, .daily-quest.ready .daily-quest-icon, .daily-bonus.ready .daily-quest-icon { animation: none; }
+}
+
 .realm-camera-action { position: absolute; bottom: calc(100% + 14px); right: 0; z-index: 2; }
 .realms-app .realm-camera .realm-daily-access { position: relative; display: grid; place-items: center; width: 52px; height: 56px; padding: 4px; border: 0; border-image: none; background: none; box-shadow: none; cursor: pointer; }
 .realm-daily-wheel { position: relative; display: grid; place-items: center; width: 42px; height: 42px; box-sizing: border-box; border-radius: 50%; border: 3px solid #e0b565; background: repeating-conic-gradient(#91603e 0deg 45deg, #52734b 45deg 90deg, #796090 90deg 135deg, #bf9954 135deg 180deg); box-shadow: 0 0 0 2px #21191a, 0 3px 0 2px #21191a; }
@@ -34,5 +103,3 @@
 .realm-daily-wheel > span { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #392d28; color: #ffe29a; font-size: 13px; }
 .realm-daily-access b { position: absolute; top: 0; right: 0; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #f6d77a; color: #30251f; font-size: 13px; }
 .realm-daily-access:hover .realm-daily-wheel { filter: brightness(1.2); }
-@media(max-width:760px) { .daily-columns { grid-template-columns: minmax(0, 1fr); } .daily-wheel-card,.daily-quest,.daily-bonus { padding: 12px; } }
-@media(prefers-reduced-motion:reduce) { .daily-wheel { transition: none; } }

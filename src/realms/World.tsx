@@ -859,7 +859,7 @@ export default function World({
             ctx.shadowBlur = (rarityOf(x) === 'rare' ? 6 : 12) + (reducedMotion ? 0 : 4 * Math.sin(time / 400 + i));
           }
           drawSprite(ctx, sheet, clip, frameAt(clip, reducedMotion ? 0 : clipTime),
-            -m.pivot.x * factor, -m.pivot.y * factor, m.sourceSize.width * factor, size);
+            -m.pivot.x * factor, -m.pivot.y * factor, m.sourceSize.width * factor, size, m);
           ctx.restore();
         }
         const label = `${x.id === save.champion ? '★ ' : ''}${x.nickname} · ${x.level}`;
