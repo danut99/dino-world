@@ -5,13 +5,15 @@ import { DinosaurArt } from './DinosaurArt';
 import { arenaBoss } from './arenaBosses';
 import { AnimatedBoss } from './AnimatedBoss';
 
-export function ArenaOpponent({ encounter, species, element, stage, className = '', animation = 'idle', speed }: {
+export function ArenaOpponent({ encounter, species, element, stage, className = '', animation = 'idle', speed, paused }: {
   encounter: Encounter; species: Species; element: RealmId; stage: Stage; className?: string; animation?: Clip; speed?: number;
+  /** Holds the first frame: the battle portraits use a still. */
+  paused?: boolean;
 }) {
   const boss = arenaBoss(encounter);
   if (boss?.animated) return <AnimatedBoss element={encounter.league as RealmId} name={boss.name}
-    animation={animation} className={className} speed={speed} />;
+    animation={animation} className={className} speed={speed} paused={paused} />;
   return boss ? <img className={`realm-hero arena-boss-art ${className}`} src={boss.art}
     alt={`${boss.name} · ${element} ${boss.species} arena boss`} data-boss={encounter.league} data-animation={animation} />
-    : <DinosaurArt species={species} element={element} stage={stage} className={className} animation={animation} speed={speed} />;
+    : <DinosaurArt species={species} element={element} stage={stage} className={className} animation={animation} speed={speed} paused={paused} frame={paused ? 0 : undefined} />;
 }

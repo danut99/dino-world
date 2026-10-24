@@ -37,6 +37,8 @@ import {
 import { DinosaurArt } from './DinosaurArt';
 import { loadAnimation, loadBossAnimation, loadSpriteImage, type Clip } from './animation';
 import { entrance, exchange, fighter, rest, runMs, type BattleAction, type Fighter, type Step, type Unit } from './battleChoreography';
+import { useReducedMotion } from './useMotion';
+import { playSound } from './sound';
 import { worldThumb } from './worldArt';
 import { ArenaOpponent } from './ArenaOpponent';
 import { arenaBoss } from './arenaBosses';
@@ -599,7 +601,7 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
           </aside>
         </div>
       ) : (
-        <div className="adventure-layout">
+        <div className={`adventure-layout ${arenaBattle ? 'battle-focus' : ''}`}>
           <div
             ref={mapRef}
             className={view === 'arena' ? 'arena-lobby-scene' : 'adventure-map'}
@@ -1022,6 +1024,58 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
   const ally = pose('ally'),
     enemy = pose('enemy');
   const foeName = boss ? `BOSS ${boss.name}` : SPECIES_NAMES[foe.species];
+  /**
+   * A landed blow shakes the arena and knocks the fighter back; an ultimate shakes harder. Unguarded, the fighter
+   * flashes white; guarded (its sprite shows the shield), it only slides a little.
+   */
+  const stageRef = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    const impact = step?.impact,
+      stage = stageRef.current;
+    if (!impact || !stage || reduced) return;
+    const heavy = impact.kind === 'ultimate',
+      guard = impact.kind === 'guard',
+      a = heavy ? 14 : guard ? 4 : 7;
+    const unit = stage.querySelector<HTMLElement>(`.battle-unit.${impact.on}`);
+    // Units are centred with `translate: -50% 0`; the knock-back slides them away from the striker.
+    const away = (impact.on === 'enemy' ? 1 : -1) * (heavy ? 14 : guard ? 5 : 9);
+    unit?.animate([{ translate: '-50% 0' }, { translate: `${-50 + away}% 0`, offset: 0.25 }, { translate: '-50% 0' }], {
+      duration: 380 / speed,
+      easing: 'ease-out',
+    });
+    if (!guard)
+      unit
+        ?.querySelector(':scope > :is(canvas, img)')
+        ?.animate([{ filter: 'brightness(3) saturate(0)' }, { filter: 'none' }], { duration: 200 / speed });
+    stage.animate(
+      [
+        { transform: 'scale(1.03)' },
+        { transform: `scale(1.03) translate(${-a}px, ${a / 2}px)` },
+        { transform: `scale(1.03) translate(${a * 0.7}px, ${-a / 3}px)` },
+        { transform: `scale(1.03) translate(${-a / 3}px, 0)` },
+        { transform: 'scale(1)' },
+      ],
+      { duration: (heavy ? 420 : 260) / speed, easing: 'ease-out' },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps, index]);
+  // Sounds follow the replay, not the reducer: a swing as an attack starts, then the blow where it lands.
+  useEffect(() => {
+    if (!step) return;
+    const before = steps[index - 1];
+    const swings = (u: Unit) => (step[u] === 'attack' || step[u] === 'ultimate') && before?.[u] !== step[u];
+    if (!step.impact && (swings('ally') || swings('enemy'))) playSound('swing');
+    if (step.impact) playSound(step.impact.kind === 'ultimate' ? 'heavy' : step.impact.kind === 'hit' ? 'hit' : 'block');
+    if (step.dodge) playSound('dodge');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps, index]);
+  useEffect(() => {
+    if (!battle.result || busy) return;
+    if (battle.result === 'victory') playSound('victory');
+    else if (battle.result === 'defeat') playSound('defeat');
+  }, [battle.result, busy]);
+  const ultimate = step?.ally === 'ultimate' || step?.enemy === 'ultimate';
   // The fight plays itself: after each beat settles, the planner picks the next move (see autoBattle.ts).
   const usedMoves = useRef(new Set<BattleAction>());
   useEffect(() => {
@@ -1063,7 +1117,7 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
   };
   const content = (
     <>
-      <div className={`battle-environment ${busy ? 'battle-playing' : ''}`} style={{ '--battle-speed': speed } as CSSProperties}>
+      <div className={`battle-environment ${busy ? 'battle-playing' : ''} ${ultimate ? 'battle-ultimate' : ''}`} style={{ '--battle-speed': speed } as CSSProperties}>
         {!battle.result && (
           <div className="battle-controls">
             <button type="button" className={speed === 2 ? 'active' : ''} aria-pressed={speed === 2} onClick={toggleSpeed} title={tr('Viteză dublă', 'Double speed')}>
@@ -1074,54 +1128,40 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
             </button>
           </div>
         )}
-        <div className="battle-round">
-          <span>
-            {tr('RUNDA', 'ROUND')} {Math.min(battle.round, 30)} / 30
-          </span>
-          <small>
-            {d.nickname} → {foeName} · 1v1
-          </small>
-        </div>
-        <div className="battle-stage">
-          <div className="battle-vitals ally">
-            <strong>
-              {el.symbol} {d.nickname} <RarityBadge rarity={rarityOf(d)} lang={lang} short /> <small>Lv. {d.level}</small>
-            </strong>
-            <div className="realm-meter health">
-              <i style={{ width: `${(shown.hp / battle.maxHp) * 100}%` }} />
-            </div>
-            <span>
-              {shown.hp} / {battle.maxHp} HP
-            </span>
-            <div className="realm-meter energy">
-              <i style={{ width: `${battle.energy}%` }} />
-            </div>
-            <small>ϟ {battle.energy} / 100</small>
+        <div className="battle-stage" ref={stageRef}>
+          <BattleHud
+            side="ally"
+            color={el.color}
+            name={`${el.symbol} ${d.nickname}`}
+            badge={<RarityBadge rarity={rarityOf(d)} lang={lang} short />}
+            level={d.level}
+            hp={shown.hp}
+            maxHp={battle.maxHp}
+            energy={battle.energy}
+            portrait={<DinosaurArt species={d.species} element={d.element} stage={d.stage} paused frame={0} />}
+          >
             {encounter.mode === 'arena' && <EdgeBadge edge={battleEdge(encounter.id, d)} lang={lang} />}
+          </BattleHud>
+          <div className="battle-round battle-round-badge">
+            <strong>VS</strong>
+            <span>
+              {tr('RUNDA', 'ROUND')} {Math.min(battle.round, 30)}/30
+            </span>
           </div>
+          <BattleHud
+            side="enemy"
+            color={foe.info.color}
+            name={`${foe.info.symbol} ${boss?.name ?? `${SPECIES_NAMES[foe.species]} ${foe.info.name[lang]}`}`}
+            badge={boss && <em className="arena-boss-tag">BOSS</em>}
+            level={encounter.level}
+            hp={shown.enemy}
+            maxHp={battle.enemyMax}
+            energy={foeHasUltimate(encounter.id) ? battle.enemyEnergy ?? 0 : undefined}
+            portrait={<ArenaOpponent encounter={encounter} species={foe.species} element={foe.element} stage={foe.stage} paused />}
+          />
         <div className="battle-unit ally" data-motion={ally.clip} data-dodge={step?.dodge === 'ally' || undefined} style={ally.style}>
           <DinosaurArt species={d.species} element={d.element} stage={d.stage} animation={ally.clip} speed={speed} className={rarityClass(d.rarity)} />
         </div>
-          <div className="battle-vitals enemy">
-            <strong>
-              {foe.info.symbol} {boss?.name ?? `${SPECIES_NAMES[foe.species]} ${foe.info.name[lang]}`}{' '}
-              <small>Lv. {encounter.level}</small>
-            </strong>
-            <div className="realm-meter health">
-              <i style={{ width: `${(shown.enemy / battle.enemyMax) * 100}%` }} />
-            </div>
-            <span>
-              {shown.enemy} / {battle.enemyMax} HP
-            </span>
-            {foeHasUltimate(encounter.id) && (
-              <>
-                <div className="realm-meter energy">
-                  <i style={{ width: `${battle.enemyEnergy ?? 0}%` }} />
-                </div>
-                <small>ϟ {battle.enemyEnergy ?? 0} / 100</small>
-              </>
-            )}
-          </div>
         <div className="battle-unit enemy" data-motion={enemy.clip} style={enemy.style}>
           <ArenaOpponent
             encounter={encounter}
@@ -1133,11 +1173,6 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
             speed={speed}
           />
         </div>
-        {step?.impact && (
-          <div className={`battle-impact on-${step.impact.on} kind-${step.impact.kind}`} key={index} aria-hidden="true">
-            {step.impact.kind === 'guard' ? '🛡' : step.impact.kind === 'ultimate' ? '✹' : step.impact.kind === 'reflect' ? '↩' : '╱'}
-          </div>
-        )}
         {step?.say?.map((c, i) => (
           <div key={`${index}-${i}`} className={`battle-callout on-${c.on} kind-${c.kind}`} style={{ '--row': i } as CSSProperties}>
             {calloutText(c, c.on === 'ally' ? d.nickname : foeName, lang)}
@@ -1211,4 +1246,48 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
   return embedded
     ? <div className="arena-embedded-battle">{content}</div>
     : <Frame title={encounter.name[lang]} view="battle" close={close} lang={lang}>{content}</Frame>;
+}
+
+/**
+ * A fighter's corner of the arena: portrait, name, health and energy. The amber strip behind the health bar is the
+ * damage just taken; it drains after a short pause.
+ */
+function BattleHud({ side, color, name, badge, level, hp, maxHp, energy, portrait, children }: {
+  side: Unit;
+  color: string;
+  name: string;
+  badge?: ReactNode;
+  level: number;
+  hp: number;
+  maxHp: number;
+  energy?: number;
+  portrait: ReactNode;
+  children?: ReactNode;
+}) {
+  const health = `${Math.max(0, (hp / maxHp) * 100)}%`;
+  return (
+    <div className={`battle-vitals battle-hud ${side}`} style={{ '--hud-color': color } as CSSProperties}>
+      <div className="battle-hud-portrait" aria-hidden="true">
+        <span>{portrait}</span>
+      </div>
+      <div className="battle-hud-body">
+        <strong>
+          {name} {badge}
+        </strong>
+        <div className="battle-hud-bar health" role="meter" aria-valuemin={0} aria-valuemax={maxHp} aria-valuenow={hp} aria-label="HP">
+          <i className="trail" style={{ width: health }} />
+          <i style={{ width: health }} />
+        </div>
+        {energy !== undefined && (
+          <div className="battle-hud-bar energy">
+            <i style={{ width: `${energy}%` }} />
+          </div>
+        )}
+        <small>
+          <b>Lv. {level}</b> · {hp} / {maxHp} HP{energy !== undefined && ` · ϟ ${energy}`}
+        </small>
+        {children}
+      </div>
+    </div>
+  );
 }

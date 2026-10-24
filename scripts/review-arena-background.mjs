@@ -55,6 +55,8 @@ try {
   const checks = [];
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(viewport);
+    // A landed blow briefly shakes and scales the stage; measure it at rest.
+    await page.evaluate(() => Promise.all(document.querySelector('.battle-stage').getAnimations().map(a => a.finished)));
     const stage = await page.locator('.battle-stage').boundingBox();
     const host = await page.locator('.battle-environment').boundingBox();
     assert.ok(stage.x >= host.x - 1 && stage.y >= host.y - 1);

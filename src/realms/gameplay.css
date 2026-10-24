@@ -1713,27 +1713,239 @@
   background: url('/realms/gameplay/arena-interior-pixel.webp') center / cover no-repeat;
   image-rendering: pixelated;
 }
-.battle-stage .battle-unit {
-  width: 32%;
-  height: 42%;
-  bottom: 22%;
+/*
+ * Fighting-game framing: two large square fighters facing each other across the floor. Sprites are 256px squares
+ * whose feet sit at 84% of their height, so the box is lowered by that margin to stand them on the floor line.
+ */
+.battle-stage {
+  --unit: min(64cqh, 50cqw);
+  --floor: 13cqh;
+  /* Where the two fighters stand (centres), as a share of the arena's width. */
+  --ally-x: 35%;
+  --enemy-x: 65%;
+  --gap: 30cqw;
 }
-.battle-stage .battle-unit.ally { left: 15%; }
-.battle-stage .battle-unit.enemy { right: 15%; }
+.battle-stage .battle-unit {
+  z-index: 1;
+  width: auto;
+  height: var(--unit);
+  aspect-ratio: 1;
+  bottom: calc(var(--floor) - 0.16 * var(--unit));
+  translate: -50% 0;
+}
+.battle-stage .battle-unit.ally { left: var(--ally-x); }
+.battle-stage .battle-unit.enemy { left: var(--enemy-x); right: auto; }
+/* An attack is a short step in towards the opponent: in, hold through the blow, back. */
+.battle-stage .battle-unit { --lunge: max(0px, min(calc(var(--gap) - var(--unit) * 0.5), calc(var(--unit) * 0.18))); }
+.battle-stage .battle-unit.ally:is([data-motion='attack'], [data-motion='ultimate']) { animation-name: stage-lunge-right; }
+.battle-stage .battle-unit.enemy:is([data-motion='attack'], [data-motion='ultimate']) { animation-name: stage-lunge-left; }
+@keyframes stage-lunge-right {
+  0% { transform: translateX(0); }
+  40%, 70% { transform: translateX(var(--lunge)); }
+  100% { transform: translateX(0); }
+}
+@keyframes stage-lunge-left {
+  0% { transform: translateX(0); }
+  40%, 70% { transform: translateX(calc(var(--lunge) * -1)); }
+  100% { transform: translateX(0); }
+}
+.battle-stage .battle-unit::before {
+  content: '';
+  position: absolute;
+  left: 24%;
+  right: 24%;
+  bottom: 12%;
+  height: 8%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #000000a0, transparent);
+}
+.battle-stage .battle-unit[data-motion='death']::before { opacity: 0.4; }
 .battle-stage .battle-unit > .dinosaur-art,
 .battle-stage .battle-unit > .dinosaur-opponent {
+  position: relative;
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
-.battle-stage .battle-vitals {
+/* An ultimate dims the arena around the fighters. */
+.battle-stage::before {
+  content: '';
   position: absolute;
-  top: 90px;
-  width: 30%;
-  max-width: 230px;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 70%, #1a0d2066, #07040bdd 75%);
+  opacity: 0;
+  transition: opacity 0.25s;
 }
-.battle-stage .battle-vitals.ally { left: 31%; transform: translateX(-50%); }
-.battle-stage .battle-vitals.enemy { right: 31%; transform: translateX(50%); }
+.battle-ultimate .battle-stage::before { opacity: 1; }
+
+/* Corner HUDs: diamond portrait, slanted health bar with a draining damage trail, energy underneath. */
+.battle-stage .battle-hud {
+  --hud-color: #e0a96a;
+  position: absolute;
+  z-index: 3;
+  top: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  width: min(40%, 460px);
+  padding: 0;
+  background: none;
+  border: 0;
+  filter: drop-shadow(0 3px 0 #1b1411) drop-shadow(0 4px 10px #00000080);
+}
+.realms-app .battle-stage .battle-hud { background-color: transparent; }
+.battle-stage .battle-hud.ally { left: 12px; }
+.battle-stage .battle-hud.enemy { right: 12px; flex-direction: row-reverse; text-align: right; }
+.battle-hud-portrait {
+  flex: 0 0 auto;
+  position: relative;
+  width: 76px;
+  height: 76px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: linear-gradient(135deg, #fff1b8, var(--hud-color) 45%, #3a2416);
+}
+.battle-hud-portrait > span {
+  position: absolute;
+  inset: 4px;
+  overflow: hidden;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--hud-color) 45%, #241a15), #120d0b);
+}
+/* The portrait is the fighter's first frame, enlarged around its head. */
+.battle-hud-portrait > span > :is(canvas, img) {
+  position: absolute;
+  width: 230%;
+  height: 230%;
+  max-width: none;
+  left: -78%;
+  top: -42%;
+  object-fit: contain;
+  filter: none;
+  animation: none;
+}
+.battle-hud.enemy .battle-hud-portrait > span > :is(canvas, img) {
+  left: -52%;
+  transform: scaleX(-1);
+}
+.battle-hud-body {
+  flex: 1;
+  min-width: 0;
+  padding-top: 8px;
+}
+.battle-stage .battle-hud strong {
+  display: block;
+  overflow: hidden;
+  margin: 0 0 5px;
+  font: 700 clamp(13px, 1.6vw, 20px) / 1.1 'Realms Pixel', 'Pixelify Sans', sans-serif;
+  color: #fff6dc;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  -webkit-text-stroke: 1px #1b1411;
+  paint-order: stroke fill;
+}
+.battle-stage .battle-hud strong .arena-boss-tag { color: #ffb070; }
+.battle-hud-bar {
+  position: relative;
+  height: 18px;
+  background: #1b1411;
+  border: 2px solid #1b1411;
+  box-shadow: inset 0 0 0 1px #6b5a48;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+}
+.battle-hud.enemy .battle-hud-bar { clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%); }
+.battle-hud-bar > i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(#ff8a6a, #e2412f 45%, #a3221a);
+  transition: width 0.15s ease-out;
+}
+.battle-hud.enemy .battle-hud-bar > i { left: auto; right: 0; }
+.battle-hud-bar > i.trail {
+  background: linear-gradient(#ffe48a, #f2b33a);
+  transition: width 0.6s ease-in 0.45s;
+}
+.battle-hud-bar.energy {
+  height: 9px;
+  width: 78%;
+  margin-top: 3px;
+}
+.battle-hud.enemy .battle-hud-bar.energy { margin-left: auto; }
+.battle-hud-bar.energy > i { background: linear-gradient(#9ee4ff, #3d9be0 55%, #2563a8); }
+.battle-stage .battle-hud small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #f6eed9;
+  text-shadow: 0 1px 0 #1b1411, 0 0 4px #000;
+}
+.battle-stage .battle-hud small b { color: var(--hud-color); }
+.battle-stage .battle-hud .edge-badge { margin-top: 5px; background: #1b1411cc; }
+
+/* Round badge between the two corners. */
+.battle-stage .battle-round-badge {
+  z-index: 3;
+  top: 14px;
+  gap: 2px;
+  padding: 6px 14px 12px;
+  isolation: isolate;
+  /* clip-path would cut a border off the slanted edges, so the gold outline is the shape itself, filled from inside. */
+  background: #e0a96a;
+  border: 0;
+  box-shadow: none;
+  clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
+}
+.battle-stage .battle-round-badge::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 2px 2px 3px;
+  background: linear-gradient(#4a372b, #2a1f19);
+  clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
+}
+.battle-round-badge strong {
+  font: 700 22px / 1 'Realms Pixel', 'Pixelify Sans', sans-serif;
+  color: #ffd36b;
+  -webkit-text-stroke: 1px #1b1411;
+  paint-order: stroke fill;
+}
+.battle-stage .battle-round-badge span { font-size: 9px; letter-spacing: 1px; padding-bottom: 6px; }
+
+/* During an arena fight the details sidebar steps aside and the arena takes the whole screen. */
+.realms-app .adventure-layout.battle-focus {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+}
+.battle-focus > .adventure-detail { display: none; }
+/* Fills the screen below the header, on phones too (the phone lobby otherwise scrolls a 540px-tall battle). */
+.realms-app .battle-focus > .arena-lobby-scene:has(.arena-embedded-battle) { height: auto; min-height: 0; border: 0; }
+
+@media (max-width: 760px) {
+  .battle-stage { --unit: min(52cqh, 58cqw); --floor: 16cqh; --ally-x: 30%; --enemy-x: 70%; --gap: 40cqw; }
+}
+/* Phones held upright or sideways: compact corners so the fighters keep the floor. */
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) {
+  .battle-stage .battle-hud { top: 8px; width: calc(50% - 40px); gap: 2px; }
+  .battle-stage .battle-hud.ally { left: 6px; }
+  .battle-stage .battle-hud.enemy { right: 6px; }
+  .battle-hud-portrait { width: 44px; height: 44px; }
+  .battle-hud-portrait > span { inset: 3px; }
+  .battle-hud-body { padding-top: 2px; }
+  .battle-hud-bar { height: 12px; }
+  .battle-hud-bar.energy { height: 6px; }
+  .battle-stage .battle-hud small { font-size: 9px; }
+  .battle-stage .battle-round-badge { top: 8px; padding: 4px 8px 10px; }
+  .battle-round-badge strong { font-size: 15px; }
+  .battle-stage .battle-round-badge span { font-size: 7px; letter-spacing: 0; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .battle-stage { --unit: min(68cqh, 40cqw); --floor: 8cqh; }
+  .battle-stage .battle-hud { width: min(34%, 300px); }
+  .battle-stage .battle-hud .edge-badge { display: none; }
+}
 .arena-lobby-scene {
   container-type: size;
 }
@@ -1771,11 +1983,11 @@
   }
 }
 
-/* Battle controls: double speed and skip to the result, top right of the arena. */
+/* Battle controls: double speed and skip to the result, bottom right of the arena (the HUDs hold the top). */
 .battle-controls {
   position: absolute;
   z-index: 5;
-  top: 14px;
+  bottom: 14px;
   right: 14px;
   display: flex;
   gap: 8px;

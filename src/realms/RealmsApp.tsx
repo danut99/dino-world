@@ -38,6 +38,39 @@ import {
 import './realms.css';
 import './pixel-theme.css';
 import { Icon, type IconName } from './ui/Icon';
+import { playSound, setSoundEnabled, soundEnabled, type SoundId } from './sound';
+
+/** The sound a successful command makes. Battle actions are voiced by the battle replay instead. */
+const COMMAND_SOUNDS: Partial<Record<Command['type'], SoundId>> = {
+  collect: 'coin',
+  collectAvailable: 'coin',
+  claim: 'coin',
+  harvest: 'coin',
+  claimCraft: 'coin',
+  claimExpedition: 'coin',
+  claimDailyQuest: 'coin',
+  claimDailyBonus: 'coin',
+  claimQuestEgg: 'coin',
+  sellEgg: 'coin',
+  hatch: 'hatch',
+  evolve: 'evolve',
+  useCrystal: 'evolve',
+  build: 'build',
+  placeLamp: 'build',
+  unlockHabitat: 'build',
+  upgradeHabitat: 'build',
+  upgradeFarm: 'build',
+  upgradeHatchery: 'build',
+  upgradeWorkshop: 'build',
+  upgradeArena: 'build',
+  spinDaily: 'spin',
+  incubate: 'pop',
+  feed: 'pop',
+  buyEgg: 'pop',
+  plant: 'pop',
+  craft: 'pop',
+  move: 'pop',
+};
 
 type Panel =
   | 'daily'
@@ -159,6 +192,16 @@ export default function RealmsApp() {
       return 0;
     }
   });
+  const [sound, setSound] = useState(soundEnabled);
+  // Every button answers with a soft click; actions add their own sound on top (see COMMAND_SOUNDS).
+  useEffect(() => {
+    const click = (e: MouseEvent) => {
+      const button = (e.target as Element | null)?.closest?.('button');
+      if (button && !button.disabled) playSound('click');
+    };
+    document.addEventListener('click', click, true);
+    return () => document.removeEventListener('click', click, true);
+  }, []);
   const [placing, setPlacing] = useState(false),
     [moving, setMoving] = useState<string | null>(null),
     [message, setMessage] = useState('');
@@ -368,9 +411,12 @@ export default function RealmsApp() {
       const next = command(saveRef.current, c, Date.now());
       saveRef.current = next;
       setSave(next);
+      const sound = COMMAND_SOUNDS[c.type];
+      if (sound) playSound(sound);
       return true;
     } catch (e) {
       const code = (e as Error).message;
+      if (c.type !== 'action') playSound('error');
       setMessage(
         (
           {
@@ -1153,6 +1199,20 @@ export default function RealmsApp() {
                   <option value={1}>English</option>
                 </select>
               </label>
+              <div className="realm-setting-row">
+                <span>{tr('Sunete', 'Sounds')}</span>
+                <button
+                  className="realm-button secondary"
+                  aria-pressed={sound}
+                  onClick={() => {
+                    setSoundEnabled(!sound);
+                    setSound(!sound);
+                    if (!sound) playSound('coin');
+                  }}
+                >
+                  {sound ? tr('Pornite', 'On') : tr('Oprite', 'Off')}
+                </button>
+              </div>
               <div className="realm-setting-row">
                 <span>
                   {tr('Salvare locală · schemă v5', 'Local save · schema v5')}
