@@ -1,7 +1,19 @@
 import { useState, type FormEvent } from 'react';
 import { starTotal, type Save } from './game';
 import type { User } from '@supabase/supabase-js';
-import { cloud, sendPasswordReset, setNewPassword, signIn, signInWithGoogle, signOut, signUp, type AuthProblem } from './cloud';
+import {
+  cloud,
+  savePlayerName,
+  sendPasswordReset,
+  setNewPassword,
+  signIn,
+  signInWithGoogle,
+  signOut,
+  signUp,
+  validName,
+  type AuthProblem,
+  type NameProblem,
+} from './cloud';
 import type { SyncConflict, SyncStatus } from './useCloudSync';
 
 /** What the account window shows and does: the signed-in player (if any), their save status and a reset in progress. */
@@ -12,6 +24,9 @@ export type AccountState = {
   endRecovery: () => void;
   /** Uploads pending progress; signing out waits for it. */
   flush?: () => Promise<void>;
+  /** The public player name, and what to do once the player changes it. */
+  name?: string;
+  onRename?: (name: string) => void;
 };
 const T = (lang: number, ro: string, en: string) => (lang ? en : ro);
 
@@ -101,6 +116,9 @@ export function AccountPanel({ lang, sync }: { lang: number; sync: AccountState 
         <p>
           {tr('Conectat ca', 'Signed in as')} <strong>{sync.user.email}</strong>
         </p>
+        {sync.name && sync.onRename && (
+          <NameForm lang={lang} userId={sync.user.id} current={sync.name} onDone={sync.onRename} />
+        )}
         <p className="realm-auth-status" data-status={sync.status}>
           {statusText(sync.status, lang)}
         </p>
@@ -193,6 +211,72 @@ export function AccountPanel({ lang, sync }: { lang: number; sync: AccountState 
           </button>
         )}
       </nav>
+    </form>
+  );
+}
+
+function nameProblemText(p: NameProblem, lang: number) {
+  return {
+    invalid: T(
+      lang,
+      'Între 3 și 20 de caractere: litere, cifre, spațiu, _ . sau -, începând cu o literă sau cifră.',
+      'Between 3 and 20 characters: letters, digits, space, _ . or -, starting with a letter or digit.',
+    ),
+    taken: T(lang, 'Numele e deja folosit. Alege altul.', 'That name is taken. Choose another.'),
+    network: T(lang, 'Nu a mers. Verifică internetul și mai încearcă.', 'That did not work. Check your connection and try again.'),
+  }[p];
+}
+
+/**
+ * The public player name others see in the player list. With `current` it renames; without, it is the required
+ * first step after creating an account.
+ */
+export function NameForm({ lang, userId, current, onDone }: { lang: number; userId: string; current?: string; onDone: (name: string) => void }) {
+  const tr = (ro: string, en: string) => T(lang, ro, en);
+  const [name, setName] = useState(current ?? '');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const clean = name.trim().replace(/\s+/g, ' ');
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!validName(clean)) return setNote({ ok: false, text: nameProblemText('invalid', lang) });
+    if (clean === current) return;
+    setBusy(true);
+    setNote(null);
+    const p = await savePlayerName(userId, clean, !current);
+    setBusy(false);
+    if (p) return setNote({ ok: false, text: nameProblemText(p, lang) });
+    if (current) setNote({ ok: true, text: tr('Nume schimbat.', 'Name changed.') });
+    onDone(clean);
+  };
+  return (
+    <form className={current ? 'realm-auth-rename' : 'realm-auth'} onSubmit={(e) => void submit(e)}>
+      {!current && (
+        <p>
+          {tr(
+            'Alege-ți numele de jucător. Așa te văd ceilalți în lista de jucători când îți vizitează lumea.',
+            'Choose your player name. This is how others see you in the player list when they visit your world.',
+          )}
+        </p>
+      )}
+      <label>
+        {tr('Nume de jucător', 'Player name')}
+        <input
+          value={name}
+          maxLength={20}
+          minLength={3}
+          required
+          autoComplete="nickname"
+          onChange={(e) => {
+            setName(e.target.value);
+            setNote(null);
+          }}
+        />
+      </label>
+      <button className={current ? 'realm-button secondary' : 'realm-button'} disabled={busy || (!!current && clean === current)}>
+        {current ? tr('Schimbă numele', 'Change name') : tr('Intră în joc', 'Enter the game')}
+      </button>
+      {note && <p className={note.ok ? 'realm-auth-ok' : 'realm-auth-error'} role="status">{note.text}</p>}
     </form>
   );
 }

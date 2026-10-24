@@ -136,3 +136,54 @@ export function planSync(local: Save, remote: CloudSave | null): 'upload' | 'dow
   if (isFreshSave(remote.save)) return 'upload';
   return 'ask';
 }
+
+/** A public player name: 3–20 letters (Romanian included), digits, spaces, `_`, `.` or `-`, starting with a letter or digit. */
+export const NAME_PATTERN = /^[A-Za-z0-9ĂÂÎȘȚŞŢăâîșțşţ][A-Za-z0-9ĂÂÎȘȚŞŢăâîșțşţ _.-]*$/;
+export const validName = (name: string) => name.length >= 3 && name.length <= 20 && NAME_PATTERN.test(name);
+export type NameProblem = 'invalid' | 'taken' | 'network';
+
+/** The player's public name; null when the account has not chosen one yet. */
+export async function fetchPlayerName(userId: string): Promise<string | null> {
+  if (!cloud) return null;
+  const { data, error } = await cloud.from('profiles').select('name').eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  return data?.name ?? null;
+}
+/** Picks (`create`) or changes the player's public name. */
+export async function savePlayerName(userId: string, raw: string, create: boolean): Promise<NameProblem | null> {
+  const name = raw.trim().replace(/\s+/g, ' ');
+  if (!validName(name)) return 'invalid';
+  if (!cloud) return 'network';
+  const { error } = create
+    ? await cloud.from('profiles').insert({ user_id: userId, name })
+    : await cloud.from('profiles').update({ name }).eq('user_id', userId);
+  if (!error) return null;
+  if (error.code === '23505') return 'taken';
+  if (error.code === '23514') return 'invalid';
+  return 'network';
+}
+
+/** One row of the player list: a name and a summary of their world. */
+export type PlayerSummary = {
+  user_id: string;
+  name: string;
+  updated_at: string | null;
+  dinos: number;
+  stars: number;
+  worlds: number;
+  species: string | null;
+  element: string | null;
+  stage: string | null;
+  level: number;
+};
+/** The most recently active players, optionally those whose name contains `search`. */
+export async function listPlayers(search = ''): Promise<PlayerSummary[]> {
+  if (!cloud) return [];
+  let query = cloud.from('players').select('*');
+  // `%` and `_` are wildcards in LIKE: a player searching for them means the characters themselves.
+  const q = search.trim().replace(/[%_\\]/g, (c) => `\\${c}`);
+  if (q) query = query.ilike('name', `%${q}%`);
+  const { data, error } = await query.order('updated_at', { ascending: false, nullsFirst: false }).limit(50);
+  if (error) throw error;
+  return (data ?? []) as PlayerSummary[];
+}

@@ -40,11 +40,15 @@ import './pixel-theme.css';
 import { Icon, type IconName } from './ui/Icon';
 import { playSound, setSoundEnabled, soundEnabled, type SoundId } from './sound';
 import { useCloudSync } from './useCloudSync';
+import { fetchCloudSave, type PlayerSummary } from './cloud';
+import { PlayersPanel } from './PlayersPanel';
 import type { User } from '@supabase/supabase-js';
 
 /** The signed-in player handed over by the sign-in gate (SignInGate), with where their cloud save stood. */
 export type SignedIn = {
   user: User;
+  /** The public player name chosen at sign-up. */
+  name: string;
   /** Cloud time of the save the game starts from; null when the account has no save row yet. */
   marker: string | null;
   /** True when the starting save is not in the cloud yet (a new game, or progress moved in from this device). */
@@ -103,6 +107,7 @@ type Panel =
   | 'market'
   | 'wiki'
   | 'account'
+  | 'players'
   | null;
 const text = (lang: number, ro: string, en: string) => (lang ? en : ro);
 function load(): Save {
@@ -198,6 +203,9 @@ export function Window({
  */
 export default function RealmsApp({ initialSave, account }: { initialSave?: Save; account?: SignedIn } = {}) {
   const [profileOpen, setProfileOpen] = useState(false);
+  /** Another player's world being looked at (read only), and which of its worlds is shown. */
+  const [visit, setVisit] = useState<{ name: string; save: Save } | null>(null);
+  const [visitView, setVisitView] = useState<'home' | RealmId>('home');
   const [save, setSave] = useState(() => (initialSave ? advance(initialSave, Date.now()) : load())),
     [now, setNow] = useState(Date.now()),
     [panel, setPanel] = useState<Panel>(() => save.battle?.encounterId.startsWith('arena') ? 'arena' : null);
@@ -330,8 +338,11 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
     saveRef.current = next;
     setSave(next);
   });
+  const [playerName, setPlayerName] = useState(account?.name ?? '');
   const sync = {
     ...cloudSync,
+    name: playerName || undefined,
+    onRename: setPlayerName,
     user: account?.user ?? null,
     recovering: account?.recovering ?? false,
     endRecovery: account?.endRecovery ?? (() => {}),
@@ -439,6 +450,7 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        setVisit(null);
         setPanel(null);
         setPlacing(false);
         setMoving(null);
@@ -602,6 +614,23 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
     setMessage(tr(`${who} s-a întors din expediție! Colectează recompensa.`, `${who} is back from the expedition! Collect the reward.`));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, save.expedition]);
+  /** Loads another player's save from the cloud and shows their world. */
+  const openVisit = async (player: PlayerSummary) => {
+    try {
+      const remote = await fetchCloudSave(player.user_id);
+      if (!remote) {
+        setMessage(tr(`${player.name} încă nu și-a construit lumea.`, `${player.name} has not built a world yet.`));
+        return;
+      }
+      setPanel(null);
+      setProfileOpen(false);
+      setVisitView('home');
+      setVisit({ name: player.name, save: advance(remote.save, Date.now()) });
+    } catch {
+      setMessage(tr('Lumea nu s-a putut încărca. Mai încearcă.', 'That world could not load. Try again.'));
+    }
+  };
+
   /**
    * The champion avatar and its menu: top-left on phones, with resources and shortcuts (phones have no HUD); top-right
    * in the desktop HUD (`desk`), where resources already show, with just the account and settings.
@@ -633,6 +662,7 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
             )}
             <footer>
               {!desk && <button onClick={() => { setProfileOpen(false); setDinoRealm(null); setPanel('dino'); }}>{tr('Dinozauri', 'Dinosaurs')}</button>}
+              {account && <button onClick={() => { setProfileOpen(false); setPanel('players'); }}>{tr('Jucători', 'Players')}</button>}
               <button onClick={() => { setProfileOpen(false); setPanel('account'); }}>{tr('Cont', 'Account')}</button>
               <button onClick={() => { setProfileOpen(false); setPanel('settings'); }}>{tr('Setări', 'Settings')}</button>
               {!desk && <button onClick={() => { setProfileOpen(false); setPanel('wiki'); }}>Wikipedia</button>}
@@ -642,6 +672,42 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
       )}
     </>
   );
+  if (visit) {
+    const worlds = ELEMENTS.filter((el) => visit.save.habitats[el.id]);
+    return (
+      <main className="realms-app realm-visiting">
+        {/* The same island renderer as at home, with every action switched off. */}
+        <World save={visit.save} realm={visitView} lang={lang} placing={false} moving={null} now={now} onPlace={() => {}} onSelect={() => {}} />
+        <section className="realm-visit-bar" aria-label={tr('Vizită', 'Visit')}>
+          <div>
+            <span className="realm-eyebrow">{tr('ÎN VIZITĂ', 'VISITING')}</span>
+            <strong>{tr(`Lumea lui ${visit.name}`, `${visit.name}'s world`)}</strong>
+            <small>
+              {visitView === 'home' ? tr('Insula principală', 'Main island') : REALM_NAMES[visitView][lang]} · 🦖 {visit.save.dinos.length}
+            </small>
+          </div>
+          <nav aria-label={tr('Lumile lui', 'Their worlds')}>
+            <button aria-pressed={visitView === 'home'} onClick={() => setVisitView('home')}>
+              🏝 {tr('Insula', 'Island')}
+            </button>
+            {worlds.map((el) => (
+              <button key={el.id} aria-pressed={visitView === el.id} onClick={() => setVisitView(el.id)} title={el.name[lang]}>
+                {el.symbol} {el.name[lang]}
+              </button>
+            ))}
+          </nav>
+          <button className="realm-button" onClick={() => setVisit(null)}>
+            ← {tr('Înapoi acasă', 'Back home')}
+          </button>
+        </section>
+        {message && (
+          <div className="realm-toast" role="status">
+            {message}
+          </div>
+        )}
+      </main>
+    );
+  }
   return (
     <main className="realms-app">
       <World
@@ -988,6 +1054,7 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
               expedition: tr('Prima aventură', 'The first adventure'),
               settings: tr('Setări', 'Settings'),
               account: tr('Cont', 'Account'),
+              players: tr('Jucători', 'Players'),
               assets: tr('Atelierul vizual', 'The visual workshop'),
               workshop: tr('Atelier', 'Workshop'),
               arena: tr('Arena PvE', 'PvE Arena'),
@@ -1232,6 +1299,7 @@ export default function RealmsApp({ initialSave, account }: { initialSave?: Save
           )}
           {panel === 'wiki' && <RealmsWiki lang={lang} />}
           {panel === 'account' && <AccountPanel lang={lang} sync={sync} />}
+          {panel === 'players' && account && <PlayersPanel lang={lang} selfId={account.user.id} onVisit={(p) => void openVisit(p)} />}
           {panel === 'settings' && (
             <div className="realm-settings">
               <div className="realm-setting-row">

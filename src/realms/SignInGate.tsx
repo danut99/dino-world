@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import RealmsApp, { Window } from './RealmsApp';
-import { AccountPanel, SyncConflictChoice } from './AccountPanel';
-import { clearLegacySave, cloud, fetchCloudSave, planSync, pushCloudSave, readLegacySave, type CloudSave } from './cloud';
+import { AccountPanel, NameForm, SyncConflictChoice } from './AccountPanel';
+import { clearLegacySave, cloud, fetchCloudSave, fetchPlayerName, planSync, pushCloudSave, readLegacySave, type CloudSave } from './cloud';
 import { newSave, type Save } from './game';
 import { useAuth } from './useAuth';
 
@@ -18,9 +18,11 @@ const dropBootLoader = () => document.getElementById('boot-loader')?.remove();
 type Start =
   | { phase: 'loading' }
   | { phase: 'error' }
+  /** The account has no player name yet: it picks one before entering. */
+  | { phase: 'name' }
   | { phase: 'conflict'; local: Save; remote: CloudSave }
   /** `owner`: the account this save belongs to, so a different account never starts from it. */
-  | { phase: 'ready'; owner: string; save: Save; marker: string | null; unsaved: boolean };
+  | { phase: 'ready'; owner: string; name: string; save: Save; marker: string | null; unsaved: boolean };
 
 /**
  * With accounts configured, nothing of the game shows until the player signs in; then their save is loaded from the
@@ -41,20 +43,22 @@ export default function SignInGate() {
     let active = true;
     setStart({ phase: 'loading' });
     (async () => {
+      const name = await fetchPlayerName(userId);
+      if (!name) return { phase: 'name' } as const;
       const remote = await fetchCloudSave(userId);
       const legacy = readLegacySave();
-      if (!legacy) return { phase: 'ready', owner: userId, save: remote?.save ?? newSave(Date.now()), marker: remote?.updatedAt ?? null, unsaved: !remote } as const;
+      if (!legacy) return { phase: 'ready', owner: userId, name, save: remote?.save ?? newSave(Date.now()), marker: remote?.updatedAt ?? null, unsaved: !remote } as const;
       const plan = planSync(legacy, remote);
       if (plan === 'ask' && remote) return { phase: 'conflict', local: legacy, remote } as const;
       if (plan === 'download' && remote) {
         clearLegacySave();
-        return { phase: 'ready', owner: userId, save: remote.save, marker: remote.updatedAt, unsaved: false } as const;
+        return { phase: 'ready', owner: userId, name, save: remote.save, marker: remote.updatedAt, unsaved: false } as const;
       }
       // The device's progress moves into the account; only once it is safely there does it leave the device.
       const at = await pushCloudSave(userId, legacy, remote?.updatedAt ?? null);
       if (!at) throw new Error('conflict');
       clearLegacySave();
-      return { phase: 'ready', owner: userId, save: legacy, marker: at, unsaved: false } as const;
+      return { phase: 'ready', owner: userId, name, save: legacy, marker: at, unsaved: false } as const;
     })().then(
       (next) => active && setStart(next),
       () => active && setStart({ phase: 'error' }),
@@ -67,17 +71,18 @@ export default function SignInGate() {
   const choose = async (keep: 'local' | 'cloud') => {
     if (start.phase !== 'conflict' || !userId) return;
     const { local, remote } = start;
+    const name = (await fetchPlayerName(userId).catch(() => null)) ?? '';
     setStart({ phase: 'loading' });
     try {
       if (keep === 'cloud') {
         clearLegacySave();
-        setStart({ phase: 'ready', owner: userId, save: remote.save, marker: remote.updatedAt, unsaved: false });
+        setStart({ phase: 'ready', owner: userId, name, save: remote.save, marker: remote.updatedAt, unsaved: false });
         return;
       }
       const at = await pushCloudSave(userId, local, remote.updatedAt);
       if (!at) throw new Error('conflict');
       clearLegacySave();
-      setStart({ phase: 'ready', owner: userId, save: local, marker: at, unsaved: false });
+      setStart({ phase: 'ready', owner: userId, name, save: local, marker: at, unsaved: false });
     } catch {
       setStart({ phase: 'error' });
     }
@@ -90,7 +95,7 @@ export default function SignInGate() {
       <RealmsApp
         key={auth.user.id}
         initialSave={ready.save}
-        account={{ user: auth.user, marker: ready.marker, unsaved: ready.unsaved, recovering: false, endRecovery: auth.endRecovery }}
+        account={{ user: auth.user, name: ready.name, marker: ready.marker, unsaved: ready.unsaved, recovering: false, endRecovery: auth.endRecovery }}
       />
     );
   // Checking the session or loading the save: the boot screen from index.html stays up meanwhile.
@@ -104,6 +109,11 @@ export default function SignInGate() {
       </Window>
     </main>
   );
+  if (auth.user && start.phase === 'name')
+    return screen(
+      tr('Cum te cheamă?', 'What is your name?'),
+      <NameForm lang={lang} userId={auth.user.id} onDone={() => setAttempt((n) => n + 1)} />,
+    );
   if (auth.user && start.phase === 'conflict')
     return screen(tr('Ce progres păstrezi?', 'Which progress do you keep?'), <SyncConflictChoice conflict={start} lang={lang} resolve={(keep) => void choose(keep)} />);
   if (auth.user && start.phase === 'error')

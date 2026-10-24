@@ -2194,3 +2194,41 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
 .realm-sync-option .realm-button { min-height: 44px; }
 /* Sign-in gate: the account window alone, over the game's night sky, before anything else loads. */
 .realm-gate { position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 30%, #3a3156, #17121f 70%); }
+
+/* Player list: search, then one row per player (champion portrait, name, summary, last seen). */
+.realm-players { display: flex; flex-direction: column; gap: 12px; }
+.realm-players-search input { width: 100%; min-height: 44px; box-sizing: border-box; padding: 10px 12px; font: inherit; font-size: 15px; color: #fff1b8; background: #241c18; border: 1px solid #a393805e; }
+.realm-players ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.realm-player { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; grid-template-areas: 'pic main seen' 'pic main visit'; align-items: center; gap: 2px 12px; width: 100%; min-height: 64px; padding: 8px 12px; text-align: left; font: inherit; color: #e2d3b2; background: #241c18; border: 1px solid #a3938055; cursor: pointer; }
+.realm-player:hover:not(:disabled), .realm-player:focus-visible { border-color: #e0a96a; background: #2f2520; }
+.realm-player:disabled { cursor: default; opacity: 0.75; }
+.realm-player-portrait { grid-area: pic; display: grid; place-items: center; width: 52px; height: 52px; overflow: hidden; border-radius: 50%; border: 2px solid #e0a96a; background: radial-gradient(circle, #574a40, #2f2520); }
+.realm-player-portrait .dinosaur-art { width: 150%; height: 150%; max-width: none; margin-top: 18%; }
+.realm-player-main { grid-area: main; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.realm-player-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #fff1b8; }
+.realm-player-main strong em { margin-left: 6px; padding: 1px 6px; font-style: normal; font-size: 10px; color: #2f2520; background: #e0a96a; }
+.realm-player-main small { font-size: 11px; color: #cdbfa8; }
+.realm-player-seen { grid-area: seen; justify-self: end; font-size: 10px; color: #a39380; }
+.realm-player-visit { grid-area: visit; justify-self: end; font-size: 11px; color: #e0a96a; }
+
+/* Visiting another player's world: a bar on top with their worlds and the way home; nothing else of the HUD. */
+.realm-visit-bar { position: absolute; z-index: 10; top: max(12px, env(safe-area-inset-top)); left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 14px; width: min(920px, calc(100% - 24px)); box-sizing: border-box; padding: 10px 14px; background: #2f2520f2; border: 2px solid #e0a96a; box-shadow: 0 6px 20px #00000066; color: #e2d3b2; }
+.realm-visit-bar > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.realm-visit-bar strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; color: #fff1b8; }
+.realm-visit-bar small { font-size: 11px; color: #cdbfa8; }
+.realm-visit-bar nav { display: flex; gap: 6px; flex: 1; overflow-x: auto; scrollbar-width: thin; }
+.realm-visit-bar nav button { flex: none; min-height: 40px; padding: 4px 10px; font: inherit; font-size: 12px; color: #e2d3b2; background: #3d332d; border: 1px solid #cdbfa844; cursor: pointer; }
+.realm-visit-bar nav button[aria-pressed='true'] { color: #2f2520; background: #e0a96a; border-color: #fff1b8; }
+.realm-visit-bar > .realm-button { flex: none; min-height: 44px; }
+@media (max-width: 760px) {
+  .realm-visit-bar { flex-wrap: wrap; gap: 8px; }
+  .realm-visit-bar nav { order: 3; flex-basis: 100%; }
+  .realm-visit-bar > .realm-button { margin-left: auto; }
+}
+
+/* Changing the player name inside the account window. */
+.realm-auth-rename { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; background: #241c18; border: 1px solid #a3938044; }
+.realm-auth-rename label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #cdbfa8; }
+.realm-auth-rename input { min-height: 44px; padding: 10px 12px; font: inherit; font-size: 15px; color: #fff1b8; background: #1b1411; border: 1px solid #a393805e; }
+.realms-app .realm-auth-rename .realm-auth-ok { color: #9be38f; }
+.realms-app .realm-auth-rename .realm-auth-error { color: #ff8a7a; }

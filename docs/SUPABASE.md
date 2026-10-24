@@ -8,6 +8,8 @@ Ce face codul:
 - `src/realms/useCloudSync.ts` — salvarea automată (la ~2,5 secunde după o schimbare și când închizi pagina).
 - `src/realms/AccountPanel.tsx` — formularele de cont și fereastra **Cont** din joc (Setări sau meniul de profil pe telefon).
 - `supabase/migrations/0001_cloud_saves.sql` — tabelul `saves` și regulile de securitate.
+- `supabase/migrations/0002_players.sql` — numele de jucător (`profiles`), lista `players` și dreptul de a vedea (nu de a modifica) lumile celorlalți.
+- `src/realms/PlayersPanel.tsx` — lista de jucători; un click deschide lumea lor, doar pentru vizionare.
 
 Progresul jucat înainte de conturi, păstrat în browser, se mută în cont la primul login și apoi e șters din browser. Dacă și contul are deja progres, jucătorul alege pe care îl păstrează. La fel, dacă alt dispozitiv a salvat între timp, jocul nu suprascrie nimic singur: arată ambele variante (dinozauri, nivel, stele, aur).
 
@@ -16,7 +18,7 @@ Rămân în browser doar preferințele (limbă, sunete, ultima lume vizitată) �
 ## 1. Proiectul Supabase (≈ 3 minute)
 
 1. Intră pe [supabase.com](https://supabase.com), creează un cont gratuit și apoi **New project**. Alege o regiune din Europa (de ex. Frankfurt) și o parolă pentru baza de date (păstreaz-o).
-2. Deschide **SQL Editor → New query**, lipește tot conținutul din `supabase/migrations/0001_cloud_saves.sql` și apasă **Run**. Trebuie să apară „Success”.
+2. Deschide **SQL Editor → New query**, lipește tot conținutul din `supabase/migrations/0001_cloud_saves.sql` și apasă **Run**. Trebuie să apară „Success”. Repetă, într-un query nou, cu `0002_players.sql` (numele de jucător, lista de jucători și vizitarea lumilor).
 3. **Project Settings → API Keys**: copiază **Project URL** și cheia **Publishable** (sau „anon” la proiectele mai vechi). Nu folosi niciodată cheia **secret / service_role** în joc.
 4. În folderul proiectului, copiază `.env.example` ca `.env.local` și completează:
 
@@ -54,6 +56,6 @@ Cât timp aplicația Google e în modul „Testing”, doar adresele trecute la 
 
 ## Securitate
 
-- Fiecare jucător poate citi și scrie doar rândul lui din `saves` (Row Level Security).
+- Fiecare jucător poate scrie doar rândul lui din `saves` și numele lui din `profiles` (Row Level Security). Jucătorii logați pot citi salvările celorlalți, ca să le viziteze lumile; emailul nu e vizibil nimănui.
 - Serverul pune singur ora fiecărei scrieri; ceasul telefonului nu contează.
 - Salvarea e încă validată doar în joc: un jucător priceput își poate modifica propriul progres. Pasul următor, când apar clasamente sau PvP, este verificarea acțiunilor pe server cu același `command()` din `game.ts` (Supabase Edge Functions).

@@ -35,3 +35,11 @@ describe('cloud key guard', () => {
     expect(isSecretKey(jwt('anon'))).toBe(false);
   });
 });
+
+describe('player names', () => {
+  it('accepts 3–20 letters, digits and simple separators, Romanian letters included', async () => {
+    const { validName } = await import('./cloud');
+    for (const ok of ['Ion', 'Dino_Rex 7', 'Ștefan-Țepeș', 'a.b.c']) expect(validName(ok), ok).toBe(true);
+    for (const bad of ['Io', 'x'.repeat(21), ' Ion', '-Rex', 'Ion<3', 'a@b.ro']) expect(validName(bad), bad).toBe(false);
+  });
+});
