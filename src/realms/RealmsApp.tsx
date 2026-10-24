@@ -260,6 +260,18 @@ export default function RealmsApp() {
   const tr = (ro: string, en: string) => text(lang, ro, en);
   const today = dailyState(save, now);
   const dailyReady = today.spin === null || dailyQuests(today.day).some(id => !today.claimed.includes(id) && today.progress[id] >= DAILY_QUESTS[id].target) || (!today.bonus && dailyQuests(today.day).every(id => today.claimed.includes(id)));
+  const dailyOpened = useRef<string | null>(null);
+  useEffect(() => {
+    if (panel || placing || save.battle || dailyOpened.current === today.day) return;
+    try {
+      if (localStorage.getItem('dino-realms-daily-opened') === today.day) return;
+      localStorage.setItem('dino-realms-daily-opened', today.day);
+    } catch {
+      // The in-memory marker also works when storage is unavailable.
+    }
+    dailyOpened.current = today.day;
+    setPanel('daily');
+  }, [today.day, panel, placing, save.battle]);
   const activeElement = ELEMENTS.find((el) => el.id === realm);
   /** Locked worlds open the world list instead, where they can be unlocked. */
   const visitRealm = (next: 'home' | RealmId) => {
@@ -290,11 +302,27 @@ export default function RealmsApp() {
     }
   }, [realm]);
   useEffect(() => {
+    let hiddenAt = document.hidden ? Date.now() : null;
     const id = window.setInterval(() => {
       if (!document.hidden) setNow(Date.now());
     }, 1000);
     const wake = () => {
-      if (!document.hidden) setNow(Date.now());
+      if (document.hidden) {
+        hiddenAt = Date.now();
+        return;
+      }
+      const returnedAt = Date.now();
+      if (hiddenAt !== null && returnedAt - hiddenAt >= 60_000) {
+        const current = advance(saveRef.current, returnedAt);
+        setOffline({
+          elapsed: returnedAt - hiddenAt,
+          gold: Math.floor(current.storedGold),
+          food: farmReadyFood(current, returnedAt),
+          jobs: current.crafting.filter(j => j.endsAt <= returnedAt).length,
+        });
+      }
+      hiddenAt = null;
+      setNow(returnedAt);
     };
     document.addEventListener('visibilitychange', wake);
     return () => {
@@ -522,6 +550,12 @@ export default function RealmsApp() {
         }}
         onSelect={openBuilding}
         onProgress={bootProgress}
+        cameraAction={!panel && !placing && !save.battle && (
+          <button className="realm-daily-access" onClick={() => setPanel('daily')} aria-label={tr('Premii și misiuni zilnice', 'Daily rewards and missions')} title={tr('Zilnic', 'Daily')}>
+            <span className="realm-daily-wheel" aria-hidden="true"><span>★</span></span>
+            {dailyReady && <b aria-hidden="true">!</b>}
+          </button>
+        )}
       />
       <div className="realm-mobile-profile">
         <button
@@ -597,7 +631,6 @@ export default function RealmsApp() {
           <Icon name="settings" />
         </button>
       </header>
-      {!panel && !placing && !save.battle && <button className="realm-daily-access" onClick={() => setPanel('daily')} aria-label={tr('Premii și misiuni zilnice', 'Daily rewards and missions')}>★ {tr('Zilnic', 'Daily')} {dailyReady && <b>!</b>}</button>}
       {devOpen && (
         <DevPanel
           lang={lang}

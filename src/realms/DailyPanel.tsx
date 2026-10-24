@@ -42,7 +42,10 @@ export function DailyPanel({ save, now, lang, run, navigate }: {
         <p>{tr('Un premiu garantat. O încercare gratuită pe zi.', 'A guaranteed prize. One free spin each day.')}</p>
         <div className="daily-wheel-frame" aria-hidden="true"><span className="daily-pointer">▼</span>
           <div className="daily-wheel-clip"><div className={`daily-wheel ${spinning ? 'spinning' : ''}`} style={{ transform: `rotate(${rotation}deg)` }}>
-            {WHEEL_PRIZES.map((prize, i) => <span key={i} style={{ transform: `translate(-50%, -50%) rotate(${i * 45 + 22.5}deg) translateY(-100px) rotate(${-i * 45 - 22.5}deg)` }}>{prize.icon}</span>)}
+            {WHEEL_PRIZES.map((prize, i) => {
+              const angle = (i * 45 + 22.5) * Math.PI / 180;
+              return <span key={i} style={{ left: `${50 + 40 * Math.sin(angle)}%`, top: `${50 - 40 * Math.cos(angle)}%` }}>{prize.icon}</span>;
+            })}
           </div></div><span className="daily-wheel-hub">★</span>
         </div>
         <button className="realm-button" disabled={daily.spin !== null || spinning} onClick={spin}>{spinning ? tr('Se învârte…', 'Spinning…') : daily.spin !== null ? tr('Revino mâine', 'Come back tomorrow') : tr('Învârte gratuit', 'Spin for free')}</button>

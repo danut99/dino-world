@@ -5,7 +5,7 @@ import { drawWorkshopTier, workshopState } from './workshopTiers';
 import { drawArena, arenaState } from './animatedArena';
 import { drawWorkshop, WORKSHOP_ART, WORKSHOP_GROUND } from './animatedWorkshop';
 import { drawFarm, farmGround, isAnimatedFarm } from './animatedFarm';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { advance, canPlace, ELEMENTS, farmNextAt, rarityOf, type Building, type Save, type RealmId } from './game';
 import { constrainPan, constrainHomePan, SCENE } from './camera';
 import { buildingLevel, groundLine, LEVELED, measureGround, TIERED, tierArt } from './buildingTiers';
@@ -435,6 +435,7 @@ export default function World({
   now = Date.now(),
   covered = false,
   onProgress,
+  cameraAction,
 }: {
   save: Save;
   placing: boolean;
@@ -450,6 +451,7 @@ export default function World({
   covered?: boolean;
   /** Reports how many of the images this view needs have loaded, until all of them have. */
   onProgress?: (done: number, total: number) => void;
+  cameraAction?: ReactNode;
 }) {
   const ref = useRef<HTMLCanvasElement>(null),
     image = useRef<HTMLImageElement | null>(null),
@@ -1216,6 +1218,7 @@ export default function World({
           );
         })()}
       <div className="realm-camera">
+        {cameraAction && <div className="realm-camera-action">{cameraAction}</div>}
         {hint && !placing && (
           <div className="realm-world-hint" role="note">
             <span>

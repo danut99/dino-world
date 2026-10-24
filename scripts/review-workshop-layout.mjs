@@ -14,6 +14,8 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => localStorage.setItem('dino-realms-language', 'en'));
   await page.goto(server.resolvedUrls.local[0]);
+  await page.locator('.daily-panel').waitFor();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
   await page.evaluate(async () => {
     const { newSave } = await import('/src/realms/game.ts');
     const save = newSave(Date.now());
@@ -31,6 +33,14 @@ try {
     await layout.evaluate(el => { el.scrollTop = 0; });
     const overflow = await layout.evaluate(el => el.scrollWidth - el.clientWidth);
     assert.ok(overflow <= 1, `Horizontal overflow at ${viewport.width}: ${overflow}`);
+    if (viewport.width <= 760) {
+      const tabs = page.locator('.craft-recipe-tabs button');
+      for (const tab of await tabs.all()) {
+        await tab.scrollIntoViewIfNeeded();
+        await tab.click();
+        assert.ok(await tab.evaluate(el => el.classList.contains('active')));
+      }
+    }
     await page.screenshot({ path: `output/workshop-layout/${viewport.width}-recipe.png` });
     const card = page.locator('.craft-use .realm-upgrade-card');
     await card.scrollIntoViewIfNeeded();

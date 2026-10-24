@@ -333,7 +333,8 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
   const gateOpen = (id: RealmId) => !GATE_LEAGUES.includes(id) || save.arenaLevel >= 2;
   const leagueOpen = (id: RealmId) => !!save.habitats[id] && gateOpen(id);
   const leagueEncounters = ENCOUNTERS.filter((e) => e.mode === 'arena' && e.league === league);
-  const encounter = ENCOUNTERS.find((e) => e.id === selected) ?? ENCOUNTERS[0],
+  const encounter = ENCOUNTERS.find((e) => e.id === selected && e.mode === view)
+      ?? ENCOUNTERS.find((e) => e.mode === (view === 'arena' ? 'arena' : 'expedition'))!,
     repeat = save.cleared.includes(encounter.id);
   const expedition = view === 'expedition' ? expeditionPlan(save, encounter.id) : null;
   const hasBuilding = save.buildings.some(
@@ -604,6 +605,7 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
             className={view === 'arena' ? 'arena-lobby-scene' : 'adventure-map'}
             onPointerDown={(e) => {
               if (view !== 'expedition' || (e.target as HTMLElement).closest('button')) return;
+              if (window.matchMedia('(max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px)').matches) return;
               e.currentTarget.setPointerCapture(e.pointerId);
               mapDrag.current = { x: e.clientX, y: e.clientY, px: mapPosition.x, py: mapPosition.y };
             }}
@@ -635,7 +637,12 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
                       key={e.id}
                       className={`adventure-node ${e.id === selected ? 'selected' : ''} ${save.cleared.includes(e.id) ? 'cleared' : ''} ${e.requires && !save.cleared.includes(e.requires) ? 'locked' : ''}`}
                       style={{ left: `${e.x}%`, top: `${e.y}%` }}
-                      onClick={() => selectDestination(e.id)}
+                      onClick={() => {
+                        selectDestination(e.id);
+                        if (window.matchMedia('(max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px)').matches) {
+                          mapRef.current?.nextElementSibling?.scrollIntoView({ block: 'start' });
+                        }
+                      }}
                       aria-label={e.name[lang]}
                     >
                       <span>
@@ -758,6 +765,9 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
             )}
           </div>
           <aside className="adventure-detail">
+            {view === 'expedition' && <button className="realm-button secondary mobile-destination-picker" onClick={() => mapRef.current?.scrollIntoView({ block: 'start' })}>
+              ← {tr('Alege altă destinație', 'Choose another destination')}
+            </button>}
             <div
               className="destination-cover"
               style={{ backgroundImage: `url('${worldThumb(encounter.image as RealmId)}')` }}
