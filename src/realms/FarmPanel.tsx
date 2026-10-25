@@ -1,6 +1,9 @@
-import { ResourceHelp, RequirementLink } from './ResourceHelp';
+import { ResourceHelp } from './ResourceHelp';
 import { useState } from 'react';
-import { CROPS, FARM_LEVELS, ITEMS, type ItemId, type CropId } from './content';
+import { CROPS, FARM_LEVELS, type CropId } from './content';
+import { Tabs, TabPanel } from './ui/Tabs';
+import { Icon } from './ui/Icon';
+import { ConstructionStrip, CostChips, UpgradeButton, underConstruction } from './PanelKit';
 import './farm-layout.css';
 import { farmReadyFood, farmYield, gemsToFinish, type Command, type Save } from './game';
 
@@ -11,6 +14,10 @@ export const duration = (seconds: number) =>
       ? `${Math.floor(seconds / 60)}m${seconds % 60 ? ` ${seconds % 60}s` : ''}`
       : `${seconds}s`;
 
+/**
+ * The farm: every plot on one row, the six crops on a strip under it (locked ones greyed with the level that opens
+ * them), and the next level on its own tab with everything it brings.
+ */
 export function FarmPanel({
   save,
   now,
@@ -29,15 +36,18 @@ export function FarmPanel({
   const tr = (ro: string, en: string) => (lang ? en : ro);
   const [picked, setPicked] = useState<number | null>(null);
   const [cropId, setCropId] = useState<CropId>(CROPS[0].id);
+  const [tab, setTab] = useState<'field' | 'upgrade'>('field');
   if (!save.buildings.some((b) => b.kind === 'farm'))
     return (
-      <div className="realm-centered">
-        <span className="realm-large-symbol food">❧</span>
-        <h3>{tr('O recoltă mică, vise mari', 'Small harvests, big dreams')}</h3>
-        <p>{tr('Construiește o fermă ca să cultivi hrană.', 'Build a farm to grow food.')}</p>
-        <button className="realm-button" onClick={build}>
-          {tr('Construiește o fermă', 'Build a farm')}
-        </button>
+      <div className="fit-panel fit-single">
+        <div className="pk-empty">
+          <Icon name="food" scale={4} />
+          <h3>{tr('O recoltă mică, vise mari', 'Small harvests, big dreams')}</h3>
+          <p className="pk-note">{tr('Construiește o fermă ca să cultivi hrană.', 'Build a farm to grow food.')}</p>
+          <button className="realm-button" onClick={build}>
+            {tr('Construiește o fermă', 'Build a farm')}
+          </button>
+        </div>
       </div>
     );
 
@@ -47,139 +57,195 @@ export function FarmPanel({
   const target = picked !== null && picked < save.plots.length && !save.plots[picked] ? picked : freePlot;
   const readyFood = farmReadyFood(save, now);
   const busy = save.plots.filter((p) => p).length;
-  const nextCrop = next && CROPS.find((c) => c.level === save.farmLevel + 1);
-  const materials = next ? (Object.entries(next.materials) as [ItemId, number][]) : [];
-  const canUpgrade = !!next && save.gold >= next.gold && materials.every(([id, n]) => save.inventory[id] >= n);
-  const selectedCrop = CROPS.find(c => c.id === cropId)!;
-  const cropLocked = selectedCrop.level > save.farmLevel;
+  // Every crop the next level opens.
+  const nextCrops = next ? CROPS.filter((c) => c.level === save.farmLevel + 1) : [];
+  const crop = CROPS.find((c) => c.id === cropId)!;
+  const cropLocked = crop.level > save.farmLevel;
+  const idBase = 'farm';
 
   return (
-    <div className="realm-farm">
-      <div className="realm-farm-head">
-        <span className="realm-farm-level">
+    <div className="fit-panel realm-farm farm-panel">
+      <header className="pk-head">
+        <span className="pk-level">
           <small>{tr('NIVEL', 'LEVEL')}</small>
           {save.farmLevel}
-          <small>/ {FARM_LEVELS.length}</small>
         </span>
-        <div>
+        <div className="pk-head-text">
           <strong>
-            {busy}/{level.plots} {tr('straturi active', 'active plots')}
+            {busy}/{level.plots} {tr('straturi active', 'active plots')} · {tr('recoltă', 'harvest')} ×{level.yield}
           </strong>
           <small>
-            {tr('Recoltă', 'Harvest')} ×{level.yield} · {tr('hrană per strat', 'food per plot')}
+            <Icon name="food" scale={1} /> {Math.floor(save.food).toLocaleString(lang ? 'en-US' : 'ro-RO')} {tr('hrană', 'food')} · <Icon name="gold" scale={1} /> {Math.floor(save.gold).toLocaleString(lang ? 'en-US' : 'ro-RO')}
           </small>
         </div>
-        <button className="realm-link" onClick={move}>
-          {tr('Mută ferma', 'Move farm')}
-        </button>
-      </div>
-
-      <div className="farm-layout"><section className="farm-field"><div className="farm-section-title"><h3>{tr('Straturile tale', 'Your plots')}</h3><small>{tr('Alege un strat liber', 'Choose an empty plot')}</small></div><div className="realm-farm-plots">
-        {Array.from({ length: FARM_LEVELS.at(-1)!.plots }, (_, i) => {
-          if (i >= save.plots.length) {
-            const unlock = FARM_LEVELS.findIndex((l) => l.plots > i) + 1;
-            return (
-              <div key={i} className="realm-plot locked">
-                <span>🔒</span>
-                <small>
-                  {tr('Nivel', 'Level')} {unlock}
-                </small>
-              </div>
-            );
-          }
-          const p = save.plots[i];
-          if (!p)
-            return (
-              <button
-                key={i}
-                className={`realm-plot empty ${i === target ? 'on' : ''}`}
-                onClick={() => setPicked(i)}
-                aria-pressed={i === target}
-              >
-                <span>＋</span>
-                <small>{tr('Liber', 'Empty')}</small>
-              </button>
-            );
-          const crop = CROPS.find((c) => c.id === p.crop)!,
-            left = p.readyAt - now,
-            done = Math.max(0, Math.min(1, 1 - left / (crop.seconds * 1000)));
-          return left > 0 ? (
-            <div key={i} className="realm-plot growing">
-              <span>{crop.icon}</span>
-              <strong>{crop.name[lang]}</strong>
-              <small>{duration(Math.ceil(left / 1000))}</small>
-              <div className="realm-meter">
-                <i style={{ width: `${done * 100}%` }} />
-              </div>
-              <button className="realm-gem-finish" disabled={save.gems < gemsToFinish(left)} onClick={() => run({ type: 'gemFinish', target: 'plot', plot: i })} title={tr('Termină acum cu diamante', 'Finish now with diamonds')}>
-                ⚡ {gemsToFinish(left)} 💎
-              </button>
-            </div>
-          ) : (
-            <button key={i} className="realm-plot ready" onClick={() => run({ type: 'harvest', plot: i })}>
-              <span>{crop.icon}</span>
-              <strong>{crop.name[lang]}</strong>
-              <small>❧ +{farmYield(save.farmLevel, p.crop)}</small>
+        <div className="pk-head-actions">
+          {readyFood > 0 && (
+            <button className="realm-button" onClick={() => run({ type: 'harvest' })}>
+              {tr('Recoltează tot', 'Harvest all')} · +{readyFood}
             </button>
-          );
-        })}
-      </div>
-
-      {readyFood > 0 && (
-        <button className="realm-button realm-farm-harvest" onClick={() => run({ type: 'harvest' })}>
-          {tr('Recoltează tot', 'Harvest all')} · ❧ +{readyFood}
-        </button>
-      )}
-
-      </section><section className="farm-seeds"><div className="farm-section-title"><h3>{tr('Alege cultura', 'Choose a crop')}</h3><small>{target >= 0 ? `${tr('Strat', 'Plot')} ${target + 1}` : tr('Niciun strat liber', 'No free plots')}</small></div>
-      <div className="realm-farm-crops">
-        {CROPS.map(c => <button key={c.id} className={`realm-crop ${cropId === c.id ? 'selected' : ''}`} aria-pressed={cropId === c.id} onClick={() => setCropId(c.id)}>
-          <span className="realm-crop-icon">{c.icon}</span><span className="realm-crop-body"><strong>{c.name[lang]}</strong><small>{c.level > save.farmLevel ? `${tr('Nivel', 'Level')} ${c.level}` : `${duration(c.seconds)} · +${farmYield(save.farmLevel, c.id)}`}</small></span>
-        </button>)}
-      </div>
-      <div className="farm-plant-selection"><strong>{selectedCrop.icon} {selectedCrop.name[lang]}</strong><div className="farm-crop-facts"><span>{tr('Recoltă', 'Harvest')}: <b>+{farmYield(save.farmLevel, selectedCrop.id)}</b></span><span>{tr('Durată', 'Time')}: <b>{duration(selectedCrop.seconds)}</b></span><span>{tr('Cost', 'Cost')}: <b>{selectedCrop.cost || tr('Gratuit', 'Free')}{selectedCrop.cost > 0 && ` ${tr('aur', 'gold')}`}</b></span></div>
-      {cropLocked ? <RequirementLink title={tr(`Nivel necesar: ${selectedCrop.level}`, `Required level: ${selectedCrop.level}`)} detail={tr('Vezi îmbunătățirea fermei.', 'View the farm upgrade.')} action={() => document.querySelector('.realm-farm-upgrade')?.scrollIntoView({ block: 'center' })} /> : <ResourceHelp save={save} lang={lang} gold={selectedCrop.cost} />}
-      {target < 0 && <p className="farm-busy-note">{tr('Recoltează culturile gata sau așteaptă eliberarea unui strat.', 'Harvest ready crops or wait for a free plot.')}</p>}
-      <button className="realm-button farm-plant-button" disabled={cropLocked || target < 0 || save.gold < selectedCrop.cost} onClick={() => { if (run({ type: 'plant', crop: selectedCrop.id, plot: target })) setPicked(null); }}>{target >= 0 ? `${tr('Plantează pe stratul', 'Plant on plot')} ${target + 1}` : tr('Straturi ocupate', 'Plots occupied')} →</button>
-      </div></section></div>
-
-      <div className="realm-farm-upgrade">
-        {next ? (
-          <>
-            <div>
-              <span className="realm-eyebrow">
-                {tr('ÎMBUNĂTĂȚIRE', 'UPGRADE')} · {tr('NIVEL', 'LEVEL')} {save.farmLevel + 1}
-              </span>
-              <ul>
-                <li>
-                  🌱 {level.plots} → <b>{next.plots}</b> {tr('straturi active', 'active plots')}
-                </li>
-                <li>
-                  ❧ ×{level.yield} → <b>×{next.yield}</b> {tr('hrană per recoltă', 'food per harvest')}
-                </li>
-                {nextCrop && (
-                  <li>
-                    {nextCrop.icon} {tr('Cultură nouă', 'New crop')}: <b>{nextCrop.name[lang]}</b>
-                  </li>
-                )}
-              </ul>
-              <div className="realm-farm-costs">
-                <span className={save.gold >= next.gold ? '' : 'short'}>{next.gold} ●</span>
-                {materials.map(([id, n]) => (
-                  <span key={id} className={save.inventory[id] >= n ? '' : 'short'} title={ITEMS[id].name[lang]}>
-                    {ITEMS[id].icon} {save.inventory[id]}/{n}
+          )}
+          <button className="realm-link" onClick={move}>
+            {tr('Mută', 'Move')}
+          </button>
+        </div>
+      </header>
+      <Tabs
+        idBase={idBase}
+        label={tr('Secțiuni fermă', 'Farm sections')}
+        active={tab}
+        onChange={setTab}
+        tabs={[
+          { id: 'field', label: tr('Câmp', 'Field') },
+          { id: 'upgrade', label: next ? `${tr('Nivel', 'Level')} ${save.farmLevel + 1}` : tr('Nivel maxim', 'Max level') },
+        ]}
+      />
+      {tab === 'field' ? (
+        <TabPanel idBase={idBase} id="field" className="fit-fill farm-field">
+          <div className="farm-plots" style={{ '--plots': FARM_LEVELS.at(-1)!.plots } as React.CSSProperties}>
+            {Array.from({ length: FARM_LEVELS.at(-1)!.plots }, (_, i) => {
+              if (i >= save.plots.length) {
+                const unlock = FARM_LEVELS.findIndex((l) => l.plots > i) + 1;
+                return (
+                  <div key={i} className="farm-plot locked">
+                    <Icon name="lock" scale={2} />
+                    <small>
+                      {tr('Nivel', 'Level')} {unlock}
+                    </small>
+                  </div>
+                );
+              }
+              const p = save.plots[i];
+              if (!p)
+                return (
+                  <button key={i} className={`farm-plot empty ${i === target ? 'on' : ''}`} onClick={() => setPicked(i)} aria-pressed={i === target}>
+                    <span>＋</span>
+                    <small>{tr('Liber', 'Empty')}</small>
+                  </button>
+                );
+              const c = CROPS.find((x) => x.id === p.crop)!,
+                left = p.readyAt - now,
+                done = Math.max(0, Math.min(1, 1 - left / (c.seconds * 1000)));
+              return left > 0 ? (
+                <div key={i} className="farm-plot growing">
+                  <span>{c.icon}</span>
+                  <strong>{c.name[lang]}</strong>
+                  <small className="pk-num">{duration(Math.ceil(left / 1000))}</small>
+                  <div className="pk-meter" style={{ '--meter': 'var(--px-moss-1)' } as React.CSSProperties}>
+                    <i style={{ width: `${done * 100}%` }} />
+                  </div>
+                  <button className="realm-gem-finish" disabled={save.gems < gemsToFinish(left)} onClick={() => run({ type: 'gemFinish', target: 'plot', plot: i })} title={tr('Termină acum cu diamante', 'Finish now with diamonds')}>
+                    ⚡ {gemsToFinish(left)} 💎
+                  </button>
+                </div>
+              ) : (
+                <button key={i} className="farm-plot ready" onClick={() => run({ type: 'harvest', plot: i })}>
+                  <span>{c.icon}</span>
+                  <strong>{c.name[lang]}</strong>
+                  <small className="pk-num">❧ +{farmYield(save.farmLevel, p.crop)}</small>
+                </button>
+              );
+            })}
+          </div>
+          <div className="farm-crops" role="group" aria-label={tr('Alege cultura', 'Choose a crop')}>
+            {CROPS.map((c) => {
+              const locked = c.level > save.farmLevel;
+              return (
+                <button key={c.id} className={`farm-crop${locked ? ' locked' : ''}`} aria-pressed={cropId === c.id} onClick={() => setCropId(c.id)} title={c.name[lang]}>
+                  <span className="farm-crop-icon">{c.icon}</span>
+                  <span className="farm-crop-body">
+                    <strong>{c.name[lang]}</strong>
+                    <small className="pk-num">{locked ? `🔒 ${tr('Nivel', 'Level')} ${c.level}` : `${duration(c.seconds)} · +${farmYield(save.farmLevel, c.id)}`}</small>
                   </span>
-                ))}
+                </button>
+              );
+            })}
+          </div>
+          <div className="pk-box farm-plant">
+            <span className="farm-plant-what">
+              <b>
+                {crop.icon} {crop.name[lang]}
+              </b>{' '}
+              · ❧ <b className="pk-num">+{farmYield(save.farmLevel, crop.id)}</b> · ⏱ <b className="pk-num">{duration(crop.seconds)}</b> · {crop.cost ? <><Icon name="gold" scale={1} /> <b className="pk-num">{crop.cost}</b></> : tr('gratuit', 'free')}
+            </span>
+            {cropLocked ? (
+              <button className="realm-link" onClick={() => setTab('upgrade')}>
+                🔒 {tr(`Se deschide la nivelul ${crop.level}`, `Opens at level ${crop.level}`)} →
+              </button>
+            ) : (
+              <ResourceHelp save={save} lang={lang} gold={crop.cost} />
+            )}
+            <button
+              className="realm-button"
+              disabled={cropLocked || target < 0 || save.gold < crop.cost}
+              onClick={() => {
+                if (run({ type: 'plant', crop: crop.id, plot: target })) setPicked(null);
+              }}
+            >
+              {target >= 0 ? `${tr('Plantează pe stratul', 'Plant on plot')} ${target + 1}` : tr('Straturi ocupate', 'Plots occupied')}
+            </button>
+          </div>
+        </TabPanel>
+      ) : (
+        <TabPanel idBase={idBase} id="upgrade" className="fit-fill farm-upgrade">
+          {next ? (
+            <>
+              <div className="farm-levels">
+                <div className="pk-box">
+                  <h3 className="pk-title">
+                    {tr('Acum', 'Now')} <small>{tr('Nivel', 'Level')} {save.farmLevel}</small>
+                  </h3>
+                  <ul>
+                    <li>
+                      🌱 <b className="pk-num">{level.plots}</b> {tr('straturi', 'plots')}
+                    </li>
+                    <li>
+                      ❧ <b className="pk-num">×{level.yield}</b> {tr('hrană per recoltă', 'food per harvest')}
+                    </li>
+                  </ul>
+                </div>
+                <span className="farm-arrow" aria-hidden="true">
+                  ▶
+                </span>
+                <div className="pk-box farm-next">
+                  <h3 className="pk-title">
+                    {tr('Nivelul următor', 'Next level')} <small>{tr('Nivel', 'Level')} {save.farmLevel + 1}</small>
+                  </h3>
+                  <ul>
+                    <li>
+                      🌱 <b className="pk-num">{next.plots}</b> {tr('straturi', 'plots')} (+{next.plots - level.plots})
+                    </li>
+                    <li>
+                      ❧ <b className="pk-num">×{next.yield}</b> {tr('hrană per recoltă', 'food per harvest')}
+                    </li>
+                    {nextCrops.map((c) => (
+                      <li key={c.id}>
+                        {c.icon} {tr('Cultură nouă', 'New crop')}: <b>{c.name[lang]}</b> · +{farmYield(save.farmLevel + 1, c.id)} / {duration(c.seconds)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
+              <div className="pk-box pk-upgrade">
+                {underConstruction(save, now, 'farm') ? (
+                  <ConstructionStrip save={save} now={now} lang={lang} run={run} target="farm" />
+                ) : (
+                  <>
+                    <span className="pk-upgrade-what">{tr('Cost', 'Cost')}</span>
+                    <CostChips save={save} lang={lang} gold={next.gold} materials={next.materials} />
+                    <ResourceHelp save={save} lang={lang} gold={next.gold} materials={next.materials} />
+                    <UpgradeButton save={save} now={now} lang={lang} run={run} target="farm" />
+                  </>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="pk-empty">
+              <Icon name="star" scale={3} />
+              <p className="pk-note">{tr('Ferma e la nivelul maxim. Toate culturile sunt deschise.', 'The farm is at max level. Every crop is open.')}</p>
             </div>
-            <div className="farm-upgrade-actions"><ResourceHelp save={save} lang={lang} gold={next.gold} materials={next.materials} /><button className="realm-button" disabled={!canUpgrade} onClick={() => run({ type: 'upgradeFarm' })}>
-              {tr('Îmbunătățește', 'Upgrade')}
-            </button></div>
-          </>
-        ) : (
-          <p>★ {tr('Ferma e la nivelul maxim.', 'The farm is at max level.')}</p>
-        )}
-      </div>
+          )}
+        </TabPanel>
+      )}
     </div>
   );
 }

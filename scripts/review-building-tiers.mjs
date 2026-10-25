@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const require = createRequire(import.meta.url);
-const { chromium } = require('C:/Users/Danut/.codex/dragon-preview-tools/node_modules/playwright');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const server = await createServer({ configLoader: 'runner', server: { host: '127.0.0.1', port: 5242 }, logLevel: 'error' });
 await server.listen(); let browser;
 try {

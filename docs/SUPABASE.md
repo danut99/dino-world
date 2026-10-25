@@ -9,6 +9,7 @@ Ce face codul:
 - `src/realms/AccountPanel.tsx` — formularele de cont și fereastra **Cont** din joc (Setări sau meniul de profil pe telefon).
 - `supabase/migrations/0001_cloud_saves.sql` — tabelul `saves` și regulile de securitate.
 - `supabase/migrations/0002_players.sql` — numele de jucător (`profiles`), lista `players` și dreptul de a vedea (nu de a modifica) lumile celorlalți.
+- `supabase/migrations/0003_schema_floor.sql` — refuză coborârea `schema_version` a unei salvări (un client vechi din cache nu poate suprascrie o salvare v6).
 - `src/realms/PlayersPanel.tsx` — lista de jucători; un click deschide lumea lor, doar pentru vizionare.
 
 Progresul jucat înainte de conturi, păstrat în browser, se mută în cont la primul login și apoi e șters din browser. Dacă și contul are deja progres, jucătorul alege pe care îl păstrează. La fel, dacă alt dispozitiv a salvat între timp, jocul nu suprascrie nimic singur: arată ambele variante (dinozauri, nivel, stele, aur).
@@ -18,7 +19,7 @@ Rămân în browser doar preferințele (limbă, sunete, ultima lume vizitată) �
 ## 1. Proiectul Supabase (≈ 3 minute)
 
 1. Intră pe [supabase.com](https://supabase.com), creează un cont gratuit și apoi **New project**. Alege o regiune din Europa (de ex. Frankfurt) și o parolă pentru baza de date (păstreaz-o).
-2. Deschide **SQL Editor → New query**, lipește tot conținutul din `supabase/migrations/0001_cloud_saves.sql` și apasă **Run**. Trebuie să apară „Success”. Repetă, într-un query nou, cu `0002_players.sql` (numele de jucător, lista de jucători și vizitarea lumilor).
+2. Deschide **SQL Editor → New query**, lipește tot conținutul din `supabase/migrations/0001_cloud_saves.sql` și apasă **Run**. Trebuie să apară „Success”. Repetă, într-un query nou, cu `0002_players.sql` (numele de jucător, lista de jucători și vizitarea lumilor). La fel cu `0003_schema_floor.sql` (pragul versiunii de salvare).
 3. **Project Settings → API Keys**: copiază **Project URL** și cheia **Publishable** (sau „anon” la proiectele mai vechi). Nu folosi niciodată cheia **secret / service_role** în joc.
 4. În folderul proiectului, copiază `.env.example` ca `.env.local` și completează:
 

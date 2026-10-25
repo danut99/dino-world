@@ -20,6 +20,7 @@ import { drawSprite, frameAt, loadAnimation, loadSpriteImage, type SpriteManifes
 import { drawRealmAtmosphere } from './worldEffects';
 import { useReducedMotion } from './useMotion';
 import { Icon } from './ui/Icon';
+import { clock } from './PanelKit';
 
 export { project, unproject };
 /**
@@ -821,7 +822,7 @@ export default function World({
           ctx.globalAlpha = 1;
         });
     if (realm === 'home')
-      for (let i = 0; i < save.lanterns; i++) {
+      for (let i = 0; i < save.lamps; i++) {
         const p = project(2 + i * 2, 10);
         ctx.fillStyle = '#584332';
         ctx.fillRect(p.x - 3, p.y - 32, 6, 32);
@@ -915,7 +916,7 @@ export default function World({
     save.buildings,
     save.dinos,
     save.champion,
-    save.lanterns,
+    save.lamps,
     loaded,
     placing,
     moving,
@@ -1157,6 +1158,26 @@ export default function World({
                       ? (save.crafting.find((j) => j.endsAt > now)?.endsAt ?? null)
                       : null;
               const ready = kind === 'workshop' ? save.crafting.some((j) => j.endsAt <= now) : at !== null && now >= at;
+              // A building being upgraded shows the builder's countdown instead of its production.
+              const building = save.construction && save.construction.target === kind && save.construction.endsAt > now ? save.construction : null;
+              if (building)
+                return (
+                  <button
+                    key={b.id}
+                    aria-label={`${UTILITY_BUILDINGS[kind].name[lang]} · ${lang ? 'being built' : 'în construcție'}`}
+                    className="production-bubble constructing"
+                    style={{
+                      left: `${((768 + (p.x - 768) * zoom + cameraPan.x) / 1536) * 100}%`,
+                      top: `${((512 + (p.y - BUILDING_LIFT - 10 - 512) * zoom + cameraPan.y) / 1024) * 100}%`,
+                    }}
+                    onClick={() => onSelect(b.id)}
+                  >
+                    <Icon name="build" scale={1} /> {clock(building.endsAt - now)}
+                    <i className="building-level" title={lang ? 'Level being built' : 'Nivelul în construcție'}>
+                      → {lang ? 'Lv' : 'Nv'} {building.level}
+                    </i>
+                  </button>
+                );
               const label = ready
                 ? lang
                   ? 'Collect'
@@ -1185,6 +1206,21 @@ export default function World({
               );
             })
           ) : save.habitats[realm] ? (
+            <>
+            {save.construction && save.construction.target === `habitat:${realm}` && save.construction.endsAt > now && (
+              <button
+                className="production-bubble constructing habitat-building"
+                aria-label={lang ? 'Habitat being upgraded' : 'Habitat în construcție'}
+                style={{
+                  left: `${((768 + (1180 - 768) * zoom + cameraPan.x) / 1536) * 100}%`,
+                  top: `${((512 + (250 - 512) * zoom + cameraPan.y) / 1024) * 100}%`,
+                }}
+                onClick={() => onSelect('habitat')}
+              >
+                <Icon name="build" scale={1} /> {clock(save.construction.endsAt - now)}
+                <i className="building-level">→ {lang ? 'Lv' : 'Nv'} {save.construction.level}</i>
+              </button>
+            )}
             <button
               className="production-bubble habitat-gold"
               aria-label={lang ? `Collect ${availableGold} gold` : `Colectează ${availableGold} aur`}
@@ -1198,6 +1234,7 @@ export default function World({
               <Icon name="gold" scale={1} />
               <strong>{availableGold.toLocaleString(lang ? 'en-US' : 'ro-RO')}</strong>
             </button>
+            </>
           ) : null}
         </div>
       )}

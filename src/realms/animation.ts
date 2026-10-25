@@ -79,7 +79,8 @@ export function frameAt(clip: SpriteClip, elapsed: number) {
 const AVAILABLE = new Set<string>(inventory);
 const manifests = new Map<string, Promise<SpriteManifest | null>>();
 export function loadAnimation(species: Species, element: RealmId, stage: Stage) {
-  if (species === 'boss') return stage === 'adult' ? loadBossAnimation(element) : Promise.resolve(null);
+  // Bosses only have adult sprites; a young boss (hatched from its egg) uses them, drawn smaller by the caller.
+  if (species === 'boss') return loadBossAnimation(element);
   const id = `${species}_${element}_${stage}`;
   if (!AVAILABLE.has(id)) return Promise.resolve(null);
   return loadManifest(id);

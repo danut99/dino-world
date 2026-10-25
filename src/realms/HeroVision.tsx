@@ -91,7 +91,7 @@ export function HeroVision({ dino, lang, finish }: { dino: Dino; lang: number; f
           <div className="battle-unit enemy" data-motion={e.clip} style={e.style}><AnimatedDinosaur key={e.key} manifest={art.enemy} clip={e.clip} label={enemyName} bossElement={opponentElement} className="dinosaur-opponent" /></div>
         </>}
         {step?.impact && <div key={`impact-${index}`} className={`battle-impact on-${step.impact.on} kind-${step.impact.kind}`} aria-hidden="true">{step.impact.kind === 'guard' ? '🛡' : '✹'}</div>}
-        {step?.say?.map((c, i) => <div key={`${index}-${i}`} className={`battle-callout on-${c.on} kind-${c.kind}`} style={{ '--row': i } as CSSProperties}>{calloutText(c, c.on === 'ally' ? dino.nickname : enemyName, lang)}</div>)}
+        {step?.say?.map((c, i) => <div key={`${index}-${i}`} className={`battle-callout on-${c.on} kind-${c.kind}`} style={{ '--row': i } as CSSProperties}>{calloutText(c, lang)}</div>)}
       </div>
     </div>
     <div className="hero-vision-guide">

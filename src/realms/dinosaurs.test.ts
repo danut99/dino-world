@@ -4,7 +4,7 @@ import { isPlayableDinosaur } from './playableDinosaurs';
 import inventory from './animation-inventory.json';
 import { command, newSave, parseSave, QUEST_EGGS } from './game';
 import { ENCOUNTERS } from './content';
-import { opponentOf } from './GameplayScreens';
+import { arenaFoes } from './arenaTeams';
 
 describe('animated dinosaur catalog', () => {
   it('exposes only families with an animation manifest for every age', () => {
@@ -37,10 +37,8 @@ describe('animated dinosaur catalog', () => {
     expect(parseSave(JSON.stringify(loaded))).toEqual(loaded);
   });
   it('uses animated opponents and refuses purchases of retired families', () => {
-    for (const encounter of ENCOUNTERS) {
-      const d = opponentOf(encounter);
-      expect(isPlayableDinosaur(d.species, d.element)).toBe(true);
-    }
+    for (const encounter of ENCOUNTERS)
+      for (const d of arenaFoes(encounter.id)) expect(isPlayableDinosaur(d.species, d.element)).toBe(true);
     const now = 1_800_000_000_000;
     let s = command(newSave(now), { type: 'devResources' }, now);
     s = command(s, { type: 'build', kind: 'market', x: 6, y: 1 }, now);
@@ -53,7 +51,9 @@ describe('animated dinosaur catalog', () => {
     s.eggs = [];
     s.dinos = [{ id: 'old', species: 'ankylosaurus', element: 'fire', level: 10, stage: 'juvenile', nickname: 'Old' }];
     s.champion = 'old';
-    const fighting = command(s, { type: 'battle' }, now);
+    s.buildings.push({ id: 'arena', kind: 'arena', x: 1, y: 8 });
+    s.arenaTickets.fire = 1;
+    const fighting = command(s, { type: 'battle', encounterId: 'arena-fire-1' }, now);
     const loaded = parseSave(JSON.stringify(fighting));
     expect(loaded.dinos).toEqual([]);
     expect(loaded.champion).toBeNull();

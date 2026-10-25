@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const require = createRequire(import.meta.url);
-const { chromium } = require('C:/Users/Danut/.codex/dragon-preview-tools/node_modules/playwright');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const server = await createServer({ configLoader: 'runner', server: { host: '127.0.0.1', port: 5238 }, logLevel: 'error' });
 await server.listen(); let browser;
 try {
@@ -22,35 +22,38 @@ try {
     const s = newSave(Date.now());
     s.arenaLevel = 2;
     s.buildings.push({ id: 'arena', kind: 'arena', x: 7, y: 5 });
-    s.dinos = [{ id: 'boss-review-hero', species: 'trex', element: 'fire', stage: 'adult', level: 50, nickname: 'Ignis' }];
-    s.champion = s.dinos[0].id;
+    // Three level-50 bosses with no edge against the late leagues, so every Champion tier is won and its boss shows.
+    s.dinos = ['fire', 'water', 'earth'].map((element) => ({ id: `review-${element}`, species: 'boss', element, stage: 'adult', level: 50, rarity: 'legendary', nickname: element }));
+    s.team = s.dinos.map((d) => d.id);
+    s.champion = s.team[0];
     s.habitats = Object.fromEntries(ELEMENTS.map(e => [e.id, 1]));
-    s.cleared = ENCOUNTERS.filter(e => e.mode === 'arena' && !e.id.endsWith('-3')).map(e => e.id);
+    s.arenaTickets = Object.fromEntries(ELEMENTS.map(e => [e.id, 9]));
+    // Two stars on the first two tiers of every league open its Champion tier.
+    s.stars = Object.fromEntries(ENCOUNTERS.filter(e => !e.id.endsWith('-3')).map(e => [e.id, 3]));
+    s.cleared = Object.keys(s.stars);
     localStorage.setItem('dino-realms-save-v1', JSON.stringify(s));
     localStorage.setItem('dino-realms-current-world', 'home');
   });
   await page.reload();
   await fs.mkdir('output/arena-bosses', { recursive: true });
   await page.getByRole('button', { name: /PvE Arena/ }).click();
-  const elements = ['fire','water','earth','nature','ice','lightning'];
-  for (const element of elements) {
-    await page.locator(`.arena-leagues button`).nth(elements.indexOf(element)).click();
-    await page.locator('.arena-ladder button').nth(2).click();
-    const boss = page.locator(`.arena-lobby-enemy[data-boss="${element}"]`);
-    await boss.waitFor(); if (element === 'ice') await boss.evaluate(img => img.decode()); else await page.waitForFunction(e => Number(document.querySelector(`[data-boss="${e}"]`)?.getAttribute('data-frame')) > 0, element);
+  const elements = ['fire', 'water', 'earth', 'nature', 'ice', 'lightning', 'wind', 'dark', 'light', 'arcane'];
+  for (const [index, element] of elements.entries()) {
+    // League chips, then the Champion tier chip; the boss enters last in the lobby line-up.
+    await page.locator('.arena-league-chips button').nth(index).click();
+    await page.locator('.arena-tier-chips button').nth(2).click();
+    await page.locator(`.arena-foe-figure.boss canvas[data-boss="${element}"]`).waitFor();
     await page.screenshot({ path: `output/arena-bosses/${element}-lobby.jpg`, type: 'jpeg', quality: 78 });
     await page.locator('.adventure-start').click();
-    const enemy = page.locator(`.battle-unit.enemy [data-boss="${element}"]`);
-    await enemy.waitFor(); if (element === 'ice') await enemy.evaluate(img => img.decode()); else {
-      await page.waitForFunction(e => document.querySelector(`.battle-unit.enemy canvas[data-boss="${e}"]`)?.getAttribute('data-animation') === 'idle', element);
-      await page.getByRole('button', {name: /Basic/}).click();
-      await page.waitForFunction(e => document.querySelector(`.battle-unit.enemy canvas[data-boss="${e}"]`)?.getAttribute('data-animation') === 'hurt', element);
-      await page.waitForFunction(e => document.querySelector(`.battle-unit.enemy canvas[data-boss="${e}"]`)?.getAttribute('data-animation') === 'attack', element);
-      await page.waitForFunction(e => Number(document.querySelector(`.battle-unit.enemy canvas[data-boss="${e}"]`)?.getAttribute('data-frame')) > 0, element);
-    }
+    // A fight the forecast calls lost asks for a second click.
+    if (await page.locator('.adventure-start.armed').count()) await page.locator('.adventure-start').click();
+    await page.locator('.battle-unit.enemy').waitFor();
+    // The relay plays out at once; the boss is the last opponent on stage.
+    await page.getByRole('button', { name: /Skip/ }).click();
+    await page.locator(`.battle-unit.enemy canvas[data-boss="${element}"]`).waitFor();
     await page.screenshot({ path: `output/arena-bosses/${element}-battle.jpg`, type: 'jpeg', quality: 78 });
-    // Clear only this review fixture's battle to inspect the next league independently.
-    await page.evaluate(() => { const key = 'dino-realms-save-v1'; const s = JSON.parse(localStorage.getItem(key)); s.battle = null; s.rewardPending = false; localStorage.setItem(key, JSON.stringify(s)); });
+    // Clear only this review fixture's battle (and the team's rest) to inspect the next league independently.
+    await page.evaluate(() => { const key = 'dino-realms-save-v1'; const s = JSON.parse(localStorage.getItem(key)); s.battle = null; s.rewardPending = false; s.tired = {}; localStorage.setItem(key, JSON.stringify(s)); });
     await page.reload(); await page.getByRole('button', { name: /PvE Arena/ }).click();
   }
   assert.deepEqual(errors, []); assert.deepEqual(missing, []);

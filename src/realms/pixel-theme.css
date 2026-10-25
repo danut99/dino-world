@@ -5,6 +5,7 @@
  * afișate la 1 px de artă = 2 px CSS, mereu cu image-rendering: pixelated.
  */
 @import './ui/palette.css';
+@import './ui/ui-kit.css';
 
 @font-face {
   font-family: 'Realms Pixel';
@@ -61,49 +62,120 @@
   --frame-card-active: url('/realms/ui/card-active.png') 3 fill / 6px / 0 stretch;
   --frame-slot: url('/realms/ui/slot.png') 3 fill / 6px / 0 stretch;
   --frame-parchment: url('/realms/ui/parchment.png') 3 fill / 6px / 0 stretch;
-  font-family: 'Pixelify Sans', 'Realms Pixel', system-ui, sans-serif;
+  /* Două familii: pixel pentru titluri/cifre/decor, Barlow pentru tot textul de citit (are ă â î ș ț). */
+  --font-display: 'Pixelify Sans', 'Realms Pixel', system-ui, sans-serif;
+  --font-body: Barlow, system-ui, sans-serif;
+  /* Scrollbar: șină plum, cursor violet, mint la apăsare. */
+  --scroll-size: 10px;
+  --scroll-track: var(--px-dusk-4);
+  --scroll-thumb: var(--px-dusk-2);
+  --scroll-thumb-hi: var(--px-dusk-1);
+  --scroll-thumb-lo: var(--px-dusk-3);
+  --scroll-thumb-hover: var(--px-dusk-1);
+  --scroll-thumb-active: var(--px-gale-2);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.4;
   color: var(--ui-text);
+  -webkit-font-smoothing: antialiased;
 }
 .realms-app :is(h1, h2, h3, .realm-brand, .realm-brand b, .realm-resource strong) {
-  font-family: 'Pixelify Sans', 'Realms Pixel', sans-serif;
+  font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: 0;
 }
-.realms-app .realm-eyebrow {
-  font-family: 'Pixelify Sans', sans-serif;
+.realms-app :is(.realm-eyebrow, .gameplay-section-label) {
+  font-family: var(--font-display);
   font-weight: 600;
   letter-spacing: 0.08em;
+}
+.realms-app .realm-eyebrow {
   color: var(--px-amber-2);
 }
-/* Textul lung din wiki rămâne pe Barlow, pentru citire. */
+/*
+ * Fontul pixel rămâne pe elementele scurte, „de joc”: cifre din HUD, niveluri, stele, prețuri, timere,
+ * insigne, butoane și replicile/cifrele din luptă. Restul (paragrafe, descrieri, liste) e pe --font-body.
+ * `.font-display` / `.font-body` sunt utilitare pentru panourile noi.
+ */
+.realms-app :is(
+    .font-display,
+    .realm-nav > button > strong,
+    .realm-nav-toggle-label,
+    .realm-resource,
+    .realm-gems-chip,
+    .realm-account > span,
+    .realm-hud-menu-rank,
+    .dino-sheet-level,
+    .building-level,
+    .battle-round-badge,
+    .rarity-badge,
+    .edge-badge,
+    .result-stars,
+    .arena-tier-stars,
+    .build-cost,
+    .dino-sheet-cost,
+    .daily-reset,
+    .production-bubble,
+    .battle-callout,
+    .battle-command > strong,
+    .adventure-node > strong,
+    .map-caption,
+    .ui-tab,
+    .ui-pager,
+    .ui-card-value
+  ) {
+  font-family: var(--font-display);
+}
+.realms-app .font-body {
+  font-family: var(--font-body);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+/* Textul lung din wiki: Barlow, puțin mai aerisit. */
 .realms-app :is(.realms-wiki-layout article, .realms-wiki-layout article p) {
-  font-family: Barlow, system-ui, sans-serif;
+  font-family: var(--font-body);
 }
 
-/* Scrollbars match the square stone frames throughout the game. */
+/*
+ * Scrollbar pixel: 10 px, colțuri drepte. Șina e plum închis cu contur, cursorul violet cu reflex sus-stânga
+ * și umbră jos-dreapta; hover mai deschis, apăsat mint. Atenție: în Chrome ≥121, `scrollbar-width` /
+ * `scrollbar-color` pe un element dezactivează ::-webkit-scrollbar — de aceea fallback-ul stă în @supports.
+ */
 .realms-app ::-webkit-scrollbar {
-  width: 14px;
-  height: 14px;
+  width: var(--scroll-size);
+  height: var(--scroll-size);
 }
 .realms-app ::-webkit-scrollbar-track,
 .realms-app ::-webkit-scrollbar-corner {
-  background: var(--px-ui-4);
+  background: var(--scroll-track);
 }
 .realms-app ::-webkit-scrollbar-track {
-  border: 2px solid var(--px-outline);
+  border: 1px solid var(--px-outline);
+  border-radius: 0;
+  box-shadow: inset 1px 1px 0 var(--px-ui-5);
 }
 .realms-app ::-webkit-scrollbar-thumb {
-  min-height: 36px;
-  background: var(--px-stone-3);
-  border: 3px solid var(--px-ui-4);
+  min-height: 32px;
+  min-width: 32px;
+  background: var(--scroll-thumb);
+  border: 1px solid var(--px-outline);
   border-radius: 0;
-  box-shadow: inset 2px 2px 0 var(--px-stone-2), inset -2px -2px 0 var(--px-stone-5);
+  box-shadow:
+    inset 2px 2px 0 var(--scroll-thumb-hi),
+    inset -2px -2px 0 var(--scroll-thumb-lo);
 }
 .realms-app ::-webkit-scrollbar-thumb:hover {
-  background: var(--px-stone-2);
+  background: var(--scroll-thumb-hover);
+  box-shadow:
+    inset 2px 2px 0 var(--px-dusk-0),
+    inset -2px -2px 0 var(--px-dusk-2);
 }
 .realms-app ::-webkit-scrollbar-thumb:active {
-  background: var(--px-amber-2);
+  background: var(--scroll-thumb-active);
+  box-shadow:
+    inset 2px 2px 0 var(--px-gale-1),
+    inset -2px -2px 0 var(--px-gale-3);
 }
 .realms-app ::-webkit-scrollbar-button {
   display: none;
@@ -111,9 +183,10 @@
   height: 0;
 }
 @supports not selector(::-webkit-scrollbar) {
+  .realms-app,
   .realms-app * {
     scrollbar-width: thin;
-    scrollbar-color: var(--px-stone-3) var(--px-ui-4);
+    scrollbar-color: var(--scroll-thumb) var(--scroll-track);
   }
 }
 
@@ -128,7 +201,7 @@
 }
 
 /* ---------- rame ---------- */
-.realms-app :is(.realm-window, .realm-quest-body, .gameplay-sidebar, .adventure-detail, .realm-profile-card, .realm-dev) {
+.realms-app :is(.realm-window, .realm-quest-body, .adventure-detail, .realm-profile-card, .realm-dev) {
   background: none;
   background-color: transparent;
   border: 18px solid transparent;
@@ -185,22 +258,8 @@
 
 /* cartonașe și sloturi */
 .realms-app :is(
-    .realm-build-card,
-    .realm-realm-card,
-    .realm-collection-card,
-    .realm-egg-card,
-    .realm-egg-item,
-    .realm-character-card,
-    .realm-nest,
-    .realm-farm-upgrade,
-    .realm-plot,
-    .realm-habitat,
-    .realm-quest-list li,
     .craft-queue,
-    .gameplay-team-slots > div,
-    .realms-wiki-layout nav button,
-    .arena-ladder button,
-    .encounter-condition
+    .realms-wiki-layout nav button
   ) {
   background: none;
   background-color: transparent;
@@ -210,11 +269,8 @@
   box-shadow: none;
   border-radius: 0;
 }
-.realms-app :is(.realm-realm-card.active, .arena-ladder button.selected, .realms-wiki-layout nav button[aria-pressed='true'], .realm-collection-card.active) {
+.realms-app :is(.realms-wiki-layout nav button[aria-pressed='true']) {
   border-image: var(--frame-card-active);
-}
-.realms-app :is(.gameplay-team-slots > div:not(.occupied), .realm-nest.locked) {
-  border-image: var(--frame-slot);
 }
 
 /* ---------- butoane ---------- */
@@ -227,7 +283,7 @@
   border-radius: 0;
   color: var(--px-bone-0);
   text-shadow: 0 2px 0 var(--px-moss-4);
-  font-family: 'Pixelify Sans', sans-serif;
+  font-family: var(--font-display);
   font-weight: 600 !important;
   font-size: 15px !important;
   padding: 2px 12px 6px;
@@ -295,177 +351,8 @@
 }
 
 /* Workshop: readable cards instead of narrow, competing flex columns. */
-.realms-app .crafting-layout {
-  grid-template-columns: 180px minmax(0, 640px) 280px;
-  justify-content: center;
-  gap: 18px;
-  padding: 20px;
-  align-items: start;
-  overscroll-behavior: contain;
-}
-.realms-app .craft-workspace {
-  min-width: 0;
-}
-.realms-app .craft-parchment {
-  padding: 20px 16px;
-  background: #e2d3b2;
-}
-.realms-app .craft-parchment h2 {
-  margin: 8px 0 16px;
-}
-.realms-app .craft-transformation {
-  margin: 16px 0;
-}
 .realms-app .craft-queue {
   margin-top: 14px;
-}
-.realms-app .craft-use {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-  min-width: 0;
-  padding: 14px;
-  grid-column: auto;
-  align-items: stretch;
-}
-.realms-app .craft-use > .gameplay-section-label {
-  display: block;
-  padding: 4px 0 0;
-  border: 0;
-  text-align: left;
-}
-.realms-app .craft-use > p {
-  display: block;
-  margin: -6px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
-}
-.realms-app .realm-upgrade-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-  padding: 14px;
-  text-align: left;
-  min-width: 0;
-}
-.realms-app .realm-upgrade-details {
-  min-width: 0;
-}
-.realms-app .realm-upgrade-card .realm-eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.5px;
-  line-height: 1.6;
-}
-.realms-app .realm-upgrade-card ul {
-  margin: 12px 0;
-  gap: 8px;
-  line-height: 1.5;
-}
-.realms-app .realm-upgrade-card .realm-farm-costs {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
-}
-.realms-app .realm-upgrade-card .realm-farm-costs span {
-  padding: 7px 8px;
-  line-height: 1.4;
-}
-.realms-app .realm-upgrade-card > .realm-button {
-  width: 100%;
-  min-height: 44px;
-  margin: 0;
-  padding: 4px 10px;
-  font-size: 14px !important;
-}
-.realms-app .craft-use > .craft-item-card {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  gap: 8px 12px;
-  padding: 14px 0 0;
-  border-top: 2px solid var(--px-stone-4);
-  text-align: left;
-  min-width: 0;
-}
-.realms-app .craft-item-card > span {
-  display: block;
-  grid-row: 1 / 3;
-  margin: 0;
-  font-size: 28px;
-  text-align: center;
-}
-.realms-app .craft-item-card > strong {
-  align-self: center;
-  font-size: 13px;
-  line-height: 1.4;
-}
-.realms-app .craft-item-card > p {
-  grid-column: 2;
-  font-size: 12px;
-  line-height: 1.5;
-  margin: 0;
-}
-.realms-app .craft-item-card > .realm-button {
-  grid-column: 1 / -1;
-  width: 100%;
-  min-height: 44px;
-  padding: 4px 10px;
-  font-size: 13px !important;
-}
-@media (max-width: 1200px) {
-  .realms-app .crafting-layout {
-    grid-template-columns: 160px minmax(0, 1fr);
-  }
-  .realms-app .craft-use {
-    grid-column: 1 / -1;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .realms-app .craft-use > .realm-upgrade-card,
-  .realms-app .craft-use > .gameplay-section-label,
-  .realms-app .craft-use > p {
-    grid-column: 1 / -1;
-  }
-}
-@media (max-width: 760px) {
-  .realms-app .crafting-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding: 12px;
-  }
-  .realms-app .craft-workspace {
-    order: 0;
-    width: 100%;
-  }
-  .realms-app .craft-inventory {
-    order: 1;
-    width: 100%;
-    min-width: 0;
-  }
-  .realms-app .craft-material-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .realms-app .craft-material-grid small {
-    font-size: 10px;
-    overflow-wrap: anywhere;
-  }
-  .realms-app .craft-use {
-    order: 2;
-    width: 100%;
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .realms-app .craft-parchment {
-    padding: 20px 12px;
-  }
-  .realms-app .craft-recipe-tabs {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .realms-app .craft-recipe-tabs button {
-    min-width: 0;
-    min-height: 44px;
-    font-size: 12px;
-    padding: 8px;
-  }
 }
 
 .realms-app .production-bubble.habitat-gold {
@@ -510,59 +397,6 @@
   .realms-app .realm-back-to-hatchery {
     width: 100%;
   }
-}
-.realms-app .realm-realms-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
-}
-.realms-app .realm-realm-card {
-  display: flex;
-  flex-direction: column;
-  padding: 12px;
-  min-width: 0;
-  cursor: default;
-}
-.realms-app .realm-world-entry {
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: center;
-}
-.realms-app .realm-world-entry small {
-  font-size: 12px;
-  letter-spacing: 0;
-  line-height: 1.5;
-}
-.realms-app .realm-world-enter-label {
-  display: block;
-  margin: 10px 0;
-  color: var(--px-amber-1);
-}
-.realms-app .realm-world-upgrade {
-  display: grid;
-  gap: 10px;
-  margin-top: auto;
-  padding-top: 14px;
-  border-top: 2px solid var(--px-stone-4);
-  text-align: left;
-  font-size: 12px;
-  line-height: 1.5;
-}
-.realms-app .realm-world-upgrade small {
-  font-size: 12px;
-  letter-spacing: 0;
-}
-.realms-app .realm-world-upgrade .realm-button {
-  width: 100%;
-  min-height: 44px;
-  padding: 4px;
-  font-size: 13px !important;
-}
-.realms-app .realm-world-upgrade .realm-link {
-  min-height: 44px;
-  padding: 4px;
-  line-height: 1.5;
 }
 .realms-app .realm-offline-strip {
   top: 94px;
@@ -761,6 +595,8 @@
 }
 .realms-app .realm-quest-body p {
   color: var(--ui-text-soft);
+  font-size: 13px;
+  line-height: 1.45;
 }
 .realms-app .realm-quest-body h2 {
   color: var(--px-bone-0);
@@ -792,8 +628,6 @@
   background: transparent;
   text-shadow: 1px 1px 0 #17151f, 0 1px 3px #17151fcc;
 }
-.realms-app .realm-building-shortcuts button,
-.realms-app .realm-island-badge,
 .realms-app .realm-placement,
 .realms-app .realm-offline-strip,
 .realms-app .realm-world-hint,
@@ -834,12 +668,12 @@
   box-shadow: inset 0 -2px 0 var(--px-stone-3);
 }
 .realms-app .battle-command > strong {
-  font-family: 'Pixelify Sans', sans-serif;
+  font-family: var(--font-display);
   font-size: 17px;
 }
 
 /* sprite-urile pixel nu se netezesc niciodată */
-.realms-app :is(.dinosaur-art, .realm-hero, .arena-lobby-enemy, .animated-dinosaur, .realm-world-thumbnail, .destination-cover) {
+.realms-app :is(.dinosaur-art, .realm-hero, .animated-dinosaur, .destination-cover) {
   image-rendering: pixelated;
 }
 .realms-app .dinosaur-art {
@@ -914,35 +748,11 @@
 }
 
 /* arena: ligile pe un rând deasupra, titlul sub ele — nu se mai suprapun */
-.realms-app .arena-leagues {
-  left: 14px;
-  right: 14px;
-  max-width: none;
-  justify-content: center;
-}
-.realms-app .arena-leagues button {
-  background: var(--px-ui-4);
-  border: 2px solid var(--px-outline);
-  border-left: 4px solid var(--league-color);
-  color: var(--px-bone-1);
-}
-.realms-app .arena-challenge-title {
-  top: 64px;
-}
 .realms-app .realm-collect.empty {
   opacity: 0.6;
 }
 /* eticheta locuitorilor dintr-o lume stă deasupra barei de jos, nu peste ea */
 @media (min-width: 761px) {
-  .realms-app .world-resident-book {
-    bottom: 94px;
-    max-height: 60px;
-    overflow-y: auto;
-  }
-  .realms-app .realm-building-shortcuts {
-    top: auto;
-    bottom: 166px;
-  }
   /* compact bottom bar; 9px = the frame's native 1x pixel size */
   .realms-app .realm-nav {
     bottom: 12px;
@@ -1075,13 +885,6 @@
     margin-top: 2px;
   }
 }
-.realms-app .world-resident-book {
-  background: none;
-  border: 6px solid transparent;
-  border-image: var(--frame-card);
-  image-rendering: pixelated;
-  color: var(--ui-text);
-}
 /* ouăle PixelLab: un ou pe tărâm; .hatching rulează foaia de eclozare (13 cadre pe orizontală) */
 .realms-app .realm-egg {
   position: relative;
@@ -1116,9 +919,6 @@
   }
 }
 /* oul PixelLab își are cuibul lui de pietre: patul de paie rămâne doar la cuiburile goale */
-.realms-app .realm-nest:is(.ready, .warming) .realm-nest-bed {
-  display: none;
-}
 
 @media (min-width: 761px) and (min-height: 501px) {
   .realms-app .realm-quest-body {
@@ -1140,10 +940,6 @@
   }
   .realms-app .realm-offline-strip .realm-button { min-height: 44px; white-space: normal; }
   .realms-app:has(.realm-offline-strip) .realm-quest { visibility: hidden; }
-  .realms-app .crafting-layout { justify-content: flex-start; }
-  .realms-app .crafting-layout > * { flex: 0 0 auto; box-sizing: border-box; min-width: 0; }
-  .realms-app .craft-recipe-tabs { overflow: visible; flex-wrap: wrap; }
-  .realms-app .craft-recipe-tabs button { white-space: normal; overflow-wrap: anywhere; }
 }
 
 /* Mobile adventures use normal document flow so artwork cannot cover controls. */
@@ -1187,18 +983,6 @@
   .realms-app .adventure-node > strong { padding: 0; margin: 0; border: 0; background: none; white-space: normal; font-size: 12px; overflow-wrap: anywhere; }
   .realms-app .adventure-node > strong small { font-size: 10px; line-height: 1.5; }
   .realms-app .arena-lobby-scene { display: flex; flex-direction: column; container-type: normal; height: auto; min-height: 0; padding: 12px; gap: 14px; overflow: visible; border: 0; }
-  .realms-app .arena-leagues { position: static; order: -2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; margin: 0; gap: 6px; }
-  .realms-app .arena-leagues button { min-height: 44px; min-width: 0; padding: 8px; font-size: 12px; }
-  .realms-app .arena-leagues button small { margin-left: auto; }
-  .realms-app .arena-lobby-scene .arena-challenge-title { position: static; order: -1; padding: 12px; background: #2f2520ed; }
-  .realms-app .arena-challenge-title h2 { margin: 6px 0; }
-  .realms-app .arena-challenge-title p { margin: 6px 0 0; }
-  .realms-app .arena-preview-stage { position: relative; inset: auto; width: 100%; height: 200px; flex: 0 0 200px; container-type: size; border: 1px solid #786044; }
-  .realms-app .arena-preview-stage .arena-lobby-enemy.realm-hero { width: 55%; height: 80%; left: 22.5%; bottom: 8%; }
-  .realms-app .arena-ladder { position: static; display: grid; grid-template-columns: 1fr; gap: 8px; }
-  .realms-app .arena-ladder button { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; min-height: 60px; padding: 10px; text-align: left; }
-  .realms-app .arena-ladder strong { font-size: 13px; }
-  .realms-app .arena-ladder span { font-size: 14px; }
   .realms-app .arena-lobby-scene:has(.arena-embedded-battle) { height: max(540px, 85dvh); padding: 0; }
 }
 
@@ -1235,4 +1019,20 @@
   .realms-app .realm-nav > button.realm-nav-toggle[aria-expanded] > .realm-nav-toggle-label {
     font-size: 9px;
   }
+}
+
+/* A building being upgraded: the builder's countdown over it (see World.tsx). */
+.realms-app .production-bubble.constructing {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--px-amber-0);
+  background: #5a3512ee;
+  border-color: var(--px-amber-1);
+}
+.realms-app .production-bubble.constructing::after {
+  border-color: var(--px-amber-1);
+}
+.realms-app .production-bubble.constructing .building-level {
+  color: var(--px-amber-0);
 }

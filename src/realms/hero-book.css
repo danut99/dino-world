@@ -1,87 +1,104 @@
-.hero-book { color:#e8dcc4; }
-.hero-book-summary { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:18px; border-bottom:1px solid #6b593d; }
-.hero-book-summary > div > small { font-size:9px; letter-spacing:2px; color:#bda06a; }
-.realms-app .realm-window .hero-book-summary h2 { display:block; background:none; border:0; border-image:none; padding:0; font-size:25px; margin:9px 0 0; line-height:1.4; }
-.hero-book-progress { flex:0 0 150px; }
-.hero-book-progress strong { font-size:23px; color:#edd197; }
-.hero-book-progress strong span { color:#9f947d; font-size:14px; }
-.hero-book-progress progress { appearance:none; display:block; height:5px; width:100%; margin:8px 0 5px; background:#423b2b; border:0; }
-.hero-book-progress progress::-webkit-progress-bar { background:#423b2b; }
-.hero-book-progress progress::-webkit-progress-value { background:#cfb16e; }
-.hero-book-progress progress::-moz-progress-bar { background:#cfb16e; }
-.hero-book-progress small { color:#b8ac94; font:12px Barlow,sans-serif; }
-.hero-book-layout { display:grid; grid-template-columns:150px minmax(0,1fr); gap:22px; margin-top:18px; }
-.hero-elements { display:flex; flex-direction:column; gap:5px; }
-.hero-elements button { display:flex; align-items:center; gap:8px; padding:9px 8px; min-height:44px; background:#29261f; color:#bfb49e; border:1px solid #534934; border-left:3px solid transparent; text-align:left; font-size:11px; }
-.hero-elements button > span:not(.px-icon) { flex:1; }
-.hero-elements button small { color:#a4977d; font-size:9px; }
-.hero-elements button[aria-pressed=true] { border-color:var(--tab-color); background:#41382a; color:#f5e6c6; box-shadow:inset 2px 0 var(--tab-color); }
-.hero-book-page { min-width:0; }
-.hero-element-title { display:flex; align-items:center; gap:14px; padding:0 0 16px; border-bottom:1px solid #574e3d; }
-.hero-element-seal { display:grid; place-items:center; flex:0 0 62px; height:62px; border:1px solid var(--hero-element); background:radial-gradient(#4a4030,#282820); }
-.hero-element-title small { font-size:9px; letter-spacing:1.5px; color:#a89b81; }
-.realms-app .realm-window .hero-element-title h3 { font-size:24px; margin:4px 0; color:var(--hero-element); }
-.realms-app .realm-window .hero-element-title p { font:13px Barlow,sans-serif; margin:0; color:#c0b397; }
-.hero-book-controls { display:flex; justify-content:space-between; gap:10px; align-items:center; margin:16px 0; }
-.hero-stage-tabs { display:flex; gap:4px; }
-.hero-stage-tabs button { min-height:44px; border:1px solid #66563c; background:#2b271f; color:#baa98a; font-size:11px; padding:8px 12px; }
-.hero-stage-tabs button[aria-pressed=true] { border-color:#d6b573; background:#4c3b23; color:#ffe2a2; }
-.hero-book-controls label { display:flex; align-items:center; gap:5px; font:12px Barlow,sans-serif; color:#b7ad98; min-height:44px; }
-.hero-book-controls input { accent-color:#bd9c59; width:16px; height:16px; }
-.hero-book-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
-.hero-specimen { min-width:0; border:1px solid #716047; background:#30291f; box-shadow:0 4px #191712; overflow:hidden; }
-.hero-specimen.discovered { border-color:#b99c61; }
-.hero-specimen-art { position:relative; display:grid; place-items:center; height:205px; background:radial-gradient(ellipse at 50% 65%,#474538,#222820 75%); overflow:hidden; border-bottom:1px solid #645536; }
-.hero-art-halo { position:absolute; bottom:28px; width:120px; height:40px; border:1px solid var(--hero-element); opacity:.25; border-radius:50%; background:var(--hero-element); box-shadow:0 0 30px var(--hero-element); }
-.hero-book .hero-specimen-art .dinosaur-art { position:relative; width:100%; height:175px; object-fit:contain; margin:10px 0 12px; z-index:1; }
-.hero-specimen-number { position:absolute; left:10px; top:10px; font-size:10px; color:#9f967f; }
-.hero-specimen-status { position:absolute; right:9px; top:10px; font-size:9px; color:#b9ae96; }
-.discovered .hero-specimen-status { color:#d5bd7e; }
-.hero-specimen-stage { position:absolute; bottom:8px; font-size:9px; color:#b9b59c; letter-spacing:1px; }
-.hero-specimen-info { padding:16px; }
-.realms-app .realm-window .hero-specimen-info h3 { font-size:20px; margin:0 0 7px; }
-.hero-role { display:flex; align-items:center; gap:6px; color:var(--hero-element); font:13px Barlow,sans-serif; }
-.realms-app .realm-window .hero-source { font:12px/1.5 Barlow,sans-serif; color:#b4a890; min-height:34px; margin:12px 0 10px; }
-.hero-book-action { display:flex; width:100%; align-items:center; justify-content:space-between; gap:8px; min-height:44px; padding:10px 12px; background:#594a2c; border:1px solid #c4a463; color:#ffe7b0; font-size:12px; }
-.hero-book-action.secondary { border-color:#736044; background:#352e24; color:#cfb887; }
-.hero-book-action:hover { filter:brightness(1.15); }
-.realms-app .realm-window .hero-book-note { color:#9e947d; font:12px/1.7 Barlow,sans-serif; padding:14px 0 0; margin:12px 0 0; }
-.hero-book-empty { padding:28px; border:1px dashed #7b6845; text-align:center; }
-.hero-book-empty .hero-book-action { width:auto; margin:auto; }
-@media(max-width:760px) {
-  .hero-book-summary { gap:12px; align-items:flex-start; }
-  .realms-app .realm-window .hero-book-summary h2 { font-size:19px; }
-  .hero-book-progress { flex-basis:100px; }
-  .hero-book-summary > div > small { font-size:8px; letter-spacing:1px; }
-  .hero-book-layout { grid-template-columns:minmax(0,1fr); gap:14px; }
-  .hero-elements { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; }
-  .hero-elements button { position:relative; flex-direction:column; padding:8px 2px; gap:4px; font-size:9px; min-width:0; }
-  .hero-elements button small { display:none; }
-  .hero-elements button > span:not(.px-icon) { flex:0; max-width:100%; overflow-wrap:anywhere; }
-  .hero-element-title { padding-bottom:10px; }
-  .hero-element-seal { flex-basis:48px; height:48px; }
-  .hero-book-controls { margin:10px 0; flex-wrap:wrap; gap:4px; }
-  .hero-stage-tabs button { padding:8px 10px; }
-  .hero-book-cards { gap:8px; }
-  .hero-specimen-art { height:150px; }
-  .hero-book .hero-specimen-art .dinosaur-art { height:130px; }
-  .hero-specimen-number { left:6px; font-size:8px; }
-  .hero-specimen-status { top:26px; right:6px; font-size:8px; }
-  .hero-specimen-info { padding:10px; }
-  .realms-app .realm-window .hero-specimen-info h3 { font-size:16px; overflow-wrap:anywhere; }
-  .hero-role { font-size:12px; }
-  .hero-book-action { font-size:10px; padding:8px; }
-  .realms-app .realm-window .hero-source { min-height:50px; font-size:11px; }
+/* The collection album: progress on top, element filter, a paged grid of cards (silhouettes until discovered). */
+.realms-app .hero-book {
+  --fit-rows: auto auto minmax(0, 1fr) auto;
 }
-@media(max-width:420px) {
-  .hero-book-summary { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; padding-bottom:12px; }
-  .realms-app .realm-window .hero-book-summary h2 { font-size:17px; margin-top:6px; }
-  .hero-book-progress { display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:12px; align-items:center; }
-  .hero-book-progress strong { grid-row:1 / 3; font-size:20px; }
-  .hero-book-progress progress { margin:0 0 3px; }
-  .hero-book-progress small { font-size:9px; }
-  .hero-elements button { min-height:46px; padding:6px 2px; }
-  .hero-elements button > span:not(.px-icon) { display:none; }
-  .hero-specimen-art { height:135px; }
-  .hero-book .hero-specimen-art .dinosaur-art { height:115px; }
+.realms-app .hero-book .pk-head-text .pk-meter {
+  margin-top: 3px;
+}
+.realms-app .hero-filter .pk-chip[aria-pressed='true'] {
+  box-shadow: inset 0 -3px 0 var(--tab-color, var(--px-amber-1)), inset 2px 2px 0 var(--px-dusk-1);
+}
+.realms-app .hero-filter .hero-filter-name {
+  display: none;
+}
+.realms-app .hero-filter .pk-chip[aria-pressed='true'] .hero-filter-name {
+  display: inline;
+}
+.realms-app .hero-cards {
+  --paged-min: 150px;
+  --paged-row: 196px;
+}
+.realms-app .hero-card {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px 6px 6px;
+  font: inherit;
+  text-align: center;
+  color: var(--px-bone-2);
+  cursor: pointer;
+  background: none;
+  border: 6px solid transparent;
+  border-image: var(--frame-card);
+  image-rendering: pixelated;
+}
+.realms-app .hero-card:hover {
+  filter: brightness(1.1);
+}
+.realms-app .hero-card.known {
+  border-image: var(--frame-card-active);
+}
+.realms-app .hero-card-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 70%, color-mix(in srgb, var(--hero-element) 30%, #2a2620), #1b1813 75%);
+  border: 2px solid var(--px-outline);
+}
+.realms-app .hero-card-art .dinosaur-art {
+  position: absolute;
+  inset: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  object-fit: contain;
+}
+.realms-app .hero-card:not(.known) .hero-card-art .dinosaur-art {
+  filter: brightness(0) drop-shadow(0 0 1px #7a6a5a);
+  opacity: 0.75;
+}
+.realms-app .hero-card-tag {
+  position: absolute;
+  z-index: 1;
+  left: 4px;
+  top: 3px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--px-bone-3);
+}
+.realms-app .hero-card.boss .hero-card-tag {
+  color: var(--px-amber-1);
+}
+.realms-app .hero-card > strong {
+  overflow: hidden;
+  font-size: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--px-bone-0);
+}
+.realms-app .hero-card:not(.known) > strong {
+  font-family: var(--font-display);
+  color: var(--px-stone-1);
+}
+.realms-app .hero-card > small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--px-bone-3);
+}
+@media (max-height: 500px) {
+  .realms-app .hero-cards {
+    --paged-min: 120px;
+    --paged-row: 150px;
+  }
+  .realms-app .hero-card > small {
+    font-size: 11px;
+  }
 }

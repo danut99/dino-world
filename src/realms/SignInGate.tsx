@@ -94,8 +94,9 @@ export default function SignInGate() {
       if (!name) return { phase: 'name' } as const;
       const remote = await fetchCloudSave(userId);
       const legacy = readLegacySave();
-      if (!legacy) return { phase: 'ready', owner: userId, anonymous, name, save: remote?.save ?? newSave(Date.now()), marker: remote?.updatedAt ?? null, unsaved: !remote } as const;
-      if (planSync(legacy, remote, guestOwner.current === userId) === 'download' && remote) {
+      // A cloud row from an older schema starts a new game, uploaded at once so the row moves to the new schema.
+      if (!legacy) return { phase: 'ready', owner: userId, anonymous, name, save: remote?.save ?? newSave(Date.now()), marker: remote?.updatedAt ?? null, unsaved: !remote || !!remote.outdated } as const;
+      if (planSync(legacy, remote, guestOwner.current === userId) === 'download' && remote && !remote.outdated) {
         clearLegacySave();
         return { phase: 'ready', owner: userId, anonymous, name, save: remote.save, marker: remote.updatedAt, unsaved: false } as const;
       }

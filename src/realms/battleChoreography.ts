@@ -1,8 +1,8 @@
 import type { Clip, SpriteManifest } from './animation';
-import type { RoundReport } from './game';
+import type { AllyMove, RoundReport } from './game';
 
-/** Actions the battle reducer understands; `skill` has no clip and is no longer offered in the UI. */
-export type BattleAction = 'basic' | 'skill' | 'defend' | 'ultimate';
+/** Actions the battle reducer understands. */
+export type BattleAction = AllyMove;
 export type Unit = 'ally' | 'enemy';
 export type Impact = { on: Unit; kind: 'hit' | 'guard' | 'ultimate' | 'reflect' };
 /** An on-screen announcement over one fighter: what just happened to it, with the damage when there is some. */
@@ -20,6 +20,8 @@ export type Step = {
   impact?: Impact;
   say?: Callout[];
   dodge?: Unit;
+  /** A relay entrance: the new fighter of this side walks in. */
+  enter?: Unit | 'both';
 };
 export type Fighter = { clips: Set<Clip>; ms: (clip: Clip) => number; impactMs: (clip: Clip) => number };
 
@@ -56,6 +58,19 @@ export function rest(alive: { ally: boolean; enemy: boolean }): Step {
 export function entrance(ally: Fighter, enemy: Fighter, alive: { ally: boolean; enemy: boolean }): Step[] {
   const ms = Math.max(ally.clips.has('walk') ? ally.ms('walk') : 900, enemy.clips.has('walk') ? enemy.ms('walk') : 900);
   return [{ ally: 'walk', enemy: 'walk', ms: Math.min(ms, 1600) }, rest(alive)];
+}
+
+/**
+ * The relay: the next fighter of `side` (or of both sides) walks in while the other holds its ground. Played after
+ * a round whose report has a `swap`, once the newcomer's sprite is loaded.
+ */
+export function swapEntrance(side: Unit | 'both', ally: Fighter, enemy: Fighter, alive: { ally: boolean; enemy: boolean }): Step[] {
+  const walks = (unit: Unit) => side === 'both' || side === unit;
+  const ms = Math.max(
+    walks('ally') ? (ally.clips.has('walk') ? ally.ms('walk') : 900) : 0,
+    walks('enemy') ? (enemy.clips.has('walk') ? enemy.ms('walk') : 900) : 0,
+  );
+  return [{ ally: walks('ally') ? 'walk' : 'idle', enemy: walks('enemy') ? 'walk' : 'idle', ms: Math.min(ms, 1600), enter: side }, rest(alive)];
 }
 
 /**
@@ -119,6 +134,7 @@ export function exchange(r: RoundReport, ally: Fighter, enemy: Fighter, alive: {
       enemy: blow,
       ms: Math.max(enemy.ms(blow) - windup, !alive.ally ? ally.ms('death') : guard || r.dodged ? MIN_BEAT_MS : ally.ms('hurt'), MIN_BEAT_MS),
       reveal: 'ally',
+      revealHp: r.hpAfter,
       impact: r.dodged ? undefined : { on: 'ally', kind: guard ? 'guard' : foeUlt ? 'ultimate' : 'hit' },
       dodge: r.dodged ? 'ally' : undefined,
       say: r.dodged
@@ -135,6 +151,7 @@ export function exchange(r: RoundReport, ally: Fighter, enemy: Fighter, alive: {
         enemy: hit,
         ms: Math.max(enemy.ms(hit), MIN_BEAT_MS),
         reveal: 'enemy',
+        revealHp: r.enemyAfter,
         impact: { on: 'enemy', kind: 'reflect' },
         say: [{ on: 'enemy', kind: 'reflect', amount: r.reflected }, ...(!alive.enemy ? [{ on: 'enemy', kind: 'ko' } as Callout] : [])],
       });

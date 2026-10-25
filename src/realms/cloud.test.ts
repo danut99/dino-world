@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { newSave, type Save } from './game';
 import { isFreshSave, planSync } from './cloud';
 
 const fresh = () => newSave(0);
 const played = (): Save => ({
   ...newSave(0),
-  dinos: [{ id: 'ignis', species: 'trex', element: 'fire', level: 5, stage: 'juvenile', nickname: 'Ignis' }] as Save['dinos'],
+  dinos: [{ id: 'ignis', species: 'trex', element: 'fire', level: 10, stage: 'juvenile', nickname: 'Ignis' }] as Save['dinos'],
+  champion: 'ignis',
+  team: ['ignis'],
 });
 const remote = (save: Save, updatedAt = '2026-10-24T10:00:00+00:00') => ({ save, updatedAt });
 
@@ -69,5 +71,36 @@ describe('guest names', () => {
     for (const n of names) expect(validName(n), n).toBe(true);
     expect(new Set(names).size).toBeGreaterThan(300);
     expect(randomGuestName(() => 0)).toBe('Raptor Curajos 100');
+  });
+});
+
+describe('saves from before the v6 reset', () => {
+  it('turn a cloud row into a new game that is uploaded over it', async () => {
+    const old = { ...played(), schemaVersion: 5 };
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_KEY', 'sb_publishable_test');
+    const row = { data: old as unknown, updated_at: '2026-10-24T10:00:00+00:00' };
+    const query = { select: () => query, eq: () => query, maybeSingle: async () => ({ data: row, error: null }) };
+    vi.doMock('@supabase/supabase-js', () => ({ createClient: () => ({ from: () => query }) }));
+    vi.resetModules();
+    try {
+      const { fetchCloudSave, planSync } = await import('./cloud');
+      const { newerSave } = await import('./useCloudSync');
+      const remote = (await fetchCloudSave('user'))!;
+      expect(remote).toMatchObject({ outdated: true, updatedAt: row.updated_at });
+      expect(remote.save).toMatchObject({ schemaVersion: 6, dinos: [] });
+      // An outdated row never wins, whatever its time: the new game replaces it.
+      expect(newerSave({ ...newSave(0), updatedAt: 0 }, remote)).toBe('local');
+      expect(planSync(fresh(), remote)).toBe('upload');
+      // A valid v6 row is read as usual; a broken one is still an error.
+      row.data = played();
+      expect(await fetchCloudSave('user')).toEqual({ save: played(), updatedAt: row.updated_at });
+      row.data = { ...played(), gold: -1 };
+      await expect(fetchCloudSave('user')).rejects.toThrow('Invalid save');
+    } finally {
+      vi.doUnmock('@supabase/supabase-js');
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
   });
 });

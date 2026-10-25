@@ -9,7 +9,7 @@ try {
   ({ chromium } = require('playwright'));
 } catch {
   ({ chromium } = require(
-    process.env.PLAYWRIGHT_MODULE ?? 'C:/Users/Danut/.codex/dragon-preview-tools/node_modules/playwright',
+    process.env.PLAYWRIGHT_MODULE ?? 'playwright',
   ));
 }
 const server = await createServer({

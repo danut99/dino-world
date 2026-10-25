@@ -1,49 +1,245 @@
-.farm-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); gap:20px; margin:18px 0; align-items:start; }
-.farm-field, .farm-seeds { min-width:0; padding:16px; border:1px solid #655b3e; background:#29281f; }
-.farm-field { background:radial-gradient(ellipse at 50% 20%,#35402b,#27281f); }
-.farm-section-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
-.realms-app .realm-window .farm-section-title h3 { font-size:17px; margin:0; }
-.farm-section-title small { color:#b8ad88; font:12px Barlow,sans-serif; }
-.realms-app .realm-farm .realm-farm-plots { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
-.realms-app .realm-farm .realm-plot { min-width:0; min-height:115px; padding:10px 4px; }
-.realms-app .realm-farm .realm-plot strong { font-size:12px; overflow-wrap:anywhere; }
-.realms-app .realm-farm .realm-farm-crops { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
-.realms-app .realm-farm .realm-crop { width:100%; min-width:0; min-height:68px; padding:10px 8px; gap:8px; text-align:left; box-sizing:border-box; }
-.realm-farm .realm-crop.selected { border-color:#dcc07a; background:#4b3c27; box-shadow:inset 3px 0 #d8b86c; }
-.realm-farm .realm-crop-body { min-width:0; }
-.realm-farm .realm-crop-body strong { font-size:12px; overflow-wrap:anywhere; }
-.realm-farm .realm-crop-body small { font:11px/1.5 Barlow,sans-serif; margin-top:4px; }
-.farm-plant-selection { padding-top:16px; margin-top:16px; border-top:1px solid #6a5a3b; }
-.farm-plant-selection > strong { font-size:15px; color:#eed4a0; }
-.farm-crop-facts { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; font:12px/1.7 Barlow,sans-serif; color:#b3a68c; margin:10px 0; }
-.farm-crop-facts b { color:#e6cea0; }
-.farm-plant-button { width:100%; min-height:44px; white-space:normal; }
-.realms-app .realm-window .farm-busy-note { font:12px/1.6 Barlow,sans-serif; color:#c9ac85; }
-.realms-app .realm-farm > .realm-farm-upgrade { display:grid; grid-template-columns:minmax(0,1fr) 260px; align-items:start; gap:20px; padding:18px; }
-.farm-upgrade-actions { min-width:0; }
-.farm-upgrade-actions .realm-button { width:100%; min-height:44px; }
-.realm-farm .realm-farm-harvest { width:100%; min-height:44px; margin-top:12px; white-space:normal; }
-.realms-app .realm-farm > .realm-farm-upgrade { margin-top:0; }
-@media(min-width:761px) {
-  .farm-layout { margin:14px 0; gap:16px; }
-  .realms-app .realm-farm .realm-plot { min-height:95px; }
-  .realms-app .realm-farm .realm-crop { min-height:58px; }
-  .farm-plant-selection { padding-top:12px; margin-top:12px; }
-  .realms-app .realm-farm > .realm-farm-upgrade { padding:12px 16px; }
+/* The farm as a fixed-height panel: plots on one row, the six crops on a strip, the plant bar; upgrade on a tab. */
+.realms-app .farm-panel {
+  --fit-rows: auto auto minmax(0, 1fr);
 }
-@media(max-width:760px) {
-  .realm-farm .realm-farm-head { display:grid; grid-template-columns:48px minmax(0,1fr); gap:10px; padding:12px; }
-  .realm-farm .realm-farm-head > .realm-link { grid-column:1 / -1; justify-self:end; min-height:32px; }
-  .realm-farm .realm-farm-head > div { min-width:0; }
-  .realm-farm .realm-farm-head strong { font-size:13px; }
-  .realm-farm .realm-farm-head small { font-size:10px; }
-  .realms-app .realm-window .farm-section-title h3 { font-size:15px; }
-  .farm-section-title small { font-size:10px; text-align:right; }
-  .farm-layout { grid-template-columns:minmax(0,1fr); gap:12px; margin:12px 0; }
-  .farm-field, .farm-seeds { padding:12px; }
-  .realms-app .realm-farm .realm-plot { min-height:90px; }
-  .realms-app .realm-farm > .realm-farm-upgrade { grid-template-columns:minmax(0,1fr); gap:10px; padding:14px; }
-  .farm-section-title { align-items:flex-start; }
-  .realms-app .realm-farm .realm-crop { gap:6px; padding:8px 5px; }
-  .realms-app .realm-farm .realm-crop-icon { font-size:20px; flex:0 0 23px; }
+.realms-app .farm-field {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+.realms-app .farm-plots {
+  display: grid;
+  grid-template-columns: repeat(var(--plots, 6), minmax(0, 1fr));
+  gap: 8px;
+  min-height: 0;
+  max-height: 300px;
+  padding: 8px;
+  background: radial-gradient(ellipse at 50% 20%, #35402b, #27281f);
+  border: 2px solid var(--px-outline);
+  box-shadow: inset 0 0 0 2px #4a5636;
+}
+.realms-app .farm-plot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px 4px;
+  overflow: hidden;
+  font: inherit;
+  text-align: center;
+  color: var(--px-bone-1);
+  background: #4a2e22;
+  border: 2px solid var(--px-outline);
+  box-shadow: inset 0 0 0 2px #6e4430, inset 0 -6px 0 #3a2219;
+}
+.realms-app .farm-plot > span {
+  font-size: 26px;
+  line-height: 1;
+}
+.realms-app .farm-plot strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.realms-app .farm-plot small {
+  font-size: 13px;
+  color: var(--px-bone-2);
+}
+.realms-app .farm-plot .pk-meter {
+  width: 85%;
+}
+.realms-app .farm-plot.empty {
+  cursor: pointer;
+  background: #3a2e27;
+  box-shadow: inset 0 0 0 2px #574a40;
+  border-style: dashed;
+}
+.realms-app .farm-plot.empty.on {
+  border-color: var(--px-amber-1);
+  border-style: solid;
+  box-shadow: inset 0 0 0 2px var(--px-amber-3);
+}
+.realms-app .farm-plot.ready {
+  cursor: pointer;
+  background: #3f5a2a;
+  box-shadow: inset 0 0 0 2px var(--px-moss-2), 0 0 12px #a6d85a55;
+}
+.realms-app .farm-plot.locked {
+  color: var(--px-stone-1);
+  background: #2b2421;
+  box-shadow: inset 0 0 0 2px var(--px-stone-4);
+  opacity: 0.75;
+}
+.realms-app .farm-plot .realm-gem-finish {
+  min-height: 24px;
+  padding: 1px 6px;
+}
+.realms-app .farm-crops {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+.realms-app .farm-crop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 2px 6px;
+  font: inherit;
+  text-align: left;
+  color: var(--px-bone-1);
+  cursor: pointer;
+  background: none;
+  border: 6px solid transparent;
+  border-image: var(--frame-card);
+  image-rendering: pixelated;
+}
+.realms-app .farm-crop:hover {
+  filter: brightness(1.1);
+}
+.realms-app .farm-crop[aria-pressed='true'] {
+  border-image: var(--frame-card-active);
+}
+.realms-app .farm-crop.locked {
+  filter: grayscale(0.9) brightness(0.75);
+}
+.realms-app .farm-crop.locked[aria-pressed='true'] {
+  filter: grayscale(0.6) brightness(0.9);
+}
+.realms-app .farm-crop-icon {
+  flex: none;
+  font-size: 22px;
+  line-height: 1;
+}
+.realms-app .farm-crop-body {
+  display: grid;
+  min-width: 0;
+}
+.realms-app .farm-crop-body strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.15;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.realms-app .farm-crop-body small {
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--px-bone-3);
+}
+.realms-app .farm-plant {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.realms-app .farm-plant-what {
+  font-size: 14px;
+  color: var(--px-bone-2);
+}
+.realms-app .farm-plant-what b {
+  color: var(--px-bone-0);
+}
+.realms-app .farm-plant > .realm-button {
+  margin-left: auto;
+}
+
+/* upgrade tab */
+.realms-app .farm-upgrade {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.realms-app .farm-levels {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) auto minmax(0, 1.2fr);
+  align-items: start;
+  gap: 8px;
+  min-height: 0;
+}
+.realms-app .farm-levels ul {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--px-bone-2);
+}
+.realms-app .farm-levels b {
+  color: var(--px-bone-0);
+}
+.realms-app .farm-arrow {
+  align-self: center;
+  font-size: 18px;
+  color: var(--px-amber-2);
+}
+.realms-app .farm-next {
+  border-image: var(--frame-card-active);
+}
+
+@media (max-height: 500px) {
+  .realms-app .farm-field {
+    gap: 5px;
+  }
+  .realms-app .farm-plots {
+    gap: 5px;
+    padding: 5px;
+  }
+  .realms-app .farm-plot {
+    gap: 2px;
+    padding: 2px;
+  }
+  .realms-app .farm-plot > span {
+    font-size: 20px;
+  }
+  .realms-app .farm-plot strong {
+    display: none;
+  }
+  .realms-app .farm-plot small {
+    font-size: 12px;
+  }
+  .realms-app .farm-crop {
+    min-height: 42px;
+    gap: 4px;
+    border-width: 4px;
+    padding: 0 4px;
+  }
+  .realms-app .farm-crop-icon {
+    font-size: 18px;
+  }
+  .realms-app .farm-crop-body strong {
+    font-size: 12px;
+    -webkit-line-clamp: 1;
+  }
+  .realms-app .farm-crop-body small {
+    font-size: 11px;
+  }
+  .realms-app .farm-plant-what {
+    font-size: 13px;
+  }
+  .realms-app .farm-levels ul {
+    font-size: 13px;
+    gap: 2px;
+  }
+}
+@media (max-width: 700px) {
+  .realms-app .farm-crops {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .realms-app .farm-levels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .realms-app .farm-arrow {
+    display: none;
+  }
 }

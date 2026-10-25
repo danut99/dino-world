@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ENCOUNTERS } from './content';
 import {
+  EGG_DROP,
   ELEMENTS,
   RARITY_POWER,
+  eggOdds,
+  rewardPreview,
   command,
   newSave,
   parseSave,
@@ -32,7 +35,23 @@ describe('rarity', () => {
     const tier = (n: number) => rarityOdds(ENCOUNTERS.find((e) => e.id === `arena-fire-${n}`)!);
     expect(tier(3).epic).toBeGreaterThan(tier(2).epic);
     expect(tier(2).epic).toBeGreaterThan(tier(1).epic);
-    expect(rarityOdds(ENCOUNTERS.find((e) => e.mode === 'expedition')!).epic).toBeLessThan(tier(1).epic);
+    expect(rarityOdds({ id: 'training', mode: 'expedition' }).epic).toBeLessThan(tier(1).epic);
+  });
+  it('drops eggs more often on harder tiers, only in fight-only worlds', () => {
+    const e = (id: string) => ENCOUNTERS.find((x) => x.id === id)!;
+    expect([1, 2, 3].map((t) => eggOdds(e(`arena-nature-${t}`))?.chance)).toEqual(EGG_DROP.tiers);
+    expect(EGG_DROP.tiers).toEqual([0.1, 0.12, 0.15]);
+    for (const market of ['fire', 'water', 'earth']) expect(eggOdds(e(`arena-${market}-2`))).toBeNull();
+    // The preview shows the boss egg while it is owed (market worlds too), then the real chance.
+    const s = newSave(0);
+    expect(rewardPreview(s, 'arena-fire-3', 1)).toMatchObject({ bossEgg: true, eggChance: undefined });
+    s.bossEggsClaimed = ['fire', 'nature'];
+    expect(rewardPreview(s, 'arena-fire-3', 1)).toMatchObject({ bossEgg: false, eggChance: undefined });
+    expect(rewardPreview(s, 'arena-nature-3', 1)).toMatchObject({ bossEgg: false, eggChance: 0.15 });
+    // A full pity counter shows the certain egg, but only where eggs drop at all.
+    s.eggLuck = EGG_DROP.pity;
+    expect(rewardPreview(s, 'arena-nature-1', 1)?.eggChance).toBe(1);
+    expect(rewardPreview(s, 'arena-fire-1', 1)?.eggChance).toBeUndefined();
   });
   it('rolls common, rare and epic eggs from expeditions in about the expected shares', () => {
     const counts: Record<string, number> = { common: 0, rare: 0, epic: 0 };
@@ -41,16 +60,14 @@ describe('rarity', () => {
     s.champion = 'd';
     s.habitats = Object.fromEntries(ELEMENTS.map((e) => [e.id, 1])); // eggs come from worlds the market does not sell
     s.buildings.push({ id: 'p', kind: 'portal', x: 6, y: 1 });
-    // The second destination, already finished: its final stage always rolls the egg (the pity counter is full).
-    const second = ENCOUNTERS.filter((e) => e.mode === 'expedition')[1].id;
+    s.portalLevel = 1;
+    // The fire region's last stage always brings an egg.
     for (let i = 0; i < 400; i++) {
-      s.cleared = ['training', second];
-      s.expedition = null;
-      s.eggLuck = 99;
+      s.expeditionProgress = { training: 4 };
+      s.expeditions = [];
       s.revision = i;
-      s.inventory.provisions = 99;
-      const sent = command(s, { type: 'expedition', encounterId: second }, i * 1000);
-      const egg = sent.expedition?.reward.egg;
+      const sent = command(s, { type: 'expedition', regionId: 'training', team: ['d'] }, i * 1000);
+      const egg = sent.expeditions[0]?.reward.egg;
       if (egg) counts[egg.rarity ?? 'common']++;
     }
     const total = counts.common + counts.rare + counts.epic;
@@ -72,7 +89,7 @@ describe('rarity', () => {
     hatched = run(hatched, { type: 'hatch', eggId: egg.id });
     expect(hatched.dinos.at(-1)?.rarity).toBe('epic');
   });
-  it('treats old dinosaurs as common, and old boss champions as legendary, on load', () => {
+  it('treats a dinosaur without a rarity as common and refuses unknown rarities', () => {
     const s = run(newSave(now), { type: 'incubate' }, { type: 'devSkip' }, { type: 'hatch' });
     const old = JSON.parse(JSON.stringify(s));
     delete old.dinos[0].rarity;

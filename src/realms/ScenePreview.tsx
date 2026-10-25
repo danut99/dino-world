@@ -375,7 +375,7 @@ function ArenaScene({
           )}
           {step?.say?.map((c, i) => (
             <div key={`${index}-${i}`} className={`battle-callout on-${c.on} kind-${c.kind}`} style={{ '--row': i } as CSSProperties}>
-              {calloutText(c, c.on === 'ally' ? allyName : foeName, lang)}
+              {calloutText(c, lang)}
             </div>
           ))}
         </div>

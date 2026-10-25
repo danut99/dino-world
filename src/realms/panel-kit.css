@@ -1,0 +1,585 @@
+/*
+ * Panel kit (Faza 5): the fixed-height window (`Window fit`) and the small pieces every panel shares — a head
+ * strip, level badge, cost chips, boxes, footers with a pager, compact buttons, and the resource-help popover.
+ * Loaded after pixel-theme.css, so equal specificity wins here.
+ */
+
+/* ---------- fixed-height window ---------- */
+.realms-app .realm-window.fit {
+  height: min(760px, 100%);
+  max-height: 100%;
+}
+.realms-app .realm-window.fit > header {
+  flex: none;
+  padding-top: 2px;
+  padding-bottom: 10px;
+}
+.realms-app .realm-window.fit > header .realm-eyebrow {
+  display: none;
+}
+.realms-app .realm-window-tabs {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 12px;
+}
+.realms-app .realm-window.fit > .realm-window-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 6px 2px;
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+.realms-app .realm-window.fit > .realm-window-body > * {
+  flex: none;
+}
+.realms-app .realm-window.fit > .realm-window-body > .fit-panel {
+  flex: 1 1 0;
+  height: auto;
+  max-height: none;
+}
+.realms-app .realm-window.fit > .realm-window-body > .realm-back-to-hatchery {
+  align-self: flex-start;
+  margin: 0;
+}
+/* Text in panels: Barlow for reading, the pixel face only for short numbers. */
+.realms-app .fit-panel {
+  font-family: var(--font-body);
+}
+.realms-app .fit-panel :is(p, small, li) {
+  font-family: var(--font-body);
+}
+.realms-app .fit-panel p {
+  margin: 0;
+}
+.realms-app .fit-panel h3,
+.realms-app .fit-panel h4 {
+  margin: 0;
+}
+
+/* ---------- compact buttons ---------- */
+.realms-app .fit-panel .realm-button,
+.realms-app .realm-button.sm {
+  min-height: 38px;
+  padding: 0 12px 4px;
+  font-size: 14px !important;
+  white-space: nowrap;
+}
+.realms-app .fit-panel .realm-button:active:not(:disabled),
+.realms-app .realm-button.sm:active:not(:disabled) {
+  padding: 2px 12px 2px;
+}
+.realms-app .fit-panel .realm-link {
+  min-height: 0;
+  padding: 4px 6px;
+  font-family: var(--font-body);
+  font-size: 13px !important;
+  color: var(--px-bone-3);
+  white-space: nowrap;
+}
+.realms-app .fit-panel .realm-link:hover {
+  color: var(--px-bone-0);
+}
+
+/* ---------- head strip ---------- */
+.realms-app .pk-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 6px 10px;
+  background: var(--px-ui-5);
+  border: 2px solid var(--px-outline);
+  box-shadow: inset 0 0 0 2px var(--px-stone-5);
+}
+.realms-app .pk-level {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 50px;
+  padding: 3px 6px 4px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--px-bone-0);
+  text-shadow: 0 2px 0 var(--px-outline);
+  background: var(--px-moss-4);
+  border: 2px solid var(--px-outline);
+  box-shadow: inset 2px 2px 0 var(--px-moss-3);
+}
+.realms-app .pk-level small {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--px-moss-0);
+  text-shadow: none;
+}
+.realms-app .pk-head-text {
+  display: grid;
+  gap: 1px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.realms-app .pk-head-text > strong {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--px-bone-0);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.realms-app .pk-head-text > small {
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--px-bone-3);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.realms-app .pk-head-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ---------- boxes, notes, costs ---------- */
+.realms-app .pk-box {
+  min-width: 0;
+  min-height: 0;
+  padding: 6px 8px;
+  background: none;
+  border: 6px solid transparent;
+  border-image: var(--frame-card);
+  image-rendering: pixelated;
+}
+.realms-app .pk-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--px-bone-0);
+  text-shadow: 0 2px 0 var(--px-outline);
+}
+.realms-app .pk-title small {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--px-bone-3);
+  text-shadow: none;
+}
+.realms-app .pk-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--px-bone-3);
+}
+.realms-app .pk-note.warn {
+  color: var(--px-ember-0);
+}
+.realms-app .pk-note.good {
+  color: var(--px-moss-1);
+}
+.realms-app .pk-costs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.realms-app .pk-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px 2px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--px-bone-1);
+  background: var(--px-ui-5);
+  border: 1px solid var(--px-stone-3);
+}
+.realms-app .pk-have {
+  margin-right: -4px;
+}
+.realms-app .pk-cost.short {
+  color: var(--px-ember-0);
+  border-color: var(--px-ember-3);
+}
+.realms-app .pk-cost.good {
+  color: var(--px-moss-0);
+  border-color: var(--px-moss-3);
+}
+.realms-app .pk-num {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.realms-app .pk-meter {
+  height: 8px;
+  min-width: 0;
+  background: var(--px-ui-5);
+  border: 1px solid var(--px-outline);
+  box-shadow: inset 0 0 0 1px var(--px-stone-4);
+}
+.realms-app .pk-meter > i {
+  display: block;
+  height: 100%;
+  background: var(--meter, var(--px-amber-1));
+  box-shadow: inset 0 -2px 0 #0000004d;
+  transition: width 0.3s ease;
+}
+.realms-app .pk-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  min-height: 30px;
+}
+.realms-app .pk-foot > .pk-note {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.realms-app .pk-foot > .ui-pager {
+  margin-left: auto;
+}
+/* Chips that pick a filter (element, stage…). */
+.realms-app .pk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+.realms-app .pk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 2px 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--px-bone-2);
+  cursor: pointer;
+  background: var(--px-stone-4);
+  border: 2px solid var(--px-outline);
+  box-shadow: inset 2px 2px 0 var(--px-stone-3);
+}
+.realms-app .pk-chip:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+.realms-app .pk-chip[aria-pressed='true'] {
+  color: var(--px-bone-0);
+  background: var(--px-dusk-2);
+  box-shadow: inset 2px 2px 0 var(--px-dusk-1);
+}
+.realms-app .pk-chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.realms-app .pk-chip small {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--px-bone-3);
+}
+/* Inline confirm (instead of window.confirm). */
+.realms-app .pk-confirm {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--px-ember-4);
+  border: 2px solid var(--px-outline);
+  box-shadow: inset 0 0 0 2px var(--px-ember-3);
+}
+.realms-app .pk-confirm p {
+  font-size: 14px;
+  color: var(--px-bone-0);
+}
+.realms-app .pk-confirm > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---------- requirement link & resource help ---------- */
+.realms-app .requirement-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  margin: 0;
+  padding: 4px 10px;
+  font: 500 13px/1.3 var(--font-body);
+  text-align: left;
+  white-space: normal;
+  color: var(--px-amber-0);
+  background: var(--px-ui-5);
+  border: 1px solid var(--px-amber-4);
+  cursor: pointer;
+}
+.realms-app .requirement-link > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.realms-app .requirement-link strong,
+.realms-app .requirement-link small {
+  display: block;
+}
+.realms-app .requirement-link small {
+  font-size: 12px;
+  color: var(--px-bone-3);
+}
+.realms-app .requirement-link:hover {
+  filter: brightness(1.15);
+}
+.realms-app .requirement-info {
+  display: inline-grid;
+  flex: 0 0 18px;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  font: 700 12px/1 var(--font-display);
+  color: var(--px-amber-1);
+  border: 1px solid var(--px-amber-3);
+}
+.realms-app .resource-help {
+  display: inline-flex;
+  flex: none;
+}
+.realms-app .resource-help-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 2px 8px;
+  font: 600 13px/1.2 var(--font-body);
+  color: var(--px-ember-0);
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--px-ui-5);
+  border: 1px solid var(--px-ember-3);
+}
+.realms-app .resource-help-btn:hover {
+  filter: brightness(1.15);
+}
+.realms-app .resource-help-pop {
+  width: min(380px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 12px;
+  overflow: auto;
+  font-family: var(--font-body);
+  color: var(--px-bone-1);
+  background: var(--px-ui-4);
+  border: 2px solid var(--px-outline);
+  box-shadow:
+    inset 0 0 0 2px var(--px-stone-4),
+    0 10px 0 #1a1412aa;
+}
+.realms-app .resource-help-pop::backdrop {
+  background: #1a141299;
+}
+.realms-app .resource-help-pop > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--px-bone-0);
+}
+.realms-app .resource-help-pop > header button {
+  width: 30px;
+  height: 30px;
+  font-size: 18px;
+  color: var(--px-bone-1);
+  cursor: pointer;
+  background: var(--px-stone-4);
+  border: 2px solid var(--px-outline);
+}
+.realms-app .resource-help-list {
+  display: grid;
+  gap: 6px;
+}
+.realms-app .resource-help-row {
+  display: grid;
+  gap: 4px;
+  padding: 6px 0;
+  border-top: 1px solid var(--px-stone-4);
+}
+.realms-app .resource-help-row > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.realms-app .resource-help-row > div > span:last-child {
+  margin-left: auto;
+  font-family: var(--font-display);
+  color: var(--px-ember-0);
+}
+.realms-app .resource-help-row.enough > div > span:last-child {
+  color: var(--px-moss-1);
+}
+.realms-app .resource-help-row > button {
+  min-height: 34px;
+  padding: 4px 10px;
+  font: 600 13px/1.3 var(--font-body);
+  text-align: left;
+  color: var(--px-amber-0);
+  cursor: pointer;
+  background: var(--px-stone-4);
+  border: 1px solid var(--px-amber-4);
+}
+
+/* ---------- short landscape phones ---------- */
+@media (max-height: 500px) {
+  .realms-app .realm-window.fit {
+    border-width: 9px;
+    border-image-width: 9px;
+  }
+  .realms-app .realm-window.fit > header {
+    padding: 0 44px 4px 0;
+  }
+  .realms-app .realm-window.fit h2 {
+    padding: 0 6px;
+    font-size: 15px;
+    border-width: 6px;
+    border-image-width: 6px;
+  }
+  .realms-app .realm-window.fit .realm-close {
+    top: 0;
+    right: 0;
+    width: 34px;
+    height: 34px;
+  }
+  .realms-app .realm-window.fit > .realm-window-body {
+    gap: 6px;
+    padding: 6px 2px 0;
+  }
+  .realms-app .fit-panel .realm-button,
+  .realms-app .realm-button.sm {
+    min-height: 34px;
+    font-size: 13px !important;
+    padding: 0 8px 4px;
+  }
+  .realms-app .fit-panel .realm-button:active:not(:disabled) {
+    padding: 2px 8px 2px;
+  }
+  .realms-app .pk-head {
+    gap: 8px;
+    padding: 3px 8px;
+  }
+  .realms-app .pk-level {
+    min-width: 40px;
+    font-size: 17px;
+    padding: 2px 4px 3px;
+  }
+  .realms-app .pk-level small {
+    font-size: 8px;
+  }
+  .realms-app .pk-head-text > strong {
+    font-size: 14px;
+  }
+  .realms-app .pk-head-text > small {
+    font-size: 12px;
+  }
+  .realms-app .pk-chip {
+    min-height: 28px;
+    padding: 1px 8px;
+  }
+  .realms-app .pk-box {
+    padding: 3px 6px;
+  }
+}
+
+/* ---------- construction (one builder, timed upgrades) ---------- */
+.realms-app .pk-upgrade-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.realms-app .pk-build-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--px-bone-2);
+  white-space: nowrap;
+}
+.realms-app .pk-build-time.busy {
+  color: var(--px-amber-1);
+}
+.realms-app .pk-construction {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--px-amber-4) 45%, var(--px-ui-5));
+  border: 2px solid var(--px-outline);
+  box-shadow: inset 0 0 0 2px var(--px-amber-3);
+}
+.realms-app .pk-construction-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  animation: pk-hammer 1.2s steps(2) infinite;
+}
+.realms-app .pk-construction-body {
+  display: grid;
+  flex: 1 1 110px;
+  gap: 4px;
+  min-width: 0;
+}
+.realms-app .pk-construction-body > strong {
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--px-bone-0);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.realms-app .pk-construction .pk-meter > i {
+  background: var(--px-amber-1);
+}
+.realms-app .pk-construction > .realm-button {
+  margin-left: auto;
+}
+.realms-app .pk-construction-time {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--px-amber-0);
+  white-space: nowrap;
+}
+@keyframes pk-hammer {
+  0% { transform: rotate(-12deg); }
+  100% { transform: rotate(12deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .realms-app .pk-construction-icon { animation: none; }
+}
+@media (max-height: 500px) {
+  .realms-app .pk-construction { gap: 6px; padding: 4px 6px; }
+  .realms-app .pk-construction-body > strong { font-size: 13px; }
+}

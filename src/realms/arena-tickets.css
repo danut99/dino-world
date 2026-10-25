@@ -1,28 +1,73 @@
-.arena-access-bar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; flex:none; padding:10px 18px; background:#241c18; border-bottom:1px solid #7a6a5a; }
-.arena-access-bar > span { color:#fff1b8; font-size:13px; }
-.arena-access-bar .realm-button { min-height:44px; padding:6px 14px; font-size:13px !important; }
-.arena-ticket-shop { flex:1; min-height:0; overflow-y:auto; padding:18px; background:#241c18; }
-.arena-ticket-shop-head { display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; align-items:center; }
-.arena-ticket-shop-head .realm-button { min-height:44px; font-size:13px !important; padding:6px 12px; }
-.arena-ticket-gold { display:inline-flex; align-items:center; gap:8px; color:#ffe092; padding:8px 12px; background:#17110f; border:1px solid #6b5946; }
-.arena-ticket-shop-intro { margin:20px 0 10px; }
-.arena-ticket-shop-intro h2 { color:#fff1b8; font-size:22px; margin:6px 0; }
-.arena-ticket-shop-intro p,.arena-ticket-notice { font-size:13px; line-height:1.6; color:#cdbfa8; }
-.arena-ticket-notice { min-height:24px; color:#f0d18b; }
-.arena-ticket-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:12px; }
-.arena-ticket-card { min-width:0; display:flex; flex-direction:column; gap:12px; padding:14px; border:1px solid #695542; border-top:3px solid var(--ticket-color); background:#30251f; }
-.arena-ticket-card-title { display:flex; gap:12px; align-items:center; }
-.arena-ticket-card h3 { margin:0 0 5px; font-size:16px; color:#fff1b8; }
-.arena-ticket-card-title small { font-size:12px; color:#cdbfa8; }
-.arena-ticket-art { display:grid; place-items:center; width:52px; height:44px; flex:none; color:var(--ticket-color); font-size:27px; border:2px solid var(--ticket-color); background:#18120f; clip-path:polygon(0 0,100% 0,100% 30%,90% 40%,90% 60%,100% 70%,100% 100%,0 100%,0 70%,10% 60%,10% 40%,0 30%); }
-.arena-ticket-price { display:flex; align-items:center; gap:5px; margin:0; font-size:12px; color:#f3d28b; }
-.arena-ticket-buy { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:auto; }
-.realms-app .arena-ticket-buy .realm-button { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:52px; padding:6px; font-size:16px !important; }
-.arena-ticket-buy small { font-size:11px; }
-.arena-ticket-lock { margin:auto 0 0; font-size:12px; line-height:1.6; color:#bdad95; }
-.arena-ticket-card.locked { border-top-color:#665745; background:#28201b; }
-.arena-ticket-card.locked .arena-ticket-art { opacity:0.5; }
-.arena-ticket-missing { font-size:11px; color:#ffb4a1; }
-.arena-entry-ticket { display:grid; gap:7px; padding:10px; margin:10px 0; border:1px solid #8c7445; background:#32291e; color:#f5d89a; font-size:12px; line-height:1.5; }
-.arena-entry-ticket .realm-button { min-height:44px; font-size:12px !important; padding:6px 10px; }
-@media(max-width:600px) { .arena-ticket-shop { padding:12px; } .arena-ticket-grid { gap:8px; } .arena-access-bar { padding:8px 12px; } .arena-ticket-shop-intro h2 { font-size:18px; } }
+/* Arena ticket counter: ten compact tiles that fit the screen without scrolling. */
+.arena-ticket-shop {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 12px 16px 14px;
+  overflow: hidden;
+  background: #241c18;
+  font-family: var(--font-body);
+}
+.arena-ticket-shop-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.arena-ticket-shop-head > div { flex: 1; min-width: 0; }
+.realms-app .arena-ticket-shop-head .realm-button { flex: none; width: auto; min-height: 40px; margin: 0; padding: 4px 12px; font-size: 13px !important; }
+.arena-ticket-shop-head h2 { margin: 0; color: #fff1b8; font: 700 18px/1.2 var(--font-display); outline: none; }
+.arena-ticket-shop-head p { margin: 2px 0 0; font-size: 12px; line-height: 1.35; color: #cdbfa8; }
+.arena-ticket-gold { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; color: #ffe092; font: 600 15px var(--font-display); background: #17110f; border: 2px solid #574a40; }
+.arena-ticket-notice { margin: 0; min-height: 18px; font-size: 12px; line-height: 1.4; color: #f0d18b; }
+.arena-ticket-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-height: 0;
+  max-height: 260px;
+}
+.arena-ticket-card {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 6px;
+  padding: 8px;
+  background: #30251f;
+  border: 2px solid #574a40;
+  border-top: 4px solid var(--ticket-color);
+}
+.arena-ticket-card.focus { border-color: #f6d77a; border-top-color: var(--ticket-color); box-shadow: 0 0 0 1px #f6d77a; }
+.arena-ticket-card-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.arena-ticket-art { display: grid; place-items: center; flex: none; width: 24px; height: 24px; background: #18120f; border: 1px solid var(--ticket-color); }
+.arena-ticket-card h3 { flex: 1; min-width: 0; margin: 0; overflow: hidden; color: #fff1b8; font: 700 13px/1.2 var(--font-body); white-space: nowrap; text-overflow: ellipsis; }
+.arena-ticket-stock { flex: none; color: #fff1b8; font: 600 14px var(--font-display); }
+.arena-ticket-buy { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-self: end; }
+.realms-app .arena-ticket-buy .realm-button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: auto; min-height: 40px; margin: 0; padding: 2px 4px; font-size: 14px !important; }
+.arena-ticket-buy .realm-button > span { font-family: var(--font-display); line-height: 1; }
+.arena-ticket-buy .realm-button > small { display: inline-flex; align-items: center; gap: 2px; font: 600 11px var(--font-display); }
+.arena-ticket-lock { align-self: end; margin: 0; font-size: 11px; line-height: 1.3; color: #bdad95; }
+.arena-ticket-card.locked { background: #28201b; border-top-color: #665745; }
+.arena-ticket-card.locked .arena-ticket-art { opacity: 0.5; filter: grayscale(0.8); }
+
+/* The stock next to the fight button. */
+.arena-ticket-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: #f5d89a; }
+.arena-ticket-line b { font-family: var(--font-display); color: #fff1b8; }
+.arena-ticket-line.empty b { color: #ff9b84; }
+.realms-app .arena-ticket-line .realm-button { width: auto; min-height: 28px; margin: 0; padding: 2px 10px; font-size: 12px !important; }
+
+@media (max-width: 760px) {
+  .arena-ticket-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; max-height: none; }
+  .arena-ticket-shop { overflow-y: auto; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .arena-ticket-shop { gap: 4px; padding: 6px 10px 8px; }
+  .arena-ticket-shop-head p { display: none; }
+  .arena-ticket-shop-head h2 { font-size: 15px; }
+  .realms-app .arena-ticket-shop-head .realm-button { min-height: 32px; }
+  .arena-ticket-notice { font-size: 11px; min-height: 15px; }
+  .arena-ticket-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 6px; max-height: none; }
+  .arena-ticket-shop { overflow: hidden; }
+  .arena-ticket-card { padding: 5px; gap: 4px; }
+  .arena-ticket-card h3 { font-size: 12px; }
+  .realms-app .arena-ticket-buy .realm-button { min-height: 34px; }
+}

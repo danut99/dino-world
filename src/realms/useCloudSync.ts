@@ -7,8 +7,12 @@ export type SyncStatus = 'local' | 'signedOut' | 'syncing' | 'synced' | 'offline
 /** Edits are gathered for a moment before one upload; hiding the page uploads at once. */
 const PUSH_DELAY_MS = 2500;
 
-/** One account, two saves: the one whose last action is more recent wins (`updatedAt` is stamped by every action). */
-export const newerSave = (local: Save, remote: CloudSave) => (local.updatedAt >= remote.save.updatedAt ? 'local' : 'cloud');
+/**
+ * One account, two saves: the one whose last action is more recent wins (`updatedAt` is stamped by every action).
+ * A cloud row from an older schema never wins: it is only there to be replaced.
+ */
+export const newerSave = (local: Save, remote: CloudSave) =>
+  remote.outdated || local.updatedAt >= remote.save.updatedAt ? 'local' : 'cloud';
 
 /**
  * Writes the signed-in player's save to the cloud, which is the only place it is kept. `marker` is the cloud time

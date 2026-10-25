@@ -2,7 +2,7 @@ process.env.VITE_SUPABASE_URL='';
 import {createServer} from 'vite';
 import {createRequire} from 'node:module';
 import fs from 'node:fs/promises';
-const {chromium}=createRequire(import.meta.url)('C:/Users/Danut/.codex/dragon-preview-tools/node_modules/playwright');
+const {chromium}=createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const server=await createServer({configLoader:'runner',server:{host:'127.0.0.1',port:5278},logLevel:'error'});
 let browser;
 try {

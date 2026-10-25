@@ -1,7 +1,7 @@
 import type { Callout } from './battleChoreography';
 
 /** The words of an on-screen battle announcement: one or two words, shown big in the middle of the arena. */
-export function calloutText(c: Callout, _name: string, lang: number) {
+export function calloutText(c: Callout, lang: number) {
   const tr = (ro: string, en: string) => (lang ? en : ro);
   switch (c.kind) {
     case 'damage':

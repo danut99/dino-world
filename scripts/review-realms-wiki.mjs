@@ -5,7 +5,7 @@ import {createRequire} from 'node:module';
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const require=createRequire(import.meta.url);
-const {chromium}=require('C:/Users/Danut/.codex/dragon-preview-tools/node_modules/playwright');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const server=await createServer({configLoader:'runner',server:{host:'127.0.0.1',port:5245},logLevel:'error'});await server.listen();let browser;
 try{
  browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>localStorage.setItem('dino-realms-language','en'));await page.goto(server.resolvedUrls.local[0]);

@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { SAVE_KEY, parseSave, type Save } from './game';
+import { OutdatedSave, SAVE_KEY, newSave, parseSave, type Save } from './game';
 
 /**
  * Cloud saves and accounts (Supabase). Without VITE_SUPABASE_URL / VITE_SUPABASE_KEY the game simply stays
@@ -71,15 +71,25 @@ export async function signOut() {
   await cloud?.auth.signOut();
 }
 
-/** The cloud copy of a player's save, with the server time of its last write. */
-export type CloudSave = { save: Save; updatedAt: string };
+/**
+ * The cloud copy of a player's save, with the server time of its last write. `outdated`: the row holds a save from
+ * before the current schema, so `save` is a new game that should replace it.
+ */
+export type CloudSave = { save: Save; updatedAt: string; outdated?: true };
 
 export async function fetchCloudSave(userId: string): Promise<CloudSave | null> {
   if (!cloud) return null;
   const { data, error } = await cloud.from('saves').select('data, updated_at').eq('user_id', userId).maybeSingle();
   if (error) throw error;
-  // The cloud copy passes through the same validation and migrations as a local or imported save.
-  return data ? { save: parseSave(JSON.stringify(data.data)), updatedAt: data.updated_at } : null;
+  if (!data) return null;
+  // The cloud copy passes through the same validation as a local or imported save. A save from an older schema
+  // is not migrated: everyone starts over (see OutdatedSave).
+  try {
+    return { save: parseSave(JSON.stringify(data.data)), updatedAt: data.updated_at };
+  } catch (e) {
+    if (e instanceof OutdatedSave) return { save: newSave(Date.now()), updatedAt: data.updated_at, outdated: true };
+    throw e;
+  }
 }
 
 /**
@@ -131,7 +141,7 @@ export const isFreshSave = (s: Save) => s.dinos.length === 0 && s.cleared.length
  *   replace it), or the guest progress is nothing worth keeping.
  */
 export function planSync(local: Save, remote: CloudSave | null, sameAccount = false): 'upload' | 'download' {
-  if (!remote) return 'upload';
+  if (!remote || remote.outdated) return 'upload';
   if (sameAccount) return local.updatedAt > remote.save.updatedAt ? 'upload' : 'download';
   if (isFreshSave(local)) return 'download';
   return isFreshSave(remote.save) ? 'upload' : 'download';

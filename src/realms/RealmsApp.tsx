@@ -4,46 +4,46 @@ import { BuildPanel } from './BuildPanel';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import World from './World';
 import { RealmsWiki } from './RealmsWiki';
-import { worldThumb } from './worldArt';
 import { Hero } from './Hero';
 import { DinosaurCollection } from './DinosaurCollection';
 import { DinosaurArt } from './DinosaurArt';
 import { HeroVision } from './HeroVision';
 import { AnimationViewer } from './AnimationViewer';
-import { SPECIES_NAMES, type Species } from './dinosaurs';
-import { BuildingSprite } from './BuildingSprite';
+import { SPECIES_NAMES } from './dinosaurs';
 import { GameplayScreen, BattleScreen, type GameplayView } from './GameplayScreens';
 import { WorkshopPanel } from './WorkshopPanel';
 import { GemShop } from './GemShop';
 import { unlockedNav, type NavKey } from './navUnlocks';
-import { ITEMS, UTILITY_BUILDINGS, RECIPES, type ItemId, type UtilityKind } from './content';
+import { DEV_TOOLS } from './devTools';
+import { UTILITY_BUILDINGS, type UtilityKind } from './content';
 import { FarmPanel } from './FarmPanel';
 import { DailyPanel } from './DailyPanel';
-import { dailyState, dailyQuests, DAILY_QUESTS } from './daily';
+import { dailyState, DAILY_QUESTS } from './daily';
 import { DevPanel, DinoPanel, EggArt, HabitatsPanel, HatcheryPanel, MarketPanel } from './DinoPanels';
 import {
   advance,
   champion,
   command,
+  currentTrip,
   ELEMENTS,
-  HABITAT_LEVELS,
-  habitatCapacity,
   farmReadyFood,
-  incubating,
   storyChapter,
   storyEgg,
+  targetName,
+  GEM_SOURCES,
   REALM_NAMES,
   newSave,
   parseSave,
   SAVE_KEY,
-  WORLD_UNLOCK,
   type Command,
   type Save,
   type RealmId,
   type Dino,
 } from './game';
+import { roman } from './format';
 import './realms.css';
 import './pixel-theme.css';
+import './panel-kit.css';
 import { Icon, type IconName } from './ui/Icon';
 import { playSound, setSoundEnabled, soundEnabled, type SoundId } from './sound';
 import { useCloudSync } from './useCloudSync';
@@ -89,6 +89,7 @@ const COMMAND_SOUNDS: Partial<Record<Command['type'], SoundId>> = {
   upgradeHatchery: 'build',
   upgradeWorkshop: 'build',
   upgradeArena: 'build',
+  upgradePortal: 'build',
   spinDaily: 'spin',
   incubate: 'pop',
   feed: 'pop',
@@ -99,7 +100,7 @@ const COMMAND_SOUNDS: Partial<Record<Command['type'], SoundId>> = {
   addGems: 'coin',
   gemFinish: 'pop',
   gemBoost: 'build',
-  gemTrade: 'coin',
+  rerollDailyQuest: 'pop',
   gemRest: 'evolve',
   gemSpin: 'spin',
 };
@@ -125,14 +126,34 @@ type Panel =
   | 'shop'
   | null;
 const text = (lang: number, ro: string, en: string) => (lang ? en : ro);
+/** What a command did on its own (see Save.notice): an egg sold for lack of room, diamonds and tickets won. */
+function noticeText(s: Save, lang: number) {
+  const n = s.notice;
+  if (!n) return '';
+  return [
+    n.gems ? text(lang, `+${n.gems} 💎 diamante câștigate!`, `+${n.gems} 💎 diamonds earned!`) : '',
+    n.tickets
+      ? text(
+          lang,
+          `+${n.tickets.count} bilete de arenă: ${ELEMENTS.find((e) => e.id === n.tickets!.realm)!.name[0].toLowerCase()}.`,
+          `+${n.tickets.count} ${ELEMENTS.find((e) => e.id === n.tickets!.realm)!.name[1].toLowerCase()} arena tickets.`,
+        )
+      : '',
+    n.eggSold
+      ? text(lang, `Lista ouălor în așteptare e plină: oul câștigat a fost vândut pentru ${n.eggSold} aur.`, `The waiting egg list is full: the egg you won was sold for ${n.eggSold} gold.`)
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
 function load(): Save {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (raw) {
       try {
-        if (JSON.parse(raw).schemaVersion < 3) localStorage.setItem(`${SAVE_KEY}-before-worlds`, raw);
         return advance(parseSave(raw), Date.now());
       } catch {
+        // An older schema or a broken save: keep a copy aside and start a new game.
         localStorage.setItem(`${SAVE_KEY}-recovery-${Date.now()}`, raw);
       }
     }
@@ -141,6 +162,8 @@ function load(): Save {
   }
   return newSave(Date.now());
 }
+/** Panels that fit their window without scrolling (see Window `fit`). */
+const FIT_PANELS: string[] = ['dino', 'hatchery', 'market', 'habitat', 'farm', 'build', 'collection', 'realms', 'shop', 'workshop', 'daily'];
 export function Window({
   title,
   eyebrow,
@@ -148,6 +171,8 @@ export function Window({
   close,
   wide = false,
   closable = true,
+  fit = false,
+  tabs,
 }: {
   title: string;
   eyebrow?: string;
@@ -156,6 +181,13 @@ export function Window({
   wide?: boolean;
   /** False for a choice the player must make: no close button, Escape and the backdrop do nothing. */
   closable?: boolean;
+  /**
+   * A fixed-height window whose body never scrolls: the panel inside (a `.fit-panel`) fills it and pages its own
+   * content; only areas marked `[data-scroll]` may scroll.
+   */
+  fit?: boolean;
+  /** Tabs (or another compact control) shown in the header, beside the title. */
+  tabs?: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -176,7 +208,7 @@ export function Window({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`realm-window ${wide ? 'wide' : ''}`}
+        className={`realm-window${wide ? ' wide' : ''}${fit ? ' fit' : ''}`}
         onKeyDown={(e) => {
           if (closable && e.key === 'Escape') {
             e.stopPropagation();
@@ -203,6 +235,7 @@ export function Window({
         <header>
           {eyebrow && <span className="realm-eyebrow">{eyebrow}</span>}
           <h2>{title}</h2>
+          {tabs && <div className="realm-window-tabs">{tabs}</div>}
           {closable && (
             <button className="realm-close" onClick={close} aria-label="Close">
               <Icon name="close" />
@@ -423,7 +456,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
   }, [guest, milestones]);
   const tr = (ro: string, en: string) => text(lang, ro, en);
   const today = dailyState(save, now);
-  const dailyReady = today.spin === null || dailyQuests(today.day).some(id => !today.claimed.includes(id) && today.progress[id] >= DAILY_QUESTS[id].target) || (!today.bonus && dailyQuests(today.day).every(id => today.claimed.includes(id)));
+  const dailyReady = today.spin === null || today.quests.some(id => !today.claimed.includes(id) && today.progress[id] >= DAILY_QUESTS[id].target) || (!today.bonus && today.quests.every(id => today.claimed.includes(id)));
   const dailyOpened = useRef<string | null>(null);
   useEffect(() => {
     if (heroVision || panel || placing || save.battle || save.dinos.length === 0 || dailyOpened.current === today.day) return;
@@ -531,6 +564,25 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [heroVision]);
+  // An upgrade whose build time has run out is put in place right away (the building shows its new level).
+  const buildingDone = !!save.construction && now >= save.construction.endsAt;
+  useEffect(() => {
+    if (!buildingDone) return;
+    const built = saveRef.current.construction;
+    if (!built) return;
+    const next = advance(saveRef.current, Date.now());
+    saveRef.current = next;
+    setSave(next);
+    playSound('build');
+    setMessage(
+      text(
+        lang,
+        `Construcție gata: ${targetName(built.target, 0)}, nivelul ${built.level}.`,
+        `Upgrade done: ${targetName(built.target, 1)}, level ${built.level}.`,
+      ),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buildingDone]);
   const run = (c: Command) => {
     try {
       const next = command(saveRef.current, c, Date.now());
@@ -538,6 +590,8 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
       setSave(next);
       const sound = COMMAND_SOUNDS[c.type];
       if (sound) playSound(sound);
+      const notes = noticeText(next, lang);
+      if (notes) setMessage(notes);
       return true;
     } catch (e) {
       const code = (e as Error).message;
@@ -560,12 +614,16 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
             away: tr('Campionul e plecat în expediție.', 'Your champion is away on an expedition.'),
             stars: tr('Ai nevoie de 2★ la treapta precedentă.', 'You need 2★ on the previous tier.'),
             tired: tr('Campionul se odihnește după înfrângere. Alege alt dinozaur sau așteaptă.', 'Your champion is resting after the defeat. Pick another dinosaur or wait.'),
-            busy: tr('Un dinozaur e deja plecat în expediție.', 'A dinosaur is already away on an expedition.'),
+            busy: tr('Un dinozaur din echipă e deja plecat sau ocupat.', 'A team member is already away or busy.'),
+            slots: tr('Toate sloturile portalului sunt ocupate. Îmbunătățește portalul pentru mai multe.', 'Every portal slot is busy. Upgrade the portal for more.'),
+            teamSize: tr('Alege numărul de dinozauri cerut de această expediție.', 'Pick the number of dinosaurs this expedition takes.'),
+            patrolLocked: tr('Patrulele se deschid după etapa 3 a regiunii.', "Patrols open after the region's stage 3."),
+            done: tr('Regiunea e deja traversată. Trimite o patrulă.', 'This region is already crossed. Send a patrol.'),
             expedition: tr('Expediția nu s-a terminat încă.', 'The expedition is not over yet.'),
             dailyClaimed: tr('Premiul a fost deja colectat azi.', 'This reward was already claimed today.'),
             dailyIncomplete: tr('Termină misiunea înainte de colectare.', 'Finish the mission before claiming.'),
             provisions: tr('Pregătește provizii în Atelier înainte de plecare.', 'Prepare supplies in the Workshop before departing.'),
-            level: tr('Crește campionul până la nivelul cerut pentru această etapă.', 'Raise your champion to the level required for this stage.'),
+            level: tr('Fiecare membru al echipei are nevoie de nivelul cerut.', 'Every team member needs the required level.'),
             timedExpedition: tr('Pornește această călătorie din Expediții.', 'Start this trip from Expeditions.'),
             fightEgg: tr(
               'Ouăle acestui element se câștigă în lupte, nu din Piață.',
@@ -576,6 +634,18 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
             arenaTicket: tr('Ai nevoie de un tichet al acestui element. Cumpără-l din Arena.', 'You need a ticket for this element. Buy one in the Arena.'),
             ticketLimit: tr('Ai atins limita de tichete pentru acest element.', 'You have reached the ticket limit for this element.'),
             rested: tr('Campionul e deja odihnit.', 'Your champion is already rested.'),
+            worldOrder: tr('Lumile se deschid pe rând: deblochează mai întâi lumea precedentă.', 'Worlds open in order: unlock the previous world first.'),
+            worldRegion: tr('Ajungi mai întâi la etapa 3 în regiunea lumii precedente.', "Reach stage 3 in the previous world's region first."),
+            evolutionCrystal: tr('Evoluția la adult cere un cristal de evoluție. Fabrică-l în Atelier.', 'Evolving to adult takes an evolution crystal. Craft one in the Workshop.'),
+            boss: tr('Campionii legendari nu pot fi eliberați.', 'Legendary champions cannot be released.'),
+            team: tr('Scoate-l mai întâi din echipă.', 'Take it out of the team first.'),
+            lastDino: tr('Nu-ți poți elibera ultimul dinozaur.', 'You cannot release your last dinosaur.'),
+            eggsFull: tr('Nu mai e loc pentru ouă. Incubează sau vinde din Incubator.', 'No room for more eggs. Incubate or sell some in the Hatchery.'),
+            dev: tr('Uneltele de test nu sunt disponibile.', 'Test tools are not available.'),
+            builderBusy: tr('Constructorul lucrează deja la o clădire. Așteaptă sau termină acum cu diamante.', 'The builder is already on another upgrade. Wait, or finish it now with diamonds.'),
+            construction: tr('Nu se construiește nimic acum.', 'Nothing is being built right now.'),
+            dailyReroll: tr('Misiunea nu se mai poate schimba: e gata sau nu mai sunt altele disponibile.', 'This mission cannot be swapped: it is done or no other mission is available.'),
+            dailyQuest: tr('Misiunea nu e printre cele de azi.', "That mission is not one of today's."),
           } as Record<string, string>
         )[code] ?? tr('Acțiunea nu este disponibilă acum.', 'That action is not available yet.'),
       );
@@ -592,11 +662,10 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
     storyReady = !!story && story.done(save),
     navKeys = unlockedNav(save, story?.panel),
     storyProgress = story?.progress?.(save);
-  const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
   // The header badge follows the chapter: its numeral, rank, title and how far into it the player is.
   const badge = current
     ? {
-        numeral: ROMAN[current.chapter.number],
+        numeral: roman(current.chapter.number),
         rank: current.chapter.rank[lang],
         title: current.chapter.title[lang],
         progress: storyIndex / steps.length,
@@ -666,18 +735,18 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
   // Tell the player once when a dinosaur is back from its expedition, wherever they are in the game.
   const announcedTrip = useRef<number | null>(null);
   useEffect(() => {
-    const trip = save.expedition;
+    const trip = save.expeditions.find((x) => now >= x.endsAt) ?? currentTrip(save);
     if (!trip || now < trip.endsAt || announcedTrip.current === trip.startedAt) return;
     announcedTrip.current = trip.startedAt;
-    const who = save.dinos.find((x) => x.id === trip.dinoId)?.nickname ?? '';
+    const who = save.dinos.find((x) => x.id === trip.team[0])?.nickname ?? '';
     setMessage(tr(`${who} s-a întors din expediție! Colectează recompensa.`, `${who} is back from the expedition! Collect the reward.`));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [now, save.expedition]);
+  }, [now, save.expeditions]);
   /** Loads another player's save from the cloud and shows their world. */
   const openVisit = async (player: PlayerSummary) => {
     try {
       const remote = await fetchCloudSave(player.user_id);
-      if (!remote) {
+      if (!remote || remote.outdated) {
         setMessage(tr(`${player.name} încă nu și-a construit lumea.`, `${player.name} has not built a world yet.`));
         return;
       }
@@ -930,20 +999,22 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
             </div>
           </div>
         </div>
-        <button
-          className="realm-square realm-info"
-          onClick={() => setDevOpen((v) => !v)}
-          aria-label={tr('Unelte de test', 'Test tools')}
-          aria-expanded={devOpen}
-        >
-          <Icon name="clock" />
-        </button>
+        {DEV_TOOLS && (
+          <button
+            className="realm-square realm-info"
+            onClick={() => setDevOpen((v) => !v)}
+            aria-label={tr('Unelte de test', 'Test tools')}
+            aria-expanded={devOpen}
+          >
+            <Icon name="clock" />
+          </button>
+        )}
         <button className="realm-square" onClick={() => setPanel('wiki')} aria-label="Wikipedia" title="Wikipedia">
           <Icon name="wiki" />
         </button>
         <div className="realm-hud-profile">{profileMenu('realm-hud-menu', true)}</div>
       </header>
-      {devOpen && (
+      {DEV_TOOLS && devOpen && (
         <DevPanel
           lang={lang}
           run={(c) => {
@@ -1026,6 +1097,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
                     <EggArt species={story.species} realm={story.element} size={22} /> {tr('Ou', 'Egg')}
                   </li>
                 )}
+                {storyEgg(story) && <li className="gem">💎 +{GEM_SOURCES.chapter}</li>}
               </ul>
               <div className="realm-quest-progress" aria-label={`${storyIndex}/${steps.length}`}>
                 {steps.map((q, i) => (
@@ -1108,8 +1180,8 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
                 key="expedition"
                 icon="expedition"
                 label={
-                  save.expedition
-                    ? now >= save.expedition.endsAt
+                  currentTrip(save)
+                    ? save.expeditions.some((x) => now >= x.endsAt)
                       ? tr('Expediție gata ✓', 'Expedition back ✓')
                       : tr('În expediție…', 'On expedition…')
                     : tr('Expediții', 'Expeditions')
@@ -1218,6 +1290,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
           wide={['farm', 'daily', 'collection', 'realms', 'assets', 'build', 'dino', 'hatchery', 'market', 'habitat', 'wiki', 'workshop', 'shop'].includes(
             panel,
           )}
+          fit={FIT_PANELS.includes(panel)}
         >
           {expeditionPreparation && (
             <button className="realm-button secondary realm-back-to-hatchery" onClick={() => { setExpeditionPreparation(false); setPanel('expedition'); }}>
@@ -1276,6 +1349,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
           {panel === 'habitat' && (
             <HabitatsPanel
               save={live}
+              now={now}
               lang={lang}
               run={run}
               visit={visitRealm}
@@ -1292,18 +1366,19 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
               move={() => startPlacement('farm')}
             />
           )}
-          {panel === 'build' && <BuildPanel initialKind={helpBuilding} save={save} lang={lang} place={startPlacement} open={kind => setPanel(kind === 'portal' ? 'expedition' : kind)} />}
+          {panel === 'build' && <BuildPanel initialKind={helpBuilding} save={save} lang={lang} run={run} place={startPlacement} open={kind => setPanel(kind === 'portal' ? 'expedition' : kind)} />}
           {panel === 'collection' && (
             <DinosaurCollection
               lang={lang}
               dinos={save.dinos}
-              initialElement={realm === 'home' ? 'fire' : realm}
+              discovered={save.discovered}
+              initialElement={realm === 'home' ? undefined : realm}
               openExpeditions={() => setPanel('expedition')}
               openOwned={(id) => openBuilding(`dino:${id}`)}
               openMarket={() => setPanel('market')}
             />
           )}
-          {panel === 'realms' && <RealmsPanel key={helpRealm} initialRealm={helpRealm} save={save} lang={lang} current={realm} visit={visitRealm} run={run} workshop={() => setPanel('workshop')} />}
+          {panel === 'realms' && <RealmsPanel key={helpRealm} initialRealm={helpRealm} save={save} now={now} lang={lang} current={realm} visit={visitRealm} run={run} workshop={() => setPanel('workshop')} />}
           {panel === 'wiki' && <RealmsWiki lang={lang} />}
           {panel === 'account' && <AccountPanel lang={lang} sync={sync} startWith={guest ? 'signup' : 'signin'} />}
           {panel === 'players' && account && <PlayersPanel lang={lang} selfId={account.user.id} onVisit={(p) => void openVisit(p)} />}

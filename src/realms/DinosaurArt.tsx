@@ -39,7 +39,9 @@ export function DinosaurArt({
       active = false;
     };
   }, [species, element, stage]);
-  if (manifest?.variantId === `${species}_${element}` && manifest.stage === stage && (manifest.clips[facing]?.[animation] || manifest.clips[facing]?.idle))
+  // A young boss borrows its adult sprites (the only ones bosses have), a size smaller.
+  const youngBoss = species === 'boss' && stage !== 'adult';
+  if (manifest?.variantId === `${species}_${element}` && (manifest.stage === stage || youngBoss) && (manifest.clips[facing]?.[animation] || manifest.clips[facing]?.idle))
     return (
       <AnimatedDinosaur
         manifest={manifest}
@@ -49,7 +51,7 @@ export function DinosaurArt({
         frame={frame}
         bounds={bounds}
         speed={speed}
-        className={className}
+        className={youngBoss ? `young-boss ${className}` : className}
         label={species === 'boss' ? ARENA_BOSSES[element].name : `${element} ${SPECIES_NAMES[species]} ${stage}`}
         bossElement={species === 'boss' ? element : undefined}
       />

@@ -1,94 +1,57 @@
-import { ResourceHelp, RequirementLink } from './ResourceHelp';
 import { WorkshopPanel, time } from './WorkshopPanel';
 import { ArenaTicketShop } from './ArenaTicketShop';
 import { RarityBadge, rarityClass } from './Rarity';
 import { ARENA_BOSSES } from './arenaBosses';
-import { PLAYABLE_DINOSAURS, isPlayableDinosaur } from './playableDinosaurs';
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { ENCOUNTERS, ITEMS, RECIPES, recipeFoodCost, type Encounter, type ItemId } from './content';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { ENCOUNTERS, ITEMS, REGIONS, REGION_STAGES, type Encounter, type ItemId } from './content';
 import { ExpeditionGuide } from './ExpeditionGuide';
-import { expeditionPlan } from './expeditionRules';
+import { recommendedElement, regionById, regionProgress } from './expeditionRules';
 import {
-  advance,
   ARENA_LEVELS,
+  ARENA_REST,
+  ARENA_SEASON,
+  arenaTicketPrice,
   BALANCE,
-  champion,
-  EGG_DROP,
-  eggOdds,
+  busyDinos,
+  command,
+  currentTrip,
+  elementEdge,
   ELEMENTS,
   GATE_LEAGUES,
-  HABITAT_LEVELS,
-  WORKSHOP_LEVELS,
-  rarityOf,
-  STARS_TO_ADVANCE,
-  TIRED_MS,
-  STAR_MILESTONES,
-  battleEdge,
+  GEMS,
   isTired,
-  starTotal,
-  command,
-  opponentAdult,
-  foeHasUltimate,
-  workshop,
-  SPECIES_NAMES,
+  rarityOf,
   REALM_NAMES,
+  rewardPreview,
+  seasonStep,
+  SPECIES_NAMES,
+  STARS_TO_ADVANCE,
+  storyChapter,
+  battleEdge,
+  teamDinos,
   type Command,
+  type Dino,
   type RealmId,
+  type RoundReport,
   type Save,
-  type Species,
 } from './game';
+import { arenaFoes, arenaTier, foeHasUltimate, roundCap, teamReward } from './arenaTeams';
 import { DinosaurArt } from './DinosaurArt';
 import { loadAnimation, loadBossAnimation, loadSpriteImage, type Clip } from './animation';
-import { entrance, exchange, fighter, rest, runMs, type BattleAction, type Fighter, type Step, type Unit } from './battleChoreography';
+import { entrance, exchange, fighter, rest, runMs, swapEntrance, type Fighter, type Step, type Unit } from './battleChoreography';
 import { useReducedMotion } from './useMotion';
 import { playSound } from './sound';
 import { worldThumb } from './worldArt';
 import { ArenaOpponent } from './ArenaOpponent';
-import { arenaBoss } from './arenaBosses';
-import { autoAction, predictFight } from './autoBattle';
+import { movesMemory, nextMove, predictFight } from './autoBattle';
 import { calloutText } from './battleCallouts';
 import { UpgradeCard } from './UpgradeCard';
+import { TeamPicker } from './TeamPicker';
+import { Tabs, TabPanel } from './ui/Tabs';
+import { CompactCard } from './ui/CompactCard';
 import './gameplay.css';
-import { Icon } from './ui/Icon';
-import { AnimatedWorkshopSprite } from './AnimatedWorkshopSprite';
-import { WORKSHOP_STATES } from './workshopTiers';
+import { Icon, elementIcon } from './ui/Icon';
 export type GameplayView = 'expedition' | 'arena' | 'workshop';
-/** Every fight has its own opponent: expeditions use their world's element; arena leagues are generated below. */
-/** Each expedition's resident, by the destination's element (the chain follows the realms, fire first). */
-const OPPONENTS: Record<string, [Species, RealmId]> = {
-  training: ['ankylosaurus', 'fire'],
-  'arena-water-1': ['raptor', 'water'],
-  'arena-water-2': ['thalassaur', 'water'],
-  'arena-earth-1': ['raptor', 'earth'],
-  'arena-earth-2': ['terrasaur', 'earth'],
-  'arena-nature-1': ['triceratops', 'nature'],
-  ruins: ['raptor', 'water'],
-  canyon: ['triceratops', 'earth'],
-  frost: ['raptor', 'nature'],
-  lagoon: ['brachiosaurus', 'ice'],
-  wind: ['trex', 'lightning'],
-  thunder: ['triceratops', 'wind'],
-  twilight: ['raptor', 'dark'],
-  dawn: ['brachiosaurus', 'light'],
-  sigils: ['ankylosaurus', 'arcane'],
-};
-export function opponentOf(encounter: Encounter) {
-  const tier = Number(encounter.id.split('-')[2] ?? 1) - 1,
-    league = ELEMENTS.findIndex((e) => e.id === encounter.league);
-  // Keep existing league rotations stable when adding the new earth family.
-  const rotation: Species[] = ['trex', 'raptor', 'triceratops', 'ankylosaurus', 'brachiosaurus', 'ignasaur', 'thalassaur'];
-  const [species, element] =
-    OPPONENTS[encounter.id] ??
-    (league >= 0 ? [rotation[(league + tier * 2) % rotation.length], encounter.league as RealmId] : ['raptor', 'ice']);
-  const animated = isPlayableDinosaur(species, element) ? { species, element }
-    : PLAYABLE_DINOSAURS.find(d => d.element === element) ?? PLAYABLE_DINOSAURS[(Math.max(0, league) + tier) % PLAYABLE_DINOSAURS.length];
-  return {
-    species: animated.species,
-    element: animated.element,
-    stage: opponentAdult(encounter) ? ('adult' as const) : ('juvenile' as const),
-    info: ELEMENTS.find((e) => e.id === animated.element)!,
-  };
-}
 type Props = {
   save: Save;
   now: number;
@@ -103,7 +66,18 @@ type Props = {
 };
 const T = (lang: number, ro: string, en: string) => (lang ? en : ro);
 /** Three star slots, the earned ones filled. */
-const starRow = (n: number) => '★'.repeat(n) + '☆'.repeat(3 - n);
+function StarRow({ n }: { n: number }) {
+  // Three stars, the earned ones lit (the pixel font draws ☆ like ★, so the empty ones are dimmed instead).
+  return (
+    <span className="star-row" aria-label={`${n} / 3`}>
+      {[0, 1, 2].map((i) => (
+        <i key={i} className={i < n ? 'on' : ''}>
+          ★
+        </i>
+      ))}
+    </span>
+  );
+}
 /** The element edge as a short badge: an arrow and a word. */
 function EdgeBadge({ edge, lang }: { edge: -1 | 0 | 1; lang: number }) {
   return (
@@ -204,93 +178,9 @@ function Frame({
     </section>
   );
 }
-function Team({ save, lang }: Pick<Props, 'save' | 'lang'>) {
-  const tr = (ro: string, en: string) => T(lang, ro, en);
-  const hero = champion(save);
-  return (
-    <div className="gameplay-team">
-      <div className="gameplay-section-label">
-        {tr('ECHIPA TA', 'YOUR TEAM')} <small>{hero ? '1' : '0'} / 3</small>
-      </div>
-      <div className="gameplay-team-slots">
-        <div className={hero ? 'occupied' : ''}>
-          {hero ? (
-            <>
-              <DinosaurArt species={hero.species} element={hero.element} stage={hero.stage} className={rarityClass(hero.rarity)} />
-              <strong>
-                {hero.nickname} · {hero.level}
-                <RarityBadge rarity={rarityOf(hero)} lang={lang} short />
-              </strong>
-              <i />
-            </>
-          ) : (
-            <span>＋</span>
-          )}
-        </div>
-        {[1, 2].map((i) => (
-          <div key={i}>
-            <span>＋</span>
-            <small>{tr('Nerecrutat', 'Not recruited')}</small>
-          </div>
-        ))}
-      </div>
-      <p className="gameplay-small">
-        {tr(
-          'Traseu solo 1v1. Celelalte familii de eroi sunt în lucru.',
-          'Solo 1v1 path. Other hero families are in development.',
-        )}
-      </p>
-    </div>
-  );
-}
-function Rewards({
-  encounter,
-  repeat,
-  lang,
-  bonus = 0,
-  eggChance,
-}: {
-  encounter: Encounter;
-  repeat: boolean;
-  lang: number;
-  bonus?: number;
-  /** Chance that a win drops an egg; undefined when this fight never drops one. */
-  eggChance?: number;
-}) {
-  const boost = (n: number) => Math.round(n * (1 + bonus));
-  return (
-    <div className="gameplay-rewards">
-      <span>
-        <b className="gold">●</b>
-        {boost(repeat ? 50 : encounter.gold)}
-        <small>{T(lang, 'Aur', 'Gold')}</small>
-      </span>
-      <span>
-        <b className="food">❧</b>
-        {boost(repeat ? 25 : encounter.food)}
-        <small>{T(lang, 'Hrană', 'Food')}</small>
-      </span>
-      {(Object.entries(encounter.materials) as [ItemId, number][]).map(([id, count]) => (
-        <span key={id}>
-          <b style={{ color: ITEMS[id].color }}>{ITEMS[id].icon}</b>
-          {boost(repeat ? Math.max(1, Math.floor(count / 4)) : count)}
-          <small>{ITEMS[id].name[lang]}</small>
-        </span>
-      ))}
-      {eggChance !== undefined && (
-        <span className="reward-egg">
-          <b><Icon name="egg" scale={1} /></b>
-          {Math.round(eggChance * 100)}%<small>{T(lang, 'Șansă de ou', 'Egg chance')}</small>
-        </span>
-      )}
-    </div>
-  );
-}
 export function GameplayScreen(props: Props & { view: GameplayView }) {
   const { view, save, now, lang, run, close, navigate, build } = props;
   const tr = (ro: string, en: string) => T(lang, ro, en);
-  const [league, setLeague] = useState<RealmId>('fire');
-  const [ticketShop, setTicketShop] = useState(false);
   const [selected, setSelected] = useState('training'),
     [recipeId, setRecipe] = useState('planks');
   const detailRef = useRef<HTMLElement>(null);
@@ -302,11 +192,6 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
   useEffect(() => {
     if (view === 'workshop') setRecipe(props.initialRecipe ?? 'planks');
   }, [view, props.initialRecipe]);
-  useEffect(() => {
-    if (view !== 'workshop') return;
-    const frame = requestAnimationFrame(() => document.querySelector('.craft-card.focus')?.scrollIntoView({ block: 'center' }));
-    return () => cancelAnimationFrame(frame);
-  }, [view, recipeId]);
   const mapRef = useRef<HTMLDivElement>(null),
     mapDrag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
   const [mapZoom, setMapZoom] = useState(1),
@@ -326,90 +211,25 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
     return () => observer.disconnect();
   }, [view]);
   useEffect(() => {
-    setTicketShop(false);
-    if (view === 'expedition') {
-      let id = save.expedition?.encounterId ?? ENCOUNTERS.find(e => e.mode === 'expedition' && !save.cleared.includes(e.id))?.id ?? 'training';
-      try {
-        const remembered = localStorage.getItem('dino-expedition-destination');
-        if (ENCOUNTERS.some(e => e.mode === 'expedition' && e.id === remembered)) id = remembered!;
-      } catch { /* Optional navigation memory. */ }
-      setSelected(id);
-      return;
-    }
-    const ongoing = view === 'arena' ? ENCOUNTERS.find(e => e.id === save.battle?.encounterId && e.mode === 'arena') : undefined;
-    setSelected(ongoing?.id ?? (view === 'arena' ? 'arena-fire-1' : 'training'));
-    setLeague((ongoing?.league ?? 'fire') as RealmId);
+    if (view !== 'expedition') return;
+    let id = currentTrip(save)?.regionId ?? frontierRegion(save).id;
+    try {
+      const remembered = localStorage.getItem('dino-expedition-destination');
+      if (regionById(remembered ?? '')) id = remembered!;
+    } catch { /* Optional navigation memory. */ }
+    setSelected(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
-  const gateOpen = (id: RealmId) => !GATE_LEAGUES.includes(id) || save.arenaLevel >= 2;
-  const leagueOpen = (id: RealmId) => !!save.habitats[id] && gateOpen(id);
-  const leagueEncounters = ENCOUNTERS.filter((e) => e.mode === 'arena' && e.league === league);
-  const encounter = ENCOUNTERS.find((e) => e.id === selected && e.mode === view)
-      ?? ENCOUNTERS.find((e) => e.mode === (view === 'arena' ? 'arena' : 'expedition'))!,
-    repeat = save.cleared.includes(encounter.id);
-  const expedition = view === 'expedition' ? expeditionPlan(save, encounter.id) : null;
-  const hasBuilding = save.buildings.some(
-    (b) => b.kind === (view === 'workshop' ? 'workshop' : view === 'arena' ? 'arena' : 'portal'),
-  );
-  const starsLocked = encounter.mode === 'arena' && !!encounter.requires && (save.stars[encounter.requires] ?? 0) < STARS_TO_ADVANCE;
-  const locked =
-    (encounter.mode !== 'arena' && !!encounter.requires && !save.cleared.includes(encounter.requires)) ||
-    starsLocked ||
-    (!!encounter.league && !leagueOpen(encounter.league as RealmId));
-  const hero = champion(save);
-  const canBattle =
-    !!hero &&
-    hero.stage !== 'baby' &&
-    hero.level >= encounter.level &&
-    !locked &&
-    (encounter.id === 'training' || hasBuilding) &&
-    (encounter.mode !== 'arena' || (save.arenaTickets[encounter.league as RealmId] ?? 0) > 0);
-  const arenaBattle = view === 'arena' && !!save.battle?.encounterId.startsWith('arena');
-  const rewards = (
-    <>
-      <div className="gameplay-section-label">
-        {tr('RECOMPENSE', 'REWARDS')}{' '}
-        <small>{repeat ? tr('REJUCARE', 'REPLAY') : expedition ? tr('ACEASTĂ ETAPĂ', 'THIS STAGE') : tr('PRIMA VICTORIE', 'FIRST VICTORY')}</small>
-      </div>
-      <Rewards
-        encounter={expedition && !repeat ? { ...encounter,
-          gold: Math.max(1, Math.floor(encounter.gold / expedition.total)),
-          food: Math.max(1, Math.floor(encounter.food / expedition.total)),
-          materials: Object.fromEntries(Object.entries(encounter.materials).map(([id, n]) => [id, Math.max(1, Math.floor(n! / expedition.total))])),
-        } : encounter}
-        repeat={repeat}
-        lang={lang}
-        eggChance={expedition && expedition.stage < expedition.total - 1 ? undefined : save.eggLuck >= EGG_DROP.pity ? 1 : eggOdds(save, encounter, !repeat)?.chance}
-        bonus={encounter.mode === 'arena' ? ARENA_LEVELS[save.arenaLevel - 1].bonus : 0}
-      />
-    </>
-  );
-  const start = () => {
-    if (save.battle || run({ type: 'battle', encounterId: encounter.id })) {
-      if (view !== 'arena' || (save.battle && !arenaBattle)) close();
-    }
-  };
-  // Expeditions are timed trips: the champion leaves, and its rewards are collected when it is back.
-  const ready = advance(save, now);
-  const activeJobs = save.crafting.filter((j) => j.endsAt > now).length;
+  const region = regionById(selected) ?? REGIONS[0];
   return (
     <Frame
-      title={
-        view === 'expedition'
-          ? tr('Expediții', 'Expeditions')
-          : view === 'arena'
-            ? tr('Arena PvE', 'PvE Arena')
-            : tr('Atelierul', 'The workshop')
-      }
+      title={view === 'expedition' ? tr('Expediții', 'Expeditions') : view === 'arena' ? tr('Arena PvE', 'PvE Arena') : tr('Atelierul', 'The workshop')}
       view={view}
       close={close}
       navigate={navigate}
       lang={lang}
     >
-      {view === 'arena' && !arenaBattle && !ticketShop && <div className="arena-access-bar">
-        <span>🎟 {ELEMENTS.find(e => e.id === league)!.name[lang]} · {tr('Tichete', 'Tickets')}: <b>{save.arenaTickets[league] ?? 0}</b></span>
-        <button className="realm-button" onClick={() => setTicketShop(true)}>{tr('Cumpără tichete', 'Buy tickets')}</button>
-      </div>}
-      {view === 'arena' && ticketShop && !arenaBattle ? <ArenaTicketShop save={save} lang={lang} run={run} back={() => setTicketShop(false)} /> : view === 'workshop' ? (
+      {view === 'workshop' ? (
         <WorkshopPanel
           save={save}
           now={now}
@@ -419,13 +239,15 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
           recipeId={recipeId}
           returnToExpeditions={props.returnToExpeditions}
         />
+      ) : view === 'arena' ? (
+        <ArenaView save={save} now={now} lang={lang} run={run} close={close} navigate={navigate} build={build} />
       ) : (
-        <div className={`adventure-layout ${arenaBattle ? 'battle-focus' : ''}`}>
+        <div className="adventure-layout">
           <div
             ref={mapRef}
-            className={view === 'arena' ? 'arena-lobby-scene' : 'adventure-map'}
+            className="adventure-map"
             onPointerDown={(e) => {
-              if (view !== 'expedition' || (e.target as HTMLElement).closest('button')) return;
+              if ((e.target as HTMLElement).closest('button')) return;
               if (window.matchMedia('(max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px)').matches) return;
               e.currentTarget.setPointerCapture(e.pointerId);
               mapDrag.current = { x: e.clientX, y: e.clientY, px: mapPosition.x, py: mapPosition.y };
@@ -441,261 +263,77 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
               mapDrag.current = null;
             }}
           >
-            {arenaBattle ? (
-              <BattleScreen save={save} lang={lang} run={run} close={close} embedded />
-            ) : view === 'expedition' ? (
-              <>
-                <div
-                  className="adventure-map-plane"
-                  data-map-zoom={mapZoom}
-                  style={{ transform: `translate(${mapPosition.x}px, ${mapPosition.y}px) scale(${mapZoom})` }}
-                >
-                  <svg className="adventure-route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    <path d="M20 75 Q25 65 37 62 Q50 65 65 75 L49 85 L64 45 M37 62 L78 23 L86 44 M37 62 L45 20 L20 18 M37 62 L14 48" />
-                  </svg>
-                  {ENCOUNTERS.filter((e) => e.mode === 'expedition').map((e, i) => (
-                    <button
-                      key={e.id}
-                      className={`adventure-node ${e.id === selected ? 'selected' : ''} ${save.cleared.includes(e.id) ? 'cleared' : ''} ${e.requires && !save.cleared.includes(e.requires) ? 'locked' : ''}`}
-                      style={{ left: `${e.x}%`, top: `${e.y}%` }}
-                      onClick={() => {
-                        selectDestination(e.id);
-                        if (window.matchMedia('(max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px)').matches) {
-                          mapRef.current?.nextElementSibling?.scrollIntoView({ block: 'start' });
-                        }
-                      }}
-                      aria-label={e.name[lang]}
-                    >
-                      <span>
-                        {save.cleared.includes(e.id) ? '✓' : ELEMENTS.find((el) => el.id === e.image)?.symbol}
-                      </span>
-                      <strong>
-                        {ELEMENTS.find((el) => el.id === e.image)?.name[lang]}
-                        <small>{e.name[lang]} · {save.cleared.includes(e.id) ? '✓' : `${save.expeditionProgress[e.id] ?? 0}/${e.id === 'training' ? 1 : 3}`}</small>
-                      </strong>
-                    </button>
-                  ))}
-                </div>
-                <div className="map-caption">
-                  <span className="realm-eyebrow">{tr('CAPITOLUL I', 'CHAPTER I')}</span>
-                  <h2>{tr('Zece lumi. O singură aventură.', 'Ten worlds. One adventure.')}</h2>
-                  <p>
-                    {save.cleared.filter((id) => ENCOUNTERS.find((e) => e.id === id)?.mode === 'expedition').length} /
-                    10 {tr('regiuni explorate', 'regions explored')}
-                  </p>
-                </div>
-                <div className="adventure-map-controls">
-                  <button
-                    onClick={() => setMapZoom((z) => Math.min(3, z + 1))}
-                    disabled={mapZoom === 3}
-                    aria-label="Zoom map in"
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => setMapZoom((z) => Math.max(1, z - 1))}
-                    disabled={mapZoom === 1}
-                    aria-label="Zoom map out"
-                  >
-                    −
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMapZoom(1);
-                      setMapPan({ x: 0, y: 0 });
-                    }}
-                    aria-label="Show all worlds"
-                  >
-                    ⌖
-                  </button>
-                  <span>{tr('Mărește și trage pentru explorare', 'Zoom and drag to explore')}</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="arena-challenge-title">
-                  <span className="realm-eyebrow">PVE · {tr('PROVOCARE SOLO', 'SOLO CHALLENGE')}</span>
-                  <h2>{encounter.name[lang]}</h2>
-                  {arenaBoss(encounter) && (
-                    <strong className="arena-boss-name">{arenaBoss(encounter)!.name} · BOSS</strong>
-                  )}
-                  <p>{tr('Fără pierderea permanentă a eroilor', 'Your heroes always return safely')}</p>
-                </div>
-                <div className="battle-stage arena-preview-stage">
-                <ArenaOpponent
-                  encounter={encounter}
-                  key={encounter.id}
-                  className="arena-lobby-enemy"
-                  species={opponentOf(encounter).species}
-                  element={opponentOf(encounter).element}
-                  stage={opponentOf(encounter).stage}
-                />
-                </div>
-                <div className="arena-leagues" aria-label={tr('Ligi', 'Leagues')}>
-                  {ELEMENTS.map((e) => (
-                    <button
-                      key={e.id}
-                      aria-pressed={league === e.id}
-                      disabled={!leagueOpen(e.id)}
-                      title={
-                        leagueOpen(e.id)
-                          ? e.name[lang]
-                          : !save.habitats[e.id]
-                            ? tr('Deblochează lumea ca să deschizi liga', 'Unlock the world to open this league')
-                            : tr('Îmbunătățește Poarta arenei la nivelul 2', 'Upgrade the Arena Gate to level 2')
-                      }
-                      style={{ '--league-color': e.color } as React.CSSProperties}
-                      onClick={() => {
-                        setLeague(e.id);
-                        setSelected(ENCOUNTERS.find((x) => x.mode === 'arena' && x.league === e.id)!.id);
-                      }}
-                    >
-                      {leagueOpen(e.id) ? e.symbol : '🔒'} {e.name[lang]}
-                      <small>
-                        {
-                          ENCOUNTERS.filter(
-                            (x) => x.mode === 'arena' && x.league === e.id && save.cleared.includes(x.id),
-                          ).length
-                        }
-                        /3
-                      </small>
-                    </button>
-                  ))}
-                </div>
-                <div className="arena-ladder">
-                  {leagueEncounters.map((e, i) => (
-                    <button
-                      onClick={() => setSelected(e.id)}
-                      className={selected === e.id ? 'selected' : ''}
-                      key={e.id}
-                    >
-                      <span className="arena-tier-stars" title={`${save.stars[e.id] ?? 0} / 3`}>
-                        {save.stars[e.id] ? starRow(save.stars[e.id]) : `0${i + 1}`}
-                      </span>
-                      <strong>
-                        {e.name[lang]}
-                        {arenaBoss(e) && <em className="arena-boss-tag"> · BOSS</em>}
-                      </strong>
-                      <small>
-                        {tr('Nivel', 'Level')} {e.level}
-                      </small>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-          <aside ref={detailRef} className={`adventure-detail${view === 'expedition' ? ' expedition-detail' : ''}`}>
             <div
-              className="destination-cover"
-              style={{ backgroundImage: `url('${worldThumb(encounter.image as RealmId)}')` }}
+              className="adventure-map-plane"
+              data-map-zoom={mapZoom}
+              style={{ transform: `translate(${mapPosition.x}px, ${mapPosition.y}px) scale(${mapZoom})` }}
             >
-              <span>{encounter.name[lang]}</span>
-              {view === 'expedition' && (
-                <em>
-                  {ELEMENTS.find((e) => e.id === encounter.image)?.symbol} {REALM_NAMES[encounter.image as RealmId]?.[lang]}
-                </em>
-              )}
+              <RegionRoute save={save} />
+              {REGIONS.map((r) => {
+                const progress = regionProgress(save, r.id),
+                  element = ELEMENTS.find((el) => el.id === r.element)!,
+                  away = save.expeditions.some((x) => x.regionId === r.id);
+                return (
+                  <button
+                    key={r.id}
+                    className={`adventure-node ${r.id === selected ? 'selected' : ''} ${progress >= REGION_STAGES ? 'cleared' : ''} ${regionLocked(save, r.id) ? 'locked' : ''} ${away ? 'away' : ''}`}
+                    style={{ left: `${r.x}%`, top: `${r.y}%` }}
+                    onClick={() => selectDestination(r.id)}
+                    aria-label={`${r.name[lang]} · ${progress}/${REGION_STAGES}`}
+                  >
+                    <span>{progress >= REGION_STAGES ? '✓' : element.symbol}</span>
+                    <strong>
+                      {element.name[lang]} <em>{progress}/{REGION_STAGES}{away ? ' ⏳' : ''}</em>
+                      <small>{r.name[lang]}</small>
+                    </strong>
+                  </button>
+                );
+              })}
+            </div>
+            <MapCaption save={save} lang={lang} />
+            <div className="adventure-map-controls">
+              <button onClick={() => setMapZoom((z) => Math.min(3, z + 1))} disabled={mapZoom === 3} aria-label="Zoom map in">
+                +
+              </button>
+              <button onClick={() => setMapZoom((z) => Math.max(1, z - 1))} disabled={mapZoom === 1} aria-label="Zoom map out">
+                −
+              </button>
+              <button
+                onClick={() => {
+                  setMapZoom(1);
+                  setMapPan({ x: 0, y: 0 });
+                }}
+                aria-label="Show all worlds"
+              >
+                ⌖
+              </button>
+              <span>{tr('Mărește și trage pentru explorare', 'Zoom and drag to explore')}</span>
+            </div>
+          </div>
+          <aside ref={detailRef} className="adventure-detail expedition-detail">
+            <div className="destination-cover" style={{ backgroundImage: `url('${worldThumb(region.element)}')` }}>
+              <span>{region.name[lang]}</span>
+              <em>
+                {ELEMENTS.find((e) => e.id === region.element)?.symbol} {REALM_NAMES[region.element]?.[lang]}
+                {' · '}
+                {tr('recomandat', 'best')} {ELEMENTS.find((e) => e.id === recommendedElement(region.element))?.symbol}
+              </em>
             </div>
             <div className="adventure-detail-body">
-              {view === 'expedition' && <ExpeditionGuide
-                save={save} now={now} lang={lang} destination={encounter.id}
-                select={selectDestination} run={run} navigate={navigate} build={build}
+              <ExpeditionGuide
+                save={save}
+                now={now}
+                lang={lang}
+                destination={region.id}
+                select={selectDestination}
+                run={run}
+                navigate={navigate}
+                build={build}
                 prepareSupplies={props.prepareSupplies ?? (() => navigate('workshop'))}
-                rewards={rewards}
-              />}
-              {view === 'expedition' && (
-                <button className="realm-button secondary mobile-destination-picker" onClick={() => mapRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
-                  ↓ {tr('Toate destinațiile', 'All destinations')}
-                </button>
-              )}
-              {view !== 'expedition' && rewards}
-              {view !== 'expedition' && <Team save={save} lang={lang} />}
-              {view !== 'expedition' && (
-              <div className="encounter-condition">
-                {opponentOf(encounter).info.symbol}{' '}
-                {arenaBoss(encounter)
-                  ? `BOSS ${arenaBoss(encounter)!.name} · ${SPECIES_NAMES[opponentOf(encounter).species]}`
-                  : `${SPECIES_NAMES[opponentOf(encounter).species]} ${opponentOf(encounter).info.name[lang]}`}{' '}
-                · {tr('Nivel recomandat', 'Recommended level')} {encounter.level}
-                <br />
-                {tr('Rol', 'Role')}: {opponentOf(encounter).info.role[lang]}
-              </div>
-              )}
-              {view !== 'expedition' && locked && (
-                <p className="gameplay-warning">
-                  {starsLocked
-                    ? tr(`Ai nevoie de ${STARS_TO_ADVANCE}★ la treapta precedentă.`, `You need ${STARS_TO_ADVANCE}★ on the previous tier.`)
-                    : tr('Câștigă mai întâi întâlnirea precedentă.', 'Win the previous encounter first.')}
-                </p>
-              )}
-              {view === 'arena' && hero && (
-                <ArenaOutlook save={save} encounterId={encounter.id} now={now} lang={lang} />
-              )}
-              {view !== 'expedition' && (!hero || hero.stage === 'baby') ? (
-                <p className="gameplay-warning">
-                  {hero
-                    ? tr(
-                        `${hero.nickname} e încă pui. Hrănește-l până la nivelul 9 și evoluează-l în juvenil ca să lupte.`,
-                        `${hero.nickname} is still a baby. Feed him to level 9 and evolve him into a juvenile to fight.`,
-                      )
-                    : tr('Eclozează primul ou ca să ai un luptător.', 'Hatch your first egg to get a fighter.')}
-                  {hero && (
-                    <button className="realm-button secondary gameplay-warning-action" onClick={() => navigate('dino')}>
-                      {tr('Crește-l acum', 'Raise him now')} →
-                    </button>
-                  )}
-                </p>
-              ) : null}
-              {view !== 'expedition' && !hasBuilding && encounter.id !== 'training' && (
-                <p className="gameplay-warning">
-                  {view === 'arena'
-                    ? tr('Construiește Poarta arenei pe insula principală ca să lupți aici.', 'Build the Arena Gate on the main island to fight here.')
-                    : tr('Construiește Portalul de expediții pe insula principală.', 'Build the Expedition Portal on the main island.')}
-                </p>
-              )}
-              {view !== 'expedition' && (
-                <>
-                {!hero && <RequirementLink title={tr('Ai nevoie de un campion', 'A champion is required')} detail={tr('Eclozează un dinozaur în Incubator.', 'Hatch a dinosaur in the Hatchery.')} route={{ panel: 'hatchery' }} />}
-                {hero && hero.level < encounter.level && <RequirementLink title={tr(`Nivel necesar: ${encounter.level}`, `Required level: ${encounter.level}`)} detail={tr('Hrănește și evoluează campionul.', 'Feed and evolve your champion.')} route={{ panel: 'dino' }} />}
-                {hero && (save.tired[hero.id] ?? 0) > now && <RequirementLink title={tr('Campionul se odihnește', 'Champion is resting')} detail={tr('Alege alt campion sau așteaptă terminarea odihnei.', 'Choose another champion or wait for recovery.')} route={{ panel: 'dino' }} />}
-                {view === 'arena' && !save.battle && <div className="arena-entry-ticket">
-                  <span>🎟 {tr('Acces', 'Entry')}: 1 {tr('tichet', 'ticket')} {ELEMENTS.find(e => e.id === league)!.name[lang]} · {tr('Deținute', 'Owned')}: {save.arenaTickets[league] ?? 0}</span>
-                  {(save.arenaTickets[league] ?? 0) === 0 && <button className="realm-button secondary" onClick={() => setTicketShop(true)}>{tr('Ai nevoie de un tichet · Cumpără', 'A ticket is required · Buy')}</button>}
-                </div>}
-              <button className="realm-button adventure-start" disabled={arenaBattle || (!save.battle && !canBattle)} onClick={start}>
-                  {arenaBattle ? tr('Luptă în desfășurare', 'Battle in progress') : save.battle ? tr('Reia lupta', 'Resume battle') : tr('Începe aventura', 'Begin adventure')} →
-                </button>
-                </>
-              )}
-              {view !== 'expedition' && !hasBuilding && encounter.id !== 'training' && (
-                <button className="realm-link" onClick={build}>
-                  {view === 'arena'
-                    ? tr('Construiește Poarta arenei', 'Build the Arena Gate')
-                    : tr('Construiește Portalul de expediții', 'Build the Expedition Portal')}
-                </button>
-              )}
-              {view === 'arena' && hasBuilding && (
-                <UpgradeCard
-                  save={save}
-                  lang={lang}
-                  level={save.arenaLevel}
-                  max={ARENA_LEVELS.length}
-                  next={[
-                    <>
-                      ● <b>+{Math.round((ARENA_LEVELS[save.arenaLevel]?.bonus ?? 0) * 100)}%</b>{' '}
-                      {tr('aur, hrană și materiale din arenă', 'arena gold, food and materials')}
-                    </>,
-                    <>
-                      ♜ {tr('Deschide ultimele 5 ligi', 'Opens the last 5 leagues')} (
-                      {GATE_LEAGUES.map((id) => ELEMENTS.find((e) => e.id === id)!.symbol).join(' ')})
-                    </>,
-                  ]}
-                  gold={ARENA_LEVELS[save.arenaLevel]?.gold ?? 0}
-                  materials={ARENA_LEVELS[save.arenaLevel]?.materials ?? {}}
-                  upgrade={() => run({ type: 'upgradeArena' })}
-                />
-              )}
+              />
+              <button className="realm-button secondary mobile-destination-picker" onClick={() => mapRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
+                ↓ {tr('Toate destinațiile', 'All destinations')}
+              </button>
             </div>
           </aside>
         </div>
@@ -703,81 +341,611 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
     </Frame>
   );
 }
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+/** A region not open yet: its world is still locked, or the region before it is not crossed. */
+const regionLocked = (save: Save, id: string) => {
+  const i = REGIONS.findIndex((r) => r.id === id);
+  return !save.habitats[REGIONS[i].element] || (i > 0 && regionProgress(save, REGIONS[i - 1].id) < REGION_STAGES);
+};
+/** The region the player is working on: the first one not crossed yet (the last one once all are). */
+const frontierRegion = (save: Save) => REGIONS.find((r) => regionProgress(save, r.id) < REGION_STAGES) ?? REGIONS[REGIONS.length - 1];
 /**
- * What the champion can expect in this arena fight: its element edge, how hard the fight will be (played in
- * advance by the same rules), the stars it holds, and how long it still rests after a defeat.
+ * The route between the regions, drawn from their positions in chain order: solid up to the last region crossed,
+ * dashed beyond. Each leg bends a little so the line does not run straight through the islands.
  */
-function ArenaOutlook({ save, encounterId, now, lang }: { save: Save; encounterId: string; now: number; lang: number }) {
-  const tr = (ro: string, en: string) => T(lang, ro, en);
-  const hero = champion(save)!;
-  const edge = battleEdge(encounterId, hero);
-  const tiredFor = (save.tired[hero.id] ?? 0) - now;
-  const forecast = useMemo(
-    () => (tiredFor > 0 ? null : predictFight(save, encounterId, now)),
-    // The forecast depends on the champion and the fight, not on the ticking clock.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [encounterId, hero.id, hero.level, hero.stage, tiredFor > 0, save.stars],
+function RegionRoute({ save }: { save: Save }) {
+  const legs = REGIONS.slice(1).map((to, i) => {
+    const from = REGIONS[i],
+      mx = (from.x + to.x) / 2,
+      my = (from.y + to.y) / 2,
+      dx = to.x - from.x,
+      dy = to.y - from.y,
+      bend = 0.12;
+    return {
+      id: to.id,
+      d: `M${from.x} ${from.y} Q${(mx - dy * bend).toFixed(1)} ${(my + dx * bend).toFixed(1)} ${to.x} ${to.y}`,
+      done: regionProgress(save, to.id) >= REGION_STAGES,
+    };
+  });
+  return (
+    <svg className="adventure-route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      {legs.map((l) => (
+        <path key={l.id} d={l.d} className={l.done ? 'done' : ''} />
+      ))}
+    </svg>
   );
-  const total = starTotal(save);
-  const next = STAR_MILESTONES[save.starMilestones];
+}
+/** The map's title card: the story chapter, the region being worked on, and how far the expedition chain goes. */
+function MapCaption({ save, lang }: { save: Save; lang: number }) {
+  const tr = (ro: string, en: string) => (lang ? en : ro);
+  const chapter = storyChapter(save)?.chapter.number;
+  const region = frontierRegion(save),
+    n = REGIONS.indexOf(region) + 1;
+  const crossed = REGIONS.filter((r) => regionProgress(save, r.id) >= REGION_STAGES).length,
+    stages = REGIONS.reduce((sum, r) => sum + regionProgress(save, r.id), 0);
+  return (
+    <div className="map-caption">
+      <span className="realm-eyebrow">
+        {chapter ? `${tr('CAPITOLUL', 'CHAPTER')} ${ROMAN[chapter]} · ` : ''}
+        {tr('REGIUNEA', 'REGION')} {n}/10
+      </span>
+      <h2>
+        {region.name[lang]} · {regionProgress(save, region.id)}/{REGION_STAGES}
+      </h2>
+      <p>
+        {crossed}/10 {tr('regiuni traversate', 'regions crossed')} · {stages}/{REGIONS.length * REGION_STAGES} {tr('etape', 'stages')}
+      </p>
+    </div>
+  );
+}
+/** The encounter the arena opens on: the fight under way, the last one picked, or the first open one not won yet. */
+function startingEncounter(save: Save) {
+  const arena = ENCOUNTERS.filter((e) => e.mode === 'arena');
+  if (save.battle) return save.battle.encounterId;
+  try {
+    const remembered = localStorage.getItem('dino-arena-encounter');
+    if (arena.some((e) => e.id === remembered)) return remembered!;
+  } catch {
+    /* Optional navigation memory. */
+  }
+  const open = arena.filter((e) => leagueOpen(save, e.league as RealmId) && !tierLocked(save, e));
+  return (open.find((e) => !save.cleared.includes(e.id)) ?? open.at(-1) ?? arena[0]).id;
+}
+const gateOpen = (save: Save, id: RealmId) => !GATE_LEAGUES.includes(id) || save.arenaLevel >= 2;
+const leagueOpen = (save: Save, id: RealmId) => !!save.habitats[id] && gateOpen(save, id);
+const tierLocked = (save: Save, e: Encounter) => !!e.requires && (save.stars[e.requires] ?? 0) < STARS_TO_ADVANCE;
+type Blocker =
+  | 'building'
+  | 'noTeam'
+  | 'baby'
+  | 'away'
+  | 'world'
+  | 'gate'
+  | 'stars'
+  | 'tired'
+  | 'level'
+  | 'ticket';
+/** The first reason the team cannot start this fight now (the same checks as the `battle` command), or null. */
+function arenaBlocker(save: Save, e: Encounter, now: number): Blocker | null {
+  const team = teamDinos(save),
+    league = e.league as RealmId;
+  if (!save.buildings.some((b) => b.kind === 'arena')) return 'building';
+  if (!team.length) return 'noTeam';
+  if (team.some((d) => d.stage === 'baby')) return 'baby';
+  if (team.some((d) => busyDinos(save).has(d.id))) return 'away';
+  if (!save.habitats[league]) return 'world';
+  if (!gateOpen(save, league)) return 'gate';
+  if (tierLocked(save, e)) return 'stars';
+  if (team.some((d) => isTired(save, d.id, now))) return 'tired';
+  if (team.some((d) => d.level < e.level)) return 'level';
+  if (!(save.arenaTickets[league] ?? 0)) return 'ticket';
+  return null;
+}
+type ArenaProps = Pick<Props, 'save' | 'now' | 'lang' | 'run' | 'close' | 'navigate' | 'build'>;
+type ArenaTab = 'fight' | 'team' | 'gate';
+
+/**
+ * The arena: league and tier chips over the opposing team on the left; on the right three tabs — Fight (rewards,
+ * opponents, forecast, ticket and start), Team (pick one to three dinosaurs, wake the resting ones) and Gate (the
+ * upgrade and the weekly season). A fight in progress takes the whole screen.
+ */
+function ArenaView({ save, now, lang, run, close, navigate, build }: ArenaProps) {
+  const tr = (ro: string, en: string) => T(lang, ro, en);
+  const [selected, setSelected] = useState(() => startingEncounter(save));
+  const [tab, setTab] = useState<ArenaTab>('fight');
+  const [shop, setShop] = useState(false);
+  const encounter = ENCOUNTERS.find((e) => e.id === selected) ?? ENCOUNTERS[0],
+    league = encounter.league as RealmId;
+  const pick = (id: string) => {
+    setSelected(id);
+    try {
+      localStorage.setItem('dino-arena-encounter', id);
+    } catch {
+      /* Optional navigation memory. */
+    }
+  };
+  if (save.battle)
+    return (
+      <div className="adventure-layout battle-focus">
+        <div className="arena-lobby-scene">
+          <BattleScreen save={save} lang={lang} run={run} close={close} embedded />
+        </div>
+      </div>
+    );
+  if (shop) return <ArenaTicketShop save={save} lang={lang} run={run} back={() => setShop(false)} focus={league} />;
+  const foes = arenaFoes(encounter.id),
+    boss = foes.find((f) => f.boss),
+    element = ELEMENTS.find((e) => e.id === league)!;
+  const leagueEncounters = ENCOUNTERS.filter((e) => e.league === league);
+  const step = seasonStep(save.arena.weekWins),
+    nextSeason = ARENA_SEASON[step];
+  const idBase = 'arena-tabs';
+  return (
+    <div className="arena-view">
+      <div className="arena-stage-pane">
+        <div className="arena-league-chips" role="group" aria-label={tr('Ligi', 'Leagues')}>
+          {ELEMENTS.map((e) => {
+            const open = leagueOpen(save, e.id),
+              stars = ENCOUNTERS.filter((x) => x.league === e.id).reduce((n, x) => n + (save.stars[x.id] ?? 0), 0);
+            return (
+              <button
+                key={e.id}
+                type="button"
+                aria-pressed={league === e.id}
+                className={`arena-league-chip${open ? '' : ' locked'}`}
+                style={{ '--league-color': e.color } as CSSProperties}
+                title={
+                  open
+                    ? `${e.name[lang]} · ${tr('nivel', 'level')} ${ENCOUNTERS.find((x) => x.id === `arena-${e.id}-1`)!.level}+`
+                    : !save.habitats[e.id]
+                      ? tr(`Deblochează lumea ${e.name[0]} ca să deschizi liga`, `Unlock the ${e.name[1]} world to open this league`)
+                      : tr('Îmbunătățește Poarta arenei la nivelul 2', 'Upgrade the Arena Gate to level 2')
+                }
+                onClick={() => pick(`arena-${e.id}-1`)}
+              >
+                {open ? <Icon name={elementIcon(e.id)} scale={1} /> : <span aria-hidden="true">🔒</span>}
+                <span className="arena-league-name">{e.name[lang]}</span>
+                <small>{stars}★</small>
+              </button>
+            );
+          })}
+        </div>
+        <div className="arena-preview">
+          <div className="arena-preview-title">
+            <span className="realm-eyebrow">
+              {element.name[lang].toUpperCase()} · {tr('NIVEL', 'LEVEL')} {encounter.level}
+            </span>
+            <h2>{encounter.name[lang]}</h2>
+            {boss && <strong className="arena-boss-name">BOSS {ARENA_BOSSES[league].name}</strong>}
+          </div>
+          <div className={`arena-foe-lineup foes-${foes.length}`}>
+            {foes.map((f, i) => (
+              <div key={`${encounter.id}-${i}`} className={`arena-foe-figure${f.boss ? ' boss' : ''}`}>
+                <ArenaOpponent foe={f} className="dinosaur-opponent" />
+              </div>
+            ))}
+          </div>
+          <div className="arena-season-chip" title={tr('Sezonul săptămânal: victorii în arenă de luni până duminică', 'Weekly season: arena wins from Monday to Sunday')}>
+            <Icon name="trophy" scale={1} />
+            {nextSeason ? (
+              <span>
+                {tr('Sezon', 'Season')} <b>{save.arena.weekWins}/{nextSeason.wins}</b> · {seasonPrize(nextSeason, lang)}
+              </span>
+            ) : (
+              <span>
+                {tr('Sezon complet', 'Season complete')} · <b>{save.arena.weekWins}</b> {tr('victorii', 'wins')}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="arena-tier-chips" role="group" aria-label={tr('Trepte', 'Tiers')}>
+          {leagueEncounters.map((e, i) => {
+            const locked = tierLocked(save, e) || !leagueOpen(save, league);
+            return (
+              <button
+                key={e.id}
+                type="button"
+                aria-pressed={selected === e.id}
+                className={`arena-tier-chip${locked ? ' locked' : ''}`}
+                onClick={() => pick(e.id)}
+              >
+                <span className="arena-tier-stars" aria-label={`${save.stars[e.id] ?? 0} / 3`}>
+                  {locked ? '🔒' : <StarRow n={save.stars[e.id] ?? 0} />}
+                </span>
+                <strong>
+                  {e.name[lang].split(' · ')[1]}
+                  {i === 2 && <em className="arena-boss-tag"> · BOSS</em>}
+                </strong>
+                <small>
+                  {tr('Nv.', 'Lv.')} {e.level} · {arenaFoes(e.id).length} {tr('adversari', 'foes')}
+                </small>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <aside className="arena-side">
+        <Tabs
+          idBase={idBase}
+          label={tr('Secțiuni arenă', 'Arena sections')}
+          className="arena-tabs"
+          active={tab}
+          onChange={setTab}
+          tabs={[
+            { id: 'fight', label: tr('Luptă', 'Fight') },
+            { id: 'team', label: tr('Echipă', 'Team'), badge: save.team.filter((id) => isTired(save, id, now)).length ? '💤' : undefined },
+            { id: 'gate', label: tr('Poartă', 'Gate') },
+          ]}
+        />
+        {tab === 'fight' && (
+          <TabPanel idBase={idBase} id="fight" className="arena-tab">
+            <ArenaFight save={save} now={now} lang={lang} run={run} encounter={encounter} openShop={() => setShop(true)} openTeam={() => setTab('team')} navigate={navigate} build={build} />
+          </TabPanel>
+        )}
+        {tab === 'team' && (
+          <TabPanel idBase={idBase} id="team" className="arena-tab">
+            <ArenaTeam save={save} now={now} lang={lang} run={run} league={league} />
+          </TabPanel>
+        )}
+        {tab === 'gate' && (
+          <TabPanel idBase={idBase} id="gate" className="arena-tab">
+            <ArenaGate save={save} now={now} lang={lang} run={run} build={build} />
+          </TabPanel>
+        )}
+      </aside>
+    </div>
+  );
+}
+/** A season step's prize in a few symbols. */
+function seasonPrize(step: (typeof ARENA_SEASON)[number], lang: number) {
+  return [
+    step.gems && `${step.gems}💎`,
+    step.gold && `${step.gold}●`,
+    ...(Object.entries(step.materials) as [ItemId, number][]).map(([id, n]) => `${n} ${ITEMS[id].name[lang].toLowerCase()}`),
+    step.tickets && `${step.tickets} ${lang ? 'tickets' : 'bilete'}`,
+  ]
+    .filter(Boolean)
+    .join(' + ');
+}
+/** A small still portrait of a fighter. */
+function Face({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <span className={`arena-face ${className}`}>{children}</span>;
+}
+
+function ArenaFight({ save, now, lang, run, encounter, openShop, openTeam, navigate, build }: Pick<ArenaProps, 'save' | 'now' | 'lang' | 'run' | 'navigate' | 'build'> & {
+  encounter: Encounter;
+  openShop: () => void;
+  openTeam: () => void;
+}) {
+  const tr = (ro: string, en: string) => T(lang, ro, en);
+  const league = encounter.league as RealmId,
+    element = ELEMENTS.find((e) => e.id === league)!;
+  const team = teamDinos(save),
+    foes = arenaFoes(encounter.id),
+    reward = rewardPreview(save, encounter.id, Math.max(1, team.length))!,
+    tickets = save.arenaTickets[league] ?? 0,
+    blocker = arenaBlocker(save, encounter, now);
+  const restKey = team.map((d) => `${d.id}:${d.level}:${d.stage}:${isTired(save, d.id, now)}`).join(',');
+  const forecast = useMemo(
+    () => (blocker === 'tired' ? null : predictFight(save, encounter.id, now)),
+    // The forecast depends on the team and the fight, not on the ticking clock.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [encounter.id, restKey, save.stars, save.buildings.length, save.arenaLevel, blocker === 'tired'],
+  );
+  // A fight the forecast says is lost needs a second click.
+  const [armed, setArmed] = useState(false);
+  useEffect(() => setArmed(false), [encounter.id, restKey]);
+  useEffect(() => {
+    if (!armed) return;
+    const timer = setTimeout(() => setArmed(false), 5000);
+    return () => clearTimeout(timer);
+  }, [armed]);
   const verdict = !forecast
     ? null
     : !forecast.win
-      ? { cls: 'hard', text: tr('Foarte greu · ar pierde acum', 'Very hard · would lose now') }
+      ? { cls: 'hard', text: forecast.result === 'draw' ? tr('Foarte greu · remiză', 'Very hard · a draw') : tr('Foarte greu · ar pierde acum', 'Very hard · would lose now') }
       : forecast.stars === 3
         ? { cls: 'easy', text: tr('Ușor', 'Easy') }
         : forecast.stars === 2
           ? { cls: 'even', text: tr('Echilibrat', 'Balanced') }
           : { cls: 'tough', text: tr('Greu · la limită', 'Tough · a close call') };
+  const edges = team.map((d) => battleEdge(encounter.id, d));
+  const risky = !!forecast && !forecast.win;
+  const start = () => {
+    if (risky && !armed) return setArmed(true);
+    setArmed(false);
+    run({ type: 'battle', encounterId: encounter.id });
+  };
+  const restLeft = Math.max(0, ...team.map((d) => (save.tired[d.id] ?? 0) - now));
+  const blockerText: Record<Blocker, [string, ReactNode?]> = {
+    building: [
+      tr('Construiește Poarta arenei pe insulă ca să lupți aici.', 'Build the Arena Gate on the island to fight here.'),
+      <button key="b" type="button" className="realm-button secondary" onClick={build}>
+        {tr('Construiește', 'Build')}
+      </button>,
+    ],
+    noTeam: [tr('Eclozează un dinozaur ca să ai cu cine lupta.', 'Hatch a dinosaur to have someone to fight with.')],
+    baby: [
+      tr('Puii nu luptă: crește-l până la juvenil sau alege altă echipă.', 'Babies do not fight: raise it to juvenile or pick another team.'),
+      <button key="b" type="button" className="realm-button secondary" onClick={() => navigate('dino')}>
+        {tr('Crește-l', 'Raise it')}
+      </button>,
+    ],
+    away: [
+      tr('Un membru al echipei e plecat în expediție.', 'A team member is away on an expedition.'),
+      <button key="b" type="button" className="realm-button secondary" onClick={openTeam}>
+        {tr('Echipă', 'Team')}
+      </button>,
+    ],
+    world: [tr(`Deblochează lumea ${element.name[0]} ca să deschizi liga.`, `Unlock the ${element.name[1]} world to open this league.`)],
+    gate: [tr('Ligile 6–10 cer Poarta arenei nivel 2.', 'Leagues 6–10 need Arena Gate level 2.')],
+    stars: [tr(`Ai nevoie de ${STARS_TO_ADVANCE}★ la treapta precedentă.`, `You need ${STARS_TO_ADVANCE}★ on the previous tier.`)],
+    tired: [
+      tr(`Echipa se odihnește încă ${time(restLeft)}.`, `The team rests for another ${time(restLeft)}.`),
+      <button key="b" type="button" className="realm-button secondary" onClick={openTeam}>
+        {tr('Trezește', 'Wake')}
+      </button>,
+    ],
+    level: [
+      tr(`Fiecare membru are nevoie de nivelul ${encounter.level}.`, `Every member needs level ${encounter.level}.`),
+      <button key="b" type="button" className="realm-button secondary" onClick={openTeam}>
+        {tr('Echipă', 'Team')}
+      </button>,
+    ],
+    ticket: [tr(`Ai nevoie de un bilet ${element.name[0].toLowerCase()}.`, `You need a ${element.name[1].toLowerCase()} ticket.`)],
+  };
   return (
-    <div className="arena-outlook">
-      <div className="arena-outlook-row">
-        <span>
-          {hero.nickname} · {ELEMENTS.find((e) => e.id === hero.element)!.symbol}
-        </span>
-        <EdgeBadge edge={edge} lang={lang} />
-      </div>
-      {tiredFor > 0 ? (
-        <p className="gameplay-warning">
-          {tr(`${hero.nickname} se odihnește după înfrângere încă`, `${hero.nickname} is resting after the defeat for`)} {time(tiredFor)}.{' '}
-          {tr('Poți alege alt campion.', 'You can pick another champion.')}
-        </p>
-      ) : (
-        verdict && (
-          <div className={`arena-forecast forecast-${verdict.cls}`}>
-            <strong>{verdict.text}</strong>
-            {forecast!.win && <small>{tr('Estimare', 'Forecast')}: {starRow(forecast!.stars)}</small>}
-          </div>
-        )
-      )}
-      {edge < 0 && (
-        <small className="arena-outlook-hint">
-          {tr('Un dinozaur de alt element s-ar descurca mai bine aici.', 'A dinosaur of another element would fare better here.')}
+    <div className="arena-fight">
+      <div className="gameplay-section-label">
+        {tr('RECOMPENSE', 'REWARDS')}
+        <small>
+          {reward.repeat ? tr('REJUCARE', 'REPLAY') : tr('PRIMA VICTORIE', 'FIRST WIN')}
+          {team.length > 1 && ` · ${tr('echipă', 'team')} ×${teamReward(team.length)}`}
         </small>
+      </div>
+      <div className="gameplay-rewards arena-rewards">
+        <span title={tr('Aur', 'Gold')}>
+          <Icon name="gold" scale={1} />
+          {reward.gold}
+        </span>
+        <span title={tr('Hrană', 'Food')}>
+          <Icon name="food" scale={1} />
+          {reward.food}
+        </span>
+        {(Object.entries(reward.materials) as [ItemId, number][]).map(([id, n]) => (
+          <span key={id} title={ITEMS[id].name[lang]}>
+            <b style={{ color: ITEMS[id].color }}>{ITEMS[id].icon}</b>
+            {n}
+          </span>
+        ))}
+        {reward.bossEgg ? (
+          <span className="reward-egg boss" title={tr('Prima victorie aduce oul bossului', 'The first win brings the boss egg')}>
+            <Icon name="egg" scale={1} />
+            {tr('Ou de boss', 'Boss egg')}
+          </span>
+        ) : (
+          reward.eggChance !== undefined && (
+            <span className="reward-egg" title={tr('Șansă de ou', 'Egg chance')}>
+              <Icon name="egg" scale={1} />
+              {Math.round(reward.eggChance * 100)}%
+            </span>
+          )
+        )}
+      </div>
+      <div className="arena-versus">
+        <div className="arena-faces" aria-label={tr('Echipa ta', 'Your team')}>
+          {team.length ? (
+            team.map((d, i) => (
+              <Face key={d.id} className={edges[i] > 0 ? 'edge-up' : edges[i] < 0 ? 'edge-down' : ''}>
+                <DinosaurArt species={d.species} element={d.element} stage={d.stage} paused frame={0} className={rarityClass(d.rarity)} />
+                <small>{d.level}</small>
+              </Face>
+            ))
+          ) : (
+            <button type="button" className="realm-button secondary" onClick={openTeam}>
+              {tr('Alege echipa', 'Pick a team')}
+            </button>
+          )}
+        </div>
+        <b className="arena-vs">VS</b>
+        <div className="arena-faces foes" aria-label={tr('Adversari', 'Opponents')}>
+          {foes.map((f, i) => (
+            <Face key={i} className={f.boss ? 'boss' : ''}>
+              <ArenaOpponent foe={f} paused />
+              <small>{f.boss ? 'BOSS' : f.level}</small>
+            </Face>
+          ))}
+        </div>
+      </div>
+      {verdict && (
+        <div className={`arena-forecast forecast-${verdict.cls}`}>
+          <strong>{verdict.text}</strong>
+          <small>
+            {forecast!.win && <StarRow n={forecast!.stars} />}
+            {edges.some((e) => e > 0) && <span className="edge-up"> ▲{edges.filter((e) => e > 0).length}</span>}
+            {edges.some((e) => e < 0) && <span className="edge-down"> ▼{edges.filter((e) => e < 0).length}</span>}
+          </small>
+        </div>
       )}
-      <small className="arena-outlook-stars">
-        ★ {total} / 90
-        {next && ` · ${tr('următoarea recompensă la', 'next reward at')} ${next.stars}★`}
-        {save.stars[encounterId] ? ` · ${tr('aici', 'here')} ${starRow(save.stars[encounterId])}` : ''}
-      </small>
+      {blocker && blocker !== 'ticket' && (
+        <p className="arena-blocker">
+          <span>{blockerText[blocker][0]}</span>
+          {blockerText[blocker][1]}
+        </p>
+      )}
+      <div className={`arena-ticket-line${tickets ? '' : ' empty'}`}>
+        <span>
+          🎟 {tr('Bilete', 'Tickets')} {element.name[lang].toLowerCase()}: <b>{tickets}</b>
+          {!tickets && ` · ${tr('trebuie 1', 'need 1')}`}
+        </span>
+        <button type="button" className="realm-button secondary" onClick={openShop}>
+          {tr('Cumpără', 'Buy')} · {arenaTicketPrice(league)}●
+        </button>
+      </div>
+      <button type="button" className={`realm-button adventure-start${risky ? ' risky' : ''}${armed ? ' armed' : ''}`} disabled={!!blocker} onClick={start}>
+        {armed ? tr('Sigur? Apasă din nou', 'Sure? Tap again') : risky ? tr('Luptă oricum', 'Fight anyway') : tr('Începe lupta', 'Start battle')} →
+      </button>
     </div>
   );
 }
+
+/** The arena team: one to three dinosaurs picked from the roster, and the ones resting after a fight. */
+function ArenaTeam({ save, now, lang, run, league }: Pick<ArenaProps, 'save' | 'now' | 'lang' | 'run'> & { league: RealmId }) {
+  const tr = (ro: string, en: string) => T(lang, ro, en);
+  const busy = busyDinos(save);
+  const minute = Math.floor(now / 60_000);
+  const isEligible = useCallback(
+    (d: Dino) =>
+      d.stage === 'baby'
+        ? tr('Pui', 'Baby')
+        : busy.has(d.id)
+          ? tr('Plecat', 'Away')
+          : isTired(save, d.id, now)
+            ? `💤 ${time((save.tired[d.id] ?? 0) - now)}`
+            : null,
+    // Re-checked every minute and whenever who is away or resting changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lang, minute, save.tired, save.expeditions, save.dinos],
+  );
+  const resting = save.team.filter((id) => isTired(save, id, now)).map((id) => save.dinos.find((d) => d.id === id)!).filter(Boolean);
+  const beats = ELEMENTS.find((e) => elementEdge(e.id, league) === 1)?.id;
+  return (
+    <div className="arena-team">
+      <TeamPicker
+        dinos={save.dinos}
+        selected={save.team}
+        max={3}
+        lang={lang}
+        recommended={beats}
+        label={tr('Echipa de arenă', 'Arena team')}
+        isEligible={isEligible}
+        onChange={(next) => {
+          // Only able dinosaurs are kept: a resting one leaves the team when it is edited.
+          const able = next.filter((id) => {
+            const d = save.dinos.find((x) => x.id === id);
+            return d && !isEligible(d);
+          });
+          if (able.length) run({ type: 'setTeam', dinoIds: able });
+        }}
+      />
+      <p className="arena-team-hint">
+        {tr('Luptă pe rând, primul deschide. Mai mulți membri = recompensă mai mare (×1.1 / ×1.2).', 'They fight in turn, the first one opens. More members = a bigger reward (×1.1 / ×1.2).')}
+      </p>
+      {resting.length > 0 && (
+        <div className="arena-resting">
+          {resting.map((d) => (
+            <CompactCard
+              key={d.id}
+              art={<DinosaurArt species={d.species} element={d.element} stage={d.stage} paused frame={0} />}
+              title={d.nickname}
+              subtitle={`💤 ${time((save.tired[d.id] ?? 0) - now)}`}
+              action={
+                <button type="button" className="realm-button" disabled={save.gems < GEMS.rest} onClick={() => run({ type: 'gemRest', dinoId: d.id })}>
+                  {GEMS.rest} 💎
+                </button>
+              }
+            />
+          ))}
+          {resting.length > 1 && (
+            <button type="button" className="realm-button arena-wake-all" disabled={save.gems < Math.min(GEMS.restTeam, GEMS.rest * resting.length)} onClick={() => run({ type: 'gemRest', team: true })}>
+              {tr('Trezește echipa', 'Wake the team')} · {Math.min(GEMS.restTeam, GEMS.rest * resting.length)} 💎
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The Arena Gate's upgrade and the weekly season's steps. */
+function ArenaGate({ save, now, lang, run, build }: Pick<ArenaProps, 'save' | 'now' | 'lang' | 'run' | 'build'>) {
+  const tr = (ro: string, en: string) => T(lang, ro, en);
+  const hasGate = save.buildings.some((b) => b.kind === 'arena');
+  return (
+    <div className="arena-gate" data-scroll>
+      {hasGate ? (
+        <UpgradeCard
+          save={save}
+          now={now}
+          lang={lang}
+          run={run}
+          target="arena"
+          level={save.arenaLevel}
+          max={ARENA_LEVELS.length}
+          next={[
+            <>
+              ● <b>+{Math.round((ARENA_LEVELS[save.arenaLevel]?.bonus ?? 0) * 100)}%</b> {tr('aur, hrană și materiale din arenă', 'arena gold, food and materials')}
+            </>,
+            <>
+              ♜ {tr('Deschide ligile 6–10', 'Opens leagues 6–10')} ({GATE_LEAGUES.map((id) => ELEMENTS.find((e) => e.id === id)!.symbol).join(' ')})
+            </>,
+          ]}
+          gold={ARENA_LEVELS[save.arenaLevel]?.gold ?? 0}
+          materials={ARENA_LEVELS[save.arenaLevel]?.materials ?? {}}
+        />
+      ) : (
+        <button type="button" className="realm-button" onClick={build}>
+          {tr('Construiește Poarta arenei', 'Build the Arena Gate')}
+        </button>
+      )}
+      <div className="arena-season">
+        <div className="gameplay-section-label">
+          {tr('SEZONUL SĂPTĂMÂNII', 'WEEKLY SEASON')}
+          <small>
+            {save.arena.weekWins} {tr('victorii', 'wins')}
+          </small>
+        </div>
+        <ol>
+          {ARENA_SEASON.map((step, i) => (
+            <li key={step.wins} className={i < save.arena.weekClaimed ? 'done' : ''}>
+              <b>{step.wins}</b>
+              <span>{seasonPrize(step, lang)}</span>
+              <i className="realm-meter">
+                <i style={{ width: `${Math.min(100, (save.arena.weekWins / step.wins) * 100)}%` }} />
+              </i>
+            </li>
+          ))}
+        </ol>
+        <small>{tr('Se reia în fiecare luni (ora României).', 'Restarts every Monday (Romania time).')}</small>
+      </div>
+    </div>
+  );
+}
+
+/** One pip per member of a side: the fighter on stage is lit, the fallen are crossed out. */
+function Pips({ states, side }: { states: ('active' | 'waiting' | 'fallen')[]; side: Unit }) {
+  if (states.length < 2) return null;
+  return (
+    <span className={`battle-pips ${side}`} aria-label={`${states.filter((s) => s !== 'fallen').length} / ${states.length}`}>
+      {states.map((s, i) => (
+        <i key={i} className={s} />
+      ))}
+    </span>
+  );
+}
+
 export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<Props, 'save' | 'lang' | 'run' | 'close'> & { embedded?: boolean }) {
   const battle = save.battle!,
-    d = save.dinos.find((x) => x.id === battle.dinoId)!,
-    el = ELEMENTS.find((e) => e.id === d.element)!,
-    encounter = ENCOUNTERS.find((e) => e.id === battle.encounterId)!,
-    foe = opponentOf(encounter),
-    boss = arenaBoss(encounter);
+    encounter = ENCOUNTERS.find((e) => e.id === battle.encounterId)!;
   const tr = (ro: string, en: string) => T(lang, ro, en);
-  const alive = { ally: battle.hp > 0, enemy: battle.enemy > 0 };
+  // The pair on stage. It follows the fight's active pair, but only once a fallen fighter's round has been told.
+  const [view, setView] = useState({ ally: battle.active, foe: battle.foeIndex });
+  const allyState = battle.team[view.ally],
+    d = save.dinos.find((x) => x.id === allyState.dinoId)!,
+    el = ELEMENTS.find((e) => e.id === d.element)!,
+    foe = battle.foes[view.foe],
+    foeInfo = ELEMENTS.find((e) => e.id === foe.element)!,
+    bossInfo = foe.boss ? ARENA_BOSSES[foe.element] : undefined;
   // The reducer resolves a round instantly; the screen replays it beat by beat with the clips each fighter owns.
   const [fighters, setFighters] = useState<{ ally: Fighter; enemy: Fighter } | null>(null);
   const [steps, setSteps] = useState<Step[]>([]);
   const [index, setIndex] = useState(0);
-  const [shown, setShown] = useState({ hp: battle.hp, enemy: battle.enemy });
+  const [shown, setShown] = useState({ hp: allyState.hp, enemy: foe.hp });
   const seenRound = useRef(battle.round);
+  const firstLoad = useRef(true);
+  /** A relay swap waiting for the round's replay to end, then for the newcomer's sprites. */
+  const swap = useRef<RoundReport['swap']>(undefined);
+  const memory = useRef(movesMemory());
   // ×2 speeds up every layer of the replay (beats, body motion, sprite frames, callouts); remembered per player.
   const [speed, setSpeed] = useState<1 | 2>(() => {
     try {
@@ -800,28 +968,31 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
     let active = true;
     Promise.all([
       loadAnimation(d.species, d.element, d.stage),
-      boss ? loadBossAnimation(encounter.league as RealmId) : loadAnimation(foe.species, foe.element, foe.stage),
+      foe.boss ? loadBossAnimation(foe.element) : loadAnimation(foe.species, foe.element, foe.stage),
     ]).then(async ([a, e]) => {
-      await Promise.allSettled([a, e].flatMap(manifest =>
-        Object.values(manifest?.clips.se ?? {}).map(clip => loadSpriteImage(clip.sheet)),
-      ));
+      await Promise.allSettled([a, e].flatMap((manifest) => Object.values(manifest?.clips.se ?? {}).map((clip) => loadSpriteImage(clip.sheet))));
       if (!active) return;
       const ally = fighter(a),
         enemy = fighter(e);
+      const alive = { ally: battle.team[view.ally].hp > 0, enemy: battle.foes[view.foe].hp > 0 };
       setFighters({ ally, enemy });
-      setSteps(battle.log === 'start' ? entrance(ally, enemy, alive) : [rest(alive)]);
+      if (swap.current) setSteps(swapEntrance(swap.current, ally, enemy, alive));
+      else setSteps(firstLoad.current && battle.log === 'start' ? entrance(ally, enemy, alive) : [rest(alive)]);
+      swap.current = undefined;
+      firstLoad.current = false;
       setIndex(0);
     });
     return () => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [d.species, d.element, d.stage, foe.species, foe.element, foe.stage, encounter.league, !!boss]);
+  }, [d.id, d.stage, foe.species, foe.element, foe.stage, !!foe.boss, view.ally, view.foe]);
   useEffect(() => {
-    if (battle.round === seenRound.current || !fighters) return;
+    if (battle.round === seenRound.current || !fighters || !battle.report) return;
     seenRound.current = battle.round;
-    if (!battle.report) return;
-    setSteps(exchange(battle.report, fighters.ally, fighters.enemy, alive));
+    const r = battle.report;
+    swap.current = r.swap;
+    setSteps(exchange(r, fighters.ally, fighters.enemy, { ally: (r.hpAfter ?? battle.hp) > 0, enemy: (r.enemyAfter ?? battle.enemy) > 0 }));
     setIndex(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [battle.round, fighters]);
@@ -829,10 +1000,17 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
     busy = !!step && Number.isFinite(step.ms);
   useEffect(() => {
     if (!step) return;
-    if (step.reveal === 'enemy') setShown((s) => ({ ...s, enemy: step.revealHp ?? battle.enemy }));
-    if (step.reveal === 'ally') setShown((s) => ({ ...s, hp: step.revealHp ?? battle.hp }));
+    if (step.reveal === 'enemy') setShown((s) => ({ ...s, enemy: step.revealHp ?? battle.foes[view.foe].hp }));
+    if (step.reveal === 'ally') setShown((s) => ({ ...s, hp: step.revealHp ?? battle.team[view.ally].hp }));
     if (!Number.isFinite(step.ms)) {
-      setShown({ hp: battle.hp, enemy: battle.enemy });
+      setShown({ hp: battle.team[view.ally].hp, enemy: battle.foes[view.foe].hp });
+      // The round is told: the next fighter of the fallen side steps in.
+      if (swap.current && (view.ally !== battle.active || view.foe !== battle.foeIndex)) {
+        setFighters(null);
+        setSteps([]);
+        setShown({ hp: battle.team[battle.active].hp, enemy: battle.foes[battle.foeIndex].hp });
+        setView({ ally: battle.active, foe: battle.foeIndex });
+      }
       return;
     }
     const timer = setTimeout(() => setIndex((i) => i + 1), step.ms / speed);
@@ -845,7 +1023,7 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
   });
   const ally = pose('ally'),
     enemy = pose('enemy');
-  const foeName = boss ? `BOSS ${boss.name}` : SPECIES_NAMES[foe.species];
+  const foeName = bossInfo ? `BOSS ${bossInfo.name}` : SPECIES_NAMES[foe.species];
   /**
    * A landed blow shakes the arena and knocks the fighter back; an ultimate shakes harder. Unguarded, the fighter
    * flashes white; guarded (its sprite shows the shield), it only slides a little.
@@ -892,27 +1070,24 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
     if (step.dodge) playSound('dodge');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [steps, index]);
+  const told = !busy && !!fighters && view.ally === battle.active && view.foe === battle.foeIndex;
   useEffect(() => {
-    if (!battle.result || busy) return;
+    if (!battle.result || !told) return;
     if (battle.result === 'victory') playSound('victory');
-    else if (battle.result === 'defeat') playSound('defeat');
-  }, [battle.result, busy]);
+    else playSound('defeat');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [battle.result, told]);
   const ultimate = step?.ally === 'ultimate' || step?.enemy === 'ultimate';
-  // The fight plays itself: after each beat settles, the planner picks the next move (see autoBattle.ts).
-  const usedMoves = useRef(new Set<BattleAction>());
+  // The fight plays itself: after each beat settles, the planner picks the next move for the fighter on stage.
   useEffect(() => {
-    if (battle.round === 1) usedMoves.current = new Set();
-  }, [battle.encounterId, battle.round]);
-  useEffect(() => {
-    if (!fighters || busy || battle.result) return;
+    if (!told || battle.result) return;
     const timer = setTimeout(() => {
-      const next = autoAction(battle, d, usedMoves.current);
-      usedMoves.current.add(next);
-      run({ type: 'action', action: next });
+      const next = nextMove(save, memory.current);
+      if (next) run({ type: 'action', action: next });
     }, (battle.round === 1 ? 900 : 650) / speed);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fighters, busy, battle.result, battle.round]);
+  }, [told, battle.result, battle.round]);
   /**
    * Skip: the planner plays every remaining round at once, through the same commands, and the screen jumps to
    * the closing pose and the result.
@@ -920,9 +1095,7 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
   const skip = () => {
     if (!fighters || battle.result) return;
     let s = save;
-    while (s.battle && !s.battle.result) {
-      const next = autoAction(s.battle, d, usedMoves.current);
-      usedMoves.current.add(next);
+    for (let next = nextMove(s, memory.current); next; next = nextMove(s, memory.current)) {
       try {
         s = command(s, { type: 'action', action: next }, Date.now());
       } catch {
@@ -933,10 +1106,24 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
     const end = s.battle;
     if (!end) return;
     seenRound.current = end.round;
-    setShown({ hp: end.hp, enemy: end.enemy });
-    setSteps([rest({ ally: end.hp > 0, enemy: end.enemy > 0 })]);
+    swap.current = undefined;
+    setShown({ hp: end.team[end.active].hp, enemy: end.foes[end.foeIndex].hp });
+    if (view.ally !== end.active || view.foe !== end.foeIndex) {
+      setFighters(null);
+      setView({ ally: end.active, foe: end.foeIndex });
+    }
+    setSteps([rest({ ally: end.team[end.active].hp > 0, enemy: end.foes[end.foeIndex].hp > 0 })]);
     setIndex(0);
   };
+  const pips = (side: Unit) =>
+    side === 'ally'
+      ? battle.team.map((a, i) => ((i === view.ally ? shown.hp : a.hp) === 0 ? 'fallen' : i === view.ally ? 'active' : 'waiting') as 'active' | 'waiting' | 'fallen')
+      : battle.foes.map((f, i) => ((i === view.foe ? shown.enemy : f.hp) === 0 ? 'fallen' : i === view.foe ? 'active' : 'waiting') as 'active' | 'waiting' | 'fallen');
+  const cap = roundCap(battle.foes.length);
+  const tier = arenaTier(encounter.id);
+  const restMinutes = battle.result === 'victory' ? ARENA_REST.win[tier - 1] : ARENA_REST.defeat;
+  const nextSeason = ARENA_SEASON[seasonStep(save.arena.weekWins)];
+  const seasonReached = battle.result === 'victory' && !!nextSeason && save.arena.weekWins + 1 >= nextSeason.wins;
   const content = (
     <>
       <div className={`battle-environment ${busy ? 'battle-playing' : ''} ${ultimate ? 'battle-ultimate' : ''}`} style={{ '--battle-speed': speed } as CSSProperties}>
@@ -958,51 +1145,50 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
             badge={<RarityBadge rarity={rarityOf(d)} lang={lang} short />}
             level={d.level}
             hp={shown.hp}
-            maxHp={battle.maxHp}
-            energy={battle.energy}
+            maxHp={allyState.maxHp}
+            energy={view.ally === battle.active ? battle.energy : 0}
+            pips={<Pips side="ally" states={pips('ally')} />}
             portrait={<DinosaurArt species={d.species} element={d.element} stage={d.stage} paused frame={0} />}
           >
-            {encounter.mode === 'arena' && <EdgeBadge edge={battleEdge(encounter.id, d)} lang={lang} />}
+            <EdgeBadge edge={elementEdge(d.element, foe.element)} lang={lang} />
           </BattleHud>
           <div className="battle-round battle-round-badge">
             <strong>VS</strong>
             <span>
-              {tr('RUNDA', 'ROUND')} {Math.min(battle.round, 30)}/30
+              {tr('RUNDA', 'ROUND')} {Math.min(battle.round, cap)}/{cap}
             </span>
           </div>
           <BattleHud
             side="enemy"
-            color={foe.info.color}
-            name={`${foe.info.symbol} ${boss?.name ?? `${SPECIES_NAMES[foe.species]} ${foe.info.name[lang]}`}`}
-            badge={boss && <em className="arena-boss-tag">BOSS</em>}
-            level={encounter.level}
+            color={foeInfo.color}
+            name={`${foeInfo.symbol} ${bossInfo?.name ?? `${SPECIES_NAMES[foe.species]} ${foeInfo.name[lang]}`}`}
+            badge={bossInfo && <em className="arena-boss-tag">BOSS</em>}
+            level={foe.level}
             hp={shown.enemy}
-            maxHp={battle.enemyMax}
-            energy={foeHasUltimate(encounter.id) ? battle.enemyEnergy ?? 0 : undefined}
-            portrait={<ArenaOpponent encounter={encounter} species={foe.species} element={foe.element} stage={foe.stage} paused />}
+            maxHp={foe.maxHp}
+            energy={foeHasUltimate(foe) ? (view.foe === battle.foeIndex ? battle.enemyEnergy : 0) : undefined}
+            pips={<Pips side="enemy" states={pips('enemy')} />}
+            portrait={<ArenaOpponent foe={foe} paused />}
           />
-        <div className="battle-unit ally" data-motion={ally.clip} data-dodge={step?.dodge === 'ally' || undefined} style={ally.style}>
-          <DinosaurArt species={d.species} element={d.element} stage={d.stage} animation={ally.clip} speed={speed} className={rarityClass(d.rarity)} />
-        </div>
-        <div className="battle-unit enemy" data-motion={enemy.clip} style={enemy.style}>
-          <ArenaOpponent
-            encounter={encounter}
-            species={foe.species}
-            element={foe.element}
-            stage={foe.stage}
-            className="dinosaur-opponent"
-            animation={enemy.clip}
-            speed={speed}
-          />
-        </div>
-        {step?.say?.map((c, i) => (
-          <div key={`${index}-${i}`} className={`battle-callout on-${c.on} kind-${c.kind}`} style={{ '--row': i } as CSSProperties}>
-            {calloutText(c, c.on === 'ally' ? d.nickname : foeName, lang)}
+          <div className="battle-unit ally" data-motion={ally.clip} data-dodge={step?.dodge === 'ally' || undefined} style={ally.style}>
+            <DinosaurArt species={d.species} element={d.element} stage={d.stage} animation={ally.clip} speed={speed} className={rarityClass(d.rarity)} />
           </div>
-        ))}
+          <div className="battle-unit enemy" data-motion={enemy.clip} style={enemy.style}>
+            <ArenaOpponent foe={foe} className="dinosaur-opponent" animation={enemy.clip} speed={speed} />
+          </div>
+          {step?.say?.map((c, i) => (
+            <div key={`${index}-${i}`} className={`battle-callout on-${c.on} kind-${c.kind}`} style={{ '--row': i } as CSSProperties}>
+              {calloutText(c, lang)}
+            </div>
+          ))}
+          {step?.enter && (
+            <div key={`enter-${view.ally}-${view.foe}`} className={`battle-callout on-${step.enter === 'enemy' ? 'enemy' : 'ally'} kind-enter`}>
+              {tr('INTRĂ', 'IN')}: {step.enter === 'enemy' ? foeName : d.nickname}
+            </div>
+          )}
         </div>
       </div>
-      {battle.result && !busy ? (
+      {battle.result && told ? (
         <div className="battle-result">
           <span className="realm-eyebrow">{tr('REZULTAT', 'RESULT')}</span>
           <h2>
@@ -1010,71 +1196,87 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
               ? tr('Victorie!', 'Victory!')
               : battle.result === 'draw'
                 ? tr('Remiză', 'Draw')
-                : `${d.nickname} ${tr('se întoarce în siguranță', 'returns safely')}`}
+                : tr('Înfrângere', 'Defeat')}
           </h2>
           {battle.result === 'victory' && battle.stars && (
             <div className="result-stars" aria-label={`${battle.stars} / 3`}>
-              {starRow(battle.stars)}
+              <StarRow n={battle.stars} />
             </div>
           )}
-          {battle.result === 'defeat' && (
-            <p className="result-rest">
-              {tr(`${d.nickname} se va odihni ${TIRED_MS / 60_000} minute. Crește-l sau încearcă un element mai potrivit.`, `${d.nickname} will rest for ${TIRED_MS / 60_000} minutes. Raise him or try a better-suited element.`)}
-            </p>
-          )}
+          <div className="result-team">
+            {battle.team.map((a) => {
+              const m = save.dinos.find((x) => x.id === a.dinoId)!;
+              return (
+                <span key={a.dinoId} className={a.hp === 0 ? 'fallen' : ''} title={`${m.nickname} · ${a.hp}/${a.maxHp}`}>
+                  <DinosaurArt species={m.species} element={m.element} stage={m.stage} paused frame={0} />
+                  <i style={{ width: `${(a.hp / a.maxHp) * 100}%` }} />
+                </span>
+              );
+            })}
+          </div>
+          <p className="result-rest">
+            {battle.result === 'victory'
+              ? tr(
+                  `Odihnă: ${restMinutes} min${battle.team.some((a) => a.hp === 0) ? `, căzuții ${ARENA_REST.fallen} min` : ''}.`,
+                  `Rest: ${restMinutes} min${battle.team.some((a) => a.hp === 0) ? `, the fallen ${ARENA_REST.fallen} min` : ''}.`,
+                )
+              : battle.result === 'draw'
+                ? tr(`Biletul ți-a fost returnat. Echipa se odihnește ${restMinutes} min.`, `Your ticket was returned. The team rests ${restMinutes} min.`)
+                : tr(`Echipa se întoarce în siguranță și se odihnește ${restMinutes} min. Încearcă un element mai potrivit sau niveluri mai mari.`, `The team returns safely and rests ${restMinutes} min. Try a better-suited element or higher levels.`)}
+          </p>
           {save.rewardPending && (
             <>
-              {!!battle.reward.milestones && (
-                <p className="result-milestone">
-                  ★ {tr('Recompensă pentru stele inclusă!', 'Star reward included!')}
-                </p>
-              )}
-              <p>
+              {!!battle.reward.milestones && <p className="result-milestone">★ {tr('Recompensă pentru stele inclusă!', 'Star reward included!')}</p>}
+              <p className="result-loot">
                 +{battle.reward.gold} ● &nbsp; +{battle.reward.food} ❧
+                {(Object.entries(battle.reward.materials) as [ItemId, number][]).map(([id, count]) => (
+                  <small key={id}>
+                    {' '}
+                    · {ITEMS[id].icon} +{count}
+                  </small>
+                ))}
               </p>
               {battle.reward.egg && (
                 <div className="result-egg">
                   <strong>
-                    <Icon name="egg" scale={1} /> {tr('Ou găsit!', 'Egg found!')} {(battle.reward.egg.species === 'boss' ? `BOSS ${ARENA_BOSSES[battle.reward.egg.element].name}` : SPECIES_NAMES[battle.reward.egg.species])} ·{' '}
+                    <Icon name="egg" scale={1} /> {tr('Ou găsit!', 'Egg found!')}{' '}
+                    {battle.reward.egg.species === 'boss' ? `BOSS ${ARENA_BOSSES[battle.reward.egg.element].name}` : SPECIES_NAMES[battle.reward.egg.species]} ·{' '}
                     {ELEMENTS.find((e) => e.id === battle.reward.egg!.element)!.name[lang]}
                     <RarityBadge rarity={rarityOf(battle.reward.egg)} lang={lang} />
                   </strong>
                   {save.eggs.length >= BALANCE.maxEggs && (
-                    <small>
-                      {tr(
-                        'Raftul e plin — oul e păstrat și apare când faci loc.',
-                        'Shelf full — the egg is saved and arrives when you make room.',
-                      )}
-                    </small>
+                    <small>{tr('Raftul e plin — oul e păstrat și apare când faci loc.', 'Shelf full — the egg is saved and arrives when you make room.')}</small>
                   )}
                 </div>
               )}
-              <div className="result-materials">
-                {(Object.entries(battle.reward.materials) as [ItemId, number][]).map(([id, count]) => (
-                  <span key={id}>
-                    {ITEMS[id].icon} +{count} {ITEMS[id].name[lang]}
-                  </span>
-                ))}
-              </div>
+              <p className="result-season">
+                <Icon name="trophy" scale={1} /> {tr('Sezon', 'Season')} {save.arena.weekWins + 1}
+                {nextSeason && `/${nextSeason.wins}`}
+                {seasonReached && ` · ${tr('recompensă', 'reward')}: ${seasonPrize(nextSeason!, lang)}!`}
+              </p>
             </>
           )}
           <button className="realm-button" onClick={() => run({ type: 'claim' })}>
-            {save.rewardPending ? tr('Colectează recompensa', 'Claim reward') : tr('Înapoi acasă', 'Return home')}
+            {save.rewardPending ? tr('Colectează recompensa', 'Claim reward') : tr('Înapoi în arenă', 'Back to the arena')}
           </button>
         </div>
       ) : null}
     </>
   );
-  return embedded
-    ? <div className="arena-embedded-battle">{content}</div>
-    : <Frame title={encounter.name[lang]} view="battle" close={close} lang={lang}>{content}</Frame>;
+  return embedded ? (
+    <div className="arena-embedded-battle">{content}</div>
+  ) : (
+    <Frame title={encounter.name[lang]} view="battle" close={close} lang={lang}>
+      {content}
+    </Frame>
+  );
 }
 
 /**
- * A fighter's corner of the arena: portrait, name, health and energy. The amber strip behind the health bar is the
- * damage just taken; it drains after a short pause.
+ * A fighter's corner of the arena: portrait, name, health and energy, and a pip per team member. The amber strip
+ * behind the health bar is the damage just taken; it drains after a short pause.
  */
-function BattleHud({ side, color, name, badge, level, hp, maxHp, energy, portrait, children }: {
+function BattleHud({ side, color, name, badge, level, hp, maxHp, energy, portrait, pips, children }: {
   side: Unit;
   color: string;
   name: string;
@@ -1084,6 +1286,7 @@ function BattleHud({ side, color, name, badge, level, hp, maxHp, energy, portrai
   maxHp: number;
   energy?: number;
   portrait: ReactNode;
+  pips?: ReactNode;
   children?: ReactNode;
 }) {
   const health = `${Math.max(0, (hp / maxHp) * 100)}%`;
@@ -1108,6 +1311,7 @@ function BattleHud({ side, color, name, badge, level, hp, maxHp, energy, portrai
         <small>
           <b>Lv. {level}</b> · {hp} / {maxHp} HP{energy !== undefined && ` · ϟ ${energy}`}
         </small>
+        {pips}
         {children}
       </div>
     </div>

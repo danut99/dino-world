@@ -14,7 +14,7 @@ describe('bottom bar unlocks', () => {
     s.dinos = [ignis('juvenile')];
     expect(unlockedNav(s).has('expedition')).toBe(true);
     expect(unlockedNav(s).has('collection')).toBe(false);
-    s.cleared = ['training'];
+    s.expeditionProgress = { training: 1 };
     expect(unlockedNav(s).has('collection')).toBe(true);
     expect(unlockedNav(s).has('arena')).toBe(false);
     s.buildings.push({ id: 'arena', kind: 'arena', x: 7, y: 7 });

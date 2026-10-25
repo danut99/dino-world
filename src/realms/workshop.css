@@ -1,0 +1,233 @@
+/* Workshop as a fixed-height panel: stock in the head, recipes 3×2, a paged queue, and the upgrade tab. */
+.realms-app .workshop-panel {
+  --fit-rows: auto auto minmax(0, 1fr);
+}
+.realms-app .workshop-stock {
+  flex-wrap: nowrap;
+  gap: 4px;
+  overflow: hidden;
+}
+.realms-app .workshop-stock .pk-cost {
+  padding: 0 5px 1px;
+  font-size: 12px;
+}
+.realms-app .workshop-stock .pk-cost.empty {
+  opacity: 0.5;
+}
+.realms-app .craft-recipes-tab {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+.realms-app .craft-recipes-tab:not(:has(> .pk-note)) {
+  grid-template-rows: minmax(0, 1fr);
+}
+.realms-app .craft-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-height: 0;
+  max-height: 380px;
+}
+.realms-app .craft-recipe {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px 8px;
+  overflow: hidden;
+  border: 6px solid transparent;
+  border-image: var(--frame-card);
+  image-rendering: pixelated;
+}
+.realms-app .craft-recipe.focus {
+  border-image: var(--frame-card-active);
+}
+.realms-app .craft-recipe > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.realms-app .craft-recipe > header > div {
+  display: grid;
+  min-width: 0;
+}
+.realms-app .craft-recipe strong {
+  overflow: hidden;
+  font-size: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--px-bone-0);
+}
+.realms-app .craft-recipe small {
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--px-bone-3);
+}
+.realms-app .craft-spacer {
+  flex: 1;
+}
+.realms-app .craft-recipe > footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.realms-app .craft-recipe > footer .realm-button {
+  flex: 0 1 auto;
+}
+.realms-app .craft-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  background: var(--px-ui-5);
+  border: 2px solid var(--px-outline);
+  box-shadow: inset 2px 2px 0 var(--px-stone-5);
+}
+.realms-app .ui-card-art > .craft-icon {
+  border: 0;
+  box-shadow: none;
+}
+.realms-app .craft-queue-list {
+  --paged-min: 300px;
+  --paged-row: 58px;
+}
+.realms-app .craft-progress {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.realms-app .craft-free .ui-card-title {
+  color: var(--px-stone-1);
+}
+.realms-app .craft-upgrade-tab {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 12px;
+}
+.realms-app .craft-building {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.realms-app .craft-building {
+  container-type: size;
+}
+.realms-app .craft-building > .utility-sprite,
+.realms-app .workshop-empty .utility-sprite {
+  position: static;
+  width: min(100cqw, 100cqh, 320px);
+  height: auto;
+  aspect-ratio: 1;
+  transform: none;
+}
+.realms-app .workshop-empty .utility-sprite {
+  width: 180px;
+}
+
+/* "Next level" card (workshop and arena gate). */
+.realms-app .pk-upgrade-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px 10px;
+  text-align: left;
+}
+.realms-app .pk-upgrade-card > ul:not(.pk-costs) {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--px-bone-2);
+}
+.realms-app .pk-upgrade-card > ul:not(.pk-costs) b {
+  color: var(--px-bone-0);
+}
+.realms-app .pk-upgrade-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-height: 500px) {
+  .realms-app .craft-grid {
+    gap: 5px;
+  }
+  .realms-app .craft-recipe {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-content: center;
+    gap: 3px 4px;
+    padding: 2px 5px;
+    border-width: 4px;
+  }
+  .realms-app .craft-recipe > header {
+    grid-column: 1 / -1;
+  }
+  .realms-app .craft-recipe > .pk-costs {
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .realms-app .craft-spacer,
+  .realms-app .craft-recipe .pk-have {
+    display: none;
+  }
+  .realms-app .craft-recipe > footer .realm-button {
+    min-height: 30px;
+    padding: 0 6px 3px;
+  }
+  .realms-app .craft-recipe > header {
+    gap: 5px;
+  }
+  .realms-app .craft-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .realms-app .craft-icon .px-icon {
+    transform: scale(0.75);
+  }
+  .realms-app .craft-recipe strong {
+    font-size: 13px;
+  }
+  .realms-app .craft-recipe small {
+    font-size: 11px;
+  }
+  .realms-app .craft-recipe .pk-cost {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+  .realms-app .craft-queue-list {
+    --paged-row: 52px;
+  }
+  .realms-app .pk-upgrade-card > ul:not(.pk-costs) {
+    font-size: 13px;
+  }
+}
+@media (max-width: 700px) {
+  .realms-app .craft-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+  .realms-app .craft-upgrade-tab {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .realms-app .craft-building {
+    display: none;
+  }
+}

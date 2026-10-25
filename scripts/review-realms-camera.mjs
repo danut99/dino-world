@@ -5,7 +5,7 @@ import { createServer } from 'vite';
 import fs from 'node:fs/promises';
 const require = createRequire(import.meta.url);
 const { chromium } = require(
-  process.env.PLAYWRIGHT_MODULE ?? 'C:/Users/Danut/.codex/dragon-preview-tools/node_modules/playwright',
+  process.env.PLAYWRIGHT_MODULE ?? 'playwright',
 );
 const server = await createServer({
   configLoader: 'runner',

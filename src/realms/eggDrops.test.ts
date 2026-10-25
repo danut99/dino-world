@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE, command, EGG_DROP, newSave, parseSave, type Command, type Save } from './game';
+import { BALANCE, command, EGG_DROP, EGG_SECONDS, WON_EGG_PRICE, newSave, parseSave, type Command, type Save } from './game';
 
 const now = 1_800_000_000_000;
 const run = (s: Save, ...cs: Command[]) => cs.reduce((x, c) => command(x, c, now), s);
@@ -18,20 +18,21 @@ function arena(): Save {
       } catch {
         /* Cell taken; try the next one. */
       }
-  s = run(s, { type: 'unlockHabitat', realm: 'nature' });
+  s.habitats.nature = 1;
   s.dinos[0] = { ...s.dinos[0], level: 50, stage: 'adult' };
   return s;
 }
 /** Fights an encounter to victory and returns the save with the reward still waiting. */
 function win(s: Save, encounterId: string, at = now) {
-  s = command(s, { type: 'battle', encounterId }, at);
+  // Every fight rests the team for a few minutes; these tests fight back to back.
+  s = command({ ...s, tired: {} }, { type: 'battle', encounterId }, at);
   while (!s.battle?.result) s = command(s, { type: 'action', action: 'basic' }, at);
   expect(s.battle.result).toBe('victory');
   return s;
 }
 
 describe('egg drops and selling', () => {
-  it('awards the defeated boss once, including previously cleared leagues, and hatches an adult', () => {
+  it('awards the defeated boss once, including previously cleared leagues, and hatches a young legend', () => {
     let s = arena();
     s.cleared = ['arena-fire-1', 'arena-fire-2', 'arena-fire-3'];
     s.stars = { 'arena-fire-1': 2, 'arena-fire-2': 2, 'arena-fire-3': 2 };
@@ -40,18 +41,20 @@ describe('egg drops and selling', () => {
     roundTrip(s);
     s = run(s, { type: 'claim' });
     const egg = s.eggs.at(-1)!;
-    expect(egg.species).toBe('boss');
+    expect(egg).toMatchObject({ species: 'boss', seconds: EGG_SECONDS.boss });
     expect(s.bossEggsClaimed).toEqual(['fire']);
     expect(() => run(s, { type: 'sellEgg', eggId: egg.id })).toThrow('egg');
     expect(() => run(s, { type: 'buyEgg', species: 'boss', element: 'fire' })).toThrow('egg');
     s = run(s, { type: 'incubate', eggId: egg.id });
     s = command(s, { type: 'hatch', eggId: egg.id }, now + egg.seconds * 1000);
     const boss = s.dinos.find(d => d.species === 'boss')!;
-    expect(boss).toMatchObject({ element: 'fire', stage: 'adult', level: 25, nickname: 'Ignaroth' });
+    expect(boss).toMatchObject({ element: 'fire', stage: 'juvenile', level: 10, nickname: 'Ignaroth', rarity: 'legendary' });
+    expect(s.discovered).toContain('boss_fire');
     roundTrip(s);
     s = command(s, { type: 'setChampion', dinoId: boss.id }, now + egg.seconds * 1000);
     expect(s.champion).toBe(boss.id);
-    s.champion = s.dinos[0].id;
+    expect(s.team[0]).toBe(boss.id);
+    s.team = [s.dinos[0].id];
     s = win(s, 'arena-fire-3', now + egg.seconds * 1000);
     expect(s.battle?.reward.egg?.species).not.toBe('boss');
   });
@@ -66,13 +69,34 @@ describe('egg drops and selling', () => {
     expect(s.owedEggs.at(-1)).toEqual({ species: 'boss', element: 'nature', rarity: 'legendary' });
     roundTrip(s);
   });
-  it('loads old saves without marking bosses as already rewarded and rejects a baby boss', () => {
+  it('accepts a juvenile or adult boss and rejects a baby boss', () => {
     const s = arena();
     const raw = JSON.parse(JSON.stringify(s));
-    delete raw.bossEggsClaimed;
-    expect(parseSave(JSON.stringify(raw)).bossEggsClaimed).toEqual([]);
+    raw.dinos.push({ id: 'boss', species: 'boss', element: 'nature', level: 12, stage: 'juvenile', nickname: 'Boss', rarity: 'legendary' });
+    expect(() => parseSave(JSON.stringify(raw))).not.toThrow();
+    raw.dinos.at(-1).stage = 'adult';
+    raw.dinos.at(-1).level = 30;
+    expect(() => parseSave(JSON.stringify(raw))).not.toThrow();
     raw.dinos.push({ id: 'invalid-boss', species: 'boss', element: 'fire', level: 1, stage: 'baby', nickname: 'Boss' });
     expect(() => parseSave(JSON.stringify(raw))).toThrow('Invalid dinosaur');
+  });
+  it('sells a regular egg won while twenty already wait, for twice its price, and says so', () => {
+    let s = arena();
+    while (s.eggs.length < BALANCE.maxEggs) s = run(s, { type: 'buyEgg', species: 'trex', element: 'fire' });
+    s.owedEggs = Array.from({ length: 20 }, () => ({ species: 'triceratops' as const, element: 'nature' as const }));
+    s.eggLuck = EGG_DROP.pity;
+    s = win(s, 'arena-nature-1');
+    const egg = s.battle!.reward.egg!;
+    expect(egg.element).toBe('nature');
+    const gold = s.gold + s.battle!.reward.gold;
+    s = run(s, { type: 'claim' });
+    const price = WON_EGG_PRICE[egg.rarity ?? 'common'];
+    expect(s.owedEggs).toHaveLength(20);
+    expect(s.gold).toBe(gold + 2 * price);
+    expect(s.notice).toEqual({ eggSold: 2 * price });
+    roundTrip(s);
+    // The notice belongs to that one command.
+    expect(run(s, { type: 'collectAvailable' }).notice).toBeUndefined();
   });
   it('sells only fire, water and earth eggs at the market', () => {
     const s = arena();
@@ -143,16 +167,12 @@ describe('egg drops and selling', () => {
       gold = s.gold;
     expect(() => run(run(s, { type: 'incubate', eggId: egg }), { type: 'sellEgg', eggId: egg })).toThrow('egg');
     s = run(s, { type: 'sellEgg', eggId: egg });
-    expect(s.gold).toBe(gold + 100);
+    // A market egg sells back for 30% of its price; a won egg by its rarity.
+    expect(s.gold).toBe(gold + 90);
     expect(s.eggs.some((e) => e.id === egg)).toBe(false);
     s.eggs.push({ id: 'egg-x', species: 'triceratops', element: 'nature', seconds: 300, hatchAt: null });
-    expect(run(s, { type: 'sellEgg', eggId: 'egg-x' }).gold).toBe(gold + 400);
-  });
-
-  it('loads saves from before egg drops', () => {
-    const s = arena() as Partial<Save>;
-    delete s.eggLuck;
-    delete s.owedEggs;
-    expect(parseSave(JSON.stringify(s))).toMatchObject({ eggLuck: 0, owedEggs: [] });
+    expect(run(s, { type: 'sellEgg', eggId: 'egg-x' }).gold).toBe(gold + 90 + 250);
+    s.eggs.at(-1)!.rarity = 'epic';
+    expect(run(s, { type: 'sellEgg', eggId: 'egg-x' }).gold).toBe(gold + 90 + 600);
   });
 });

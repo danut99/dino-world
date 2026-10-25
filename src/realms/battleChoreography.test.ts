@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SpriteClip, SpriteManifest } from './animation';
-import { entrance, exchange, fighter, runMs, runStart } from './battleChoreography';
+import { entrance, exchange, fighter, runMs, runStart, swapEntrance } from './battleChoreography';
 import type { RoundReport } from './game';
 
 const report = (r: Partial<RoundReport>): RoundReport => ({
@@ -131,5 +131,24 @@ describe('battle choreography', () => {
     expect(runStart(steps, 5, 'ally')).toBe(5);
     const loss = exchange(report({}), J, A, { ally: false, enemy: true });
     expect(runStart(loss, loss.length - 1, 'ally')).toBe(loss.length - 2);
+  });
+  it('replays the entrance for the fighter that steps in after a relay swap', () => {
+    const foe = swapEntrance('enemy', A, J, { ally: true, enemy: true });
+    expect(foe.map((s) => [s.ally, s.enemy])).toEqual([
+      ['idle', 'walk'],
+      ['idle', 'idle'],
+    ]);
+    expect(foe[0]).toMatchObject({ enter: 'enemy', ms: 12 * 83 });
+    expect(foe[1].ms).toBe(Infinity);
+    const ally = swapEntrance('ally', statue, A, { ally: true, enemy: true });
+    expect(ally[0]).toMatchObject({ ally: 'walk', enemy: 'idle', enter: 'ally', ms: 900 });
+    const both = swapEntrance('both', A, J, { ally: true, enemy: true });
+    expect(both[0]).toMatchObject({ ally: 'walk', enemy: 'walk', enter: 'both' });
+  });
+  it('reveals the health a fallen fighter ended its round with, not its successor', () => {
+    const steps = exchange(report({ taken: 40, hpAfter: 0, reflected: 5, ally: 'defend', dealt: 0, enemyAfterStrike: 60, enemyAfter: 55, swap: 'ally' }), A, J, { ally: false, enemy: true });
+    expect(steps.find((s) => s.reveal === 'ally')?.revealHp).toBe(0);
+    expect(steps.find((s) => s.impact?.kind === 'reflect')?.revealHp).toBe(55);
+    expect(steps.at(-1)).toMatchObject({ ally: 'death', ms: Infinity });
   });
 });

@@ -1,88 +1,61 @@
 # Dino World / Dino Realms
 
-The entry opens **Dino Realms**. Run `npm install`, then `npm run dev`. The animation scene preview (every dinosaur and champion in the real arena and habitat) is at `?mode=preview`. The original Dino World game was removed on 23 October 2026; it remains in the git history before that date.
-
-The main island has five placeable utilities: Hatchery, Farm, Workshop, Expedition Portal and Arena Gate. Habitats remain separate elemental worlds; Ignis lives in the fire world. Full-screen pixel-art expeditions, arena and crafting include a ten-world adventure map, resumable solo battles, a timed crafting queue, material rewards and offline collection. Romanian is the default, with English in Settings. The first PixelLab T-Rex family now has all age-appropriate South-East clips and 164 imported frames across three stages; other character art, final animation validation and 3v3 remain pending. Open **Artă & referințe** for the frame viewer; it defaults to SE. See the [animation pipeline and job inventory](docs/REALMS_ANIMATION_PIPELINE.md), [adaptation status](docs/STATUS.md), [decisions](docs/DECISIONS.md), and [asset backlog](docs/ASSET_BACKLOG.md).
-
-Validation: `npm test`, `npm run build`. Browser QA: `node scripts/review-realms.mjs` with Playwright and Microsoft Edge installed (`PLAYWRIGHT_MODULE` can point to an existing Playwright package). On Windows where PowerShell blocks npm.ps1, use `npm.cmd`.
-
-Reference 03/05 UI checks: `node scripts/review-reference-gameplay.mjs`. If the disk is nearly full, `node scripts/build-low-space.mjs` produces a complete local build using hard links for immutable public assets; rebuild rather than editing files in `dist`. The Windows sandbox config-loader restriction can be avoided with `npm.cmd test -- --configLoader runner`.
-
-The documentation below describes the retained classic game.
-
-Joc de colecție cu dinozauri, în stilul Dragon City: o insulă cu habitate pe elemente, ferme, incubator,
-împerechere și un atlas al speciilor. Aspectul fiecărui dinozaur vine dintr-un generator (elemente + raritate + seed)
-aplicat pe schelete Spine animate.
+Joc de colecție cu dinozauri în pixel art, în stilul Dragon City: o insulă cu clădiri, zece lumi pe elemente,
+expediții cu echipe și o arenă PvE în ștafetă. Conținutul e gândit pentru ~30 de zile de joc normal (3–4 sesiuni
+scurte pe zi). Româna e limba implicită; engleza se alege din Setări.
 
 ```sh
 npm install
-npm run dev      # http://127.0.0.1:5173
-npm test
-npm run build
+npm run dev      # http://127.0.0.1:5173 (?mode=preview: scena de previzualizare a animațiilor)
 ```
 
-În dev, butonul ⏩ (stânga jos) avansează timpul și pornește un joc nou.
-
-The game defaults to English. Use **Română** in the top bar, or choose a language in Settings;
-the choice is saved separately from game progress. Translations are bundled in `src/i18n/en.json`
-and require no browser translation or network service. Wrap displayed text with `t()`; keep IDs,
-save data, and player input unchanged. Catalog templates use numbered placeholders (`{0}`, `{1}`).
+Jocul clasic Dino World a fost scos din proiect pe 23 octombrie 2026; rămâne în istoricul git de dinainte.
 
 ## Bucla de joc
 
-- **Insula** are parcele fixe (`SLOTS`): pe ele construiești habitate (6 elemente) sau ferme.
-- **Habitatele** produc aur în timp, până la un plafon; un dinozaur locuiește doar într-un habitat cu un element al lui.
-- **Fermele** cresc hrană; hrana crește nivelul dinozaurilor (și aurul pe minut).
-- **Incubatorul**: ouă cumpărate sau din împerechere; puiul iese direct într-un habitat potrivit.
-- **Bârlogul**: doi dinozauri de nivel 4+ dau un ou dintr-o specie ale cărei elemente le au părinții (hibrizi, epici, legendari).
-- **Atlasul**: toate speciile, cele nedescoperite ca siluete.
+- **Insula** are clădirile utilitare: Incubator, Fermă, Atelier, Portal de expediții, Poarta arenei și Piață.
+  Fiecare upgrade durează (5 min – 8 h) și există un singur constructor.
+- **Lumile** (foc, apă, pământ, natură, gheață, fulger, vânt, întuneric, lumină, arcan) se deblochează în ordine,
+  cu aur și materiale; fiecare are un habitat (5 niveluri) care produce aur din dinozaurii lui.
+- **Ferma** crește hrană; hrana ridică nivelul dinozaurilor (pui → tânăr la 10 → adult la 25, cu cristal de evoluție).
+- **Expedițiile**: zece regiuni × cinci etape, cu echipe de 1–3 dinozauri de nivelul cerut (10 → 50) și provizii;
+  etapa a cincea aduce un ou al regiunii. După etapa a treia, regiunea se poate patrula (1 / 3 / 8 ore).
+- **Arena**: zece ligi × trei trepte (Ucenic, Veteran, Campion cu boss). Echipa luptă în ștafetă cu 1, 2 sau 3
+  dinozauri; fiecare luptă consumă un bilet al elementului ligii. Stelele deblochează treptele și dau premii.
+- **Colecția**: 20 de familii jucabile + 10 boși (30/30). Ouăle vin din piață, poveste, finalurile regiunilor,
+  patrule și ligi.
+- **Zilnic** (ziua din București): trei misiuni, cufărul lor și roata. **Diamantele** se câștigă încet din joc
+  (~220 pe lună) și cumpără doar timp.
+
+Detalii și tabele: [docs/BALANCE.md](docs/BALANCE.md). Starea curentă: [docs/STATUS.md](docs/STATUS.md);
+decizii: [docs/DECISIONS.md](docs/DECISIONS.md); conturi și cloud: [docs/SUPABASE.md](docs/SUPABASE.md); animații:
+[docs/REALMS_ANIMATION_PIPELINE.md](docs/REALMS_ANIMATION_PIPELINE.md).
 
 ## Structura
 
 ```text
-shared/game/        Regulile, fără React (pure, deterministe, testate) — viitor comune cu serverul
-  catalog.ts        Elemente, rarități, specii, clădiri, parcele, culturi: echilibrarea
-  world.ts          Parcele, construire/mutare/îmbunătățire, aurul habitatelor, fermele
-  dinos.ts          Ouă, eclozare, hrănire, mutare, vânzare, împerechere
-  commands.ts       runCommand: o comandă pe o copie a stării (la eroare, starea rămâne neschimbată)
-src/
-  app/App.tsx       Cadrul: lumea pe tot ecranul + HUD (resurse, butoane)
-  screens/          WorldScreen (insula, camera, parcele), BuildingPanel, ShopPanel, AtlasScreen
-  world/            islands.ts (imaginea insulei + pozițiile parcelelor), BuildingArt (habitatele în SVG)
-  dino-lab/         Biblioteca de dinozauri (vezi mai jos)
-  hooks/useGame.ts  Starea, salvarea locală, ceasul, notificările
-public/
-  world/            Insulele pictate (sursele mari în art/)
-  dinosaurs/        Scheletele Spine (manifest.json + câte un folder pe schelet) și runtime-ul
+src/main.tsx              Intrarea: jocul (sau ?mode=preview)
+src/realms/
+  game.ts                 Starea (Save v6) și reducerul `command(save, comandă, acum)`; `advance` pentru timp
+  content.ts              Tabele: clădiri, culturi, rețete, regiuni, ligi
+  expeditionRules.ts      Planul unei etape / patrule (verificări comune pentru UI și reducer)
+  arenaTeams.ts           Adversarii fiecărei trepte, recompensa pe mărimea echipei
+  autoBattle.ts           Planificatorul luptelor și prognoza (`predictFight`)
+  daily.ts                Misiuni zilnice, cufăr, roată, ziua din București
+  pacingBot.ts            Botul de ritm (doar pentru teste: pacing.test.ts)
+  cloud.ts, SignInGate.tsx, useCloudSync.ts   Conturi și salvarea în cloud (Supabase)
+  *Panel.tsx, GameplayScreens.tsx, ui/        Interfața
+public/realms/            Lumi, clădiri, ouă, animații (sprite-uri PixelLab)
+supabase/migrations/      Tabelul `saves`, jucătorii, pragul de schemă
+scripts/                  Verificări în browser (Playwright) și unelte de artă
 ```
 
-## Biblioteca de dinozauri (`src/dino-lab`)
+## Verificare
 
-- `engine.ts` — aplică o **rețetă** pe un schelet Spine: culori pe părți (cap, corp, coadă, picioare, brațe,
-  creastă, efecte), proporții, mișcare (val, inerție, ritm, săltare). Se schimbă live.
-- `generator.ts` — `generateDino({ elements, rarity, seed, rig })`: rețetă completă din paleta și temperamentul
-  elementelor. Același seed → același dinozaur.
-- `recipes.ts` + `recipes.json` — rețeta unei specii: cea salvată în `recipes.json` sau, altfel, cea generată.
-- `DinoView.tsx` — componenta React animată; `thumbnails.ts` — PNG-uri statice (un singur context WebGL).
-
-**Schelet nou** (raptor, triceratops, sauropod): folder în `public/dinosaurs/<rig>/` cu `skeleton.json`,
-`parts.atlas`, `parts.png`, o intrare în `manifest.json`, apoi `rig: '<rig>'` la specie. Părțile se recunosc
-după numele oaselor (`DEFAULT_GROUPS` în `engine.ts`).
-
-**Artă pictată pentru clădiri**: PNG-uri în `public/world/` și o intrare în `SPRITES` din `world/BuildingArt.tsx`;
-imaginea înlocuiește desenul vectorial.
-
-## Expediții zilnice
-
-Avanpostul oferă trei locuri de misiune și trei rezerve, schimbate la miezul nopții în `Europe/Bucharest`.
-Speciile și nivelurile cerute trebuie îndeplinite de dinozauri diferiți. Un loc neînceput poate fi înlocuit
-cu o rezervă pentru 5 diamante; rezerva se consumă și limita rămâne trei misiuni zilnice.
-
-Durata explorării / recuperării: ușoară 20 / 30 minute, specializată 45 / 90 minute, dificilă 90 / 180 minute.
-Recuperarea începe la întoarcere, inclusiv offline, independent de revendicare. Blochează arena, alte
-expediții și împerecherea; hrănirea și venitul continuă. Timerul este vizibil în card și în scena dinozaurului.
-
-Recompensele includ fragmente ancestrale. Echipamentul de teren are trei îmbunătățiri (25, 60, 100 fragmente),
-fiecare cu +10% aur, hrană și fragmente. Recompensa este fixată la plecare. Cele trei misiuni revendicate
-în aceeași zi acordă automat un cufăr de 15 fragmente și 2 diamante. Misiunile din ziua precedentă își
-păstrează recompensele, fără să completeze locuri din lista nouă. Salvările cu expediții vechi rămân compatibile.
+- Teste: `npm test` (pe Windows, dacă PowerShell blochează npm.ps1: `npm.cmd test -- --configLoader runner`).
+  `pacing.test.ts` rulează botul de ritm și afișează tabelul pe zile.
+- Tipuri și build: `npm run build` (`tsc` + `vite build`). Dacă discul e aproape plin,
+  `node scripts/build-low-space.mjs` face un build complet cu hard link-uri pentru fișierele publice.
+- În browser: `node scripts/review-realms.mjs` și celelalte `scripts/review-*.mjs`, cu Playwright și Microsoft Edge
+  instalate (`PLAYWRIGHT_MODULE` poate indica un pachet Playwright existent).
+- Uneltele de test (butonul „i”: resurse, diamante, sărituri în timp) există doar în `npm run dev`.

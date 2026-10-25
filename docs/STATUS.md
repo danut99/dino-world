@@ -1,47 +1,97 @@
-# Dino Realms adaptation status
+# Dino Realms — starea curentă
 
-## South-East animation delivery — 17 October 2026
+Actualizat pe 25 octombrie 2026, după rebalansul pentru ~30 de zile (fazele 0–6 din plan). Jocul clasic Dino World a
+fost scos pe 23 octombrie 2026 (rămâne în istoricul git).
 
-All requested SE clips for the first T-Rex fire family are now imported: baby idle/walk (20 frames), juvenile idle/walk/attack/defend/hurt/defeat, and adult clips including ultimate. Total imported coverage is 164 frames across three stages, including previously completed optional NE clips. SE is the default viewer and gameplay direction; island patrols use the SE sprite mirrored on return. No required SE generation jobs remain pending. Assets remain marked prototype pending full art/foot-contact approval. See [REALMS_ANIMATION_PIPELINE.md](REALMS_ANIMATION_PIPELINE.md) and [job inventory](pixellab-animation-jobs.json).
+## Salvarea v6 și resetul
 
-## Earlier partial PixelLab batch — 17 October 2026
+- `Save.schemaVersion` este 6. Orice altă versiune aruncă `OutdatedSave` la încărcare: nu există migrare, jucătorul
+  pornește un joc nou (`cloud.ts` întoarce `{ save: newSave(), outdated: true }`, `SignInGate` urcă imediat noua
+  salvare, iar în `useCloudSync` un rând vechi nu câștigă niciodată).
+- `supabase/migrations/0003_schema_floor.sql` refuză coborârea `schema_version` în `saves`, ca un client vechi din
+  cache să nu suprascrie v6. Numele jucătorilor (`profiles`) și view-ul `players` rămân neatinse.
+- Câmpurile noi (echipă, portal, expediții multiple, bilete pe element, sezon, construcție, colecție, lămpi, zilnicele)
+  se adaugă de acum cu `??=` în `parseSave`, fără alt reset.
+- Uneltele de test (butonul „i”, `devSkip`, `devResources`, `devRarityEggs`, `addGems`) există doar când
+  `DEV_TOOLS = import.meta.env.DEV` e adevărat; în build-ul de producție comenzile aruncă `dev`.
 
-The current visual/animation work is documented in [REALMS_ANIMATION_PIPELINE.md](REALMS_ANIMATION_PIPELINE.md). Three native pixel-art T-Rex fire models now share a consistent identity. The first imported juvenile atlas batch contains 34 real frames (NE idle, SE attack/defend/hurt/defeat), marked prototype. Further juvenile/adult jobs are processing in PixelLab; baby animation requests and adult idle were refused while all ten job slots were occupied. This is not completion of the first-family gate or the full catalog.
+## Economia
 
-The runtime now supports atlas playback, stage-restricted clips, one-shot defeat, frame stepping, pivot/bounds, comparison and reduced motion. Utility buildings and all realms have separate procedural pixel VFX. A local pixel display font and plum/violet/mint UI theme are integrated. See the linked report for canvas-size changes, validation commands and remaining scope. Historical sections below predate this animation batch.
+- Hrănire: `feedCost(L) = round(10 + 3L + 0,9L²)`; juvenil la nivelul 10 (~480 hrană), adult la 25 (~5.550, plus un
+  cristal de evoluție), nivelul 50 la ~40.550. Butoane ×1, ×5 și „până la prag”; cristalul de evoluție dă +1 nivel.
+- Fermă cu 5 niveluri (2–6 parcele, randament ×1–×1,6) și 6 culturi, de la ferigi (2 min) la ospăț (8 h).
+- Habitate cu 5 niveluri (2–6 locuri, plafon 500–2.800 aur, venit ×1–×1,6), lămpi +3% (maximum 5).
+- Lumile se deschid în ordine (lumea N cere lumea N−1 și etapa 3 din regiunea ei), ~100.000 aur în total.
+- Clădirile se îmbunătățesc cu timp de construcție (5 min – 8 h) și un singur constructor; clădirea lucrează la nivelul
+  vechi până la final. Plasarea unei clădiri și deschiderea unei lumi rămân instantanee.
+- Ouă: piață (foc, apă, pământ), poveste, final de regiune (garantat), patrule (1,5%/h), ligi (10/12/15%, pity 8).
+  Ouăle peste limită se vând automat (cu mesaj), cele din poveste așteaptă. `releaseDino` eliberează un dinozaur
+  (nu boși, nu echipa) pentru aur; familia rămâne în colecție. Colecția: 20 de familii + 10 boși.
+- Toate tabelele, cu numerele botului de ritm: [BALANCE.md](BALANCE.md).
 
-Updated 17 October 2026. Default: Dino Realms preview. The classic Dino World game was removed from the tree on 23 October 2026 (see git history).
+## Expediții
 
-## Wide elemental worlds
+- Zece regiuni × cinci etape, în ordinea lumilor; fiecare etapă se face o singură dată. Nivelul cerut fiecărui membru
+  e `10 + 4(r−1) + (s−1)`, echipa are 1 / 2 / 3 membri (regiunile 1–2 / 3–5 / 6–10), proviziile = mărimea echipei
+  (regiunea 1 fără). Elementul recomandat dă +20% pe membru (maximum +60%). Etapa 5: ou al regiunii, 2 bilete, 3 💎.
+- Patrule după etapa 3: 1 / 3 / 8 ore, echipă 1–3, o provizie; primele trei din zi plătesc ×1,5; 3 h și 8 h aduc
+  bilete. Toate sunt pe plus.
+- Portalul are 1 / 2 / 3 sloturi. Un dinozaur plecat nu produce aur până se întoarce.
 
-All ten elemental landscapes now use generated 16:9 sibling artwork at `public/realms/worlds/{element}-wide-v1.png`, following the approved wide main island. Runtime, realm thumbnails and destination previews use the new versions. Originals remain available. Landscapes keep their natural aspect ratio, centered behind the saved grid; camera bounds use actual image dimensions, allowing sideways dragging at 1x. Prompts and actual sizes: [wide-world-art-prompts.json](wide-world-art-prompts.json). Browser review: `node scripts/review-wide-worlds.mjs`.
+## Arena
 
-## Implemented from references 03 and 05
+- Ligile urmează lumile; treptele sunt la nivelurile B, B+2, B+4 (B = 10 + 4·(ligă−1)), deci campionul arcan e la 50.
+  Ucenic: 2 adversari; Veteran: 3 adulți; Campion: 2 adversari + boss. Poarta arenei L2 deschide ligile 6–10 și dă +25%.
+- Echipa (1–3 dinozauri) luptă în ștafetă; luptele se joacă singure (planificatorul din `autoBattle.ts`), cu
+  „Sari peste” și viteză dublă. Prognoza (`predictFight`) simulează toată ștafeta; o luptă pierdută la prognoză cere
+  confirmare („Luptă oricum”).
+- Stele după HP-ul întregii echipe: 3★ la ≥50% și nimeni căzut, 2★ la ≥20%. Două stele deschid treapta următoare.
+- Bilete pe element, cumpărate cu aur (5 × nivelul de bază al ligii) sau câștigate; nu se refac în timp; remiza
+  returnează biletul. Odihnă după luptă: 2 / 4 / 6 min la victorie, 10 min pentru un membru căzut, 20 min la înfrângere.
+- Sezon săptămânal (luni–duminică, București): 5 / 15 / 30 de victorii.
 
-## Dinosaur artwork update
+## Diamante
 
-All five reference species now have static pixel-art designs for all ten elements and all three stages (150 designs). The collection and visual workshop browse every design, five species previews are placed in each elemental world, and Ignis and the ice combat opponents use the new shared artwork. These are art previews rather than additional recruited units or final animation atlases. See [DINOSAUR_ART.md](DINOSAUR_ART.md) for placement, limitations, prompts, and validation.
+- Se câștigă doar din joc (~220 pe lună): bun venit, finalul fiecărui capitol, regiuni terminate, praguri de stele,
+  colecție, cufărul zilnic, felia de pe roată, sezonul de arenă. Se cheltuie doar pe timp: terminare acum
+  `ceil(1,2·√minute)`, boost de aur, trezirea din odihnă, o rotire sau o misiune în plus. Pachetele plătite sunt
+  „în curând”; schimbul diamante → resurse a fost scos.
 
-## Buildings and gameplay
+## Povestea
 
-- Five independently placeable/selectable/movable utility buildings: Hatchery, Farm, Workshop, Expedition Portal, Arena Gate. Purchases are atomic; 3x3 footprints reject overlaps and out-of-bounds positions. No habitats or resident dinosaurs on home.
-- Ten separate elemental habitat worlds, with 1536x1024 landscapes. Ignis lives in the fire world. Camera movement is constrained to the artwork after dragging, zooming and resizing.
-- Full-screen pixel-art expedition map covering all ten worlds, destination nodes, route connections, rewards, team sidebar and unlock requirements. Bounded 1x/2x/3x map zoom and drag. Generated map source: 1619x971, rather than the 2560x1536 requested from the tool.
-- PvE arena lobby with three challenge tiers; dedicated full-screen arena battle presentation with real HP, energy, cooldown, burn, defend and adult-ultimate state. Battles and reward snapshots survive refresh.
-- Workshop inventory and five recipes, with input/output preview, duration and one running plus two queued jobs. Atomic material reservations, queued cancellation/refund, offline completion and single-claim outputs. Habitat kits increase fire-world income; evolution crystals grant a level without bypassing stage gates; lamps decorate home.
-- Building-anchored timers and ready bubbles, fire-world income bubble, and an offline strip showing claimable resources. Collect Available claims gold, farm food and completed crafting outputs once.
-- Schema v3 saves validate resources, utilities, inventory, queues, encounter progression and battles. v1/v2 previews migrate with backup, preserving dinosaurs, food, gold and active battles. Classic saves are never overwritten.
-- Original egg, feeding, explicit juvenile/adult evolution, farm and offline production loop remains functional. Ten expedition encounters and three arena challenges have first-clear and reduced replay rewards. Materials come from encounters, with a small initial crafting inventory for new/migrated previews.
+Zece capitole: capitolul I (eclozare, fermă, juvenil, portal, regiunea focului) și câte un capitol pe lume (deschide
+lumea, clădirile cerute, regiunea 5/5, o victorie în ligă). Ultimul capitol cere bossul arcan și colecția 30/30; oul
+lui (cryptoraptor) vine acum cu bossul, nu după colecția completă. Capitolul curent e „nivelul” jucătorului din HUD.
 
-All new map, building, arena, workshop and enemy assets use deliberately generated pixel art. Smooth initial candidates were rejected and removed from runtime assets. Exact prompts/paths: [gameplay-art-prompts.json](gameplay-art-prompts.json). Original concept boards are not sliced into runtime sprites.
+## Interfața
 
-## Remaining limitations
+- Două fonturi: `--font-display` (Pixelify Sans) pentru titluri, cifre, timere, prețuri, și `--font-body` (Barlow,
+  latin-ext, self-hosted) pentru text. Scrollbar în culorile temei.
+- Ferestrele au taburi și corp cu înălțime fixă (`min(640px, 100dvh − 60px)`); doar wiki-ul și zonele `data-scroll`
+  pot face scroll. Componente comune: `Tabs`, `CompactCard`, `Pager`/`usePager`, `TeamPicker`, `PanelKit`.
+- Panouri: Dinozauri (roster paginat + Statistici / Creștere / Habitat), Incubator, Fermă, Atelier (Rețete / Coadă /
+  Upgrade), Magazin de diamante, Zilnic, Arenă (Luptă / Echipă / Poartă, chip-uri pentru ligi și trepte),
+  Expediții (Etapă / Patrulă / Active).
 
-Only the fire T-Rex is currently owned/playable. Battles remain solo 1v1; the team panel shows one real portrait and two explicitly unrecruited slots. Generic 3v3, other playable families, timed team expeditions, breeding and online economies are not implemented. Hero and enemy art is static; separate impact VFX do not constitute finished character frame animation. Final atlases, animation validation, audio, mobile FPS measurements and the reference island's exact bridge/terrace layout remain pending.
+## Verificare
 
-## Validation and build
+- `npm.cmd test -- --configLoader runner` (toate testele, inclusiv `pacing.test.ts`), `npx.cmd tsc -p tsconfig.json`,
+  `npm run build`.
+- Botul de ritm (4 sesiuni pe zi): regiunile se termină în ziua 24, totul în ziua 30; cu 3 sesiuni pe zi, ziua 33.
+- Scripturile `scripts/review-*.mjs` cer Playwright (`PLAYWRIGHT_MODULE`, altfel pachetul `playwright`) și Microsoft
+  Edge. `review-scroll-ui.mjs` și `review-arena-bosses.mjs` folosesc ecranele actuale; o parte din celelalte verifică
+  ecrane mai vechi și trebuie adaptate înainte de folosire.
 
-- Unit/regression suite: `npm.cmd test -- --configLoader runner`.
-- UI QA: `node scripts/review-reference-gameplay.mjs`. Checks five utility purchases/placements, ten-world map controls, craft queue across refresh, battle resume, arena challenges, offline collection and desktop/mobile views. Compact JPEG screenshots and report: `output/reference-gameplay/`.
-- Camera report: `output/realms/camera/review.json` (54 edge checks). Older large QA screenshots were cleared to recover disk space; reports remain.
-- Normal build: `npm.cmd run build -- --configLoader runner`. This environment ran out of OS disk space copying public assets. `node scripts/build-low-space.mjs` creates the production bundle and completes `dist/` using hard links to immutable public assets. Do not edit linked files in `dist`; rebuild instead. Normal npm build behavior is unchanged.
+## Artă și animații (istoric)
+
+- Toate cele 20 de familii jucabile au animații pe trei vârste (PixelLab, direcția SE); cei 10 boși au animațiile lor
+  (`AnimatedBoss`). Lumile folosesc peisajele largi `public/realms/worlds/{element}-wide-v1.png`.
+- Detalii: [REALMS_ANIMATION_PIPELINE.md](REALMS_ANIMATION_PIPELINE.md),
+  [ANIMATED_ARENA_BOSSES.md](ANIMATED_ARENA_BOSSES.md), [ASSET_BACKLOG.md](ASSET_BACKLOG.md).
+
+## Ce lipsește
+
+- Pachetele de diamante plătite (sunt „în curând”).
+- Recompensele repetărilor din arenă depășesc puțin prețul biletului (mai ales la Campion), deci luptele repetate
+  aduc ceva aur și hrană; sunt limitate de bilete și de odihna dinozaurilor (vezi BALANCE.md).
+- Validarea comenzilor pe server (salvarea în cloud are încredere în client).

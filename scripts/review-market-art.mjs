@@ -4,7 +4,7 @@ import { createServer } from 'vite';
 import { createRequire } from 'node:module';
 import fs from 'node:fs/promises';
 const require=createRequire(import.meta.url);
-const {chromium}=require('C:/Users/Danut/.codex/dragon-preview-tools/node_modules/playwright');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const server=await createServer({configLoader:'runner',server:{host:'127.0.0.1',port:5237},logLevel:'error'});
 await server.listen();let browser;
 try {

@@ -1,0 +1,335 @@
+/*
+ * UI kit pentru panourile fără scroll (Faza 5): Tabs, Pager, CompactCard, .fit-panel, [data-scroll].
+ * Culori din paleta pixel (src/realms/ui/palette.css); colțuri drepte, contururi de 2 px, reflexe inset.
+ * Fonturile: --font-display (pixel) pentru taburi/cifre, --font-body (Barlow) pentru text.
+ */
+
+/* ---------- layout: corp cu înălțime fixă ---------- */
+.realms-app .fit-panel {
+  --fit-height: min(640px, calc(100dvh - 60px));
+  height: var(--fit-height);
+  max-height: var(--fit-height);
+  min-height: 0;
+  display: grid;
+  /* Implicit: [taburi] [conținut 1fr] [subsol]. Panourile își pot defini propriile rânduri prin --fit-rows. */
+  grid-template-rows: var(--fit-rows, auto minmax(0, 1fr) auto);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  overflow: hidden;
+}
+.realms-app .fit-panel.fit-single {
+  --fit-rows: minmax(0, 1fr);
+}
+.realms-app .fit-panel.fit-body {
+  --fit-rows: auto minmax(0, 1fr);
+}
+.realms-app .fit-panel > * {
+  min-width: 0;
+  min-height: 0;
+}
+/* Zonă care umple restul și nu face scroll (conținutul se paginează). */
+.realms-app .fit-fill {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+/* Doar zonele marcate pot face scroll; scrollbar-ul tematic vine din pixel-theme.css. */
+.realms-app [data-scroll] {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.realms-app [data-scroll='x'] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-gutter: auto;
+}
+
+/* Grilă pentru usePager: rânduri fixe, deci numărul de elemente nu-i schimbă înălțimea. */
+.realms-app .ui-paged {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--paged-min, 210px), 1fr));
+  grid-auto-rows: var(--paged-row, 60px);
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ---------- Tabs ---------- */
+.realms-app .ui-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 2px;
+  border-bottom: 2px solid var(--px-outline);
+  box-shadow: 0 2px 0 var(--px-stone-4);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.realms-app .ui-tabs::-webkit-scrollbar {
+  display: none;
+}
+.realms-app .ui-tab {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  margin: 0 0 -2px;
+  padding: 5px 12px 6px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--px-bone-3);
+  text-shadow: 0 2px 0 var(--px-outline);
+  white-space: nowrap;
+  background: var(--px-stone-4);
+  border: 2px solid var(--px-outline);
+  border-bottom: 0;
+  border-radius: 0;
+  box-shadow:
+    inset 2px 2px 0 var(--px-stone-3),
+    inset -2px 0 0 var(--px-stone-5);
+  translate: 0 2px;
+  transition: translate 80ms, filter 80ms;
+}
+.realms-app .ui-tab:hover:not(:disabled, [aria-selected='true']) {
+  color: var(--px-bone-1);
+  filter: brightness(1.12);
+  translate: 0 0;
+}
+.realms-app .ui-tab[aria-selected='true'] {
+  z-index: 1;
+  color: var(--px-bone-0);
+  background: var(--px-dusk-2);
+  box-shadow:
+    inset 2px 2px 0 var(--px-dusk-1),
+    inset -2px 0 0 var(--px-dusk-3),
+    0 2px 0 var(--px-dusk-2);
+  translate: 0 0;
+}
+.realms-app .ui-tab:disabled {
+  opacity: 0.5;
+}
+.realms-app .ui-tab:focus-visible {
+  outline: 2px solid var(--px-gale-1);
+  outline-offset: -5px;
+}
+.realms-app .ui-tab-badge {
+  min-width: 18px;
+  padding: 2px 4px 3px;
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--px-outline);
+  text-shadow: none;
+  background: var(--px-gale-1);
+  border: 1px solid var(--px-outline);
+  box-shadow: inset -1px -1px 0 var(--px-gale-3);
+}
+.realms-app .ui-tabpanel {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ---------- Pager „‹ 1/3 ›” ---------- */
+.realms-app .ui-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+}
+.realms-app .ui-pager-step {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0 0 3px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--px-bone-0);
+  text-shadow: 0 2px 0 var(--px-outline);
+  background: var(--px-stone-3);
+  border: 2px solid var(--px-outline);
+  border-radius: 0;
+  box-shadow:
+    inset 2px 2px 0 var(--px-stone-2),
+    inset -2px -2px 0 var(--px-stone-5);
+}
+.realms-app .ui-pager-step:hover:not(:disabled) {
+  background: var(--px-dusk-2);
+  box-shadow:
+    inset 2px 2px 0 var(--px-dusk-1),
+    inset -2px -2px 0 var(--px-dusk-3);
+}
+.realms-app .ui-pager-step:active:not(:disabled) {
+  box-shadow:
+    inset 2px 2px 0 var(--px-stone-5),
+    inset -2px -2px 0 var(--px-stone-2);
+  padding-top: 2px;
+}
+.realms-app .ui-pager-count {
+  min-width: 3.2em;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--px-bone-1);
+  text-shadow: 0 2px 0 var(--px-outline);
+}
+
+/* ---------- CompactCard ---------- */
+.realms-app .ui-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  padding: 2px 6px 2px 2px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  text-align: left;
+  color: var(--px-bone-1);
+  background: none;
+  border: 6px solid transparent;
+  border-image: var(--frame-card);
+  border-radius: 0;
+  image-rendering: pixelated;
+  box-shadow: none;
+}
+.realms-app .ui-card:not(:has(> .ui-card-art)) {
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding-left: 6px;
+}
+.realms-app button.ui-card {
+  cursor: pointer;
+  transition: filter 80ms;
+}
+.realms-app button.ui-card:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+.realms-app .ui-card.active {
+  border-image: var(--frame-card-active);
+}
+.realms-app .ui-card.disabled {
+  filter: saturate(0.4);
+  opacity: 0.7;
+}
+.realms-app .ui-card[class*='tone-'] {
+  box-shadow: inset 3px 0 0 var(--ui-card-tone);
+}
+.realms-app .ui-card.tone-good {
+  --ui-card-tone: var(--px-moss-1);
+}
+.realms-app .ui-card.tone-warn {
+  --ui-card-tone: var(--px-ember-1);
+}
+.realms-app .ui-card.tone-rare {
+  --ui-card-tone: var(--px-rune-1);
+}
+.realms-app .ui-card.tone-locked {
+  --ui-card-tone: var(--px-stone-2);
+}
+.realms-app .ui-card-art {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  background: var(--px-ui-5);
+  border: 2px solid var(--px-outline);
+  box-shadow: inset 2px 2px 0 var(--px-stone-5);
+  image-rendering: pixelated;
+}
+.realms-app .ui-card-art > :is(img, canvas, svg) {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.realms-app .ui-card-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.realms-app .ui-card-title {
+  overflow: hidden;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--px-bone-0);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.realms-app .ui-card-subtitle {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--px-bone-3);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.realms-app .ui-card-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.realms-app .ui-card-value {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--px-amber-1);
+  text-shadow: 0 2px 0 var(--px-outline);
+}
+.realms-app .ui-card-side > .realm-button {
+  font-size: 13px !important;
+  padding: 0 10px 4px;
+}
+
+@media (max-height: 500px) {
+  .realms-app .fit-panel {
+    gap: 6px;
+  }
+  .realms-app .ui-tab {
+    min-height: 30px;
+    padding: 4px 10px 5px;
+    font-size: 13px;
+  }
+  .realms-app .ui-card {
+    min-height: 46px;
+    gap: 8px;
+  }
+  .realms-app .ui-card-art {
+    width: 34px;
+    height: 34px;
+  }
+  .realms-app .ui-card-title {
+    font-size: 14px;
+  }
+  .realms-app .ui-card-subtitle {
+    font-size: 12.5px;
+    -webkit-line-clamp: 1;
+  }
+}
