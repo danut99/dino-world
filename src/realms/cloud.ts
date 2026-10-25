@@ -130,8 +130,9 @@ export const isFreshSave = (s: Save) => s.dinos.length === 0 && s.cleared.length
  * - `download`: the account already has progress of its own, which is kept (a few guest minutes must never
  *   replace it), or the guest progress is nothing worth keeping.
  */
-export function planSync(local: Save, remote: CloudSave | null): 'upload' | 'download' {
+export function planSync(local: Save, remote: CloudSave | null, sameAccount = false): 'upload' | 'download' {
   if (!remote) return 'upload';
+  if (sameAccount) return local.updatedAt > remote.save.updatedAt ? 'upload' : 'download';
   if (isFreshSave(local)) return 'download';
   return isFreshSave(remote.save) ? 'upload' : 'download';
 }

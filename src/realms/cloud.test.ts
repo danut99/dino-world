@@ -10,6 +10,13 @@ const played = (): Save => ({
 const remote = (save: Save, updatedAt = '2026-10-24T10:00:00+00:00') => ({ save, updatedAt });
 
 describe('cloud sync plan', () => {
+  it('keeps the latest guest progress when upgrading the same anonymous account', () => {
+    const latest = { ...played(), updatedAt: 2000 };
+    const earlier = { ...played(), updatedAt: 1000 };
+    expect(planSync(latest, remote(earlier), true)).toBe('upload');
+    expect(planSync(earlier, remote(latest), true)).toBe('download');
+    expect(planSync(latest, remote(latest), true)).toBe('download');
+  });
   it('moves local progress into an account with no cloud save yet', () => {
     expect(planSync(played(), null)).toBe('upload');
   });

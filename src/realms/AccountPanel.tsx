@@ -155,6 +155,8 @@ export function AccountPanel({ lang, sync, startWith = 'signin', intro = true }:
       );
     else if (mode === 'signup')
       void attempt(async () => {
+        sync.stash?.();
+        await sync.flush?.();
         if (sync.user?.is_anonymous) {
           const linked = await linkEmail(email, password);
           return fail(

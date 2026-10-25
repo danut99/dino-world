@@ -61,6 +61,10 @@ export default function SignInGate() {
   const userId = auth.user?.id;
   /** An anonymous account plays as a guest: no name step, and the invitations to create an account. */
   const anonymous = !!auth.user?.is_anonymous;
+  const guestOwner = useRef<string | null>(null);
+  useEffect(() => {
+    if (anonymous && userId) guestOwner.current = userId;
+  }, [anonymous, userId]);
   // A newcomer gets an anonymous account; if Supabase refuses one, the game keeps the save on the device instead.
   const [anonymousFailed, setAnonymousFailed] = useState(false);
   const anonymousStarted = useRef(false);
@@ -91,7 +95,7 @@ export default function SignInGate() {
       const remote = await fetchCloudSave(userId);
       const legacy = readLegacySave();
       if (!legacy) return { phase: 'ready', owner: userId, name, save: remote?.save ?? newSave(Date.now()), marker: remote?.updatedAt ?? null, unsaved: !remote } as const;
-      if (planSync(legacy, remote) === 'download' && remote) {
+      if (planSync(legacy, remote, guestOwner.current === userId) === 'download' && remote) {
         clearLegacySave();
         return { phase: 'ready', owner: userId, name, save: remote.save, marker: remote.updatedAt, unsaved: false } as const;
       }
