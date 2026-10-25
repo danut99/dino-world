@@ -27,7 +27,7 @@ const roundTrip = (s: Save) => expect(parseSave(JSON.stringify(s))).toEqual(s);
 function town(): Save {
   let s = newSave(now);
   s.gold = 200_000;
-  s.inventory = { ...s.inventory, planks: 200, blocks: 200, crystal: 200, habitatKit: 20 };
+  s.inventory = { ...s.inventory, wood: 1000, stone: 1000, crystal: 200, habitatKit: 20 };
   for (const [kind, x, y] of [
     ['farm', 5, 8],
     ['workshop', 6, 1],
@@ -145,7 +145,6 @@ describe('timed construction', () => {
     expect(parseSave(forge({ endsAt: now + 60_000, rushed: true })).construction?.rushed).toBe(true);
     // A building that is not there cannot be upgraded.
     const plain = newSave(now);
-    plain.inventory.planks = 10;
     const bare = command(plain, { type: 'upgradeHatchery' }, now);
     roundTrip(bare);
     expect(() => parseSave(JSON.stringify({ ...bare, construction: { ...bare.construction!, target: 'arena' } }))).toThrow('Invalid construction');

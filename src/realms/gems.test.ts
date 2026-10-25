@@ -117,8 +117,8 @@ describe('diamonds', () => {
   it('keep the save loadable after finishing a craft or an expedition early', () => {
     let s = command(rich(), { type: 'build', kind: 'workshop', x: 6, y: 1 }, now);
     s.inventory.wood = 50;
-    s = command(s, { type: 'craft', recipeId: 'planks' }, now);
-    s = command(s, { type: 'craft', recipeId: 'planks' }, now);
+    s = command(s, { type: 'craft', recipeId: 'provisions' }, now);
+    s = command(s, { type: 'craft', recipeId: 'provisions' }, now);
     const [first, second] = s.crafting;
     s = command(s, { type: 'gemFinish', target: 'craft', id: first.id }, now + 1000);
     expect(s.crafting[0].endsAt).toBe(now + 1000);
@@ -136,7 +136,7 @@ describe('diamonds', () => {
 
   it('refuse a shortened timer that diamonds did not pay for', () => {
     let s = command(rich(), { type: 'build', kind: 'workshop', x: 6, y: 1 }, now);
-    s = command(s, { type: 'craft', recipeId: 'planks' }, now);
+    s = command(s, { type: 'craft', recipeId: 'provisions' }, now);
     s = command(s, { type: 'gemFinish', target: 'craft', id: s.crafting[0].id }, now + 1000);
     expect(parseSave(JSON.stringify(s)).crafting[0].rushed).toBe(true);
     const forged = JSON.parse(JSON.stringify(s));

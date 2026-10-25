@@ -426,26 +426,26 @@ type Materials = Partial<Record<ItemId, number>>;
  */
 export const HATCHERY_LEVELS: { slots: number; gold: number; materials: Materials; minutes: number }[] = [
   { slots: 1, gold: 0, materials: {}, minutes: 0 },
-  { slots: 2, gold: 800, materials: { planks: 4 }, minutes: 10 },
-  { slots: 3, gold: 3000, materials: { planks: 8, blocks: 8 }, minutes: 120 },
-  { slots: 4, gold: 8000, materials: { planks: 14, blocks: 14, crystal: 10 }, minutes: 360 },
+  { slots: 2, gold: 800, materials: { wood: 20 }, minutes: 10 },
+  { slots: 3, gold: 3000, materials: { wood: 40, stone: 40 }, minutes: 120 },
+  { slots: 4, gold: 8000, materials: { wood: 70, stone: 70, crystal: 10 }, minutes: 360 },
 ];
 /** Workshop: `slots` jobs running or waiting, `lanes` of them running at once, `speed` multiplies crafting time. */
 export const WORKSHOP_LEVELS: { slots: number; lanes: number; speed: number; gold: number; materials: Materials; minutes: number }[] = [
   { slots: 3, lanes: 1, speed: 1, gold: 0, materials: {}, minutes: 0 },
-  { slots: 5, lanes: 2, speed: 0.8, gold: 1200, materials: { planks: 6, blocks: 6 }, minutes: 30 },
-  { slots: 7, lanes: 3, speed: 0.6, gold: 4000, materials: { planks: 12, blocks: 12, crystal: 10 }, minutes: 180 },
+  { slots: 5, lanes: 2, speed: 0.8, gold: 1200, materials: { wood: 30, stone: 30 }, minutes: 30 },
+  { slots: 7, lanes: 3, speed: 0.6, gold: 4000, materials: { wood: 60, stone: 60, crystal: 10 }, minutes: 180 },
 ];
 /** Expedition Portal: how many teams can be away at once. */
 export const PORTAL_LEVELS: { slots: number; gold: number; materials: Materials; minutes: number }[] = [
   { slots: 1, gold: 0, materials: {}, minutes: 0 },
-  { slots: 2, gold: 3000, materials: { planks: 10, blocks: 10 }, minutes: 120 },
-  { slots: 3, gold: 10000, materials: { planks: 20, blocks: 20, crystal: 20 }, minutes: 480 },
+  { slots: 2, gold: 3000, materials: { wood: 50, stone: 50 }, minutes: 120 },
+  { slots: 3, gold: 10000, materials: { wood: 100, stone: 100, crystal: 20 }, minutes: 480 },
 ];
 /** Arena Gate: level 2 adds 25% to arena rewards and opens the last five leagues. */
 export const ARENA_LEVELS: { bonus: number; gold: number; materials: Materials; minutes: number }[] = [
   { bonus: 0, gold: 0, materials: {}, minutes: 0 },
-  { bonus: 0.25, gold: 6000, materials: { blocks: 12, crystal: 20 }, minutes: 240 },
+  { bonus: 0.25, gold: 6000, materials: { stone: 60, crystal: 20 }, minutes: 240 },
 ];
 export const GATE_LEAGUES = ['lightning', 'wind', 'dark', 'light', 'arcane'];
 /**
@@ -546,14 +546,14 @@ function completeConstruction(s: Save) {
 export const WORLD_UNLOCK: Record<RealmId, { gold: number; materials: Materials }> = {
   fire: { gold: 0, materials: {} },
   water: { gold: 600, materials: { wood: 15 } },
-  earth: { gold: 1500, materials: { stone: 20, planks: 4 } },
-  nature: { gold: 3000, materials: { wood: 20, fiber: 20, blocks: 4 } },
-  ice: { gold: 5000, materials: { stone: 20, crystal: 15, planks: 6 } },
-  lightning: { gold: 8000, materials: { crystal: 20, planks: 8, blocks: 8 } },
-  wind: { gold: 12000, materials: { fiber: 30, planks: 10, blocks: 10 } },
-  dark: { gold: 17000, materials: { crystal: 30, blocks: 14 } },
-  light: { gold: 23000, materials: { crystal: 35, planks: 14, blocks: 14 } },
-  arcane: { gold: 30000, materials: { crystal: 45, planks: 18, blocks: 18 } },
+  earth: { gold: 1500, materials: { stone: 20, wood: 20 } },
+  nature: { gold: 3000, materials: { wood: 20, fiber: 20, stone: 20 } },
+  ice: { gold: 5000, materials: { stone: 20, crystal: 15, wood: 30 } },
+  lightning: { gold: 8000, materials: { crystal: 20, wood: 40, stone: 40 } },
+  wind: { gold: 12000, materials: { fiber: 30, wood: 50, stone: 50 } },
+  dark: { gold: 17000, materials: { crystal: 30, stone: 70 } },
+  light: { gold: 23000, materials: { crystal: 35, wood: 70, stone: 70 } },
+  arcane: { gold: 30000, materials: { crystal: 45, wood: 90, stone: 90 } },
 };
 /** The Market sells only these eggs, at these prices; every other element is won in fights. */
 export const EGG_PRICES: Partial<Record<RealmId, number>> = { fire: 300, water: 600, earth: 1000 };
@@ -659,6 +659,8 @@ export type StoryStep = {
   progress?: (s: Save) => [number, number];
   /** Where the player works on it. */
   panel: 'hatchery' | 'dino' | 'build' | 'farm' | 'workshop' | 'expedition' | 'arena' | 'realms' | 'collection';
+  /** Select the right building when this goal opens the construction panel. */
+  building?: UtilityKind;
   gold: number;
   food: number;
   /** The egg a chapter's last goal gives. */
@@ -684,14 +686,14 @@ const thousands = (n: number, lang: number) => String(n).replace(/\B(?=(\d{3})+(
 /** A build time as "5 min", "1 h" or "1 h 30 min". */
 export const buildTime = (minutes: number) =>
   minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60} min` : ''}`;
-/** "1.500 aur, 6 plăci" — a price in words, for the hints. */
+/** "1.500 aur, 30 lemn" — a price in words, for the hints. */
 function priceText(gold: number, materials: Materials, lang: number) {
   return [
     `${thousands(gold, lang)} ${lang ? 'gold' : 'aur'}`,
     ...(Object.entries(materials) as [ItemId, number][]).filter(([, n]) => n > 0).map(([id, n]) => `${n} ${ITEMS[id].name[lang].toLowerCase()}`),
   ].join(', ');
 }
-/** "1.500 aur, 6 plăci · 1 h" — the price and build time of an upgrade level. */
+/** "1.500 aur, 30 lemn · 1 h" — the price and build time of an upgrade level. */
 const stepText = (step: UpgradeStep, lang: number) => `${priceText(step.gold, step.materials, lang)} · ${buildTime(step.minutes)}`;
 /** A goal of reaching level `level` of a building (one level at a time, by the single builder). */
 function levelGoal(target: BuildTarget, level: number, panel: Goal['panel'], id: string): Goal {
@@ -731,6 +733,7 @@ function buildGoal(kind: UtilityKind, id: string, hint: readonly [string, string
     hint: [`${hint[0]} Costă ${thousands(cost, 0)} aur.`, `${hint[1]} It costs ${thousands(cost, 1)} gold.`],
     done: has(kind),
     panel: 'build',
+    building: kind,
   };
 }
 /** The story goal of crossing a world's region: all five stages, with the team size and level its finale asks. */
@@ -1215,9 +1218,9 @@ export const STARS_TO_ADVANCE = 2;
 export const STAR_MILESTONES: { stars: number; gold: number; food: number; gems: number; materials: Partial<Inventory> }[] = [
   { stars: 5, gold: 300, food: 150, gems: 2, materials: { crystal: 5 } },
   { stars: 12, gold: 600, food: 250, gems: 3, materials: { evolutionCrystal: 1 } },
-  { stars: 20, gold: 1000, food: 400, gems: 3, materials: { crystal: 15, blocks: 3 } },
+  { stars: 20, gold: 1000, food: 400, gems: 3, materials: { crystal: 15, stone: 15 } },
   { stars: 30, gold: 1800, food: 600, gems: 5, materials: { evolutionCrystal: 2 } },
-  { stars: 42, gold: 3000, food: 800, gems: 5, materials: { crystal: 25, planks: 5, blocks: 5 } },
+  { stars: 42, gold: 3000, food: 800, gems: 5, materials: { crystal: 25, wood: 25, stone: 25 } },
   { stars: 55, gold: 4500, food: 1000, gems: 5, materials: { evolutionCrystal: 3 } },
   { stars: 70, gold: 6500, food: 1500, gems: 7, materials: { crystal: 40, habitatKit: 1 } },
   { stars: 90, gold: 10000, food: 2500, gems: 10, materials: { evolutionCrystal: 5 } },
@@ -1868,9 +1871,7 @@ export function command(save: Save, c: Command, now: number): Save {
       for (const e of ELEMENTS) s.arenaTickets[e.id] = Math.min(ARENA_TICKET_LIMIT, (s.arenaTickets[e.id] ?? 0) + 999);
       s.gold += 5000;
       s.food += 5000;
-      for (const id of ['wood', 'stone', 'fiber', 'crystal'] as const) s.inventory[id] += 50;
-      s.inventory.planks += 20;
-      s.inventory.blocks += 20;
+      for (const id of ['wood', 'stone', 'fiber', 'crystal'] as const) s.inventory[id] += 150;
       s.inventory.habitatKit += 3;
       s.inventory.evolutionCrystal += 3;
       break;
@@ -2159,8 +2160,32 @@ export function parseSave(text: string): Save {
   const s = JSON.parse(text) as Save;
   if (!s || typeof s !== 'object' || Array.isArray(s)) throw Error('Invalid save');
   if (s.schemaVersion !== 6) throw new OutdatedSave((s as { schemaVersion?: unknown }).schemaVersion);
+  // Accept saves made while the discarded story-scene experiment was being tried.
+  if (Array.isArray(s.questEggs)) {
+    const experimental = s.questEggs.some(id => id === 'c1-plant' || id === 'c1-harvest');
+    s.questEggs = s.questEggs.filter(id => id !== 'c1-plant' && id !== 'c1-harvest');
+    if (experimental && s.questEggs.includes('c1-grow') && !s.questEggs.includes('w-earth-market')) s.questEggs.push('w-earth-market');
+  }
+  delete (s as Save & { narrative?: unknown }).narrative;
   // Later additions start empty here (`??=`), so they never need another reset.
   s.daily = normalizeDaily(s.daily);
+  // Planks and blocks left the workshop: they fold back into the wood and stone they were cut from (10 for 2), and
+  // their jobs, finished or not, give back what they cost.
+  const RETIRED = { planks: 'wood', blocks: 'stone' } as const;
+  const inventory = s.inventory as unknown as Record<string, number> | undefined;
+  if (inventory && typeof inventory === 'object') {
+    for (const [old, raw] of Object.entries(RETIRED))
+      if (Number.isInteger(inventory[old]) && inventory[old] >= 0) {
+        inventory[raw] += 5 * inventory[old];
+        delete inventory[old];
+      }
+    if (Array.isArray(s.crafting))
+      s.crafting = s.crafting.filter((j) => {
+        const raw = RETIRED[j?.recipeId as keyof typeof RETIRED];
+        if (raw) inventory[raw] += 10;
+        return !raw;
+      });
+  }
   const finite = (n: unknown, max = 1e9): n is number =>
     typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= max;
   const integer = (n: unknown, max = 1e9): n is number => finite(n, max) && Number.isInteger(n);

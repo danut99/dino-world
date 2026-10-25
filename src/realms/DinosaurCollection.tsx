@@ -1,7 +1,9 @@
 import { useState, type CSSProperties } from 'react';
 import { rarityClass } from './Rarity';
 import { ARENA_BOSSES } from './arenaBosses';
-import { COLLECTION, ELEMENTS, MARKET_ELEMENTS, type Dino, type RealmId, type Species, type Stage } from './game';
+import { COLLECTION, ELEMENTS, MARKET_ELEMENTS, type Dino, type RealmId, type Save, type Species, type Stage } from './game';
+import { CollectionGoals } from './AdventureJournal';
+import type { JourneyRoute } from './journey';
 import { DINOSAURS, STAGES } from './dinosaurs';
 import { DinosaurArt } from './DinosaurArt';
 import { Icon, elementIcon } from './ui/Icon';
@@ -22,7 +24,9 @@ const ENTRIES: Entry[] = COLLECTION.map((id) => {
  * The collection album: thirty entries (twenty families and ten bosses), counted from `discovered` so a released
  * dinosaur stays in it. Undiscovered entries show as silhouettes. One element at a time (or all), paged.
  */
-export function DinosaurCollection({ lang, dinos, discovered, openOwned, openMarket, openExpeditions, initialElement }: {
+export function DinosaurCollection({ lang, dinos, discovered, openOwned, openMarket, openExpeditions, initialElement, save, navigate }: {
+  save?: Save;
+  navigate?: (route: JourneyRoute) => void;
   lang: number;
   dinos: Dino[];
   /** Families ever hatched (`species_element`). */
@@ -35,6 +39,7 @@ export function DinosaurCollection({ lang, dinos, discovered, openOwned, openMar
   const tr = (ro: string, en: string) => (lang ? en : ro);
   const [element, setElement] = useState<RealmId | 'all'>(initialElement ?? 'all');
   const [stage, setStage] = useState<Stage>('adult');
+  const [goals, setGoals] = useState(false);
   const found = (e: Entry) => discovered.includes(e.id) || dinos.some((d) => d.species === e.species && d.element === e.element);
   const shown = element === 'all' ? ENTRIES : ENTRIES.filter((e) => e.element === element);
   const pager = usePager(shown, { itemSelector: '.hero-card' });
@@ -44,6 +49,8 @@ export function DinosaurCollection({ lang, dinos, discovered, openOwned, openMar
   const go = (e: Entry) => {
     const mine = dinos.find((d) => d.species === e.species && d.element === e.element);
     if (mine) return openOwned(mine.id);
+    if (!save?.habitats[e.element] && navigate) return navigate('realms');
+    if (e.boss && navigate) return navigate('arena');
     if (!e.boss && MARKET_ELEMENTS.includes(e.element)) return openMarket();
     (openExpeditions ?? openMarket)();
   };
@@ -90,7 +97,7 @@ export function DinosaurCollection({ lang, dinos, discovered, openOwned, openMar
           );
         })}
       </div>
-      <div ref={pager.ref} className="ui-paged hero-cards">
+      {goals && save && navigate ? <div className="journey-scroll" data-scroll><CollectionGoals save={save} lang={lang} navigate={navigate} /></div> : <div ref={pager.ref} className="ui-paged hero-cards">
         {pager.pageItems.map((e) => {
           const known = found(e),
             mine = dinos.filter((d) => d.species === e.species && d.element === e.element),
@@ -124,10 +131,10 @@ export function DinosaurCollection({ lang, dinos, discovered, openOwned, openMar
             </button>
           );
         })}
-      </div>
+      </div>}
       <div className="pk-foot">
-        <p className="pk-note">{tr('Familiile rămân în colecție și după ce eliberezi un dinozaur.', 'Families stay in the collection after you release a dinosaur.')}</p>
-        <Pager page={pager.page} pages={pager.pages} onPrev={pager.prev} onNext={pager.next} lang={lang} />
+        {save && navigate ? <button type="button" className="realm-link" aria-pressed={goals} onClick={() => setGoals(!goals)}>{goals ? tr('Înapoi la colecție', 'Back to collection') : tr('Ce pot descoperi acum?', 'What can I discover now?')} →</button> : <p className="pk-note">{tr('Familiile rămân în colecție și după ce eliberezi un dinozaur.', 'Families stay in the collection after you release a dinosaur.')}</p>}
+        {!goals && <Pager page={pager.page} pages={pager.pages} onPrev={pager.prev} onNext={pager.next} lang={lang} />}
       </div>
     </div>
   );

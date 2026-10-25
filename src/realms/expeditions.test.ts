@@ -67,7 +67,7 @@ describe('expedition regions', () => {
     expect(REGIONS.map((r) => r.id)).toEqual(['training', 'ruins', 'canyon', 'frost', 'lagoon', 'wind', 'thunder', 'twilight', 'dawn', 'sigils']);
     expect(REGIONS[0].name).toEqual(['Pasul de jar', 'Ember pass']);
     expect(REGIONS[3].name).toEqual(['Poiana ferigilor', 'Fern glade']);
-    expect(REGIONS[0].minutes).toEqual([1, 10, 15, 20, 30]);
+    expect(REGIONS[0].minutes).toEqual([1, 3, 7, 15, 25]);
     expect(REGIONS[9].minutes).toEqual([360, 420, 480, 540, 600]);
     for (const r of REGIONS) expect([...r.minutes].every((m, i) => i === 0 || m > r.minutes[i - 1]), r.id).toBe(true);
     expect(stageLevel(1, 1)).toBe(10);
@@ -75,7 +75,7 @@ describe('expedition regions', () => {
     expect(stageLevel(10, 5)).toBe(50);
     expect(REGIONS.map((_, i) => regionTeamSize(i + 1))).toEqual([1, 1, 2, 2, 2, 3, 3, 3, 3, 3]);
     // About 220 hours of stages in all.
-    expect(REGIONS.reduce((n, r) => n + r.minutes.reduce((a, b) => a + b, 0), 0) / 60).toBeCloseTo(219.5, 1);
+    expect(REGIONS.reduce((n, r) => n + r.minutes.reduce((a, b) => a + b, 0), 0) / 60).toBeCloseTo(219.1, 1);
     expect(recommendedElement('fire')).toBe('water');
     expect(recommendedElement('ice')).toBe('light');
   });

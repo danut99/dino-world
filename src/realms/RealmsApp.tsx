@@ -19,6 +19,8 @@ import { UTILITY_BUILDINGS, type UtilityKind } from './content';
 import { FarmPanel } from './FarmPanel';
 import { DailyPanel } from './DailyPanel';
 import { GuidedTour, type TourStep } from './GuidedTour';
+import { AdventureJournal } from './AdventureJournal';
+import { goalPurpose } from './journey';
 import { dailyState, DAILY_QUESTS } from './daily';
 import { DevPanel, DinoPanel, EggArt, HabitatsPanel, HatcheryPanel, MarketPanel } from './DinoPanels';
 import {
@@ -108,6 +110,7 @@ const COMMAND_SOUNDS: Partial<Record<Command['type'], SoundId>> = {
 };
 
 type Panel =
+  | 'journey'
   | 'daily'
   | 'dino'
   | 'hatchery'
@@ -257,12 +260,14 @@ export function Window({
 export default function RealmsApp({ initialSave, account, guest = false }: { initialSave?: Save; account?: SignedIn; guest?: boolean } = {}) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [heroVision, setHeroVision] = useState<Dino | null>(null);
+  const [trainAfterVision, setTrainAfterVision] = useState(false);
   /** Another player's world being looked at (read only), and which of its worlds is shown. */
   const [visit, setVisit] = useState<{ name: string; save: Save } | null>(null);
   const [visitView, setVisitView] = useState<'home' | RealmId>('home');
   const [save, setSave] = useState(() => (initialSave ? advance(initialSave, Date.now()) : load())),
     [now, setNow] = useState(Date.now()),
     [panel, setPanel] = useState<Panel>(() => save.battle?.encounterId.startsWith('arena') ? 'arena' : null);
+  useEffect(() => { if (panel !== 'dino') setTrainAfterVision(false); }, [panel]);
   const [realm, setRealm] = useState<'home' | RealmId>(() => {
     try {
       const last = localStorage.getItem('dino-realms-current-world');
@@ -292,7 +297,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
     [moving, setMoving] = useState<string | null>(null),
     [message, setMessage] = useState('');
   const [expeditionPreparation, setExpeditionPreparation] = useState(false);
-  const [workshopRecipe, setWorkshopRecipe] = useState('planks');
+  const [workshopRecipe, setWorkshopRecipe] = useState('provisions');
   const [helpRealm, setHelpRealm] = useState<RealmId | undefined>();
   const [helpBuilding, setHelpBuilding] = useState<UtilityKind>('farm');
   // The bottom bar can fold down to just the Collect button; phones start folded, where it covers more island.
@@ -1111,6 +1116,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
               </span>
               <h2>{story.task[lang]}</h2>
               <p className="realm-quest-hint">{storyReady ? tr('Gata! Ia-ți recompensa.', 'Done! Take your reward.') : story.hint[lang]}</p>
+              {!storyReady && <p className="realm-quest-purpose">{goalPurpose(story)[lang]}</p>}
               {storyProgress && !storyReady && (
                 <div className="realm-quest-bar" role="progressbar" aria-valuemin={0} aria-valuemax={storyProgress[1]} aria-valuenow={storyProgress[0]}>
                   <i style={{ width: `${Math.min(100, (storyProgress[0] / storyProgress[1]) * 100)}%` }} />
@@ -1143,10 +1149,13 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
                   <Icon name={storyEgg(story) ? 'egg' : 'star'} scale={1} /> {tr('Ia premiul', 'Claim')} <span>→</span>
                 </button>
               ) : (
-                <button className="realm-button" onClick={() => setPanel(story.panel)}>
+                <button className="realm-button" onClick={() => { if (story.building) setHelpBuilding(story.building); setPanel(story.panel); }}>
                   {tr('Mergi', 'Go')} <span>→</span>
                 </button>
               )}
+              <button type="button" className="realm-link realm-journey-link" onClick={() => setPanel('journey')}>
+                {tr('Vezi traseul și următoarea descoperire', 'See your path and next discovery')} →
+              </button>
             </>
           ) : (
             <>
@@ -1300,6 +1309,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
         <Window
           title={
             {
+              journey: tr('Jurnalul aventurii', 'Adventure journal'),
               dino: dinoRealm ? `${tr('Habitat', 'Habitat')} · ${REALM_NAMES[dinoRealm][lang]}` : tr('Dinozaurii tăi', 'Your dinosaurs'),
               hatchery: tr('Incubatorul', 'The hatchery'),
               habitat: tr('Habitate', 'Habitats'),
@@ -1322,11 +1332,15 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
           }
           eyebrow="DINO REALMS"
           close={() => setPanel(null)}
-          wide={['farm', 'daily', 'collection', 'realms', 'assets', 'build', 'dino', 'hatchery', 'market', 'habitat', 'wiki', 'workshop', 'shop'].includes(
+          wide={['journey', 'farm', 'daily', 'collection', 'realms', 'assets', 'build', 'dino', 'hatchery', 'market', 'habitat', 'wiki', 'workshop', 'shop'].includes(
             panel,
           )}
-          fit={FIT_PANELS.includes(panel)}
+          fit={panel === 'journey' || FIT_PANELS.includes(panel)}
         >
+          {panel === 'journey' && <AdventureJournal save={save} lang={lang} run={run} navigate={route => {
+            if (route === 'build' && current?.step.building) setHelpBuilding(current.step.building);
+            setPanel(route);
+          }} />}
           {expeditionPreparation && (
             <button className="realm-button secondary realm-back-to-hatchery" onClick={() => { setExpeditionPreparation(false); setPanel('expedition'); }}>
               ← {tr('Înapoi la expediție', 'Back to expedition')}
@@ -1363,7 +1377,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
                   setMessage(tr('Ou cumpărat! Incubează-l în incubator.', 'Egg bought! Incubate it in the hatchery.'));
                 return ok;
               }}
-              build={() => setPanel('build')}
+              build={() => { setHelpBuilding('market'); setPanel('build'); }}
               openHabitats={() => setPanel('habitat')}
             />
           )}
@@ -1376,6 +1390,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
               select={setSelectedDino}
               openHatchery={() => setPanel('hatchery')}
               previewHero={dino => setHeroVision(dino)}
+              initialTab={trainAfterVision ? 'grow' : undefined}
               realm={dinoRealm}
               openHabitats={() => setPanel('habitat')}
               fromHatchery={dinoFromHatchery}
@@ -1404,6 +1419,8 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
           {panel === 'build' && <BuildPanel initialKind={helpBuilding} save={save} lang={lang} run={run} place={startPlacement} open={kind => setPanel(kind === 'portal' ? 'expedition' : kind)} />}
           {panel === 'collection' && (
             <DinosaurCollection
+              save={save}
+              navigate={setPanel}
               lang={lang}
               dinos={save.dinos}
               discovered={save.discovered}
@@ -1522,6 +1539,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
         setSelectedDino(heroVision.id); setDinoRealm(heroVision.element); setHeroVision(null); setPanel('dino');
       }}>
         <HeroVision dino={heroVision} lang={lang} finish={() => {
+          setTrainAfterVision(heroVision.level < 50);
           setSelectedDino(heroVision.id); setDinoRealm(heroVision.element); setHeroVision(null); setPanel('dino');
         }} />
       </Window>}
@@ -1610,8 +1628,8 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
                     until: () => saveRef.current.dinos.length > 0 && !document.querySelector('.hero-vision'),
                     title: ['O viziune din viitor', 'A vision of the future'],
                     body: [
-                      'Așa va lupta dinozaurul tău când va fi adult. Urmărește lupta, apoi apasă butonul verde ca să începi să-l crești.',
-                      'This is how your dinosaur will fight as an adult. Watch the battle, then tap the green button to start raising it.',
+                      'O luptă dintr-un viitor posibil. După viziune, apasă „Începe antrenamentul”.',
+                      'A battle from a possible future. After the vision, tap "Start training".',
                     ],
                   },
                   {
@@ -1723,7 +1741,7 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
                     wait: true,
                     click: true,
                     title: ['Construiește piața', 'Build the market'],
-                    body: ['Arena cere 2 dinozauri, iar din Piață cumperi ouă noi. Apasă „Mergi”.', 'The arena needs 2 dinosaurs, and the Market sells new eggs. Tap "Go".'],
+                    body: ['Din Piață poți alege ouă pentru a-ți diversifica echipa. Construiește-o acum; oul îl poți cumpăra când dorești. Apasă „Mergi”.', 'The Market lets you choose eggs to diversify your team. Build it now; buy an egg whenever you want. Tap "Go".'],
                   },
                   {
                     target: '.build-buttons .realm-button:not(.secondary)',
@@ -1762,17 +1780,16 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
                     ],
                   },
                   {
-                    target: '.market-egg .realm-button:not(:disabled)',
+                    target: '.market-eggs',
                     wait: true,
-                    click: true,
-                    title: ['Al doilea ou de foc', 'A second fire egg'],
-                    body: ['Cumpără un ou. Cu doi dinozauri poți intra în arenă!', 'Buy an egg. With two dinosaurs you can enter the arena!'],
+                    title: ['Tu alegi următorul companion', 'Choose your next companion'],
+                    body: ['Fiecare ou de Foc costă 300 aur. Achiziția este opțională: poți continua povestea cu primul dinozaur.', 'Each Fire egg costs 300 gold. Buying is optional: you can continue the story with your first dinosaur.'],
                   },
                   {
-                    title: ['Oul e al tău!', 'The egg is yours!'],
+                    title: ['Aventura continuă!', 'Your adventure continues!'],
                     body: [
-                      'Îl găsești pe Raftul din Incubator: pune-l la incubat și în curând ai doi dinozauri. De aici înainte, butonul din „Povestea ta” te duce mereu la pasul următor. Spor la aventură!',
-                      'You will find it on the Hatchery shelf: incubate it and soon you will have two dinosaurs. From now on, the button in "Your story" always takes you to the next step. Enjoy the adventure!',
+                      'Când cumperi un ou, îl găsești pe Raftul din Incubator. Acum continuă din „Povestea ta”: crește-ți companionul până la juvenil, construiește Portalul și pornește în prima expediție de un minut. Jurnalul îți arată traseul și premiile.',
+                      'Purchased eggs wait on the Hatchery shelf. Continue from "Your story": raise your companion to juvenile, build the Portal and start your first one-minute expedition. The journal shows your path and rewards.',
                     ],
                   },
                 ] satisfies TourStep[])

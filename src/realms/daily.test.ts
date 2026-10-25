@@ -99,7 +99,7 @@ describe('daily rewards', () => {
     expect(save.daily.progress.harvest).toBe(0);
     save = command(save,{type:'harvest'},now+120000);
     expect(save.daily.progress.harvest).toBe(1);
-    save = command(save,{type:'craft',recipeId:'planks'},now+120000);
+    save = command(save,{type:'craft',recipeId:'provisions'},now+120000);
     const job = save.crafting[0];
     save = command(save,{type:'claimCraft',jobId:job.id},job.endsAt);
     expect(save.daily.progress.craft).toBe(1);
@@ -166,7 +166,7 @@ describe('daily mission pool', () => {
     for (const [kind, x, y] of [['farm', 5, 8], ['workshop', 6, 1]] as const) save = command(save, { type: 'build', kind, x, y }, now);
     save = command(save, { type: 'plant' }, now);
     expect(save.daily.progress.plant).toBe(1);
-    save = command(save, { type: 'craft', recipeId: 'planks' }, now);
+    save = command(save, { type: 'craft', recipeId: 'provisions' }, now);
     expect(save.daily.progress.startCraft).toBe(1);
     save.storedGold = 50;
     save = command(save, { type: 'collect' }, now);

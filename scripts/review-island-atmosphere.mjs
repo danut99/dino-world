@@ -49,6 +49,13 @@ try {
           if (frames[0].data[p] !== frames[1].data[p] || frames[0].data[p+1] !== frames[1].data[p+1] || frames[0].data[p+2] !== frames[1].data[p+2]) plateauChanges++;
         }
       }
+      let earthFlowChanges = 0;
+      if (realm === 'earth') for (const [left, top, right, bottom] of [[207, 346, 225, 394], [394, 290, 406, 338]]) {
+        for (let y = top; y < bottom; y++) for (let x = left; x < right; x++) {
+          const p = (y * canvas.width + x) * 4;
+          if (Math.abs(frames[0].data[p + 1] - frames[1].data[p + 1]) > 20) earthFlowChanges++;
+        }
+      }
       let smokeChanges = 0;
       if (realm === 'fire') for (let y = 70; y < 122; y++) for (let x = 308; x < 343; x++) {
         const p = (y * canvas.width + x) * 4;
@@ -70,7 +77,7 @@ try {
           arcaneJumps = Math.max(arcaneJumps, jumps);
         }
       }
-      results.push({ realm, changed, plateauChanges, smokeChanges, arcaneJumps, elapsed: performance.now() - started, frames: frames.map(f => f.png) });
+      results.push({ realm, changed, plateauChanges, smokeChanges, earthFlowChanges, arcaneJumps, elapsed: performance.now() - started, frames: frames.map(f => f.png) });
     }
     return results;
   }, realms);
@@ -79,6 +86,7 @@ try {
     assert.equal(result.plateauChanges, 0, `${result.realm}: playable plateau must stay still`);
     assert.ok(result.changed < 512 * 512 * 0.25, 'Terrain must remain still');
     if (result.realm === 'fire') assert.ok(result.smokeChanges > 100, 'Volcanic smoke must move');
+    if (result.realm === 'earth') assert.ok(result.earthFlowChanges > 100, `Canyon water itself must visibly move, independently of mist (${result.earthFlowChanges})`);
     if (result.realm === 'arcane') assert.ok(result.arcaneJumps < 100, `Arcane must not jump between adjacent frames (${result.arcaneJumps})`);
     for (let i = 0; i < result.frames.length; i++) await fs.writeFile(`output/island-atmosphere/${result.realm}-${i}.png`, Buffer.from(result.frames[i].split(',')[1], 'base64'));
     console.log(`${result.realm}: ${result.changed} animated pixels${result.realm === 'arcane' ? `; ${result.arcaneJumps} abrupt pixels at 30fps` : ''}`);

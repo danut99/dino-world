@@ -80,7 +80,6 @@ try {
   await page.getByRole('button', { name: 'Workshop', exact: true }).click();
   let dialog = page.getByRole('dialog', { name: 'The workshop', exact: true });
   await dialog.getByRole('button', { name: /Craft$/ }).click();
-  await dialog.getByRole('button', { name: /Stone blocks$/ }).click();
   await dialog.getByRole('button', { name: /Craft$/ }).click();
   await shot('workshop-queue');
   await page.reload();
@@ -92,8 +91,7 @@ try {
   await dialog.getByRole('button', { name: 'Collect', exact: true }).first().click();
   await dialog.getByRole('button', { name: 'Collect', exact: true }).first().click();
   state = await page.evaluate(() => JSON.parse(localStorage.getItem('dino-realms-save-v1')));
-  assert.equal(state.inventory.planks, 2);
-  assert.equal(state.inventory.blocks, 2);
+  assert.equal(state.inventory.provisions, 2);
   assert.equal(state.crafting.length, 0);
   await dialog.getByRole('button', { name: /Expeditions$/ }).click();
   dialog = page.getByRole('dialog', { name: 'Expeditions', exact: true });
@@ -146,7 +144,7 @@ try {
     s.storedGold = 0;
     s.farmAt = Date.now() - 30_000;
     s.crafting = [
-      { id: 'offline-fixture', recipeId: 'planks', startedAt: Date.now() - 60_000, endsAt: Date.now() - 30_000 },
+      { id: 'offline-fixture', recipeId: 'provisions', startedAt: Date.now() - 240_000, endsAt: Date.now() - 60_000 },
     ];
     localStorage.setItem(key, JSON.stringify(s));
   });
@@ -157,7 +155,7 @@ try {
   await page.getByRole('button', { name: 'Collect available', exact: true }).click();
   const after = await page.evaluate(() => JSON.parse(localStorage.getItem('dino-realms-save-v1')));
   assert.equal(after.food, before.food + 25);
-  assert.equal(after.inventory.planks, before.inventory.planks + 2);
+  assert.equal(after.inventory.provisions, before.inventory.provisions + 1);
   assert.equal(after.crafting.length, 0);
   assert(after.gold >= before.gold + 30);
   await page.reload();

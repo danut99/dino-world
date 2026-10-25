@@ -288,6 +288,9 @@
   border-color: var(--px-amber-2);
 }
 .realms-app .dino-ages-art {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
   display: grid;
   place-items: center;
   width: 72px;
@@ -719,6 +722,7 @@
   .realms-app .pk-lamp { padding: 2px 6px; }
 }
 @media (max-width: 700px) {
+  .realms-app .dino-ages-art { width: 48px; height: 42px; }
   .realms-app .dino-sheet { grid-template-columns: 170px minmax(0, 1fr); }
   .realms-app .dino-sheet-stage { display: none; }
   .realms-app .habitat-tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }

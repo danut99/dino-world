@@ -22,7 +22,7 @@ export const time = (ms: number) => {
 type QueueItem = { kind: 'done' | 'running' | 'queued'; job: CraftJob } | { kind: 'free'; id: string };
 
 /**
- * The workshop: stock on top, then three tabs — the six recipes (3×2), the queue (only running and waiting jobs
+ * The workshop: stock on top, then three tabs — the four recipes (2×2), the queue (only running and waiting jobs
  * take a slot; finished ones wait to be collected), and the next level.
  */
 export function WorkshopPanel({ save, now, lang, run, build, recipeId, returnToExpeditions }: {
@@ -70,7 +70,7 @@ export function WorkshopPanel({ save, now, lang, run, build, recipeId, returnToE
         <div className="pk-empty workshop-empty">
           <AnimatedWorkshopSprite art={WORKSHOP_STATES[0].art} />
           <h3>{tr('Încă nu ai atelier pe insulă', 'You have no workshop on the island yet')}</h3>
-          <p className="pk-note">{tr('Atelierul face plăci, blocuri, kituri de habitat, cristale de evoluție, lămpi și provizii.', 'The workshop makes planks, blocks, habitat kits, evolution crystals, lamps and supplies.')}</p>
+          <p className="pk-note">{tr('Atelierul face provizii, kituri de habitat, cristale de evoluție și lămpi.', 'The workshop makes supplies, habitat kits, evolution crystals and lamps.')}</p>
           <button className="realm-button" onClick={build}>
             {tr('Construiește atelierul', 'Build the workshop')}
           </button>

@@ -151,7 +151,7 @@ describe('eggs, hatchery, market and habitats', () => {
       { type: 'incubate' },
       { type: 'plant', crop: 'cicadas' },
     );
-    for (let i = 0; i < 3; i++) s = run(s, { type: 'craft', recipeId: 'planks' });
+    for (let i = 0; i < 3; i++) s = run(s, { type: 'craft', recipeId: 'provisions' });
     const gold = s.gold;
     s = run(s, { type: 'devSkip' });
     expect(s.eggs[0].hatchAt).toBeLessThanOrEqual(now);
@@ -338,13 +338,13 @@ describe('the reordered story', () => {
     expect(step('w-earth-hatchery').done({ ...s, hatcheryLevel: 2 })).toBe(true);
     expect(step('w-nature-farm').done({ ...s, farmLevel: 2 })).toBe(false);
     expect(step('w-nature-farm').done({ ...s, farmLevel: 3 })).toBe(true);
-    expect(step('w-nature-farm').hint[0]).toContain('Nivelul 3: 1.500 aur, 6 plăci · 1 h');
-    expect(step('w-nature-farm').hint[1]).toContain('Level 3: 1,500 gold, 6 planks · 1 h');
+    expect(step('w-nature-farm').hint[0]).toContain('Nivelul 3: 1.500 aur, 30 lemn · 1 h');
+    expect(step('w-nature-farm').hint[1]).toContain('Level 3: 1,500 gold, 30 wood · 1 h');
     expect(step('w-nature-habitat').done({ ...s, habitats: { fire: 1, water: 2 } })).toBe(true);
-    expect(step('w-ice-portal').hint[0]).toContain('3.000 aur, 10 plăci, 10 blocuri · 2 h');
+    expect(step('w-ice-portal').hint[0]).toContain('3.000 aur, 50 lemn, 50 piatră · 2 h');
     expect(step('w-ice-boss').done({ ...s, cleared: ['arena-fire-1', 'arena-fire-2'] })).toBe(false);
     expect(step('w-ice-boss').done({ ...s, cleared: ['arena-fire-3'] })).toBe(true);
-    expect(step('w-lightning-gate').hint[0]).toContain('6.000 aur, 12 blocuri, 20 cristale · 4 h');
+    expect(step('w-lightning-gate').hint[0]).toContain('6.000 aur, 60 piatră, 20 cristale · 4 h');
     expect(step('w-wind-farm').hint[0]).toContain('Nivelul 4');
     const families = COLLECTION.filter((id) => !id.startsWith('boss_'));
     expect(step('w-wind-families').done({ ...s, discovered: [...families.slice(0, 11), 'boss_fire'] })).toBe(false);

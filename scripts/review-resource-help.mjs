@@ -25,11 +25,8 @@ try {
  await page.locator('.atlas-upgrade .resource-help').getByRole('button',{name:/Craft in Workshop: Habitat/}).click();
  await page.locator('.craft-card.focus').filter({hasText:'Habitat kit'}).waitFor();
  await page.locator('.craft-card.focus .resource-help summary').click();
- assert.ok((await page.locator('.craft-card.focus .resource-help').innerText()).includes('Missing 4'));
- await page.locator('.craft-card.focus .resource-help').getByRole('button',{name:/Craft in Workshop: Building planks/}).click();
- await page.locator('.craft-card.focus').filter({hasText:'Building planks'}).waitFor();
- await page.locator('.craft-card.focus .resource-help summary').click();
- await page.locator('.craft-card.focus .resource-help').getByRole('button',{name:/Earn from expedition/}).click();
+ assert.ok((await page.locator('.craft-card.focus .resource-help').innerText()).includes('3 missing'));
+ await page.locator('.craft-card.focus .resource-help').getByRole('button',{name:/Earn from expedition/}).first().click();
  await page.locator('.gameplay-expedition').waitFor();
  await page.locator('.gameplay-header').getByRole('button',{name:'Workshop',exact:true}).click();
  await page.locator('.craft-card').filter({hasText:'Supply pack'}).locator('.resource-help summary').click();
@@ -43,7 +40,7 @@ try {
   await page.screenshot({path:`output/resource-help/farm-${width}.png`});
  }
  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('dino-realms-save-v1')));
- assert.equal(saved.food,0);assert.equal(saved.inventory.habitatKit,0);assert.equal(saved.inventory.planks,0);
+ assert.equal(saved.food,0);assert.equal(saved.inventory.habitatKit,0);assert.equal(saved.inventory.wood,0);
  await page.evaluate(()=>{const key='dino-realms-save-v1';const s=JSON.parse(localStorage.getItem(key));s.buildings=s.buildings.filter(b=>b.kind!=='workshop');s.gold=0;localStorage.setItem(key,JSON.stringify(s));});
  await page.reload({waitUntil:'domcontentloaded'});
  await page.locator('.realm-nav button').evaluateAll(buttons=>buttons.find(b=>/realms/i.test(b.textContent)).click());
@@ -54,5 +51,5 @@ try {
  await page.locator('.build-preview .resource-help').getByRole('button',{name:/Collect gold from habitats/}).click();
  await page.locator('.realm-habitat-list').waitFor();
  assert.deepEqual(errors,[]);
- console.log('Habitat kit → exact kit recipe → planks recipe → expeditions; food → Farm; missing counts, mobile layout and navigation without spending passed.');
+ console.log('Habitat kit → exact kit recipe → expeditions; food → Farm; missing counts, mobile layout and navigation without spending passed.');
 } finally {await browser?.close();await server.close();}

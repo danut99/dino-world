@@ -608,6 +608,7 @@ export function DinoPanel({
   openHabitats,
   fromHatchery = false,
   previewHero,
+  initialTab,
 }: {
   save: Save;
   lang: number;
@@ -621,10 +622,11 @@ export function DinoPanel({
   /** Opened right after a hatch: keep the way back to the hatchery even when a habitat is shown. */
   fromHatchery?: boolean;
   previewHero?: (dino: Dino) => void;
+  initialTab?: DinoTab;
 }) {
   const roster = realm ? residents(save, realm) : save.dinos;
   const d = roster.find((x) => x.id === selected) ?? roster.find((x) => x.id === save.champion) ?? roster[0];
-  const [tab, setTab] = useState<DinoTab>(() => (d && d.level < levelCap(d.stage) && save.food >= feedCost(d.level) ? 'grow' : 'stats'));
+  const [tab, setTab] = useState<DinoTab>(() => initialTab ?? (d && d.level < levelCap(d.stage) && save.food >= feedCost(d.level) ? 'grow' : 'stats'));
   const [releasing, setReleasing] = useState<string | null>(null);
   const pager = usePager(roster, { max: 8, itemSelector: '.dino-roster-item' });
   const index = d ? roster.indexOf(d) : -1;

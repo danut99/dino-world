@@ -42,26 +42,39 @@ describe('reference utility systems', () => {
   });
   it('reserves materials, refunds only queued jobs, and adjusts later start times', () => {
     let s = built();
-    for (let i = 0; i < 3; i++) s = command(s, { type: 'craft', recipeId: 'planks' }, now);
+    s.inventory.wood = 6;
+    for (let i = 0; i < 3; i++) s = command(s, { type: 'craft', recipeId: 'provisions' }, now);
     expect(s.inventory.wood).toBe(0);
-    expect(() => command(s, { type: 'craft', recipeId: 'blocks' }, now)).toThrow();
+    expect(() => command(s, { type: 'craft', recipeId: 'provisions' }, now)).toThrow();
     expect(() => command(s, { type: 'cancelCraft', jobId: s.crafting[0].id }, now)).toThrow();
     s = command(s, { type: 'cancelCraft', jobId: s.crafting[1].id }, now);
-    expect(s.inventory.wood).toBe(10);
-    expect(s.crafting[1].startedAt).toBe(now + 300_000);
-    expect(s.crafting[1].endsAt).toBe(now + 600_000);
+    expect(s.inventory.wood).toBe(2);
+    expect(s.crafting[1].startedAt).toBe(now + 180_000);
+    expect(s.crafting[1].endsAt).toBe(now + 360_000);
     expect(parseSave(JSON.stringify(s))).toEqual(s);
+  });
+  it('turns old planks, blocks and their jobs back into wood and stone on load', () => {
+    const s = built();
+    const old = JSON.parse(JSON.stringify(s));
+    old.inventory = { ...old.inventory, planks: 3, blocks: 2 };
+    old.crafting = [
+      { id: 'p', recipeId: 'planks', startedAt: now, endsAt: now + 300_000 },
+      { id: 'b', recipeId: 'blocks', startedAt: now + 300_000, endsAt: now + 600_000 },
+    ];
+    const loaded = parseSave(JSON.stringify(old));
+    expect(loaded.inventory).toEqual({ ...s.inventory, wood: s.inventory.wood + 15 + 10, stone: s.inventory.stone + 10 + 10 });
+    expect(loaded.crafting).toEqual([]);
+    expect(parseSave(JSON.stringify(loaded))).toEqual(loaded);
   });
   it('collects offline farm and queued outputs once, including after refresh', () => {
     let s = command(built(), { type: 'plant' }, now);
-    s = command(s, { type: 'craft', recipeId: 'planks' }, now);
-    s = command(s, { type: 'craft', recipeId: 'blocks' }, now);
+    s = command(s, { type: 'craft', recipeId: 'provisions' }, now);
+    s = command(s, { type: 'craft', recipeId: 'provisions' }, now);
     const loaded = parseSave(JSON.stringify(s));
-    expect(() => command(loaded, { type: 'claimCraft', jobId: s.crafting[0].id }, now + 299_999)).toThrow();
+    expect(() => command(loaded, { type: 'claimCraft', jobId: s.crafting[0].id }, now + 179_999)).toThrow();
     s = command(loaded, { type: 'collectAvailable' }, now + 601_000);
-    expect(s.inventory.planks).toBe(2);
-    expect(s.inventory.blocks).toBe(2);
-    expect(s.food).toBe(403);
+    expect(s.inventory.provisions).toBe(2);
+    expect(s.food).toBe(400 - 2 * 30 + 3);
     const again = command(s, { type: 'collectAvailable' }, now + 601_000);
     expect(again.inventory).toEqual(s.inventory);
     expect(again.food).toBe(s.food);
@@ -106,7 +119,7 @@ describe('reference utility systems', () => {
     expect(() => parseSave(JSON.stringify({ ...s, inventory: { ...s.inventory, wood: -1 } }))).toThrow();
     expect(() =>
       parseSave(
-        JSON.stringify({ ...s, crafting: [{ id: 'bad', recipeId: 'planks', startedAt: now, endsAt: now + 1 }] }),
+        JSON.stringify({ ...s, crafting: [{ id: 'bad', recipeId: 'provisions', startedAt: now, endsAt: now + 1 }] }),
       ),
     ).toThrow();
   });
@@ -133,15 +146,15 @@ describe('farm levels, plots and crops', () => {
     let s = farm();
     expect(s.plots).toHaveLength(2);
     s.gold = 30_000;
-    s.inventory = { ...s.inventory, planks: 40, blocks: 30, crystal: 10 };
+    s.inventory = { ...s.inventory, wood: 200, stone: 150, crystal: 10 };
     s = upgradeFarm(s);
     expect(s).toMatchObject({ farmLevel: 2, gold: 29_600, plots: [null, null, null] });
     s = upgradeFarm(s);
-    expect(s).toMatchObject({ farmLevel: 3, gold: 28_100, inventory: { planks: 34 } });
+    expect(s).toMatchObject({ farmLevel: 3, gold: 28_100, inventory: { wood: 170 } });
     s = upgradeFarm(s);
-    expect(s).toMatchObject({ farmLevel: 4, gold: 23_100, inventory: { planks: 22, blocks: 22 } });
+    expect(s).toMatchObject({ farmLevel: 4, gold: 23_100, inventory: { wood: 110, stone: 110 } });
     s = upgradeFarm(s);
-    expect(s).toMatchObject({ farmLevel: 5, gold: 11_100, inventory: { planks: 2, blocks: 6, crystal: 0 } });
+    expect(s).toMatchObject({ farmLevel: 5, gold: 11_100, inventory: { wood: 10, stone: 30, crystal: 0 } });
     expect(s.plots).toHaveLength(6);
     expect(() => command(s, { type: 'upgradeFarm' }, now)).toThrow('maxLevel');
     for (let i = 0; i < 6; i++) s = command(s, { type: 'plant' }, now);
@@ -163,7 +176,7 @@ describe('farm levels, plots and crops', () => {
   it('unlocks one more crop at every farm level, the last at level five', () => {
     let s = farm();
     s.gold = 30_000;
-    s.inventory = { ...s.inventory, planks: 40, blocks: 30, crystal: 10 };
+    s.inventory = { ...s.inventory, wood: 200, stone: 150, crystal: 10 };
     for (const [level, crop] of [[2, 'ginkgo'], [3, 'meat'], [4, 'amber'], [5, 'feast']] as const) {
       expect(() => command(s, { type: 'plant', crop }, now)).toThrow('locked');
       s = upgradeFarm(s);

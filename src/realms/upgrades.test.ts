@@ -15,36 +15,36 @@ function rich(): Save {
 describe('workshop and arena gate upgrades', () => {
   it('workshop levels add queue slots, speed and one, two then three parallel jobs', () => {
     let s = rich();
-    for (let i = 0; i < 3; i++) s = run(s, { type: 'craft', recipeId: 'planks' });
-    expect(() => run(s, { type: 'craft', recipeId: 'planks' })).toThrow('queue');
-    s = run(upgrade(s, { type: 'upgradeWorkshop' }), { type: 'craft', recipeId: 'planks' });
+    for (let i = 0; i < 3; i++) s = run(s, { type: 'craft', recipeId: 'provisions' });
+    expect(() => run(s, { type: 'craft', recipeId: 'provisions' })).toThrow('queue');
+    s = run(upgrade(s, { type: 'upgradeWorkshop' }), { type: 'craft', recipeId: 'provisions' });
     const fast = s.crafting.at(-1)!;
     expect(fast.lane).toBe(1);
     expect(fast.startedAt).toBe(now);
-    expect(fast.endsAt - fast.startedAt).toBe(240_000);
-    s = run(s, { type: 'craft', recipeId: 'blocks' });
-    expect(() => run(s, { type: 'craft', recipeId: 'blocks' })).toThrow('queue');
+    expect(fast.endsAt - fast.startedAt).toBe(144_000);
+    s = run(s, { type: 'craft', recipeId: 'provisions' });
+    expect(() => run(s, { type: 'craft', recipeId: 'provisions' })).toThrow('queue');
     roundTrip(s);
     // Level 3 starts the first three jobs immediately on distinct lanes.
     s = run(newSave(now), { type: 'devResources' }, { type: 'devResources' }, { type: 'build', kind: 'workshop', x: 6, y: 1 });
     s = upgrade(upgrade(s, { type: 'upgradeWorkshop' }), { type: 'upgradeWorkshop' });
-    s = run(s, { type: 'craft', recipeId: 'planks' }, { type: 'craft', recipeId: 'blocks' }, { type: 'craft', recipeId: 'planks' });
-    // Level 3 crafts at 0.6 of the time: planks take 3 minutes instead of 5.
+    s = run(s, { type: 'craft', recipeId: 'provisions' }, { type: 'craft', recipeId: 'provisions' }, { type: 'craft', recipeId: 'provisions' });
+    // Level 3 crafts at 0.6 of the time: supplies take 108 seconds instead of 3 minutes.
     expect(s.workshopLevel).toBe(3);
-    expect(s.crafting.map((j) => j.endsAt - j.startedAt)).toEqual([180_000, 180_000, 180_000]);
+    expect(s.crafting.map((j) => j.endsAt - j.startedAt)).toEqual([108_000, 108_000, 108_000]);
     expect(s.crafting.map((j) => [j.lane, j.startedAt - now])).toEqual([
       [0, 0],
       [1, 0],
       [2, 0],
     ]);
     // Cancelling a queued job only moves the later jobs of its own lane.
-    s = run(s, { type: 'craft', recipeId: 'blocks' }, { type: 'craft', recipeId: 'blocks' });
+    s = run(s, { type: 'craft', recipeId: 'provisions' }, { type: 'craft', recipeId: 'provisions' });
     s = run(s, { type: 'cancelCraft', jobId: s.crafting[3].id });
     expect(s.crafting.map((j) => [j.lane, j.startedAt - now])).toEqual([
       [0, 0],
       [1, 0],
       [2, 0],
-      [1, 180_000],
+      [1, 108_000],
     ]);
     roundTrip(s);
     s = run(s, { type: 'devSkip' });
@@ -76,7 +76,7 @@ describe('workshop and arena gate upgrades', () => {
     expect(s.portalLevel).toBe(1);
     const gold = s.gold;
     s = upgrade(s, { type: 'upgradePortal' });
-    expect(s).toMatchObject({ portalLevel: 2, gold: gold - 3000, inventory: { planks: 30, blocks: 30 } });
+    expect(s).toMatchObject({ portalLevel: 2, gold: gold - 3000, inventory: { wood: 280, stone: 280 } });
     expect(portalSlots(s)).toBe(2);
     s.gold += 10_000;
     s = upgrade(s, { type: 'upgradePortal' });

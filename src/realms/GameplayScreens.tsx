@@ -160,7 +160,7 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
   const { view, save, now, lang, run, close, navigate, build } = props;
   const tr = (ro: string, en: string) => T(lang, ro, en);
   const [selected, setSelected] = useState('training'),
-    [recipeId, setRecipe] = useState('planks');
+    [recipeId, setRecipe] = useState('provisions');
   const detailRef = useRef<HTMLElement>(null);
   const selectDestination = (id: string) => {
     setSelected(id);
@@ -173,7 +173,7 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
     }
   };
   useEffect(() => {
-    if (view === 'workshop') setRecipe(props.initialRecipe ?? 'planks');
+    if (view === 'workshop') setRecipe(props.initialRecipe ?? 'provisions');
   }, [view, props.initialRecipe]);
   const mapRef = useRef<HTMLDivElement>(null),
     mapDrag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);

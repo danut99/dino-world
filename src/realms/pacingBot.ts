@@ -340,14 +340,15 @@ export function runBot(options: BotOptions): BotResult {
   }
 
   // ---- workshop -----------------------------------------------------------------------------------------------
-  /** Materials the next few purchases need: the next world, the next upgrades. */
-  function wishes() {
+  /** Materials the next few purchases need: the next world, and unless `upgrades` is false the next upgrades. */
+  function wishes(upgrades = true) {
     const need: Partial<Record<ItemId, number>> = {};
     const add = (m: Partial<Record<ItemId, number>>) => {
       for (const [id, n] of Object.entries(m) as [ItemId, number][]) need[id] = Math.max(need[id] ?? 0, n);
     };
     const w = nextWorld();
     if (w) add(WORLD_UNLOCK[w].materials);
+    if (!upgrades) return need;
     const queue = buildQueue().slice(0, 3);
     const sum: Partial<Record<ItemId, number>> = {};
     for (const t of queue) for (const [id, n] of Object.entries(nextUpgrade(s, t)!.materials) as [ItemId, number][]) sum[id] = (sum[id] ?? 0) + n;
@@ -358,7 +359,8 @@ export function runBot(options: BotOptions): BotResult {
     if (!has('workshop')) return;
     const queued = (id: string) => s.crafting.filter((j) => j.recipeId === id).length;
     const room = () => s.crafting.filter((j) => j.endsAt > now).length < workshop(s).slots;
-    const need = wishes();
+    const need = wishes(),
+      worldNeed = wishes(false);
     const f = frontier();
     const stageSupplies = f && regionNumber(f.id) > 1 ? regionTeamSize(regionNumber(f.id)) : 0;
     const supplies = stageSupplies + (Object.values(s.expeditionProgress).some((n) => (n ?? 0) >= PATROL.unlockStage) ? 3 : 0);
@@ -368,19 +370,19 @@ export function runBot(options: BotOptions): BotResult {
       ['provisions', () => s.inventory.provisions + queued('provisions') < supplies && s.food >= 30 + 50],
       ['evolution', () => s.inventory.evolutionCrystal + queued('evolution') < crystalsWanted],
       ['kit', () => s.inventory.habitatKit + queued('kit') < Math.max(kitsWanted, need.habitatKit ?? 0)],
-      ['planks', () => s.inventory.planks + 2 * queued('planks') < (need.planks ?? 0) + 4 * Math.max(0, kitsWanted - s.inventory.habitatKit - queued('kit'))],
-      ['blocks', () => s.inventory.blocks + 2 * queued('blocks') < (need.blocks ?? 0) + 4 * Math.max(0, kitsWanted - s.inventory.habitatKit - queued('kit'))],
-      ['lamp', () => s.lamps + s.inventory.lamp + queued('lamp') < 5 && s.inventory.crystal >= 6 + (need.crystal ?? 0) + 16 && s.inventory.blocks >= 4 + (need.blocks ?? 0)],
+      ['lamp', () => s.lamps + s.inventory.lamp + queued('lamp') < 5 && s.inventory.crystal >= 6 + (need.crystal ?? 0) + 16 && s.inventory.stone >= 20 + (need.stone ?? 0)],
     ];
     for (let guard = 0; guard < 10 && room(); guard++) {
       const pick = plan.find(([id, want]) => {
         if (!want()) return false;
         const recipe = RECIPES.find((r) => r.id === id)!;
-        // Raw materials the next world needs as they are stay untouched, and supply packs always keep a little wood and
-        // fiber back for themselves (without them no patrol leaves, and patrols bring the wood).
+        // Raw materials the next world needs stay untouched, and supply packs always keep a little wood and fiber back
+        // for themselves (without them no patrol leaves, and patrols bring the wood). Supplies and kits feed the next
+        // upgrades instead of waiting behind them; only the optional lamps also leave the upgrades' materials alone.
         const kept = (item: ItemId) => (id !== 'provisions' && (item === 'wood' || item === 'fiber') ? 12 : 0);
+        const reserve = id === 'lamp' ? need : worldNeed;
         return (Object.entries(recipe.cost) as [ItemId, number][]).every(
-          ([item, n]) => s.inventory[item] - n >= (['wood', 'stone', 'fiber', 'crystal'].includes(item) && id !== 'evolution' ? need[item] ?? 0 : 0) + kept(item),
+          ([item, n]) => s.inventory[item] - n >= (['wood', 'stone', 'fiber', 'crystal'].includes(item) && id !== 'evolution' ? reserve[item] ?? 0 : 0) + kept(item),
         );
       });
       if (!pick || !run({ type: 'craft', recipeId: pick[0] })) break;
