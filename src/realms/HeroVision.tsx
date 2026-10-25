@@ -4,7 +4,8 @@ import { loadAnimation, loadBossAnimation, loadSpriteImage, type SpriteManifest 
 import { ARENA_BOSSES } from './arenaBosses';
 import { entrance, exchange, fighter, runMs, runStart, type Step, type Unit } from './battleChoreography';
 import { calloutText } from './battleCallouts';
-import { SPECIES_NAMES, type Dino } from './game';
+import { SPECIES_NAMES, type Dino, type Stage } from './game';
+import { DinosaurArt } from './DinosaurArt';
 import { playSound } from './sound';
 import './gameplay.css';
 import './hero-vision.css';
@@ -65,40 +66,83 @@ export function HeroVision({ dino, lang, finish }: { dino: Dino; lang: number; f
         ((step.enemy === 'attack' || step.enemy === 'ultimate') && before?.enemy !== step.enemy)) playSound('swing');
     if (step.impact) playSound(step.impact.kind === 'ultimate' ? 'heavy' : step.impact.kind === 'hit' ? 'hit' : 'block');
   }, [step, steps, index]);
+  // The boss's health tells the story at a glance: the first strike chips it, the shield holds, the ultimate ends it.
+  const [bossHp, setBossHp] = useState(100);
+  useEffect(() => {
+    if (step?.impact?.on === 'enemy' && step.impact.kind !== 'guard') setBossHp(phase === 'blasting' ? 0 : 82);
+  }, [step, phase]);
   const pose = (unit: Unit) => ({
     clip: step?.[unit] ?? 'idle',
     key: `${runStart(steps, index, unit)}-${step?.[unit] ?? 'idle'}`,
     style: { '--motion-ms': `${runMs(steps, index, unit) || 600}ms` } as CSSProperties,
   });
   const a = pose('ally'), e = pose('enemy');
-  const guidance = failed ? tr('Viziunea nu s-a putut încărca. Eroul tău te așteaptă!', 'The vision could not load. Your hero is waiting!')
-    : !art ? tr('Pregătim arena…', 'Preparing the arena…')
-    : phase === 'attacking' ? tr('Primul atac: curajul unui viitor campion!', 'The first strike: the courage of a future champion!')
-    : phase === 'guarding' ? tr('Scutul rezistă ultimatei de foc!', 'The shield withstands the fire ultimate!')
-    : phase === 'blasting' ? tr('Aceasta este puterea pe care o poate descoperi!', 'This is the power your hero can discover!')
-    : phase === 'done' ? tr('Aventura lui începe acum.', 'Your hero’s adventure starts now.')
-    : tr('Un erou se ascunde în acest pui. Descoperă-i puterea!', 'A hero is hiding in this hatchling. Discover their power!');
+  // One big title card per beat of the fight; the three beats show as chips under the arena.
+  const banner: Record<Phase, [string, string]> = {
+    arrival: [tr('VIZIUNE DIN VIITOR', 'A VISION OF THE FUTURE'), tr(`Așa va lupta ${dino.nickname} când va crește`, `This is how ${dino.nickname} will fight, all grown up`)],
+    attacking: [tr('ATAC!', 'STRIKE!'), tr('Primul atac al unui viitor campion', 'The first strike of a future champion')],
+    guarding: [tr('SCUT!', 'GUARD!'), tr('Scutul rezistă ultimatei boss-ului', "The shield holds against the boss's ultimate")],
+    blasting: [tr('ULTIMATĂ!', 'ULTIMATE!'), tr('Lovitura supremă, deblocată la nivelul 25', 'The finishing blow, unlocked at level 25')],
+    done: [tr('VICTORIE!', 'VICTORY!'), tr('Acest viitor începe acum, cu tine', 'That future starts now, with you')],
+  };
+  const [cardTitle, cardLine] = failed ? [tr('EROUL TĂU', 'YOUR HERO'), tr('Viziunea nu s-a putut încărca, dar eroul te așteaptă!', 'The vision could not load, but your hero is waiting!')] : banner[phase];
+  const order: Phase[] = ['arrival', 'attacking', 'guarding', 'blasting', 'done'];
+  const beats: [Phase, string][] = [['attacking', tr('Atac', 'Strike')], ['guarding', tr('Scut', 'Guard')], ['blasting', tr('Ultimată', 'Ultimate')]];
+  const road: [Stage, string, string, string][] = [
+    ['baby', tr('ACUM', 'NOW'), tr('Pui', 'Hatchling'), tr('Crește cu hrană', 'Grows on food')],
+    ['juvenile', tr('NIVEL 10', 'LEVEL 10'), tr('Juvenil', 'Juvenile'), tr('Lupte și expediții', 'Battles and expeditions')],
+    ['adult', tr('NIVEL 25', 'LEVEL 25'), tr('Adult', 'Adult'), tr('Ultimata din viziune', 'The ultimate you just saw')],
+  ];
   return <section className="hero-vision" data-phase={phase} aria-label={tr('Viziunea eroului', 'Hero vision')}>
-    <div className="hero-vision-intro"><span className="realm-eyebrow">{tr('VIZIUNE DIN VIITOR', 'A VISION OF THE FUTURE')}</span>
-      <h3>{dino.nickname} · {tr('potențialul unui erou', 'a hero’s potential')}</h3>
-      <p>{tr('O demonstrație cu versiunea adultă. Puiul tău rămâne în siguranță în habitat.', 'A demonstration with the adult version. Your hatchling stays safe in its habitat.')}</p>
-    </div>
     <div className={`battle-environment hero-vision-arena ${step && Number.isFinite(step.ms) ? 'battle-playing' : ''} ${step?.ally === 'ultimate' || step?.enemy === 'ultimate' ? 'battle-ultimate' : ''}`}>
       <div className="battle-stage">
-        <div className="hero-vision-names"><strong>{dino.nickname}<small>{SPECIES_NAMES[dino.species]} · {tr('Adult', 'Adult')}</small></strong><span>VS</span><strong>{enemyName}<small>{tr('BOSS · Viziune', 'BOSS · Vision')}</small></strong></div>
+        <div className="hero-vision-names">
+          <div className="hv-fighter">
+            <strong>{dino.nickname}</strong>
+            <small>{SPECIES_NAMES[dino.species]} · {tr('Adult', 'Adult')}</small>
+            <i className="hv-hp ally"><b style={{ width: '100%' }} /></i>
+          </div>
+          <span>VS</span>
+          <div className="hv-fighter foe">
+            <strong>{enemyName}</strong>
+            <small>BOSS</small>
+            <i className="hv-hp"><b style={{ width: `${bossHp}%` }} /></i>
+          </div>
+        </div>
         {art && <>
           <div className="battle-unit ally" data-motion={a.clip} style={a.style}><AnimatedDinosaur key={a.key} manifest={art.ally} clip={a.clip} label={`${dino.nickname} adult`} /></div>
           <div className="battle-unit enemy" data-motion={e.clip} style={e.style}><AnimatedDinosaur key={e.key} manifest={art.enemy} clip={e.clip} label={enemyName} bossElement={opponentElement} className="dinosaur-opponent" /></div>
         </>}
         {step?.impact && <div key={`impact-${index}`} className={`battle-impact on-${step.impact.on} kind-${step.impact.kind}`} aria-hidden="true">{step.impact.kind === 'guard' ? '🛡' : '✹'}</div>}
         {step?.say?.map((c, i) => <div key={`${index}-${i}`} className={`battle-callout on-${c.on} kind-${c.kind}`} style={{ '--row': i } as CSSProperties}>{calloutText(c, lang)}</div>)}
+        <div key={failed ? 'failed' : phase} className="hv-banner" role="status" aria-live="polite">
+          <strong>{cardTitle}</strong>
+          <span>{!art && !failed ? tr('Viziunea se formează…', 'The vision takes shape…') : cardLine}</span>
+        </div>
       </div>
     </div>
+    <ol className="hv-beats" aria-hidden="true">
+      {beats.map(([id, label]) => (
+        <li key={id} className={order.indexOf(phase) > order.indexOf(id) ? 'done' : phase === id ? 'current' : ''}>{label}</li>
+      ))}
+    </ol>
+    <div className="hv-road">
+      <p>{tr(`${dino.nickname} e acum un pui. Hrănește-l ca să devină eroul din viziune:`, `${dino.nickname} is a hatchling now. Feed them to become the hero of the vision:`)}</p>
+      <ol>
+        {road.map(([stage, when, name, what], i) => (
+          <li key={stage} className={i === 0 ? 'now' : ''}>
+            <span className="hv-road-art"><DinosaurArt species={dino.species} element={dino.element} stage={stage} paused frame={0} /></span>
+            <small>{when}</small>
+            <strong>{name}</strong>
+            <em>{what}</em>
+          </li>
+        ))}
+      </ol>
+    </div>
     <div className="hero-vision-guide">
-      <p role="status" aria-live="polite">{guidance}</p>
-      {(phase === 'done' || failed) && <button className="realm-button hero-vision-primary" onClick={finish}>{tr('Hrănește-l și ajută-l să crească', 'Feed your hero and help them grow')} →</button>}
-      <small>{tr('Nivel 10: evoluție și primele lupte · Nivel 25: adult și ultimată', 'Level 10: evolution and first battles · Level 25: adult and ultimate')}</small>
-      {phase !== 'done' && <button className="realm-link" onClick={finish}>{tr('Sari peste', 'Skip')}</button>}
+      {phase === 'done' || failed
+        ? <button className="realm-button hero-vision-primary" onClick={finish}>{tr('Hrănește-l și ajută-l să crească', 'Feed your hero and help them grow')} →</button>
+        : <button className="realm-link" onClick={finish}>{tr('Sari peste', 'Skip')}</button>}
     </div>
   </section>;
 }

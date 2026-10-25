@@ -230,7 +230,7 @@ describe('arena leagues', () => {
     expect(new Set(QUEST_EGGS.map((q) => q.id)).size).toBe(QUEST_EGGS.length);
     for (const c of STORY_CHAPTERS) {
       expect(c.steps.length).toBeGreaterThanOrEqual(3);
-      expect(c.steps.length).toBeLessThanOrEqual(5);
+      expect(c.steps.length).toBeLessThanOrEqual(c.number === 1 ? 6 : 5);
       // Every goal pays gold and food; one goal of a chapter adds an egg of that chapter's world: the last one, but in
       // the last chapter the boss (its final goal, the full collection, would come too late for the egg to count).
       for (const q of c.steps) expect(q.gold > 0 && q.food > 0).toBe(true);
@@ -242,7 +242,7 @@ describe('arena leagues', () => {
 
   it('pays each goal once, in order, and opens the next chapter after the finale egg', () => {
     let s = newSave(now);
-    const [hatch, farm, grow, portal, trip] = STORY_CHAPTERS[0].steps;
+    const [hatch, farm, market, grow, portal, trip] = STORY_CHAPTERS[0].steps;
     expect(storyChapter(s)).toMatchObject({ chapter: { number: 1 }, index: 0 });
     expect(() => run(s, { type: 'claimQuestEgg', questId: hatch.id })).toThrow('locked');
     s = run(s, { type: 'incubate' }, { type: 'devSkip' }, { type: 'hatch' });
@@ -254,9 +254,13 @@ describe('arena leagues', () => {
     s.expeditionProgress = { training: 5 };
     expect(() => run(s, { type: 'claimQuestEgg', questId: trip.id })).toThrow('locked');
     s = run(s, { type: 'build', kind: 'farm', x: 5, y: 8 }, { type: 'claimQuestEgg', questId: farm.id });
+    expect(() => run(s, { type: 'claimQuestEgg', questId: market.id })).toThrow('locked');
+    s = run(s, { type: 'build', kind: 'market', x: 6, y: 1 }, { type: 'claimQuestEgg', questId: market.id });
     s.dinos[0] = { ...s.dinos[0], level: 10, stage: 'juvenile' };
     s = run(s, { type: 'claimQuestEgg', questId: grow.id });
     expect(() => run(s, { type: 'claimQuestEgg', questId: portal.id })).toThrow('locked');
+    // This story-order test supplies gold instead of waiting for habitat income.
+    s.gold += 1000;
     s = run(s, { type: 'build', kind: 'portal', x: 8, y: 5 }, { type: 'claimQuestEgg', questId: portal.id });
     const eggs = s.eggs.length;
     s = run(s, { type: 'claimQuestEgg', questId: trip.id });
@@ -275,8 +279,8 @@ describe('arena leagues', () => {
     s.eggs = Array.from({ length: BALANCE.maxEggs }, (_, i) => ({ id: `e${i}`, species: 'trex' as const, element: 'fire' as const, seconds: 600, hatchAt: null }));
     s.expeditionProgress = { training: 5 };
     s.buildings.push({ id: 'farm', kind: 'farm', x: 5, y: 8 });
-    s.questEggs = STORY_CHAPTERS[0].steps.slice(0, 4).map((q) => q.id);
-    const trip = STORY_CHAPTERS[0].steps[4];
+    s.questEggs = STORY_CHAPTERS[0].steps.slice(0, -1).map((q) => q.id);
+    const trip = STORY_CHAPTERS[0].steps.at(-1)!;
     s = run(s, { type: 'claimQuestEgg', questId: trip.id });
     expect(s.questEggs).toContain(trip.id);
     expect(s.owedEggs).toEqual([{ species: trip.species, element: 'fire', story: true }]);
@@ -293,9 +297,9 @@ describe('arena leagues', () => {
 describe('the reordered story', () => {
   it('follows the plan: each world asks for the buildings its next steps need', () => {
     expect(STORY_CHAPTERS.map((c) => c.steps.map((q) => q.id))).toEqual([
-      ['c1-hatch', 'c1-farm', 'c1-grow', 'c1-portal', 'c1-trip'],
+      ['c1-hatch', 'c1-farm', 'w-earth-market', 'c1-grow', 'c1-portal', 'c1-trip'],
       ['w-water-open', 'w-water-workshop', 'w-water-gate', 'w-water-trip', 'w-water-league'],
-      ['w-earth-open', 'w-earth-market', 'w-earth-hatchery', 'w-earth-trip', 'w-earth-league'],
+      ['w-earth-open', 'w-earth-hatchery', 'w-earth-trip', 'w-earth-league'],
       ['w-nature-open', 'w-nature-farm', 'w-nature-habitat', 'w-nature-trip', 'w-nature-league'],
       ['w-ice-open', 'w-ice-portal', 'w-ice-boss', 'w-ice-trip', 'w-ice-league'],
       ['w-lightning-open', 'w-lightning-gate', 'w-lightning-trip', 'w-lightning-league'],

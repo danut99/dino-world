@@ -1,0 +1,692 @@
+/* Phone-only corrections. Desktop layouts stay in their component stylesheets. */
+@media (max-width: 760px) and (orientation: portrait) {
+  main.realms-app .realm-window > header {
+    padding: 6px 48px 10px 8px;
+  }
+  main.realms-app .realm-window h2 {
+    min-height: 0;
+    padding: 8px 10px;
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  main.realms-app .realm-window-body {
+    padding-inline: 6px;
+  }
+  main.realms-app .dino-sheet {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 98px minmax(0, 1fr);
+    gap: 10px;
+  }
+  main.realms-app .dino-roster-list {
+    --paged-min: 116px;
+    --paged-row: 58px;
+    gap: 6px;
+  }
+  main.realms-app .dino-roster-item {
+    grid-template-columns: 30px minmax(0, 1fr);
+    padding: 2px;
+    gap: 4px;
+    border-width: 4px;
+  }
+  main.realms-app .dino-sheet-thumb {
+    width: 30px;
+    height: 30px;
+  }
+  main.realms-app .dino-roster-name strong {
+    font-size: 13px;
+  }
+  main.realms-app .dino-roster-name small {
+    font-size: 11px;
+  }
+  main.realms-app .dino-sheet-info {
+    gap: 6px;
+  }
+  main.realms-app .dino-sheet-info > header {
+    gap: 12px;
+  }
+  main.realms-app .dino-sheet-level {
+    width: 42px;
+    height: 42px;
+  }
+  main.realms-app .dino-sheet-level strong {
+    font-size: 20px;
+  }
+  main.realms-app .dino-sheet-level small {
+    font-size: 8px;
+  }
+  main.realms-app .dino-sheet-info h3 {
+    font-size: 18px;
+  }
+  main.realms-app .dino-sheet-info header p {
+    font-size: 12px;
+  }
+  main.realms-app .dino-sheet-stats li {
+    grid-template-columns: 16px 60px minmax(0, 1fr) 40px;
+    font-size: 13px;
+  }
+  main.realms-app .dino-ages {
+    max-height: 100px;
+    margin: 0;
+  }
+  main.realms-app .dino-tab-foot {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  main.realms-app .dino-tab-foot .realm-button {
+    min-height: 34px;
+  }
+  main.realms-app .dino-grow-buttons {
+    flex-wrap: wrap;
+  }
+  main.realms-app .hero-book > .pk-head {
+    flex-wrap: wrap;
+  }
+  main.realms-app .hero-book .pk-head-actions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  main.realms-app .hero-book .pk-head-actions .pk-chip {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 6px;
+  }
+  main.realms-app .craft-grid {
+    max-height: none;
+    gap: 6px;
+  }
+  main.realms-app .craft-recipe {
+    padding: 4px;
+    gap: 4px;
+    border-width: 4px;
+    justify-content: flex-start;
+  }
+  main.realms-app .craft-recipe > header {
+    gap: 4px;
+  }
+  main.realms-app .craft-icon {
+    width: 26px;
+    height: 26px;
+  }
+  main.realms-app .craft-recipe strong {
+    font-size: 13px;
+  }
+  main.realms-app .craft-recipe small {
+    font-size: 11px;
+  }
+  main.realms-app .craft-recipe .pk-have,
+  main.realms-app .craft-spacer {
+    display: none;
+  }
+  main.realms-app .craft-recipe .pk-costs {
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  main.realms-app .craft-recipe .pk-cost {
+    padding: 0 3px;
+    font-size: 11px;
+  }
+  main.realms-app .craft-recipe > footer {
+    margin-top: auto;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  main.realms-app .craft-recipe > footer .realm-button {
+    min-height: 32px;
+    padding: 2px 5px;
+    font-size: 12px !important;
+  }
+  main.realms-app .craft-upgrade-tab {
+    align-content: start;
+  }
+  main.realms-app .market-egg {
+    min-height: 0;
+    padding: 8px;
+    gap: 6px;
+  }
+  main.realms-app .market-egg .realm-egg {
+    width: 64px !important;
+    height: 64px !important;
+  }
+  main.realms-app .market-egg .realm-egg img {
+    width: 64px;
+    height: 64px;
+  }
+  main.realms-app .atlas-body {
+    gap: 6px;
+    padding: 8px;
+  }
+  main.realms-app .atlas-upgrade {
+    gap: 6px;
+  }
+  main.realms-app .atlas-body .habitat-buttons {
+    gap: 6px;
+  }
+  main.realms-app .atlas-body .habitat-buttons .realm-button {
+    min-height: 34px;
+    padding-inline: 8px;
+  }
+  main.realms-app .atlas-body .habitat-buttons .realm-link {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  main.realms-app .arena-fight .arena-versus {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    padding: 10px 6px;
+    gap: 6px;
+  }
+  main.realms-app .arena-fight .arena-face {
+    width: 54px;
+    height: 64px;
+  }
+  main.realms-app .arena-fight .arena-rewards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  main.realms-app .arena-fight .arena-rewards > span {
+    min-height: 44px;
+    padding: 6px 3px;
+    gap: 4px;
+    font-size: 16px;
+  }
+  main.realms-app .arena-fight .arena-rewards .reward-egg {
+    grid-column: span 2;
+  }
+}
+@media (max-width: 760px) and (max-height: 680px) and (orientation: portrait) {
+  main.realms-app .dino-sheet {
+    grid-template-rows: 84px minmax(0, 1fr);
+    gap: 6px;
+  }
+  main.realms-app .dino-roster-list {
+    --paged-row: 50px;
+  }
+  main.realms-app .dino-ages {
+    display: none;
+  }
+  main.realms-app .dino-sheet-stats {
+    gap: 4px;
+  }
+  main.realms-app .dino-tab {
+    gap: 6px;
+  }
+  main.realms-app .dino-tab .pk-note {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  main.realms-app .dino-grow-buttons > .realm-button {
+    min-height: 32px;
+    padding-inline: 6px;
+  }
+  main.realms-app .dino-tab .habitat-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  main.realms-app .habitat-stats > div {
+    padding: 4px;
+  }
+  main.realms-app .habitat-stats dt {
+    font-size: 10px;
+  }
+  main.realms-app .habitat-stats dd {
+    font-size: 14px;
+  }
+  main.realms-app .atlas-detail {
+    grid-template-rows: minmax(48px, 0.6fr) auto;
+  }
+  main.realms-app .atlas-body .habitat-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  main.realms-app .market-panel .pk-head {
+    gap: 6px;
+  }
+  main.realms-app .market-egg .realm-egg {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  main.realms-app .market-egg .realm-egg img {
+    width: 44px;
+    height: 44px;
+  }
+  main.realms-app .market-eggs {
+    gap: 6px;
+  }
+  main.realms-app .craft-recipe > header small {
+    display: none;
+  }
+  main.realms-app .craft-recipe .realm-resource-help {
+    min-height: 24px;
+  }
+}
+@media (max-width: 1050px) and (max-height: 500px) and (orientation: landscape) {
+  main.realms-app .gameplay-expedition .expedition-detail {
+    display: grid;
+    padding-top: 6px;
+    overflow: hidden;
+  }
+  main.realms-app .gameplay-expedition .expedition-detail .destination-cover {
+    height: 28px;
+  }
+  main.realms-app .gameplay-expedition .expedition-detail .destination-cover span {
+    padding: 3px 38px 3px 6px;
+    font-size: 12px;
+  }
+  main.realms-app .gameplay-expedition .expedition-detail .destination-cover em {
+    display: none;
+  }
+  main.realms-app .gameplay-expedition .expedition-detail > .expedition-panel-close {
+    top: 7px;
+    right: 7px;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    min-height: 26px;
+  }
+  main.realms-app .gameplay-expedition .expedition-detail .adventure-detail-body {
+    padding-top: 4px;
+  }
+  main.realms-app .gameplay-expedition .expedition-detail .expedition-guide,
+  main.realms-app .gameplay-expedition .expedition-detail .expedition-tab {
+    gap: 4px;
+  }
+  main.realms-app .expedition-guide .ui-tab {
+    min-height: 28px;
+  }
+  main.realms-app .expedition-guide .expedition-stage-row {
+    padding: 3px 4px;
+  }
+  main.realms-app .expedition-guide .expedition-stage-row strong {
+    font-size: 12px;
+  }
+  main.realms-app .expedition-guide .expedition-facts li {
+    min-height: 22px;
+    padding: 2px 4px;
+    font-size: 11px;
+  }
+  main.realms-app .expedition-guide .expedition-loot {
+    gap: 2px;
+  }
+  main.realms-app .expedition-guide .expedition-section-title {
+    font-size: 11px;
+  }
+  main.realms-app .expedition-detail .expedition-rewards,
+  main.realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px;
+  }
+  main.realms-app .expedition-detail .expedition-rewards > span,
+  main.realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards > span {
+    min-height: 32px;
+    padding: 2px;
+    gap: 2px;
+    font-size: 12px;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  main.realms-app .expedition-detail .expedition-rewards small {
+    display: none;
+  }
+  main.realms-app .expedition-guide .team-picker {
+    min-height: 74px;
+    padding: 3px;
+  }
+  main.realms-app .expedition-guide .expedition-patrol-tab .team-picker {
+    min-height: 74px;
+  }
+  main.realms-app .expedition-guide .team-picker-head {
+    min-height: 20px;
+    font-size: 11px;
+  }
+  main.realms-app .gameplay-expedition .expedition-guide .team-picker-roster {
+    --paged-min: 48px;
+    --paged-row: 46px;
+    gap: 3px;
+  }
+  main.realms-app .expedition-guide .expedition-tab > .adventure-start {
+    min-height: 30px;
+    padding: 2px 6px;
+    font-size: 12px !important;
+  }
+  main.realms-app .expedition-guide .expedition-notice,
+  main.realms-app .expedition-guide .expedition-patrol-tab .expedition-notice {
+    display: flex;
+    padding: 3px 5px;
+    gap: 4px;
+    font-size: 11px;
+  }
+  main.realms-app .expedition-guide .expedition-notice .realm-button,
+  main.realms-app .expedition-guide .expedition-patrol-tab .expedition-notice .realm-button {
+    min-height: 26px;
+    width: auto;
+    padding: 2px 4px;
+    font-size: 11px !important;
+  }
+  main.realms-app .expedition-guide .expedition-hours,
+  main.realms-app .expedition-guide .expedition-patrol-tab .expedition-hours {
+    display: flex;
+    gap: 4px;
+  }
+  main.realms-app .expedition-guide .expedition-hours button,
+  main.realms-app .expedition-guide .expedition-patrol-tab .expedition-hours button {
+    min-height: 26px;
+    min-width: 38px;
+    padding: 2px 4px;
+    font-size: 12px;
+  }
+  main.realms-app .expedition-guide .expedition-daily {
+    width: auto;
+    font-size: 10px;
+  }
+  main.realms-app .expedition-guide .expedition-runs {
+    gap: 4px;
+  }
+  main.realms-app .expedition-guide .expedition-active-summary {
+    padding: 4px;
+  }
+  main.realms-app .expedition-guide .expedition-active-summary p {
+    margin: 2px 0 0;
+    font-size: 11px;
+  }
+  main.realms-app .expedition-guide .expedition-runs .ui-card {
+    padding: 4px;
+    gap: 4px;
+  }
+  main.realms-app .expedition-guide .expedition-runs .ui-card-subtitle {
+    font-size: 11px;
+  }
+  main.realms-app .expedition-guide .expedition-portal-up {
+    padding: 4px;
+    gap: 4px;
+  }
+  main.realms-app .expedition-guide .expedition-portal-up .pk-cost {
+    padding: 2px;
+    font-size: 11px;
+  }
+  main.realms-app .expedition-guide .expedition-portal-up .realm-button {
+    min-height: 28px;
+  }
+  main.realms-app .arena-fight {
+    gap: 6px;
+    padding: 0;
+  }
+  main.realms-app .arena-fight .arena-rewards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  main.realms-app .arena-fight .arena-rewards > span {
+    min-height: 30px;
+    padding: 3px;
+    gap: 3px;
+    font-size: 13px;
+  }
+  main.realms-app .arena-fight .arena-versus {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    padding: 4px;
+    gap: 4px;
+  }
+  main.realms-app .arena-fight .arena-face {
+    width: 42px;
+    height: 46px;
+  }
+  main.realms-app .arena-fight .arena-faces {
+    gap: 3px;
+  }
+  main.realms-app .arena-fight .arena-faces::before {
+    font-size: 10px;
+  }
+  main.realms-app .arena-fight .arena-forecast {
+    padding: 5px;
+    font-size: 12px;
+  }
+  main.realms-app .arena-fight .arena-ticket-line {
+    padding: 5px;
+    gap: 5px;
+    font-size: 12px;
+  }
+  main.realms-app .arena-fight .arena-ticket-line .realm-button {
+    min-height: 30px;
+    padding: 2px 5px;
+    font-size: 12px !important;
+  }
+  main.realms-app .arena-fight .adventure-start {
+    min-height: 32px;
+    font-size: 13px !important;
+  }
+}
+
+@media (max-width: 760px) and (orientation: portrait) {
+  main.realms-app .craft-recipes-tab {
+    grid-template-rows: minmax(0, 1fr) auto auto;
+  }
+  main.realms-app .craft-grid {
+    grid-template-rows: none;
+    grid-auto-rows: 154px;
+    align-content: start;
+    overflow: hidden;
+  }
+  main.realms-app .craft-recipe {
+    min-height: 154px;
+  }
+  main.realms-app .craft-recipe > header small {
+    display: block;
+    white-space: normal;
+  }
+  main.realms-app .atlas-layout {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  main.realms-app .atlas-detail {
+    grid-template-rows: minmax(50px, 1fr) auto;
+  }
+  main.realms-app .atlas-body .pk-costs {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  main.realms-app .atlas-body .habitat-buttons {
+    flex-wrap: wrap;
+  }
+  main.realms-app .atlas-body .habitat-buttons .realm-link {
+    min-height: 22px;
+    padding: 0;
+  }
+}
+@media (max-width: 760px) and (max-height: 680px) and (orientation: portrait) {
+  main.realms-app .atlas-body .habitat-stats {
+    margin: 0;
+  }
+  main.realms-app .atlas-body .pk-note {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+  main.realms-app .atlas-body .pk-upgrade-what {
+    font-size: 12px;
+  }
+  main.realms-app .atlas-body .pk-cost {
+    padding: 1px 4px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 760px) and (orientation: portrait) {
+  main.realms-app .market-eggs {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    align-content: stretch;
+  }
+  main.realms-app .market-egg {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    align-items: center;
+    min-width: 0;
+    min-height: 0;
+    padding: 8px;
+  }
+  main.realms-app .market-egg > .realm-egg {
+    grid-row: 1 / 4;
+  }
+  main.realms-app .market-egg .realm-button {
+    min-height: 34px;
+  }
+  main.realms-app .realms-wiki-layout > nav {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible !important;
+  }
+  main.realms-app .realms-wiki-layout > nav > button {
+    min-width: 0;
+    white-space: normal;
+    padding: 8px;
+    font-size: 11px;
+  }
+  main.realms-app .craft-upgrade-tab .pk-upgrade-card-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  main.realms-app .craft-upgrade-tab .pk-upgrade-card-actions .resource-help {
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 760px) and (max-height: 680px) and (orientation: portrait) {
+  main.realms-app .atlas-detail {
+    grid-template-rows: 42px minmax(0, 1fr);
+  }
+  main.realms-app .atlas-body {
+    gap: 4px;
+    padding: 6px;
+  }
+  main.realms-app .atlas-body h3 {
+    font-size: 13px;
+  }
+  main.realms-app .atlas-body .habitat-stats > div {
+    padding: 2px;
+  }
+  main.realms-app .atlas-body .habitat-buttons .realm-button {
+    min-height: 28px;
+    font-size: 12px !important;
+  }
+  main.realms-app .atlas-upgrade {
+    padding-top: 4px;
+    gap: 4px;
+  }
+  main.realms-app .atlas-upgrade .habitat-buttons {
+    gap: 3px;
+  }
+}
+@media (max-width: 1050px) and (max-height: 500px) and (orientation: landscape) {
+  main.realms-app .expedition-guide .expedition-patrol-tab .team-picker {
+    min-height: 66px;
+    padding: 2px;
+  }
+  main.realms-app .gameplay-expedition .expedition-patrol-tab .team-picker-roster {
+    --paged-row: 40px;
+  }
+  main.realms-app .expedition-guide .expedition-patrol-tab > .expedition-section-title {
+    display: none;
+  }
+  main.realms-app .expedition-guide .expedition-patrol-tab .expedition-notice {
+    align-items: center;
+  }
+  main.realms-app .expedition-guide .expedition-patrol-tab .expedition-notice > span {
+    flex-basis: 120px;
+  }
+}
+
+@media (max-width: 760px) and (max-height: 680px) and (orientation: portrait) {
+  main.realms-app .realm-window h2 {
+    font-size: 15px;
+    padding: 6px;
+  }
+  main.realms-app .realm-atlas > .pk-head {
+    gap: 6px;
+    min-height: 40px;
+  }
+  main.realms-app .realm-atlas > .pk-head .pk-level {
+    width: 40px;
+    height: 40px;
+    padding: 3px;
+  }
+  main.realms-app .realm-atlas .atlas-elements {
+    gap: 4px;
+  }
+  main.realms-app .realm-atlas .atlas-elements button {
+    min-height: 30px;
+    padding: 2px;
+    border-width: 4px;
+  }
+  main.realms-app .realm-atlas .atlas-body .habitat-buttons .realm-link {
+    font-size: 11px;
+  }
+  main.realms-app .realm-atlas .atlas-body .resource-help-btn {
+    min-height: 26px;
+    padding: 2px 6px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 760px) and (orientation: portrait) {
+  main.realms-app .arena-ticket-modal {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
+  }
+  main.realms-app .arena-ticket-shop {
+    padding: 12px;
+    gap: 12px;
+  }
+  main.realms-app .arena-ticket-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  main.realms-app .arena-ticket-card {
+    padding: 8px;
+    gap: 10px;
+    min-height: 126px;
+  }
+  main.realms-app .arena-ticket-card.locked {
+    min-height: 82px;
+  }
+  main.realms-app .arena-ticket-card-title {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  main.realms-app .arena-ticket-card h3 {
+    font-size: 13px;
+  }
+  main.realms-app .arena-ticket-art {
+    width: 24px;
+    height: 24px;
+  }
+  main.realms-app .arena-ticket-stock {
+    font-size: 13px;
+  }
+  main.realms-app .arena-ticket-selected {
+    font-size: 10px;
+  }
+  main.realms-app .arena-ticket-buy {
+    gap: 4px;
+  }
+  main.realms-app .arena-ticket-buy .realm-button > small {
+    font-size: 11px;
+  }
+  main.realms-app .arena-ticket-buy .realm-button > span {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 760px) and (max-height: 680px) and (orientation: portrait) {
+  main.realms-app .realm-atlas > .pk-head {
+    padding: 4px;
+  }
+  main.realms-app .realm-atlas > .pk-head .pk-level {
+    min-width: 36px;
+    width: 36px;
+    height: 32px;
+  }
+  main.realms-app .realm-atlas .atlas-body > .realm-button {
+    min-height: 28px;
+    padding: 2px 6px;
+    font-size: 12px !important;
+  }
+  main.realms-app .realm-atlas .atlas-body .habitat-buttons .realm-link {
+    min-height: 18px;
+    line-height: 1.2;
+  }
+}

@@ -35,7 +35,7 @@ export const UTILITY_BUILDINGS = {
   },
   market: {
     name: ['Piață', 'Market'],
-    cost: 1000,
+    cost: 300,
     icon: '⚖',
     description: [
       'Cumpără ouă pentru lumile în care ai habitat.',
@@ -161,7 +161,7 @@ export interface Region {
   y: number;
 }
 export const REGIONS: readonly Region[] = [
-  { id: 'training', name: ['Pasul de jar', 'Ember pass'], element: 'fire', materials: ['wood', 'stone'], minutes: [5, 10, 15, 20, 30], x: 78, y: 23 },
+  { id: 'training', name: ['Pasul de jar', 'Ember pass'], element: 'fire', materials: ['wood', 'stone'], minutes: [1, 10, 15, 20, 30], x: 78, y: 23 },
   { id: 'ruins', name: ['Reciful de safir', 'Sapphire reef'], element: 'water', materials: ['wood', 'crystal'], minutes: [30, 45, 60, 90, 120], x: 65, y: 75 },
   { id: 'canyon', name: ['Ruinele canionului', 'Canyon ruins'], element: 'earth', materials: ['stone', 'crystal'], minutes: [90, 120, 150, 180, 240], x: 37, y: 62 },
   { id: 'frost', name: ['Poiana ferigilor', 'Fern glade'], element: 'nature', materials: ['wood', 'fiber'], minutes: [120, 150, 180, 240, 300], x: 20, y: 75 },

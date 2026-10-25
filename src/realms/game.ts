@@ -642,7 +642,7 @@ export function worldLock(s: Pick<Save, 'habitats' | 'expeditionProgress'>, worl
   return (s.expeditionProgress[regionOf(previous).id] ?? 0) >= WORLD_UNLOCK_STAGE ? null : { reason: 'region', world: previous };
 }
 /**
- * The story card: ten chapters of four or five short goals, followed one at a time. Chapter I settles the player
+ * The story card: ten chapters of short goals, followed one at a time. Chapter I settles the player
  * on the island and in the fire world (up to the portal and the fire region's five stages); each later chapter is
  * one world, in the order they unlock: open it, build or upgrade what the next steps need, cross its region's five
  * stages and win in its arena league. Every goal pays gold and food when claimed (more each chapter); a chapter's
@@ -823,6 +823,7 @@ export const STORY_CHAPTERS: StoryChapter[] = [
           panel: 'hatchery',
         },
         buildGoal('farm', 'c1-farm', ['Ferma crește hrana cu care îți hrănești dinozaurii.', 'The farm grows the food your dinosaurs eat.']),
+        buildGoal('market', 'w-earth-market', ['Din Piață poți cumpăra ouă cu aur pentru lumile deblocate. Primul ou de Foc costă 300 aur. Cumpărarea unui ou este opțională.', 'Buy eggs with gold at the Market for unlocked worlds. A fire egg costs 300 gold. Buying an egg is optional.']),
         {
           id: 'c1-grow',
           task: ['Crește-ți campionul până la juvenil', 'Raise your champion to juvenile'],
@@ -844,7 +845,6 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     buildGoal('arena', 'w-water-gate', ['Arena e locul unde câștigi stele, materiale și ouă.', 'The arena is where you win stars, materials and eggs.']),
   ]),
   worldChapter(3, 'earth', ['Pionier', 'Pioneer'], 'terrasaur', [
-    buildGoal('market', 'w-earth-market', ['Piața vinde ouă de foc, apă și pământ.', 'The market sells fire, water and earth eggs.']),
     levelGoal('hatchery', 2, 'hatchery', 'w-earth-hatchery'),
   ]),
   worldChapter(4, 'nature', ['Îngrijitor', 'Keeper'], 'brachiosaurus', [

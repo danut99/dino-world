@@ -48,6 +48,8 @@ function RewardTiles({ reward, lang, region, egg, extra }: { reward: ExpeditionR
   const tr = (ro: string, en: string) => (lang ? en : ro);
   const element = ELEMENTS.find((e) => e.id === regionById(region)?.element)!;
   return (
+    <section className="expedition-loot" aria-label={tr('Recompense', 'Rewards')}>
+      <h3 className="expedition-section-title">{tr('Recompense', 'Rewards')}</h3>
     <div className="gameplay-rewards expedition-rewards">
       <span>
         <Icon name="gold" scale={1} />
@@ -83,6 +85,7 @@ function RewardTiles({ reward, lang, region, egg, extra }: { reward: ExpeditionR
       {egg}
       {extra}
     </div>
+    </section>
   );
 }
 
@@ -93,7 +96,7 @@ function issueText(issue: MemberIssue, level: number, lang: number) {
 }
 
 /**
- * The expedition sidebar, in three tabs that each fit without scrolling: the region's next stage (requirements,
+ * The expedition sidebar, in three scrollable tabs: the region's next stage (requirements,
  * reward with the team's element bonus, the team, departure), its patrols (length, reward, team) and the runs under
  * way, one card per portal slot.
  */
@@ -142,17 +145,17 @@ export function ExpeditionGuide({ save, now, lang, destination, select, run, nav
         ]}
       />
       {tab === 'stage' && (
-        <TabPanel idBase={idBase} id="stage" className="expedition-tab">
+        <TabPanel idBase={idBase} id="stage" className="expedition-tab expedition-stage-tab">
           <StageTab {...{ save, now, lang, plan, team: stageTeam, setTeam: setStageTeam, eligible: stageEligible, select, run, navigate, build, prepareSupplies, setTab }} />
         </TabPanel>
       )}
       {tab === 'patrol' && (
-        <TabPanel idBase={idBase} id="patrol" className="expedition-tab">
+        <TabPanel idBase={idBase} id="patrol" className="expedition-tab expedition-patrol-tab">
           <PatrolTab {...{ save, now, lang, plan: patrol, stage: plan, team: patrolTeam, setTeam: setPatrolTeam, eligible: patrolEligible, hours, setHours, run, navigate, build, prepareSupplies, setTab }} />
         </TabPanel>
       )}
       {tab === 'active' && (
-        <TabPanel idBase={idBase} id="active" className="expedition-tab">
+        <TabPanel idBase={idBase} id="active" className="expedition-tab expedition-active-tab">
           <ActiveTab {...{ save, now, lang, run, build, select }} />
         </TabPanel>
       )}
@@ -319,6 +322,7 @@ function PatrolTab({ save, now, lang, plan, stage, team, setTeam, eligible, hour
           : null;
   return (
     <>
+      <h3 className="expedition-section-title">{tr('Durata patrulei', 'Patrol duration')}</h3>
       <div className="expedition-hours" role="radiogroup" aria-label={tr('Durata patrulei', 'Patrol length')}>
         {PATROL_HOURS.map((h) => (
           <button key={h} type="button" role="radio" aria-checked={hours === h} className={hours === h ? 'active' : ''} onClick={() => setHours(h)}>
@@ -432,6 +436,10 @@ function ActiveTab({ save, now, lang, run, build, select }: Pick<Props, 'save' |
   };
   return (
     <div className="expedition-runs">
+      <header className="expedition-active-summary">
+        <h3 className="expedition-section-title">{tr('Echipe pe drum', 'Teams on the move')}</h3>
+        <p>{save.expeditions.length}/{slots} {tr('sloturi ocupate', 'slots occupied')}</p>
+      </header>
       {save.expeditions.map(card)}
       {Array.from({ length: Math.max(0, slots - save.expeditions.length) }, (_, i) => (
         <CompactCard

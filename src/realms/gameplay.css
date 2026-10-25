@@ -1873,40 +1873,41 @@
 .arena-gate { display: flex; flex-direction: column; gap: 8px; min-height: 0; height: 100%; }
 .arena-fight > *,
 .arena-gate > * { flex: none; }
-.realms-app .arena-fight .gameplay-section-label small { font-size: 10px; }
+.realms-app .arena-fight .gameplay-section-label { font-size: 12px; gap: 8px; flex-wrap: wrap; }
+.realms-app .arena-fight .gameplay-section-label small { font-size: 11px; }
 .realms-app .arena-rewards { flex-wrap: nowrap; gap: 4px; margin: 0; }
 .realms-app .arena-rewards > span {
   flex: 1 1 0;
   flex-direction: row;
   gap: 4px;
   min-width: 0;
-  min-height: 30px;
-  padding: 2px 4px;
-  font: 600 13px var(--font-display);
+  min-height: 38px;
+  padding: 4px;
+  font: 600 15px var(--font-display);
   white-space: nowrap;
 }
 .realms-app .arena-rewards b { font-size: 16px; line-height: 1; }
 .realms-app .arena-rewards .reward-egg { flex: 1.4 1 0; color: #fff1b8; }
 .realms-app .arena-rewards .reward-egg.boss { color: #ffb070; font-size: 11px; }
 .arena-versus { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; }
-.arena-faces { display: flex; gap: 4px; min-width: 0; }
+.arena-faces { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
 .arena-faces.foes { justify-content: flex-end; }
 .realms-app .arena-faces .realm-button { width: 100%; min-height: 40px; margin: 0; font-size: 12px !important; }
-.arena-vs { font: 700 15px var(--font-display); color: #ffd36b; }
+.arena-vs { font: 700 18px var(--font-display); color: #ffd36b; }
 .arena-face {
   position: relative;
   display: grid;
   place-items: center;
   flex: none;
-  width: 46px;
-  height: 46px;
+  width: 58px;
+  height: 58px;
   overflow: hidden;
   background: #1b1411;
   border: 2px solid #574a40;
 }
 .arena-face > :first-child { width: 150%; height: 150%; max-width: none; margin-top: 20%; }
 .arena-faces.foes .arena-face > :first-child { transform: scaleX(-1); }
-.arena-face > small { position: absolute; right: 1px; bottom: 0; padding: 0 2px; font: 600 11px var(--font-display); color: #fff1b8; background: #1b1411cc; }
+.arena-face > small { position: absolute; right: 1px; bottom: 0; padding: 1px 3px; font: 600 13px var(--font-display); color: #fff1b8; background: #1b1411e6; }
 .arena-face.edge-up { border-color: #9be38f; }
 .arena-face.edge-down { border-color: #ff8a7a; }
 .arena-face.boss { border-color: #ffb070; }
@@ -1914,8 +1915,10 @@
 .arena-forecast { margin: 0; }
 .arena-forecast small .edge-up { color: #9be38f; }
 .arena-forecast small .edge-down { color: #ff8a7a; }
-.arena-blocker { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 4px 8px; font-size: 12px; line-height: 1.35; color: #ffd0a0; background: #3a1f1f44; border: 1px solid #f0a35a88; }
-.realms-app .arena-blocker .realm-button { flex: none; width: auto; min-height: 28px; margin: 0; padding: 2px 10px; font-size: 12px !important; }
+.arena-blocker { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 8px 10px; font-size: 14px; line-height: 1.4; color: #ffd0a0; background: #3a1f1f44; border: 1px solid #f0a35a88; }
+.arena-blocker > span { flex: 1 1 160px; }
+.realms-app .arena-blocker .realm-button { flex: none; width: auto; min-height: 36px; margin: 0; padding: 4px 12px; font-size: 14px !important; }
+.realms-app .arena-side .arena-tab:has(.arena-fight) { overflow-y: auto; }
 .realms-app .arena-fight .adventure-start { margin-top: auto; min-height: 42px; }
 .realms-app .arena-fight .adventure-start.risky { background-color: #a5502f; }
 .realms-app .arena-fight .adventure-start.armed { background-color: #c0392b; box-shadow: inset 0 0 0 3px #ffd0a0, 0 3px #5f1f18; }
@@ -2020,4 +2023,413 @@
   .arena-embedded-battle .battle-result { top: 50%; transform: translate(-50%, -50%); max-height: calc(100% - 8px); }
   .arena-embedded-battle .result-stars { font-size: 26px; line-height: 1.1; margin: 0; }
   .arena-embedded-battle .battle-result .realm-button { min-height: 34px; }
+}
+
+/* Arena controls share the side panel instead of taking a full header row. */
+.arena-side-toolbar { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.arena-side-toolbar .arena-tabs { flex: 1; min-width: 0; }
+.realms-app .arena-side-toolbar > .gameplay-close { position: static; flex: none; width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; margin: 0; }
+.realms-app .arena-battle-close { position: absolute; top: 10px; right: 10px; z-index: 5; }
+
+/* Close controls stay in the content; gameplay views no longer need a header. */
+.realms-app .gameplay-floating-close { position: absolute; top: 10px; right: 10px; z-index: 5; margin: 0; }
+.realms-app .gameplay-workshop .workshop-panel > .pk-head { padding-right: 58px; }
+.expedition-detail { position: relative; }
+.realms-app .expedition-panel-close { position: absolute; top: 8px; right: 8px; z-index: 5; margin: 0; width: 36px; min-width: 36px; height: 36px; min-height: 36px; padding: 0; }
+.expedition-detail .destination-cover { padding-right: 56px; }
+
+/* Give the world artwork its own space below the close control. */
+.realms-app .gameplay-expedition .expedition-detail {
+  padding-top: 56px;
+}
+.realms-app .gameplay-expedition .expedition-detail .destination-cover {
+  height: clamp(150px, 23dvh, 220px);
+  padding-right: 0;
+  background-position: center;
+}
+.realms-app .gameplay-expedition .expedition-detail .destination-cover span {
+  padding: 16px 12px 12px;
+  font-size: 18px;
+}
+.realms-app .gameplay-expedition .expedition-detail .destination-cover em {
+  display: block;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  width: fit-content;
+  max-width: calc(100% - 20px);
+  font-size: 11px;
+}
+.realms-app .gameplay-expedition .expedition-detail .adventure-detail-body {
+  padding-top: 16px;
+  overflow-y: auto;
+}
+.realms-app .gameplay-expedition .expedition-detail .expedition-tab {
+  overflow-y: auto;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .realms-app .gameplay-expedition .expedition-detail .destination-cover { height: 110px; }
+  .realms-app .gameplay-expedition .expedition-detail { display: block; overflow-y: auto; }
+}
+
+/* Fight summary: readable rewards, full team rows and actions kept together. */
+.realms-app .arena-side .arena-fight {
+  height: auto;
+  gap: 16px;
+  padding: 8px 0 16px;
+}
+.realms-app .arena-fight .gameplay-section-label {
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.realms-app .arena-fight .gameplay-section-label small {
+  width: 100%;
+  font: 12px/1.4 var(--font-body);
+  color: #cdbfa8;
+}
+.realms-app .arena-fight .arena-rewards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.realms-app .arena-fight .arena-rewards > span {
+  min-height: 54px;
+  gap: 10px;
+  padding: 10px;
+  font: 700 20px/1.2 Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  background: #211a15;
+  border: 1px solid #66503b;
+}
+.realms-app .arena-fight .arena-rewards .reward-egg.boss { font-size: 14px; }
+.realms-app .arena-fight .arena-versus {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 14px 12px;
+  background: #211a15;
+  border: 1px solid #574a40;
+}
+.realms-app .arena-fight .arena-faces {
+  justify-content: center;
+  gap: 8px;
+}
+.realms-app .arena-fight .arena-faces::before {
+  content: attr(aria-label);
+  flex-basis: 100%;
+  color: #cdbfa8;
+  font: 600 13px/1.4 var(--font-body);
+}
+.realms-app .arena-fight .arena-face {
+  width: clamp(64px, 5vw, 84px);
+  height: clamp(72px, 6vw, 92px);
+}
+.realms-app .arena-fight .arena-face > small {
+  right: 4px;
+  bottom: 4px;
+  padding: 3px 5px;
+  font: 700 15px/1.2 Arial, sans-serif;
+}
+.realms-app .arena-fight .arena-vs { text-align: center; font-size: 16px; }
+.realms-app .arena-fight .arena-forecast {
+  padding: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  background: #211a15;
+}
+.realms-app .arena-fight .arena-ticket-line {
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 12px;
+  border: 1px solid #574a40;
+  background: #211a15;
+  font-size: 14px;
+}
+.realms-app .arena-fight .arena-ticket-line b { font: 700 16px/1.3 Arial, sans-serif; }
+.realms-app .arena-fight .arena-ticket-line .realm-button {
+  min-height: 40px;
+  padding: 6px 12px;
+  font-size: 14px !important;
+}
+.realms-app .arena-fight .adventure-start {
+  margin-top: 0;
+  min-height: 54px;
+  font-size: 16px !important;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .realms-app .arena-side .arena-fight { gap: 10px; }
+  .realms-app .arena-fight .arena-rewards > span { min-height: 42px; font-size: 17px; }
+  .realms-app .arena-fight .arena-face { width: 64px; height: 68px; }
+}
+
+/* Team and Gate use the same comfortable scale as the fight summary. */
+.realms-app .arena-side .arena-tab:has(.arena-team),
+.realms-app .arena-side .arena-tab:has(.arena-gate) { overflow-y: auto; }
+.realms-app .arena-side :is(.arena-team, .arena-gate) {
+  height: auto;
+  overflow: visible;
+  gap: 18px;
+  padding: 8px 0 16px;
+}
+.realms-app .arena-team .team-picker { flex: none; }
+.realms-app .arena-team .team-picker-head { min-height: 40px; font-size: 14px; }
+.realms-app .arena-team .team-picker-roster {
+  --paged-min: 84px;
+  --paged-row: 112px;
+  height: 242px;
+  gap: 10px;
+}
+.realms-app .arena-team .team-pick { padding: 6px; }
+.realms-app .arena-team .team-pick-level { gap: 6px; font: 700 15px/1.3 Arial, sans-serif; }
+.realms-app .arena-team .team-pick-place { padding: 4px 6px; font: 700 14px/1.2 Arial, sans-serif; }
+.realms-app .arena-team .arena-team-hint {
+  padding: 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  background: #211a15;
+  border: 1px solid #574a40;
+}
+.realms-app .arena-team .arena-resting { gap: 10px; }
+.realms-app .arena-team .arena-resting .ui-card { min-height: 76px; padding: 10px; gap: 10px; }
+.realms-app .arena-team .arena-resting .ui-card-art { width: 52px; height: 52px; }
+.realms-app .arena-team .arena-resting .realm-button { min-height: 42px; padding: 8px 12px; font-size: 15px !important; }
+.realms-app .arena-team .arena-wake-all { min-height: 48px; font-size: 15px !important; }
+.realms-app .arena-gate .pk-upgrade-card {
+  padding: 18px 14px;
+  gap: 16px;
+  background: #211a15;
+  border: 1px solid #66503b;
+}
+.realms-app .arena-gate .pk-title { flex-wrap: wrap; gap: 10px; font-size: 17px; line-height: 1.5; }
+.realms-app .arena-gate .pk-title small { font: 14px/1.4 Arial, sans-serif; }
+.realms-app .arena-gate .pk-upgrade-card > ul:not(.pk-costs) { gap: 12px; font-size: 15px; line-height: 1.6; }
+.realms-app .arena-gate .pk-costs { flex-wrap: wrap; gap: 8px; }
+.realms-app .arena-gate .pk-cost { padding: 8px; font: 600 15px/1.3 Arial, sans-serif; }
+.realms-app .arena-gate .pk-upgrade-card-actions { flex-wrap: wrap; gap: 12px; margin-top: 4px; }
+.realms-app .arena-gate .pk-upgrade-card-actions .realm-button { min-height: 48px; font-size: 15px !important; }
+.realms-app .arena-gate .arena-season { gap: 18px; padding: 18px 14px; background: #211a15; }
+.realms-app .arena-gate .arena-season .gameplay-section-label { flex-wrap: wrap; gap: 8px; font-size: 14px; line-height: 1.5; }
+.realms-app .arena-gate .arena-season .gameplay-section-label small { font: 13px/1.4 Arial, sans-serif; }
+.realms-app .arena-gate .arena-season ol { gap: 12px; }
+.realms-app .arena-gate .arena-season li {
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 8px 12px;
+  min-height: 76px;
+  padding: 12px 8px;
+  background: #30251f;
+  border: 1px solid #574a40;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.realms-app .arena-gate .arena-season li > b { font: 700 23px/1.3 Arial, sans-serif; }
+.realms-app .arena-gate .arena-season li .realm-meter { height: 7px; }
+.realms-app .arena-gate .arena-season > small { font-size: 13px; line-height: 1.5; }
+@media (max-height: 500px) and (orientation: landscape) {
+  .realms-app .arena-team .team-picker-roster { --paged-min: 72px; --paged-row: 92px; height: 202px; }
+}
+
+/* Expedition tabs use the available panel height and paginate the roster. */
+.realms-app .gameplay-expedition .expedition-detail .adventure-detail-body { display: block; }
+.realms-app .gameplay-expedition .expedition-detail .expedition-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.realms-app .gameplay-expedition .expedition-detail .expedition-tab {
+  gap: 16px;
+  overflow: visible;
+  padding-bottom: 16px;
+}
+.realms-app .expedition-guide .ui-tab { min-height: 44px; font-size: 14px; }
+.realms-app .expedition-guide .expedition-section-title {
+  margin: 0;
+  color: #f6d77a;
+  font: 700 14px/1.5 var(--font-body);
+}
+.realms-app .expedition-guide .expedition-stage-row { flex-wrap: wrap; gap: 12px; padding: 14px 12px; background: #211a15; border: 1px solid #574a40; }
+.realms-app .expedition-guide .expedition-stage-row strong { font-size: 16px; line-height: 1.5; }
+.realms-app .expedition-guide .expedition-pips { gap: 5px; }
+.realms-app .expedition-guide .expedition-pips li { min-width: 20px; height: 9px; }
+.realms-app .expedition-guide .expedition-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.realms-app .expedition-guide .expedition-facts li { min-height: 44px; padding: 10px 8px; gap: 8px; font: 600 14px/1.4 Arial, sans-serif; }
+.realms-app .expedition-guide .expedition-loot { display: grid; gap: 10px; }
+.realms-app .expedition-detail .expedition-rewards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.realms-app .expedition-detail .expedition-rewards > span {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 82px;
+  padding: 12px 8px;
+  gap: 6px;
+  font: 700 20px/1.2 Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  background: #211a15;
+  border: 1px solid #66503b;
+}
+.realms-app .expedition-detail .expedition-rewards small { display: block; font: 13px/1.4 var(--font-body); white-space: normal; overflow: visible; text-align: center; }
+.realms-app .expedition-guide .expedition-notice { gap: 12px; padding: 14px 12px; font-size: 14px; line-height: 1.6; flex-wrap: wrap; }
+.realms-app .expedition-guide .expedition-notice .realm-button { min-height: 44px; padding: 8px 12px; font-size: 14px !important; }
+.realms-app .expedition-guide .team-picker { padding: 12px; border: 1px solid #574a40; background: #211a15; }
+.realms-app .expedition-guide .team-picker-head { min-height: 38px; font-size: 14px; }
+.realms-app .gameplay-expedition .expedition-guide .team-picker-roster { --paged-min: 78px; --paged-row: 104px; height: 226px; gap: 8px; }
+.realms-app .expedition-guide .team-pick-level { font: 700 15px/1.3 Arial, sans-serif; }
+.realms-app .expedition-guide .expedition-tab > .adventure-start { margin-top: 0; min-height: 52px; height: auto; padding: 12px 8px; font-size: 15px !important; }
+.realms-app .expedition-guide .expedition-hours { flex-wrap: wrap; gap: 8px; }
+.realms-app .expedition-guide .expedition-hours button { flex: 1; min-width: 60px; min-height: 48px; font: 700 17px/1.3 Arial, sans-serif; }
+.realms-app .expedition-guide .expedition-daily { width: 100%; margin: 0; padding: 10px 12px; font-size: 13px; background: #30251f; white-space: normal; }
+.realms-app .expedition-guide .expedition-runs { overflow: visible; gap: 16px; }
+.realms-app .expedition-guide .expedition-active-summary { padding: 14px 12px; border: 1px solid #574a40; background: #211a15; }
+.realms-app .expedition-guide .expedition-active-summary p { margin: 8px 0 0; font: 14px/1.4 Arial, sans-serif; color: #cdbfa8; }
+.realms-app .expedition-guide .expedition-runs .ui-card { display: flex; flex-wrap: wrap; gap: 12px; padding: 16px 12px; min-height: 116px; }
+.realms-app .expedition-guide .expedition-runs .ui-card-text { flex: 1; min-width: 140px; }
+.realms-app .expedition-guide .expedition-runs .ui-card-title { font-size: 15px; line-height: 1.5; }
+.realms-app .expedition-guide .expedition-runs .ui-card-subtitle { font-size: 13px; line-height: 1.5; gap: 10px; }
+.realms-app .expedition-guide .expedition-runs .ui-card-side { flex-basis: 100%; flex-direction: row; justify-content: space-between; align-items: center; }
+.realms-app .expedition-guide .expedition-runs .realm-meter { height: 7px; }
+.realms-app .expedition-guide .expedition-faces { gap: 8px; }
+.realms-app .expedition-guide .expedition-faces > span { width: 48px; height: 52px; }
+.realms-app .expedition-guide .expedition-runs :is(.realm-button, .realm-gem-finish) { min-height: 44px; padding: 8px 12px; font-size: 14px !important; }
+.realms-app .expedition-guide .expedition-portal-up { display: flex; flex-direction: column; align-items: stretch; gap: 14px; padding: 16px 12px; font-size: 14px; line-height: 1.5; }
+.realms-app .expedition-guide .expedition-portal-up .pk-costs { flex-wrap: wrap; gap: 8px; }
+.realms-app .expedition-guide .expedition-portal-up .pk-cost { padding: 8px; font: 600 14px/1.3 Arial, sans-serif; }
+.realms-app .expedition-guide .expedition-portal-up .realm-button { min-height: 48px; }
+
+/* Fit the expedition summary to the viewport instead of stacking fixed-height blocks. */
+.realms-app .gameplay-expedition .expedition-detail {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding-top: 48px;
+  overflow: hidden;
+}
+.realms-app .gameplay-expedition .expedition-detail .destination-cover { height: clamp(90px, 15dvh, 150px); }
+.realms-app .gameplay-expedition .expedition-detail .adventure-detail-body {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+  padding-top: 10px;
+}
+.realms-app .gameplay-expedition .expedition-detail .expedition-guide {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  gap: 10px;
+}
+.realms-app .gameplay-expedition .expedition-detail .expedition-tab {
+  min-height: 0;
+  gap: 10px;
+  padding-bottom: 4px;
+  overflow: hidden;
+}
+.realms-app .expedition-guide .expedition-stage-row { padding: 8px; gap: 8px; }
+.realms-app .expedition-guide .expedition-stage-row strong { font-size: 14px; }
+.realms-app .expedition-guide .expedition-facts { display: flex; flex-wrap: wrap; gap: 6px; }
+.realms-app .expedition-guide .expedition-facts li { min-height: 32px; padding: 6px; font-size: 13px; }
+.realms-app .expedition-guide .expedition-loot { gap: 6px; }
+.realms-app .expedition-detail .expedition-rewards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.realms-app .expedition-detail .expedition-rewards > span { min-height: 58px; padding: 6px 4px; gap: 3px; font-size: 17px; }
+.realms-app .expedition-detail .expedition-rewards small { font-size: 11px; }
+.realms-app .expedition-guide .team-picker { flex: 1 1 auto; min-height: 100px; padding: 8px; }
+.realms-app .expedition-guide .team-picker-head { min-height: 28px; font-size: 13px; }
+.realms-app .gameplay-expedition .expedition-guide .team-picker-roster {
+  --paged-min: 72px;
+  --paged-row: 82px;
+  height: auto;
+  min-height: 0;
+  gap: 6px;
+}
+.realms-app .expedition-guide .expedition-tab > .adventure-start { min-height: 44px; padding: 8px; }
+.realms-app .expedition-guide .expedition-notice { padding: 8px; gap: 8px; font-size: 13px; line-height: 1.4; }
+.realms-app .expedition-guide .expedition-notice .realm-button { min-height: 36px; padding: 6px 8px; }
+.realms-app .expedition-guide .expedition-hours button { min-height: 36px; }
+.realms-app .expedition-guide .expedition-daily { padding: 4px 0; }
+.realms-app .expedition-guide .expedition-runs { gap: 10px; min-height: 0; }
+.realms-app .expedition-guide .expedition-active-summary { padding: 8px; }
+.realms-app .expedition-guide .expedition-active-summary p { margin-top: 4px; }
+.realms-app .expedition-guide .expedition-runs .ui-card { padding: 10px 8px; min-height: 0; gap: 8px; }
+.realms-app .expedition-guide .expedition-faces > span { width: 34px; height: 38px; }
+.realms-app .expedition-guide .expedition-portal-up { padding: 10px 8px; gap: 8px; }
+@media (max-height: 740px) {
+  .realms-app .gameplay-expedition .expedition-detail .destination-cover { height: 70px; }
+  .realms-app .gameplay-expedition .expedition-detail .expedition-tab,
+  .realms-app .gameplay-expedition .expedition-detail .expedition-guide { gap: 6px; }
+  .realms-app .expedition-detail .expedition-rewards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .realms-app .expedition-detail .expedition-rewards > span { min-height: 48px; padding: 4px 2px; font-size: 15px; }
+  .realms-app .expedition-guide .team-picker { min-height: 92px; }
+  .realms-app .gameplay-expedition .expedition-guide .team-picker-roster { --paged-row: 62px; }
+  .realms-app .expedition-guide .expedition-facts li { min-height: 26px; padding: 4px; }
+  .realms-app .expedition-guide .ui-tab { min-height: 34px; }
+}
+
+/* Patrol setup stays compact enough to show requirements, team and departure together. */
+.realms-app .gameplay-expedition .expedition-detail .expedition-patrol-tab { gap: 8px; }
+.realms-app .expedition-guide .expedition-patrol-tab > .expedition-section-title { font-size: 13px; }
+.realms-app .expedition-guide .expedition-patrol-tab .expedition-hours {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.realms-app .expedition-guide .expedition-patrol-tab .expedition-hours button { min-width: 0; min-height: 36px; }
+.realms-app .expedition-guide .expedition-patrol-tab .expedition-daily {
+  grid-column: 1 / -1;
+  padding: 2px 0;
+  background: none;
+  font: 12px/1.4 Arial, sans-serif;
+}
+.realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+.realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards > span {
+  min-height: 68px;
+  padding: 6px 2px;
+  font-size: 16px;
+}
+.realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards small { font-size: 10px; }
+.realms-app .expedition-guide .expedition-patrol-tab .expedition-notice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 10px;
+  gap: 6px;
+}
+.realms-app .expedition-guide .expedition-patrol-tab .expedition-notice > span { min-width: 0; }
+.realms-app .expedition-guide .expedition-patrol-tab .expedition-notice .realm-button {
+  width: 100%;
+  min-height: 36px;
+  font-size: 13px !important;
+}
+.realms-app .expedition-guide .expedition-patrol-tab .team-picker {
+  flex: 1 1 auto !important;
+  min-height: 132px;
+}
+.realms-app .gameplay-expedition .expedition-patrol-tab .team-picker-roster {
+  --paged-row: 88px;
+}
+.realms-app .expedition-guide .expedition-patrol-tab > .adventure-start {
+  margin-top: 0;
+  min-height: 46px;
+}
+@media (max-height: 740px) {
+  .realms-app .expedition-guide .expedition-patrol-tab .team-picker { min-height: 100px; }
+  .realms-app .gameplay-expedition .expedition-patrol-tab .team-picker-roster { --paged-row: 64px; }
+  .realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards > span { min-height: 54px; font-size: 14px; }
+}
+
+/* Close belongs on the cover, without reserving an empty toolbar above it. */
+.realms-app .gameplay-expedition .expedition-detail {
+  padding-top: 10px;
+}
+.realms-app .gameplay-expedition .expedition-detail > .expedition-panel-close {
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  background-color: #211a15ed;
+}
+.realms-app .gameplay-expedition .expedition-detail .destination-cover em {
+  right: 50px;
+  max-width: calc(100% - 60px);
+  font-size: 10px;
+  line-height: 1.4;
 }

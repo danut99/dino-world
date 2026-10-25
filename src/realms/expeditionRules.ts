@@ -68,7 +68,8 @@ export type ExpeditionReward = Reward & { tickets?: number; gems?: number };
 export function stageReward(regionId: string, stage: number, bonus = 0): ExpeditionReward {
   const r = regionById(regionId)!,
     n = regionNumber(regionId),
-    minutes = r.minutes[stage],
+    // The introductory trip is faster but keeps its original starter reward.
+    minutes = regionId === 'training' && stage === 0 ? 5 : r.minutes[stage],
     up = (x: number) => Math.round(x * (1 + bonus)),
     finale = stage === REGION_STAGES - 1;
   return {

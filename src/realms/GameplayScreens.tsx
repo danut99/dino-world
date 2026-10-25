@@ -38,7 +38,17 @@ import {
 import { arenaFoes, arenaTier, foeHasUltimate, roundCap, teamReward } from './arenaTeams';
 import { DinosaurArt } from './DinosaurArt';
 import { loadAnimation, loadBossAnimation, loadSpriteImage, type Clip } from './animation';
-import { entrance, exchange, fighter, rest, runMs, swapEntrance, type Fighter, type Step, type Unit } from './battleChoreography';
+import {
+  entrance,
+  exchange,
+  fighter,
+  rest,
+  runMs,
+  swapEntrance,
+  type Fighter,
+  type Step,
+  type Unit,
+} from './battleChoreography';
 import { useReducedMotion } from './useMotion';
 import { playSound } from './sound';
 import { worldThumb } from './worldArt';
@@ -82,7 +92,11 @@ function StarRow({ n }: { n: number }) {
 function EdgeBadge({ edge, lang }: { edge: -1 | 0 | 1; lang: number }) {
   return (
     <span className={`edge-badge edge-${edge > 0 ? 'up' : edge < 0 ? 'down' : 'even'}`}>
-      {edge > 0 ? `▲ ${T(lang, 'Avantaj', 'Advantage')}` : edge < 0 ? `▼ ${T(lang, 'Dezavantaj', 'Disadvantage')}` : `● ${T(lang, 'Neutru', 'Neutral')}`}
+      {edge > 0
+        ? `▲ ${T(lang, 'Avantaj', 'Advantage')}`
+        : edge < 0
+          ? `▼ ${T(lang, 'Dezavantaj', 'Disadvantage')}`
+          : `● ${T(lang, 'Neutru', 'Neutral')}`}
     </span>
   );
 }
@@ -91,7 +105,6 @@ function Frame({
   view,
   children,
   close,
-  navigate,
   lang,
 }: {
   title: string;
@@ -133,47 +146,12 @@ function Frame({
         }
       }}
     >
-      <header className="gameplay-header">
-        <button onClick={close} className="gameplay-back">
-          ← <span>{T(lang, 'Insula', 'Island')}</span>
-        </button>
-        <div>
-          <span className="realm-eyebrow">DINO REALMS</span>
-          <h1>{title}</h1>
-        </div>
-        {navigate && (
-          <nav>
-            {(['expedition', 'arena', 'workshop'] as const).map((v, i) => (
-              <button
-                className={view === v ? 'active' : ''}
-                key={v}
-                onClick={() => navigate(v)}
-                aria-label={
-                  [
-                    T(lang, 'Expediții', 'Expeditions'),
-                    T(lang, 'Arena PvE', 'PvE Arena'),
-                    T(lang, 'Atelier', 'Workshop'),
-                  ][i]
-                }
-              >
-                {['⌘', '⚔', '⚒'][i]}{' '}
-                <span>
-                  {
-                    [
-                      T(lang, 'Expediții', 'Expeditions'),
-                      T(lang, 'Arena PvE', 'PvE Arena'),
-                      T(lang, 'Atelier', 'Workshop'),
-                    ][i]
-                  }
-                </span>
-              </button>
-            ))}
-          </nav>
-        )}
-        <button onClick={close} className="gameplay-close" aria-label="Close">
+      {(view === 'workshop' || view === 'battle') && (
+        <button type="button" onClick={close} className="gameplay-close gameplay-floating-close"
+          aria-label={T(lang, 'Înapoi pe insulă', 'Back to island')}>
           <Icon name="close" />
         </button>
-      </header>
+      )}
       {children}
     </section>
   );
@@ -186,8 +164,13 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
   const detailRef = useRef<HTMLElement>(null);
   const selectDestination = (id: string) => {
     setSelected(id);
-    if (window.matchMedia('(max-width: 760px)').matches) requestAnimationFrame(() => detailRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
-    try { localStorage.setItem('dino-expedition-destination', id); } catch { /* Optional navigation memory. */ }
+    if (window.matchMedia('(max-width: 760px)').matches)
+      requestAnimationFrame(() => detailRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+    try {
+      localStorage.setItem('dino-expedition-destination', id);
+    } catch {
+      /* Optional navigation memory. */
+    }
   };
   useEffect(() => {
     if (view === 'workshop') setRecipe(props.initialRecipe ?? 'planks');
@@ -216,14 +199,22 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
     try {
       const remembered = localStorage.getItem('dino-expedition-destination');
       if (regionById(remembered ?? '')) id = remembered!;
-    } catch { /* Optional navigation memory. */ }
+    } catch {
+      /* Optional navigation memory. */
+    }
     setSelected(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
   const region = regionById(selected) ?? REGIONS[0];
   return (
     <Frame
-      title={view === 'expedition' ? tr('Expediții', 'Expeditions') : view === 'arena' ? tr('Arena PvE', 'PvE Arena') : tr('Atelierul', 'The workshop')}
+      title={
+        view === 'expedition'
+          ? tr('Expediții', 'Expeditions')
+          : view === 'arena'
+            ? tr('Arena PvE', 'PvE Arena')
+            : tr('Atelierul', 'The workshop')
+      }
       view={view}
       close={close}
       navigate={navigate}
@@ -248,7 +239,12 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
             className="adventure-map"
             onPointerDown={(e) => {
               if ((e.target as HTMLElement).closest('button')) return;
-              if (window.matchMedia('(max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px)').matches) return;
+              if (
+                window.matchMedia(
+                  '(max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px)',
+                ).matches
+              )
+                return;
               e.currentTarget.setPointerCapture(e.pointerId);
               mapDrag.current = { x: e.clientX, y: e.clientY, px: mapPosition.x, py: mapPosition.y };
             }}
@@ -283,7 +279,11 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
                   >
                     <span>{progress >= REGION_STAGES ? '✓' : element.symbol}</span>
                     <strong>
-                      {element.name[lang]} <em>{progress}/{REGION_STAGES}{away ? ' ⏳' : ''}</em>
+                      {element.name[lang]}{' '}
+                      <em>
+                        {progress}/{REGION_STAGES}
+                        {away ? ' ⏳' : ''}
+                      </em>
                       <small>{r.name[lang]}</small>
                     </strong>
                   </button>
@@ -292,10 +292,18 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
             </div>
             <MapCaption save={save} lang={lang} />
             <div className="adventure-map-controls">
-              <button onClick={() => setMapZoom((z) => Math.min(3, z + 1))} disabled={mapZoom === 3} aria-label="Zoom map in">
+              <button
+                onClick={() => setMapZoom((z) => Math.min(3, z + 1))}
+                disabled={mapZoom === 3}
+                aria-label="Zoom map in"
+              >
                 +
               </button>
-              <button onClick={() => setMapZoom((z) => Math.max(1, z - 1))} disabled={mapZoom === 1} aria-label="Zoom map out">
+              <button
+                onClick={() => setMapZoom((z) => Math.max(1, z - 1))}
+                disabled={mapZoom === 1}
+                aria-label="Zoom map out"
+              >
                 −
               </button>
               <button
@@ -311,6 +319,10 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
             </div>
           </div>
           <aside ref={detailRef} className="adventure-detail expedition-detail">
+            <button type="button" onClick={close} className="gameplay-close expedition-panel-close"
+              aria-label={tr('Înapoi pe insulă', 'Back to island')}>
+              <Icon name="close" />
+            </button>
             <div className="destination-cover" style={{ backgroundImage: `url('${worldThumb(region.element)}')` }}>
               <span>{region.name[lang]}</span>
               <em>
@@ -331,7 +343,10 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
                 build={build}
                 prepareSupplies={props.prepareSupplies ?? (() => navigate('workshop'))}
               />
-              <button className="realm-button secondary mobile-destination-picker" onClick={() => mapRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
+              <button
+                className="realm-button secondary mobile-destination-picker"
+                onClick={() => mapRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })}
+              >
                 ↓ {tr('Toate destinațiile', 'All destinations')}
               </button>
             </div>
@@ -348,7 +363,8 @@ const regionLocked = (save: Save, id: string) => {
   return !save.habitats[REGIONS[i].element] || (i > 0 && regionProgress(save, REGIONS[i - 1].id) < REGION_STAGES);
 };
 /** The region the player is working on: the first one not crossed yet (the last one once all are). */
-const frontierRegion = (save: Save) => REGIONS.find((r) => regionProgress(save, r.id) < REGION_STAGES) ?? REGIONS[REGIONS.length - 1];
+const frontierRegion = (save: Save) =>
+  REGIONS.find((r) => regionProgress(save, r.id) < REGION_STAGES) ?? REGIONS[REGIONS.length - 1];
 /**
  * The route between the regions, drawn from their positions in chain order: solid up to the last region crossed,
  * dashed beyond. Each leg bends a little so the line does not run straight through the islands.
@@ -393,7 +409,8 @@ function MapCaption({ save, lang }: { save: Save; lang: number }) {
         {region.name[lang]} · {regionProgress(save, region.id)}/{REGION_STAGES}
       </h2>
       <p>
-        {crossed}/10 {tr('regiuni traversate', 'regions crossed')} · {stages}/{REGIONS.length * REGION_STAGES} {tr('etape', 'stages')}
+        {crossed}/10 {tr('regiuni traversate', 'regions crossed')} · {stages}/{REGIONS.length * REGION_STAGES}{' '}
+        {tr('etape', 'stages')}
       </p>
     </div>
   );
@@ -414,17 +431,7 @@ function startingEncounter(save: Save) {
 const gateOpen = (save: Save, id: RealmId) => !GATE_LEAGUES.includes(id) || save.arenaLevel >= 2;
 const leagueOpen = (save: Save, id: RealmId) => !!save.habitats[id] && gateOpen(save, id);
 const tierLocked = (save: Save, e: Encounter) => !!e.requires && (save.stars[e.requires] ?? 0) < STARS_TO_ADVANCE;
-type Blocker =
-  | 'building'
-  | 'noTeam'
-  | 'baby'
-  | 'away'
-  | 'world'
-  | 'gate'
-  | 'stars'
-  | 'tired'
-  | 'level'
-  | 'ticket';
+type Blocker = 'building' | 'noTeam' | 'baby' | 'away' | 'world' | 'gate' | 'stars' | 'tired' | 'level' | 'ticket';
 /** The first reason the team cannot start this fight now (the same checks as the `battle` command), or null. */
 function arenaBlocker(save: Save, e: Encounter, now: number): Blocker | null {
   const team = teamDinos(save),
@@ -467,12 +474,12 @@ function ArenaView({ save, now, lang, run, close, navigate, build }: ArenaProps)
   if (save.battle)
     return (
       <div className="adventure-layout battle-focus">
+        <button type="button" className="gameplay-close arena-battle-close" onClick={close} aria-label={tr('Înapoi pe insulă', 'Back to island')}><Icon name="close" /></button>
         <div className="arena-lobby-scene">
           <BattleScreen save={save} lang={lang} run={run} close={close} embedded />
         </div>
       </div>
     );
-  if (shop) return <ArenaTicketShop save={save} lang={lang} run={run} back={() => setShop(false)} focus={league} />;
   const foes = arenaFoes(encounter.id),
     boss = foes.find((f) => f.boss),
     element = ELEMENTS.find((e) => e.id === league)!;
@@ -482,6 +489,7 @@ function ArenaView({ save, now, lang, run, close, navigate, build }: ArenaProps)
   const idBase = 'arena-tabs';
   return (
     <div className="arena-view">
+      {shop && <ArenaTicketShop save={save} lang={lang} run={run} back={() => setShop(false)} focus={league} />}
       <div className="arena-stage-pane">
         <div className="arena-league-chips" role="group" aria-label={tr('Ligi', 'Leagues')}>
           {ELEMENTS.map((e) => {
@@ -498,7 +506,10 @@ function ArenaView({ save, now, lang, run, close, navigate, build }: ArenaProps)
                   open
                     ? `${e.name[lang]} · ${tr('nivel', 'level')} ${ENCOUNTERS.find((x) => x.id === `arena-${e.id}-1`)!.level}+`
                     : !save.habitats[e.id]
-                      ? tr(`Deblochează lumea ${e.name[0]} ca să deschizi liga`, `Unlock the ${e.name[1]} world to open this league`)
+                      ? tr(
+                          `Deblochează lumea ${e.name[0]} ca să deschizi liga`,
+                          `Unlock the ${e.name[1]} world to open this league`,
+                        )
                       : tr('Îmbunătățește Poarta arenei la nivelul 2', 'Upgrade the Arena Gate to level 2')
                 }
                 onClick={() => pick(`arena-${e.id}-1`)}
@@ -525,11 +536,21 @@ function ArenaView({ save, now, lang, run, close, navigate, build }: ArenaProps)
               </div>
             ))}
           </div>
-          <div className="arena-season-chip" title={tr('Sezonul săptămânal: victorii în arenă de luni până duminică', 'Weekly season: arena wins from Monday to Sunday')}>
+          <div
+            className="arena-season-chip"
+            title={tr(
+              'Sezonul săptămânal: victorii în arenă de luni până duminică',
+              'Weekly season: arena wins from Monday to Sunday',
+            )}
+          >
             <Icon name="trophy" scale={1} />
             {nextSeason ? (
               <span>
-                {tr('Sezon', 'Season')} <b>{save.arena.weekWins}/{nextSeason.wins}</b> · {seasonPrize(nextSeason, lang)}
+                {tr('Sezon', 'Season')}{' '}
+                <b>
+                  {save.arena.weekWins}/{nextSeason.wins}
+                </b>{' '}
+                · {seasonPrize(nextSeason, lang)}
               </span>
             ) : (
               <span>
@@ -565,6 +586,7 @@ function ArenaView({ save, now, lang, run, close, navigate, build }: ArenaProps)
         </div>
       </div>
       <aside className="arena-side">
+        <div className="arena-side-toolbar">
         <Tabs
           idBase={idBase}
           label={tr('Secțiuni arenă', 'Arena sections')}
@@ -573,13 +595,29 @@ function ArenaView({ save, now, lang, run, close, navigate, build }: ArenaProps)
           onChange={setTab}
           tabs={[
             { id: 'fight', label: tr('Luptă', 'Fight') },
-            { id: 'team', label: tr('Echipă', 'Team'), badge: save.team.filter((id) => isTired(save, id, now)).length ? '💤' : undefined },
+            {
+              id: 'team',
+              label: tr('Echipă', 'Team'),
+              badge: save.team.filter((id) => isTired(save, id, now)).length ? '💤' : undefined,
+            },
             { id: 'gate', label: tr('Poartă', 'Gate') },
           ]}
         />
+        <button type="button" className="gameplay-close" onClick={close} aria-label={tr('Înapoi pe insulă', 'Back to island')} title={tr('Înapoi pe insulă', 'Back to island')}><Icon name="close" /></button>
+        </div>
         {tab === 'fight' && (
           <TabPanel idBase={idBase} id="fight" className="arena-tab">
-            <ArenaFight save={save} now={now} lang={lang} run={run} encounter={encounter} openShop={() => setShop(true)} openTeam={() => setTab('team')} navigate={navigate} build={build} />
+            <ArenaFight
+              save={save}
+              now={now}
+              lang={lang}
+              run={run}
+              encounter={encounter}
+              openShop={() => setShop(true)}
+              openTeam={() => setTab('team')}
+              navigate={navigate}
+              build={build}
+            />
           </TabPanel>
         )}
         {tab === 'team' && (
@@ -601,7 +639,9 @@ function seasonPrize(step: (typeof ARENA_SEASON)[number], lang: number) {
   return [
     step.gems && `${step.gems}💎`,
     step.gold && `${step.gold}●`,
-    ...(Object.entries(step.materials) as [ItemId, number][]).map(([id, n]) => `${n} ${ITEMS[id].name[lang].toLowerCase()}`),
+    ...(Object.entries(step.materials) as [ItemId, number][]).map(
+      ([id, n]) => `${n} ${ITEMS[id].name[lang].toLowerCase()}`,
+    ),
     step.tickets && `${step.tickets} ${lang ? 'tickets' : 'bilete'}`,
   ]
     .filter(Boolean)
@@ -612,7 +652,17 @@ function Face({ children, className = '' }: { children: ReactNode; className?: s
   return <span className={`arena-face ${className}`}>{children}</span>;
 }
 
-function ArenaFight({ save, now, lang, run, encounter, openShop, openTeam, navigate, build }: Pick<ArenaProps, 'save' | 'now' | 'lang' | 'run' | 'navigate' | 'build'> & {
+function ArenaFight({
+  save,
+  now,
+  lang,
+  run,
+  encounter,
+  openShop,
+  openTeam,
+  navigate,
+  build,
+}: Pick<ArenaProps, 'save' | 'now' | 'lang' | 'run' | 'navigate' | 'build'> & {
   encounter: Encounter;
   openShop: () => void;
   openTeam: () => void;
@@ -643,7 +693,13 @@ function ArenaFight({ save, now, lang, run, encounter, openShop, openTeam, navig
   const verdict = !forecast
     ? null
     : !forecast.win
-      ? { cls: 'hard', text: forecast.result === 'draw' ? tr('Foarte greu · remiză', 'Very hard · a draw') : tr('Foarte greu · ar pierde acum', 'Very hard · would lose now') }
+      ? {
+          cls: 'hard',
+          text:
+            forecast.result === 'draw'
+              ? tr('Foarte greu · remiză', 'Very hard · a draw')
+              : tr('Foarte greu · ar pierde acum', 'Very hard · would lose now'),
+        }
       : forecast.stars === 3
         ? { cls: 'easy', text: tr('Ușor', 'Easy') }
         : forecast.stars === 2
@@ -666,7 +722,10 @@ function ArenaFight({ save, now, lang, run, encounter, openShop, openTeam, navig
     ],
     noTeam: [tr('Eclozează un dinozaur ca să ai cu cine lupta.', 'Hatch a dinosaur to have someone to fight with.')],
     baby: [
-      tr('Puii nu luptă: crește-l până la juvenil sau alege altă echipă.', 'Babies do not fight: raise it to juvenile or pick another team.'),
+      tr(
+        'Puii nu luptă: crește-l până la juvenil sau alege altă echipă.',
+        'Babies do not fight: raise it to juvenile or pick another team.',
+      ),
       <button key="b" type="button" className="realm-button secondary" onClick={() => navigate('dino')}>
         {tr('Crește-l', 'Raise it')}
       </button>,
@@ -677,9 +736,19 @@ function ArenaFight({ save, now, lang, run, encounter, openShop, openTeam, navig
         {tr('Echipă', 'Team')}
       </button>,
     ],
-    world: [tr(`Deblochează lumea ${element.name[0]} ca să deschizi liga.`, `Unlock the ${element.name[1]} world to open this league.`)],
+    world: [
+      tr(
+        `Deblochează lumea ${element.name[0]} ca să deschizi liga.`,
+        `Unlock the ${element.name[1]} world to open this league.`,
+      ),
+    ],
     gate: [tr('Ligile 6–10 cer Poarta arenei nivel 2.', 'Leagues 6–10 need Arena Gate level 2.')],
-    stars: [tr(`Ai nevoie de ${STARS_TO_ADVANCE}★ la treapta precedentă.`, `You need ${STARS_TO_ADVANCE}★ on the previous tier.`)],
+    stars: [
+      tr(
+        `Ai nevoie de ${STARS_TO_ADVANCE}★ la treapta precedentă.`,
+        `You need ${STARS_TO_ADVANCE}★ on the previous tier.`,
+      ),
+    ],
     tired: [
       tr(`Echipa se odihnește încă ${time(restLeft)}.`, `The team rests for another ${time(restLeft)}.`),
       <button key="b" type="button" className="realm-button secondary" onClick={openTeam}>
@@ -692,7 +761,12 @@ function ArenaFight({ save, now, lang, run, encounter, openShop, openTeam, navig
         {tr('Echipă', 'Team')}
       </button>,
     ],
-    ticket: [tr(`Ai nevoie de un bilet ${element.name[0].toLowerCase()}.`, `You need a ${element.name[1].toLowerCase()} ticket.`)],
+    ticket: [
+      tr(
+        `Ai nevoie de un bilet ${element.name[0].toLowerCase()}.`,
+        `You need a ${element.name[1].toLowerCase()} ticket.`,
+      ),
+    ],
   };
   return (
     <div className="arena-fight">
@@ -719,7 +793,10 @@ function ArenaFight({ save, now, lang, run, encounter, openShop, openTeam, navig
           </span>
         ))}
         {reward.bossEgg ? (
-          <span className="reward-egg boss" title={tr('Prima victorie aduce oul bossului', 'The first win brings the boss egg')}>
+          <span
+            className="reward-egg boss"
+            title={tr('Prima victorie aduce oul bossului', 'The first win brings the boss egg')}
+          >
             <Icon name="egg" scale={1} />
             {tr('Ou de boss', 'Boss egg')}
           </span>
@@ -737,7 +814,14 @@ function ArenaFight({ save, now, lang, run, encounter, openShop, openTeam, navig
           {team.length ? (
             team.map((d, i) => (
               <Face key={d.id} className={edges[i] > 0 ? 'edge-up' : edges[i] < 0 ? 'edge-down' : ''}>
-                <DinosaurArt species={d.species} element={d.element} stage={d.stage} paused frame={0} className={rarityClass(d.rarity)} />
+                <DinosaurArt
+                  species={d.species}
+                  element={d.element}
+                  stage={d.stage}
+                  paused
+                  frame={0}
+                  className={rarityClass(d.rarity)}
+                />
                 <small>{d.level}</small>
               </Face>
             ))
@@ -782,15 +866,31 @@ function ArenaFight({ save, now, lang, run, encounter, openShop, openTeam, navig
           {tr('Cumpără', 'Buy')} · {arenaTicketPrice(league)}●
         </button>
       </div>
-      <button type="button" className={`realm-button adventure-start${risky ? ' risky' : ''}${armed ? ' armed' : ''}`} disabled={!!blocker} onClick={start}>
-        {armed ? tr('Sigur? Apasă din nou', 'Sure? Tap again') : risky ? tr('Luptă oricum', 'Fight anyway') : tr('Începe lupta', 'Start battle')} →
+      <button
+        type="button"
+        className={`realm-button adventure-start${risky ? ' risky' : ''}${armed ? ' armed' : ''}`}
+        disabled={!!blocker}
+        onClick={start}
+      >
+        {armed
+          ? tr('Sigur? Apasă din nou', 'Sure? Tap again')
+          : risky
+            ? tr('Luptă oricum', 'Fight anyway')
+            : tr('Începe lupta', 'Start battle')}{' '}
+        →
       </button>
     </div>
   );
 }
 
 /** The arena team: one to three dinosaurs picked from the roster, and the ones resting after a fight. */
-function ArenaTeam({ save, now, lang, run, league }: Pick<ArenaProps, 'save' | 'now' | 'lang' | 'run'> & { league: RealmId }) {
+function ArenaTeam({
+  save,
+  now,
+  lang,
+  run,
+  league,
+}: Pick<ArenaProps, 'save' | 'now' | 'lang' | 'run'> & { league: RealmId }) {
   const tr = (ro: string, en: string) => T(lang, ro, en);
   const busy = busyDinos(save);
   const minute = Math.floor(now / 60_000);
@@ -807,7 +907,10 @@ function ArenaTeam({ save, now, lang, run, league }: Pick<ArenaProps, 'save' | '
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [lang, minute, save.tired, save.expeditions, save.dinos],
   );
-  const resting = save.team.filter((id) => isTired(save, id, now)).map((id) => save.dinos.find((d) => d.id === id)!).filter(Boolean);
+  const resting = save.team
+    .filter((id) => isTired(save, id, now))
+    .map((id) => save.dinos.find((d) => d.id === id)!)
+    .filter(Boolean);
   const beats = ELEMENTS.find((e) => elementEdge(e.id, league) === 1)?.id;
   return (
     <div className="arena-team">
@@ -829,7 +932,10 @@ function ArenaTeam({ save, now, lang, run, league }: Pick<ArenaProps, 'save' | '
         }}
       />
       <p className="arena-team-hint">
-        {tr('Luptă pe rând, primul deschide. Mai mulți membri = recompensă mai mare (×1.1 / ×1.2).', 'They fight in turn, the first one opens. More members = a bigger reward (×1.1 / ×1.2).')}
+        {tr(
+          'Luptă pe rând, primul deschide. Mai mulți membri = recompensă mai mare (×1.1 / ×1.2).',
+          'They fight in turn, the first one opens. More members = a bigger reward (×1.1 / ×1.2).',
+        )}
       </p>
       {resting.length > 0 && (
         <div className="arena-resting">
@@ -840,14 +946,24 @@ function ArenaTeam({ save, now, lang, run, league }: Pick<ArenaProps, 'save' | '
               title={d.nickname}
               subtitle={`💤 ${time((save.tired[d.id] ?? 0) - now)}`}
               action={
-                <button type="button" className="realm-button" disabled={save.gems < GEMS.rest} onClick={() => run({ type: 'gemRest', dinoId: d.id })}>
+                <button
+                  type="button"
+                  className="realm-button"
+                  disabled={save.gems < GEMS.rest}
+                  onClick={() => run({ type: 'gemRest', dinoId: d.id })}
+                >
                   {GEMS.rest} 💎
                 </button>
               }
             />
           ))}
           {resting.length > 1 && (
-            <button type="button" className="realm-button arena-wake-all" disabled={save.gems < Math.min(GEMS.restTeam, GEMS.rest * resting.length)} onClick={() => run({ type: 'gemRest', team: true })}>
+            <button
+              type="button"
+              className="realm-button arena-wake-all"
+              disabled={save.gems < Math.min(GEMS.restTeam, GEMS.rest * resting.length)}
+              onClick={() => run({ type: 'gemRest', team: true })}
+            >
               {tr('Trezește echipa', 'Wake the team')} · {Math.min(GEMS.restTeam, GEMS.rest * resting.length)} 💎
             </button>
           )}
@@ -874,10 +990,12 @@ function ArenaGate({ save, now, lang, run, build }: Pick<ArenaProps, 'save' | 'n
           max={ARENA_LEVELS.length}
           next={[
             <>
-              ● <b>+{Math.round((ARENA_LEVELS[save.arenaLevel]?.bonus ?? 0) * 100)}%</b> {tr('aur, hrană și materiale din arenă', 'arena gold, food and materials')}
+              ● <b>+{Math.round((ARENA_LEVELS[save.arenaLevel]?.bonus ?? 0) * 100)}%</b>{' '}
+              {tr('aur, hrană și materiale din arenă', 'arena gold, food and materials')}
             </>,
             <>
-              ♜ {tr('Deschide ligile 6–10', 'Opens leagues 6–10')} ({GATE_LEAGUES.map((id) => ELEMENTS.find((e) => e.id === id)!.symbol).join(' ')})
+              ♜ {tr('Deschide ligile 6–10', 'Opens leagues 6–10')} (
+              {GATE_LEAGUES.map((id) => ELEMENTS.find((e) => e.id === id)!.symbol).join(' ')})
             </>,
           ]}
           gold={ARENA_LEVELS[save.arenaLevel]?.gold ?? 0}
@@ -916,7 +1034,10 @@ function ArenaGate({ save, now, lang, run, build }: Pick<ArenaProps, 'save' | 'n
 function Pips({ states, side }: { states: ('active' | 'waiting' | 'fallen')[]; side: Unit }) {
   if (states.length < 2) return null;
   return (
-    <span className={`battle-pips ${side}`} aria-label={`${states.filter((s) => s !== 'fallen').length} / ${states.length}`}>
+    <span
+      className={`battle-pips ${side}`}
+      aria-label={`${states.filter((s) => s !== 'fallen').length} / ${states.length}`}
+    >
       {states.map((s, i) => (
         <i key={i} className={s} />
       ))}
@@ -924,7 +1045,13 @@ function Pips({ states, side }: { states: ('active' | 'waiting' | 'fallen')[]; s
   );
 }
 
-export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<Props, 'save' | 'lang' | 'run' | 'close'> & { embedded?: boolean }) {
+export function BattleScreen({
+  save,
+  lang,
+  run,
+  close,
+  embedded = false,
+}: Pick<Props, 'save' | 'lang' | 'run' | 'close'> & { embedded?: boolean }) {
   const battle = save.battle!,
     encounter = ENCOUNTERS.find((e) => e.id === battle.encounterId)!;
   const tr = (ro: string, en: string) => T(lang, ro, en);
@@ -970,7 +1097,11 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
       loadAnimation(d.species, d.element, d.stage),
       foe.boss ? loadBossAnimation(foe.element) : loadAnimation(foe.species, foe.element, foe.stage),
     ]).then(async ([a, e]) => {
-      await Promise.allSettled([a, e].flatMap((manifest) => Object.values(manifest?.clips.se ?? {}).map((clip) => loadSpriteImage(clip.sheet))));
+      await Promise.allSettled(
+        [a, e].flatMap((manifest) =>
+          Object.values(manifest?.clips.se ?? {}).map((clip) => loadSpriteImage(clip.sheet)),
+        ),
+      );
       if (!active) return;
       const ally = fighter(a),
         enemy = fighter(e);
@@ -992,7 +1123,12 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
     seenRound.current = battle.round;
     const r = battle.report;
     swap.current = r.swap;
-    setSteps(exchange(r, fighters.ally, fighters.enemy, { ally: (r.hpAfter ?? battle.hp) > 0, enemy: (r.enemyAfter ?? battle.enemy) > 0 }));
+    setSteps(
+      exchange(r, fighters.ally, fighters.enemy, {
+        ally: (r.hpAfter ?? battle.hp) > 0,
+        enemy: (r.enemyAfter ?? battle.enemy) > 0,
+      }),
+    );
     setIndex(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [battle.round, fighters]);
@@ -1066,7 +1202,8 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
     const before = steps[index - 1];
     const swings = (u: Unit) => (step[u] === 'attack' || step[u] === 'ultimate') && before?.[u] !== step[u];
     if (!step.impact && (swings('ally') || swings('enemy'))) playSound('swing');
-    if (step.impact) playSound(step.impact.kind === 'ultimate' ? 'heavy' : step.impact.kind === 'hit' ? 'hit' : 'block');
+    if (step.impact)
+      playSound(step.impact.kind === 'ultimate' ? 'heavy' : step.impact.kind === 'hit' ? 'hit' : 'block');
     if (step.dodge) playSound('dodge');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [steps, index]);
@@ -1081,10 +1218,13 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
   // The fight plays itself: after each beat settles, the planner picks the next move for the fighter on stage.
   useEffect(() => {
     if (!told || battle.result) return;
-    const timer = setTimeout(() => {
-      const next = nextMove(save, memory.current);
-      if (next) run({ type: 'action', action: next });
-    }, (battle.round === 1 ? 900 : 650) / speed);
+    const timer = setTimeout(
+      () => {
+        const next = nextMove(save, memory.current);
+        if (next) run({ type: 'action', action: next });
+      },
+      (battle.round === 1 ? 900 : 650) / speed,
+    );
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [told, battle.result, battle.round]);
@@ -1117,8 +1257,16 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
   };
   const pips = (side: Unit) =>
     side === 'ally'
-      ? battle.team.map((a, i) => ((i === view.ally ? shown.hp : a.hp) === 0 ? 'fallen' : i === view.ally ? 'active' : 'waiting') as 'active' | 'waiting' | 'fallen')
-      : battle.foes.map((f, i) => ((i === view.foe ? shown.enemy : f.hp) === 0 ? 'fallen' : i === view.foe ? 'active' : 'waiting') as 'active' | 'waiting' | 'fallen');
+      ? battle.team.map(
+          (a, i) =>
+            ((i === view.ally ? shown.hp : a.hp) === 0 ? 'fallen' : i === view.ally ? 'active' : 'waiting') as
+              'active' | 'waiting' | 'fallen',
+        )
+      : battle.foes.map(
+          (f, i) =>
+            ((i === view.foe ? shown.enemy : f.hp) === 0 ? 'fallen' : i === view.foe ? 'active' : 'waiting') as
+              'active' | 'waiting' | 'fallen',
+        );
   const cap = roundCap(battle.foes.length);
   const tier = arenaTier(encounter.id);
   const restMinutes = battle.result === 'victory' ? ARENA_REST.win[tier - 1] : ARENA_REST.defeat;
@@ -1126,13 +1274,27 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
   const seasonReached = battle.result === 'victory' && !!nextSeason && save.arena.weekWins + 1 >= nextSeason.wins;
   const content = (
     <>
-      <div className={`battle-environment ${busy ? 'battle-playing' : ''} ${ultimate ? 'battle-ultimate' : ''}`} style={{ '--battle-speed': speed } as CSSProperties}>
+      <div
+        className={`battle-environment ${busy ? 'battle-playing' : ''} ${ultimate ? 'battle-ultimate' : ''}`}
+        style={{ '--battle-speed': speed } as CSSProperties}
+      >
         {!battle.result && (
           <div className="battle-controls">
-            <button type="button" className={speed === 2 ? 'active' : ''} aria-pressed={speed === 2} onClick={toggleSpeed} title={tr('Viteză dublă', 'Double speed')}>
+            <button
+              type="button"
+              className={speed === 2 ? 'active' : ''}
+              aria-pressed={speed === 2}
+              onClick={toggleSpeed}
+              title={tr('Viteză dublă', 'Double speed')}
+            >
               ×2
             </button>
-            <button type="button" onClick={skip} disabled={!fighters} title={tr('Sari la rezultat', 'Skip to the result')}>
+            <button
+              type="button"
+              onClick={skip}
+              disabled={!fighters}
+              title={tr('Sari la rezultat', 'Skip to the result')}
+            >
               {tr('Sari peste', 'Skip')} ⏭
             </button>
           </div>
@@ -1170,19 +1332,38 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
             pips={<Pips side="enemy" states={pips('enemy')} />}
             portrait={<ArenaOpponent foe={foe} paused />}
           />
-          <div className="battle-unit ally" data-motion={ally.clip} data-dodge={step?.dodge === 'ally' || undefined} style={ally.style}>
-            <DinosaurArt species={d.species} element={d.element} stage={d.stage} animation={ally.clip} speed={speed} className={rarityClass(d.rarity)} />
+          <div
+            className="battle-unit ally"
+            data-motion={ally.clip}
+            data-dodge={step?.dodge === 'ally' || undefined}
+            style={ally.style}
+          >
+            <DinosaurArt
+              species={d.species}
+              element={d.element}
+              stage={d.stage}
+              animation={ally.clip}
+              speed={speed}
+              className={rarityClass(d.rarity)}
+            />
           </div>
           <div className="battle-unit enemy" data-motion={enemy.clip} style={enemy.style}>
             <ArenaOpponent foe={foe} className="dinosaur-opponent" animation={enemy.clip} speed={speed} />
           </div>
           {step?.say?.map((c, i) => (
-            <div key={`${index}-${i}`} className={`battle-callout on-${c.on} kind-${c.kind}`} style={{ '--row': i } as CSSProperties}>
+            <div
+              key={`${index}-${i}`}
+              className={`battle-callout on-${c.on} kind-${c.kind}`}
+              style={{ '--row': i } as CSSProperties}
+            >
               {calloutText(c, lang)}
             </div>
           ))}
           {step?.enter && (
-            <div key={`enter-${view.ally}-${view.foe}`} className={`battle-callout on-${step.enter === 'enemy' ? 'enemy' : 'ally'} kind-enter`}>
+            <div
+              key={`enter-${view.ally}-${view.foe}`}
+              className={`battle-callout on-${step.enter === 'enemy' ? 'enemy' : 'ally'} kind-enter`}
+            >
               {tr('INTRĂ', 'IN')}: {step.enter === 'enemy' ? foeName : d.nickname}
             </div>
           )}
@@ -1207,7 +1388,11 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
             {battle.team.map((a) => {
               const m = save.dinos.find((x) => x.id === a.dinoId)!;
               return (
-                <span key={a.dinoId} className={a.hp === 0 ? 'fallen' : ''} title={`${m.nickname} · ${a.hp}/${a.maxHp}`}>
+                <span
+                  key={a.dinoId}
+                  className={a.hp === 0 ? 'fallen' : ''}
+                  title={`${m.nickname} · ${a.hp}/${a.maxHp}`}
+                >
                   <DinosaurArt species={m.species} element={m.element} stage={m.stage} paused frame={0} />
                   <i style={{ width: `${(a.hp / a.maxHp) * 100}%` }} />
                 </span>
@@ -1221,12 +1406,20 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
                   `Rest: ${restMinutes} min${battle.team.some((a) => a.hp === 0) ? `, the fallen ${ARENA_REST.fallen} min` : ''}.`,
                 )
               : battle.result === 'draw'
-                ? tr(`Biletul ți-a fost returnat. Echipa se odihnește ${restMinutes} min.`, `Your ticket was returned. The team rests ${restMinutes} min.`)
-                : tr(`Echipa se întoarce în siguranță și se odihnește ${restMinutes} min. Încearcă un element mai potrivit sau niveluri mai mari.`, `The team returns safely and rests ${restMinutes} min. Try a better-suited element or higher levels.`)}
+                ? tr(
+                    `Biletul ți-a fost returnat. Echipa se odihnește ${restMinutes} min.`,
+                    `Your ticket was returned. The team rests ${restMinutes} min.`,
+                  )
+                : tr(
+                    `Echipa se întoarce în siguranță și se odihnește ${restMinutes} min. Încearcă un element mai potrivit sau niveluri mai mari.`,
+                    `The team returns safely and rests ${restMinutes} min. Try a better-suited element or higher levels.`,
+                  )}
           </p>
           {save.rewardPending && (
             <>
-              {!!battle.reward.milestones && <p className="result-milestone">★ {tr('Recompensă pentru stele inclusă!', 'Star reward included!')}</p>}
+              {!!battle.reward.milestones && (
+                <p className="result-milestone">★ {tr('Recompensă pentru stele inclusă!', 'Star reward included!')}</p>
+              )}
               <p className="result-loot">
                 +{battle.reward.gold} ● &nbsp; +{battle.reward.food} ❧
                 {(Object.entries(battle.reward.materials) as [ItemId, number][]).map(([id, count]) => (
@@ -1240,12 +1433,19 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
                 <div className="result-egg">
                   <strong>
                     <Icon name="egg" scale={1} /> {tr('Ou găsit!', 'Egg found!')}{' '}
-                    {battle.reward.egg.species === 'boss' ? `BOSS ${ARENA_BOSSES[battle.reward.egg.element].name}` : SPECIES_NAMES[battle.reward.egg.species]} ·{' '}
-                    {ELEMENTS.find((e) => e.id === battle.reward.egg!.element)!.name[lang]}
+                    {battle.reward.egg.species === 'boss'
+                      ? `BOSS ${ARENA_BOSSES[battle.reward.egg.element].name}`
+                      : SPECIES_NAMES[battle.reward.egg.species]}{' '}
+                    · {ELEMENTS.find((e) => e.id === battle.reward.egg!.element)!.name[lang]}
                     <RarityBadge rarity={rarityOf(battle.reward.egg)} lang={lang} />
                   </strong>
                   {save.eggs.length >= BALANCE.maxEggs && (
-                    <small>{tr('Raftul e plin — oul e păstrat și apare când faci loc.', 'Shelf full — the egg is saved and arrives when you make room.')}</small>
+                    <small>
+                      {tr(
+                        'Raftul e plin — oul e păstrat și apare când faci loc.',
+                        'Shelf full — the egg is saved and arrives when you make room.',
+                      )}
+                    </small>
                   )}
                 </div>
               )}
@@ -1257,7 +1457,9 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
             </>
           )}
           <button className="realm-button" onClick={() => run({ type: 'claim' })}>
-            {save.rewardPending ? tr('Colectează recompensa', 'Claim reward') : tr('Înapoi în arenă', 'Back to the arena')}
+            {save.rewardPending
+              ? tr('Colectează recompensa', 'Claim reward')
+              : tr('Înapoi în arenă', 'Back to the arena')}
           </button>
         </div>
       ) : null}
@@ -1276,7 +1478,19 @@ export function BattleScreen({ save, lang, run, close, embedded = false }: Pick<
  * A fighter's corner of the arena: portrait, name, health and energy, and a pip per team member. The amber strip
  * behind the health bar is the damage just taken; it drains after a short pause.
  */
-function BattleHud({ side, color, name, badge, level, hp, maxHp, energy, portrait, pips, children }: {
+function BattleHud({
+  side,
+  color,
+  name,
+  badge,
+  level,
+  hp,
+  maxHp,
+  energy,
+  portrait,
+  pips,
+  children,
+}: {
   side: Unit;
   color: string;
   name: string;
@@ -1299,7 +1513,14 @@ function BattleHud({ side, color, name, badge, level, hp, maxHp, energy, portrai
         <strong>
           {name} {badge}
         </strong>
-        <div className="battle-hud-bar health" role="meter" aria-valuemin={0} aria-valuemax={maxHp} aria-valuenow={hp} aria-label="HP">
+        <div
+          className="battle-hud-bar health"
+          role="meter"
+          aria-valuemin={0}
+          aria-valuemax={maxHp}
+          aria-valuenow={hp}
+          aria-label="HP"
+        >
           <i className="trail" style={{ width: health }} />
           <i style={{ width: health }} />
         </div>

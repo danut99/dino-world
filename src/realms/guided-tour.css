@@ -1,0 +1,176 @@
+/* The first-time guide: a dark shade with a lit hole over one element and a framed bubble beside it. */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+.tour-shade,
+.tour-block {
+  position: fixed;
+  background: #120d0bb3;
+  pointer-events: auto;
+}
+.tour-full {
+  inset: 0;
+}
+.tour-block {
+  background: transparent;
+}
+.tour-ring {
+  position: fixed;
+  border: 3px solid var(--px-amber-1);
+  box-shadow: 0 0 0 3px var(--px-outline, #1a1412), 0 0 18px #ffcf5a80;
+  transition: left 0.2s, top 0.2s, width 0.2s, height 0.2s;
+}
+.tour-ring.pulse {
+  animation: tour-pulse 1.1s steps(4) infinite;
+}
+@keyframes tour-pulse {
+  50% {
+    box-shadow: 0 0 0 3px var(--px-outline, #1a1412), 0 0 30px var(--px-amber-1);
+  }
+}
+.tour-pointer {
+  position: fixed;
+  transform: translate(-50%, 6px);
+  color: var(--px-amber-1);
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 2px 2px 0 var(--px-outline, #1a1412);
+  animation: tour-bob 0.8s steps(2) infinite;
+}
+.tour-pointer.up {
+  transform: translate(-50%, calc(-100% - 6px));
+  animation-name: tour-bob-up;
+}
+@keyframes tour-bob {
+  50% {
+    margin-top: 6px;
+  }
+}
+@keyframes tour-bob-up {
+  50% {
+    margin-top: -6px;
+  }
+}
+
+/* The bubble wears the same pixel frame as the story card and the windows. */
+.realms-app .tour-bubble {
+  position: fixed;
+  z-index: 1;
+  box-sizing: border-box;
+  pointer-events: auto;
+  padding: 2px 4px 0;
+  border: 18px solid transparent;
+  border-image: var(--frame-panel);
+  image-rendering: pixelated;
+  box-shadow: 0 8px 0 #1a141299, 0 18px 40px #0009;
+  color: var(--ui-text);
+  animation: tour-in 0.16s ease-out;
+}
+@keyframes tour-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+.tour-bubble header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tour-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 4px solid transparent;
+  border-image: var(--frame-slot);
+}
+.tour-bubble h2 {
+  flex: 1;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1.2;
+  color: var(--px-bone-0);
+  text-shadow: 2px 2px 0 var(--px-outline, #1a1412);
+}
+.realms-app .tour-x {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ui-text-soft);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.realms-app .tour-x:hover {
+  color: var(--px-bone-0);
+}
+.tour-bubble p {
+  margin: 8px 0 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ui-text-soft);
+}
+.tour-bubble footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+}
+.tour-dots {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 2px;
+  overflow: hidden;
+}
+.tour-dots i {
+  flex: 0 1 6px;
+  min-width: 2px;
+  height: 4px;
+  background: var(--px-stone-4);
+}
+.tour-dots .done {
+  background: var(--px-moss-2);
+}
+.tour-dots .current {
+  flex-basis: 12px;
+  background: var(--px-amber-1);
+}
+.realms-app .tour-bubble footer .realm-button {
+  flex: none;
+  min-height: 32px;
+  font-size: 13px !important;
+  padding: 0 10px 4px;
+  white-space: nowrap;
+}
+.realms-app .tour-bubble footer .realm-button:active:not(:disabled) {
+  padding: 2px 10px 2px;
+}
+.realms-app .tour-bubble footer .tour-back {
+  min-width: 32px;
+  padding: 0 6px 4px;
+}
+.tour-cue {
+  flex: none;
+  max-width: 62%;
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--px-amber-1);
+  text-align: right;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-ring.pulse,
+  .tour-pointer,
+  .realms-app .tour-bubble {
+    animation: none;
+  }
+}

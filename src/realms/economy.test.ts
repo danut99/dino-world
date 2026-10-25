@@ -43,7 +43,7 @@ describe('economy tables', () => {
       expect(rising(table.map((l) => l.gold))).toBe(true);
       expect(rising(table.map((l) => l.minutes))).toBe(true);
     }
-    expect([UTILITY_BUILDINGS.farm, UTILITY_BUILDINGS.workshop, UTILITY_BUILDINGS.portal, UTILITY_BUILDINGS.arena, UTILITY_BUILDINGS.market].map((b) => b.cost)).toEqual([100, 300, 500, 800, 1000]);
+    expect([UTILITY_BUILDINGS.farm, UTILITY_BUILDINGS.workshop, UTILITY_BUILDINGS.portal, UTILITY_BUILDINGS.arena, UTILITY_BUILDINGS.market].map((b) => b.cost)).toEqual([100, 300, 500, 800, 300]);
   });
   it('opens worlds at rising prices, about 100,000 gold in all', () => {
     expect(ELEMENTS.map((e) => WORLD_UNLOCK[e.id].gold)).toEqual([0, 600, 1500, 3000, 5000, 8000, 12000, 17000, 23000, 30000]);
@@ -109,6 +109,8 @@ describe('the first steps of a new game', () => {
     go({ type: 'hatch' });
     claim();
     go({ type: 'build', kind: 'farm', x: 5, y: 8 });
+    claim();
+    go({ type: 'build', kind: 'market', x: 6, y: 1 });
     claim();
     go({ type: 'feed', times: 10 });
     go({ type: 'evolve' });
