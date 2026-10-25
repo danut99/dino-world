@@ -43,7 +43,7 @@ type Start =
   /** The account has no player name yet: it picks one before entering. */
   | { phase: 'name' }
   /** `owner`: the account this save belongs to, so a different account never starts from it. */
-  | { phase: 'ready'; owner: string; name: string; save: Save; marker: string | null; unsaved: boolean };
+  | { phase: 'ready'; owner: string; anonymous: boolean; name: string; save: Save; marker: string | null; unsaved: boolean };
 
 /**
  * A newcomer plays straight away as a guest, with the save on this device, and is invited to create an account
@@ -94,16 +94,16 @@ export default function SignInGate() {
       if (!name) return { phase: 'name' } as const;
       const remote = await fetchCloudSave(userId);
       const legacy = readLegacySave();
-      if (!legacy) return { phase: 'ready', owner: userId, name, save: remote?.save ?? newSave(Date.now()), marker: remote?.updatedAt ?? null, unsaved: !remote } as const;
+      if (!legacy) return { phase: 'ready', owner: userId, anonymous, name, save: remote?.save ?? newSave(Date.now()), marker: remote?.updatedAt ?? null, unsaved: !remote } as const;
       if (planSync(legacy, remote, guestOwner.current === userId) === 'download' && remote) {
         clearLegacySave();
-        return { phase: 'ready', owner: userId, name, save: remote.save, marker: remote.updatedAt, unsaved: false } as const;
+        return { phase: 'ready', owner: userId, anonymous, name, save: remote.save, marker: remote.updatedAt, unsaved: false } as const;
       }
       // The device's progress moves into the account; only once it is safely there does it leave the device.
       const at = await pushCloudSave(userId, legacy, remote?.updatedAt ?? null);
       if (!at) throw new Error('cloud changed meanwhile');
       clearLegacySave();
-      return { phase: 'ready', owner: userId, name, save: legacy, marker: at, unsaved: false } as const;
+      return { phase: 'ready', owner: userId, anonymous, name, save: legacy, marker: at, unsaved: false } as const;
     })().then(
       (next) => active && setStart(next),
       (error: unknown) => {
@@ -117,7 +117,9 @@ export default function SignInGate() {
   }, [userId, anonymous, auth.recovering, attempt]);
 
   if (!cloud) return <RealmsApp />;
-  const ready = auth.user && !auth.recovering && start.phase === 'ready' && start.owner === auth.user.id ? start : null;
+  // Linking an email keeps the user id but remounts the game. Wait for the new bootstrap instead of
+  // mounting with the guest's original startup snapshot, which could upload a reset over its latest save.
+  const ready = auth.user && !auth.recovering && start.phase === 'ready' && start.owner === auth.user.id && start.anonymous === anonymous ? start : null;
   // After an anonymous account linked its e-mail and confirmed it, it chooses its password.
   const choosePassword = !!auth.user && !anonymous && pendingPassword();
   if (ready && auth.user && !choosePassword)
