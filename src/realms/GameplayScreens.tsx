@@ -1,5 +1,6 @@
 import { ResourceHelp, RequirementLink } from './ResourceHelp';
 import { WorkshopPanel, time } from './WorkshopPanel';
+import { ArenaTicketShop } from './ArenaTicketShop';
 import { RarityBadge, rarityClass } from './Rarity';
 import { ARENA_BOSSES } from './arenaBosses';
 import { PLAYABLE_DINOSAURS, isPlayableDinosaur } from './playableDinosaurs';
@@ -289,6 +290,7 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
   const { view, save, now, lang, run, close, navigate, build } = props;
   const tr = (ro: string, en: string) => T(lang, ro, en);
   const [league, setLeague] = useState<RealmId>('fire');
+  const [ticketShop, setTicketShop] = useState(false);
   const [selected, setSelected] = useState('training'),
     [recipeId, setRecipe] = useState('planks');
   const detailRef = useRef<HTMLElement>(null);
@@ -324,6 +326,7 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
     return () => observer.disconnect();
   }, [view]);
   useEffect(() => {
+    setTicketShop(false);
     if (view === 'expedition') {
       let id = save.expedition?.encounterId ?? ENCOUNTERS.find(e => e.mode === 'expedition' && !save.cleared.includes(e.id))?.id ?? 'training';
       try {
@@ -358,7 +361,8 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
     hero.stage !== 'baby' &&
     hero.level >= encounter.level &&
     !locked &&
-    (encounter.id === 'training' || hasBuilding);
+    (encounter.id === 'training' || hasBuilding) &&
+    (encounter.mode !== 'arena' || (save.arenaTickets[encounter.league as RealmId] ?? 0) > 0);
   const arenaBattle = view === 'arena' && !!save.battle?.encounterId.startsWith('arena');
   const rewards = (
     <>
@@ -401,7 +405,11 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
       navigate={navigate}
       lang={lang}
     >
-      {view === 'workshop' ? (
+      {view === 'arena' && !arenaBattle && !ticketShop && <div className="arena-access-bar">
+        <span>🎟 {ELEMENTS.find(e => e.id === league)!.name[lang]} · {tr('Tichete', 'Tickets')}: <b>{save.arenaTickets[league] ?? 0}</b></span>
+        <button className="realm-button" onClick={() => setTicketShop(true)}>{tr('Cumpără tichete', 'Buy tickets')}</button>
+      </div>}
+      {view === 'arena' && ticketShop && !arenaBattle ? <ArenaTicketShop save={save} lang={lang} run={run} back={() => setTicketShop(false)} /> : view === 'workshop' ? (
         <WorkshopPanel
           save={save}
           now={now}
@@ -651,6 +659,10 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
                 {!hero && <RequirementLink title={tr('Ai nevoie de un campion', 'A champion is required')} detail={tr('Eclozează un dinozaur în Incubator.', 'Hatch a dinosaur in the Hatchery.')} route={{ panel: 'hatchery' }} />}
                 {hero && hero.level < encounter.level && <RequirementLink title={tr(`Nivel necesar: ${encounter.level}`, `Required level: ${encounter.level}`)} detail={tr('Hrănește și evoluează campionul.', 'Feed and evolve your champion.')} route={{ panel: 'dino' }} />}
                 {hero && (save.tired[hero.id] ?? 0) > now && <RequirementLink title={tr('Campionul se odihnește', 'Champion is resting')} detail={tr('Alege alt campion sau așteaptă terminarea odihnei.', 'Choose another champion or wait for recovery.')} route={{ panel: 'dino' }} />}
+                {view === 'arena' && !save.battle && <div className="arena-entry-ticket">
+                  <span>🎟 {tr('Acces', 'Entry')}: 1 {tr('tichet', 'ticket')} {ELEMENTS.find(e => e.id === league)!.name[lang]} · {tr('Deținute', 'Owned')}: {save.arenaTickets[league] ?? 0}</span>
+                  {(save.arenaTickets[league] ?? 0) === 0 && <button className="realm-button secondary" onClick={() => setTicketShop(true)}>{tr('Ai nevoie de un tichet · Cumpără', 'A ticket is required · Buy')}</button>}
+                </div>}
               <button className="realm-button adventure-start" disabled={arenaBattle || (!save.battle && !canBattle)} onClick={start}>
                   {arenaBattle ? tr('Luptă în desfășurare', 'Battle in progress') : save.battle ? tr('Reia lupta', 'Resume battle') : tr('Începe aventura', 'Begin adventure')} →
                 </button>

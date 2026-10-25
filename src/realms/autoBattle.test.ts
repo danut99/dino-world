@@ -7,6 +7,7 @@ import type { BattleAction } from './battleChoreography';
 /** A save that may enter every encounter, with one dinosaur of the given age and level. */
 function ready(stage: Stage, level: number): Save {
   const s = newSave(0);
+  s.arenaTickets = Object.fromEntries(ELEMENTS.map(e => [e.id, 100]));
   s.dinos = [{ id: 'd', species: 'trex', element: 'fire', level, stage, nickname: 'T' }];
   s.champion = 'd';
   s.habitats = Object.fromEntries(ELEMENTS.map((e) => [e.id, 1]));

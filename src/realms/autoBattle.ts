@@ -1,4 +1,4 @@
-import { command, foeMove, incomingDamage, strikeAgainst, ULTIMATE_POWER, type Battle, type Dino, type Save } from './game';
+import { command, ELEMENTS, foeMove, incomingDamage, strikeAgainst, ULTIMATE_POWER, type Battle, type Dino, type Save } from './game';
 import type { BattleAction } from './battleChoreography';
 
 /**
@@ -41,7 +41,10 @@ export function autoAction(
 export function predictFight(save: Save, encounterId: string, now: number): { win: boolean; stars: number; hpLeft: number } | null {
   let s: Save;
   try {
-    s = command({ ...save, battle: null, rewardPending: false }, { type: 'battle', encounterId }, now);
+    // Forecast combat strength even before the player buys entry; the copy pays the ticket.
+    s = command({ ...save, battle: null, rewardPending: false,
+      arenaTickets: Object.fromEntries(ELEMENTS.map(e => [e.id, 1])),
+    }, { type: 'battle', encounterId }, now);
   } catch {
     return null;
   }

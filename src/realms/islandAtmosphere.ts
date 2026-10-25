@@ -36,6 +36,25 @@ function pixelCloud(ctx: CanvasRenderingContext2D, x: number, y: number, radius:
 }
 
 /** Spray is drawn in source-art pixels so it follows the island at every zoom. */
+export function drawCascadeMist(ctx: CanvasRenderingContext2D, falls: number[][], time: number,
+  colors: string[]) {
+  const t = time / 1000;
+  for (const [f, [x, y, strength]] of falls.entries()) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(strength, strength);
+    for (let i = 0; i < 26; i++) {
+      const age = (t / (2.2 + i % 3 * 0.4) + i * 0.381966 + f * 0.23) % 1;
+      const side = i % 2 ? 1 : -1;
+      const px = side * age * (10 + i % 4 * 3) + Math.sin(t * 0.8 + i) * 2;
+      const py = -age * (25 + i % 3 * 6);
+      const radius = 3 + age * 7;
+      ctx.globalAlpha = Math.sin(age * Math.PI) * 0.32;
+      ctx.fillStyle = colors[i % colors.length];
+      pixelCloud(ctx, px, py, radius, Math.round(radius * 0.75));
+    }
+    ctx.restore();
+  }
+}
+
 export function drawCascadeSpray(ctx: CanvasRenderingContext2D, falls: number[][], time: number) {
   const t = Math.floor(time / 80) * 0.08;
   for (let f = 0; f < falls.length; f++) {

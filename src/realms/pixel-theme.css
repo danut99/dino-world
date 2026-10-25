@@ -952,7 +952,8 @@
   .realms-app .realm-nav > button.realm-nav-toggle {
     height: auto;
   }
-  /* zoom buttons sit above the open bar (70px tall, 12px from the bottom) */
+  /* Keep the camera above the bar in both states so toggling never moves the controls. */
+  .realms-app .realm-camera,
   .realms-app:has(.realm-nav:not(.collapsed)) .realm-camera {
     bottom: 94px;
   }
@@ -1014,6 +1015,7 @@
   .realms-app .realm-nav:not(.collapsed) .realm-collect > div {
     display: none;
   }
+  .realms-app .realm-camera,
   .realms-app:has(.realm-nav:not(.collapsed)) .realm-camera {
     bottom: calc(max(12px, env(safe-area-inset-bottom)) + 72px);
   }
@@ -1198,4 +1200,39 @@
   .realms-app .arena-ladder strong { font-size: 13px; }
   .realms-app .arena-ladder span { font-size: 14px; }
   .realms-app .arena-lobby-scene:has(.arena-embedded-battle) { height: max(540px, 85dvh); padding: 0; }
+}
+
+/* Show the menu's next action in both states, including compact layouts. */
+.realms-app .realm-nav > button.realm-nav-toggle[aria-expanded] {
+  width: 80px;
+  min-width: 80px;
+  flex: 0 0 80px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+.realms-app .realm-nav > button.realm-nav-toggle[aria-expanded] > .realm-nav-arrow {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  color: var(--px-amber-1);
+}
+.realms-app .realm-nav > button.realm-nav-toggle[aria-expanded] > .realm-nav-toggle-label {
+  display: block;
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--px-bone-1);
+}
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  .realms-app .realm-nav > button.realm-nav-toggle[aria-expanded] {
+    width: 64px;
+    min-width: 64px;
+    flex: 0 0 64px;
+    height: 44px;
+    margin-right: 0;
+  }
+  .realms-app .realm-nav > button.realm-nav-toggle[aria-expanded] > .realm-nav-toggle-label {
+    font-size: 9px;
+  }
 }

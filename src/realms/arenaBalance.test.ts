@@ -20,6 +20,7 @@ const ids = ELEMENTS.map((e) => e.id as RealmId);
 const withEdge = (league: RealmId, edge: number) => ids.find((x) => elementEdge(x, league) === edge);
 function ready(species: string, element: RealmId, level: number): Save {
   const s = newSave(0);
+  s.arenaTickets = Object.fromEntries(ELEMENTS.map(e => [e.id, 100]));
   s.dinos = [{ id: 'd', species: species as never, element, level, stage: level >= 25 ? 'adult' : 'juvenile', nickname: 'T' }];
   s.champion = 'd';
   s.habitats = Object.fromEntries(ELEMENTS.map((x) => [x.id, 1]));

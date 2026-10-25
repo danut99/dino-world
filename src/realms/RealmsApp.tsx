@@ -67,6 +67,7 @@ import { AccountPanel, statusText } from './AccountPanel';
 
 /** The sound a successful command makes. Battle actions are voiced by the battle replay instead. */
 const COMMAND_SOUNDS: Partial<Record<Command['type'], SoundId>> = {
+  buyArenaTicket: 'coin',
   collect: 'coin',
   collectAvailable: 'coin',
   claim: 'coin',
@@ -572,6 +573,8 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
             ),
             workshop: tr('Construiește mai întâi atelierul.', 'Build the workshop first.'),
             gems: tr('Nu ai destule diamante. Vezi Magazinul.', 'Not enough diamonds. Visit the Shop.'),
+            arenaTicket: tr('Ai nevoie de un tichet al acestui element. Cumpără-l din Arena.', 'You need a ticket for this element. Buy one in the Arena.'),
+            ticketLimit: tr('Ai atins limita de tichete pentru acest element.', 'You have reached the ticket limit for this element.'),
             rested: tr('Campionul e deja odihnit.', 'Your champion is already rested.'),
           } as Record<string, string>
         )[code] ?? tr('Acțiunea nu este disponibilă acum.', 'That action is not available yet.'),
@@ -1090,8 +1093,10 @@ export default function RealmsApp({ initialSave, account, guest = false }: { ini
             aria-label={navOpen ? tr('Restrânge meniul', 'Collapse menu') : tr('Extinde meniul', 'Expand menu')}
             title={navOpen ? tr('Restrânge meniul', 'Collapse menu') : tr('Extinde meniul', 'Expand menu')}
           >
-            <span className="realm-nav-chevron" aria-hidden />
-            <span className="realm-nav-toggle-label">{tr('Meniu', 'Menu')}</span>
+            <svg className="realm-nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
+              <path d={navOpen ? 'm16 5-7 7 7 7' : 'm8 5 7 7-7 7'} />
+            </svg>
+            <span className="realm-nav-toggle-label">{navOpen ? tr('Restrânge', 'Collapse') : tr('Meniu', 'Menu')}</span>
           </button>
           {(() => {
             // Realms is the hub: always there, in the middle; the other unlocked buttons share the two sides.

@@ -257,6 +257,8 @@ export interface Save {
   /** Workshop and Arena Gate levels (see WORKSHOP_LEVELS, ARENA_LEVELS). */
   workshopLevel: number;
   arenaLevel: number;
+  /** One elemental ticket is consumed when an arena battle starts. */
+  arenaTickets: Partial<Record<RealmId, number>>;
   /** Habitat level per element world; a missing world has no habitat yet. */
   habitats: Partial<Record<RealmId, number>>;
   /** Story goals already claimed (see STORY_CHAPTERS). */
@@ -330,6 +332,9 @@ export const ARENA_LEVELS: { bonus: number; gold: number; materials: Partial<Rec
   { bonus: 0.25, gold: 1200, materials: { blocks: 8, crystal: 15 } },
 ];
 export const GATE_LEAGUES = ['lightning', 'wind', 'dark', 'light', 'arcane'];
+/** Initial ticket price in the current economy; rewards and other prices stay unchanged. */
+export const ARENA_TICKET_PRICE = 25;
+export const ARENA_TICKET_LIMIT = 9999;
 /** Habitat per element world: residents, gold storage, income bonus. Each upgrade costs gold and one habitat kit. */
 export const HABITAT_LEVELS = [
   { capacity: 2, cap: 600, gold: 0 },
@@ -568,6 +573,7 @@ export function storyChapter(s: Save) {
 }
 
 export type Command =
+  | { type: 'buyArenaTicket'; realm: RealmId; quantity: number }
   | { type: 'spinDaily' | 'claimDailyBonus' }
   | { type: 'claimDailyQuest'; quest: DailyQuestId }
   | { type: 'incubate' | 'hatch'; eggId?: string }
@@ -626,6 +632,7 @@ export function newSave(now: number): Save {
     hatcheryLevel: 1,
     workshopLevel: 1,
     arenaLevel: 1,
+    arenaTickets: {},
     habitats: { fire: 1 },
     questEggs: [],
     storyVersion: 2,
@@ -1280,6 +1287,7 @@ export function command(save: Save, c: Command, now: number): Save {
       for (const rarity of ['rare', 'epic'] as const) receiveEgg(s, { species: 'trex', element: 'fire', rarity });
       break;
     case 'devResources':
+      for (const e of ELEMENTS) s.arenaTickets[e.id] = Math.min(ARENA_TICKET_LIMIT, (s.arenaTickets[e.id] ?? 0) + 999);
       s.gold += 5000;
       s.food += 5000;
       for (const id of ['wood', 'stone', 'fiber', 'crystal'] as const) s.inventory[id] += 50;
@@ -1288,6 +1296,17 @@ export function command(save: Save, c: Command, now: number): Save {
       s.inventory.habitatKit += 3;
       s.inventory.evolutionCrystal += 3;
       break;
+    case 'buyArenaTicket': {
+      require(ELEMENTS.some(e => e.id === c.realm), 'ticket');
+      require(Number.isInteger(c.quantity) && c.quantity >= 1 && c.quantity <= 99, 'ticket');
+      require(s.habitats[c.realm], 'locked');
+      require(!GATE_LEAGUES.includes(c.realm) || s.arenaLevel >= 2, 'gate');
+      const owned = s.arenaTickets[c.realm] ?? 0;
+      require(owned + c.quantity <= ARENA_TICKET_LIMIT, 'ticketLimit');
+      pay(ARENA_TICKET_PRICE * c.quantity, {});
+      s.arenaTickets[c.realm] = owned + c.quantity;
+      break;
+    }
     case 'battle': {
       const d = champion(s);
       require(d && d.stage !== 'baby' && !s.battle && !s.rewardPending, 'juvenile');
@@ -1308,6 +1327,11 @@ export function command(save: Save, c: Command, now: number): Save {
       require(d.level >= encounter.level, 'level');
       require(encounter.id === 'training' ||
         s.buildings.some((b) => b.kind === (encounter.mode === 'arena' ? 'arena' : 'portal')), 'building');
+      if (encounter.mode === 'arena') {
+        const realm = encounter.league as RealmId;
+        require((s.arenaTickets[realm] ?? 0) > 0, 'arenaTicket');
+        s.arenaTickets[realm] = s.arenaTickets[realm]! - 1;
+      }
       const repeat = s.cleared.includes(encounter.id);
       const st = stats(d.level, d.stage, d.species, rarityOf(d));
       // The upgraded Arena Gate adds its bonus to arena rewards.
@@ -1599,6 +1623,7 @@ export function parseSave(text: string): Save {
     s.boostUntil ??= 0;
     s.expedition ??= null;
     s.expeditionProgress ??= {};
+    if (!Object.hasOwn(s, 'arenaTickets')) s.arenaTickets = {};
     s.daily = normalizeDaily(s.daily ?? newDaily(s.updatedAt));
     // Saves from before the ten-chapter story: goals already reached count as claimed (their old rewards stand),
     // and the card picks up at the first goal still ahead.
@@ -1660,6 +1685,9 @@ export function parseSave(text: string): Save {
   const integer = (n: unknown, max = 1e9): n is number => finite(n, max) && Number.isInteger(n);
   const element = (id: unknown): id is RealmId => ELEMENTS.some((e) => e.id === id);
   const species = (id: unknown): id is Species => (id === 'boss' || SPECIES.includes(id as (typeof SPECIES)[number]));
+  if (!s || !s.arenaTickets || typeof s.arenaTickets !== 'object' || Array.isArray(s.arenaTickets) ||
+    Object.entries(s.arenaTickets).some(([id, n]) => !element(id) || !integer(n, ARENA_TICKET_LIMIT)))
+    throw Error('Invalid arena tickets');
   if (
     !s ||
     s.schemaVersion !== 5 ||
