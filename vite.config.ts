@@ -10,5 +10,6 @@ const { version } = JSON.parse(fs.readFileSync(new URL('./package.json', import.
 export default defineConfig({
   plugins: [react()],
   define: { __APP_VERSION__: JSON.stringify(version) },
-  test: { include: ['src/**/*.test.{ts,tsx}'] },
+  // Tests never reach the real Supabase project, whatever .env.local holds.
+  test: { include: ['src/**/*.test.{ts,tsx}'], env: { VITE_SUPABASE_URL: '', VITE_SUPABASE_KEY: '' } },
 });

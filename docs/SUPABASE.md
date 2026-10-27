@@ -17,6 +17,8 @@ Ce face codul:
 - `supabase/migrations/0007_leaderboard.sql` — funcția `weekly_ranking(since)`: victoriile amicale ale jucătorului și ale prietenilor acceptați din săptămâna curentă (clasamentul săptămânal din lista de prieteni).
 - `supabase/migrations/0008_global_weekly_ranking.sql` — `weekly_ranking(since)` pe toți jucătorii: primii 50 după victorii amicale din săptămână, plus jucătorul curent oriunde s-ar afla.
 - `supabase/migrations/0009_open_duels.sql` — dueluri cu orice jucător (nu doar prieteni): cel mult un duel pe minut și 5 pe zi contra aceluiași adversar.
+- `supabase/migrations/0010_record_duel.sql` — repară „infinite recursion in policy” la salvarea duelurilor: rezultatul se salvează prin funcția `record_duel`, care verifică aceleași limite.
+- `supabase/migrations/0011_fair_duels.sql` — clasamentul numără cel mult o victorie pe zi contra aceluiași adversar; maxim 3 dueluri pe zi cu același jucător.
 - `src/realms/PlayersPanel.tsx` — lista de jucători; un click deschide lumea lor, doar pentru vizionare.
 
 Progresul jucat înainte de conturi, păstrat în browser, se mută în cont la primul login și apoi e șters din browser. Dacă și contul are deja progres, jucătorul alege pe care îl păstrează. La fel, dacă alt dispozitiv a salvat între timp, jocul nu suprascrie nimic singur: arată ambele variante (dinozauri, nivel, stele, aur).

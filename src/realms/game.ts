@@ -1261,8 +1261,8 @@ export type Command =
   | { type: 'pet' | 'train'; dinoId: string }
   /** Ends a finished training (+1 level) or picks up the island's lost treasure. */
   | { type: 'claimTraining' | 'treasure' }
-  /** A duel against another player ended: the first DUEL.rewards wins of the day pay gold and food. */
-  | { type: 'duelReward'; result: 'victory' | 'defeat' | 'draw' }
+  /** A duel ended: the first win of the day against each rival pays, up to DUEL.rewards a day. */
+  | { type: 'duelReward'; result: 'victory' | 'defeat' | 'draw'; rival: string }
   /** Wakes a resting dinosaur (the champion when none is given), or with `team` every resting team member. */
   | { type: 'gemRest'; dinoId?: string; team?: boolean }
   | { type: 'gemSpin' };
@@ -2284,9 +2284,10 @@ export function command(save: Save, c: Command, now: number): Save {
       break;
     }
     case 'duelReward': {
-      require(['victory', 'defeat', 'draw'].includes(c.result), 'duel');
-      if (c.result !== 'victory' || s.daily.duels >= DUEL.rewards) break;
+      require(['victory', 'defeat', 'draw'].includes(c.result) && typeof c.rival === 'string', 'duel');
+      if (c.result !== 'victory' || s.daily.duels >= DUEL.rewards || s.daily.duelRivals.includes(c.rival)) break;
       s.daily.duels++;
+      s.daily.duelRivals.push(c.rival);
       s.gold += DUEL.gold;
       s.food += DUEL.food;
       break;

@@ -1078,8 +1078,9 @@ export default function RealmsApp({
       const next = command(fight.save, c, Date.now());
       const result = next.battle?.result;
       if (result && !fight.save.battle?.result) {
-        const before = saveRef.current.daily.duels;
-        run({ type: 'duelReward', result });
+        const before = saveRef.current.daily.duels,
+          beatenToday = saveRef.current.daily.duelRivals.includes(fight.id);
+        run({ type: 'duelReward', result, rival: fight.id });
         const paid = saveRef.current.daily.duels > before;
         setMessage(
           result !== 'victory'
@@ -1089,19 +1090,37 @@ export default function RealmsApp({
                   `Victorie! +${DUEL.gold} aur, +${DUEL.food} hrană (${saveRef.current.daily.duels}/${DUEL.rewards} azi).`,
                   `Victory! +${DUEL.gold} gold, +${DUEL.food} food (${saveRef.current.daily.duels}/${DUEL.rewards} today).`,
                 )
-              : tr(
-                  'Victorie! Premiile de azi s-au terminat, dar victoria intră în clasament.',
-                  "Victory! Today's prizes are used up, but the win counts on the leaderboard.",
-                ),
+              : beatenToday
+                ? tr(
+                    `Victorie! L-ai mai bătut azi pe ${fight.name}: fără premiu și fără punct nou în clasament. Încearcă alt jucător!`,
+                    `Victory! You already beat ${fight.name} today: no prize and no new ranking point. Try another player!`,
+                  )
+                : tr(
+                    'Victorie! Premiile de azi s-au terminat, dar victoria intră în clasament.',
+                    "Victory! Today's prizes are used up, but the win counts on the leaderboard.",
+                  ),
         );
         if (account)
           recordFriendBattle(account.user.id, fight.id, result).catch((e) => {
             console.error('Duel result not saved', e);
+            const code = (e as Error).message;
             setMessage(
-              tr(
-                'Rezultatul nu s-a putut salva în clasament. Mai încearcă peste un minut.',
-                'The result could not be saved to the leaderboard. Try again in a minute.',
-              ),
+              code === 'too_soon'
+                ? tr('Duelul nu intră în clasament: maxim un duel pe minut.', 'Not ranked: one duel a minute at most.')
+                : code === 'daily_limit'
+                  ? tr(
+                      `Ai jucat deja 3 dueluri azi cu ${fight.name}. Revino mâine sau provoacă pe altcineva.`,
+                      `You already had 3 duels with ${fight.name} today. Come back tomorrow or challenge someone else.`,
+                    )
+                  : code === 'no_profile'
+                    ? tr(
+                        'Alege-ți un nume de jucător ca duelurile să intre în clasament.',
+                        'Pick a player name so duels get ranked.',
+                      )
+                    : tr(
+                        'Rezultatul nu s-a putut salva în clasament. Mai încearcă.',
+                        'The result could not be saved to the leaderboard. Try again.',
+                      ),
             );
           });
       }
@@ -1446,6 +1465,11 @@ export default function RealmsApp({
           close={() => setFriendFight(null)}
           friendly={friendFight.name}
         />
+        {message && (
+          <div className="realm-toast" role="status">
+            {message}
+          </div>
+        )}
       </main>
     );
   }

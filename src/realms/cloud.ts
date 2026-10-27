@@ -371,11 +371,12 @@ export async function clearFriendHelps(ids: number[]) {
 }
 
 export type FightResult = 'victory' | 'defeat' | 'draw';
-/** Records a friendly fight this player started against `otherId`. */
-export async function recordFriendBattle(selfId: string, otherId: string, result: FightResult) {
+/** Records a duel this player started against `otherId` (see record_duel, 0010). Throws with the refusal code. */
+export async function recordFriendBattle(_selfId: string, otherId: string, result: FightResult) {
   if (!cloud) return;
-  const { error } = await cloud.from('friend_battles').insert({ attacker: selfId, defender: otherId, result });
+  const { data, error } = await cloud.rpc('record_duel', { rival: otherId, outcome: result });
   if (error) throw error;
+  if (data) throw new Error(data as string);
 }
 /** Friend requests waiting for this player's answer, and friendly fights friends started against them after `since`. */
 export async function fetchFriendNews(selfId: string, since: string) {

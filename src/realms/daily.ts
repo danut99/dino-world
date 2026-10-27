@@ -164,8 +164,9 @@ export type DailyState = {
   trainings: number;
   treasures: number;
   treasureAt: number;
-  /** Duels won today that paid their reward (see DUEL). */
+  /** Duels won today that paid their reward (see DUEL), and the rivals they were won against. */
   duels: number;
+  duelRivals: string[];
 };
 /** The chest for all three missions of the day (scaled with the chapter, its diamond as it is). */
 export const DAILY_BONUS: DailyReward = { gold: 200, food: 100, materials: { crystal: 5 }, gems: 1 };
@@ -260,6 +261,7 @@ export function newDaily(now: number, save?: QuestSave): DailyState {
     treasures: 0,
     treasureAt: 0,
     duels: 0,
+    duelRivals: [],
   };
 }
 export function dailyState(save: Pick<Save, 'daily' | 'updatedAt'> & QuestSave, now: number) {
@@ -305,6 +307,7 @@ export function normalizeDaily(value: DailyState) {
     treasures: value.treasures ?? 0,
     treasureAt: value.treasureAt ?? 0,
     duels: value.duels ?? 0,
+    duelRivals: value.duelRivals ?? [],
   };
   if (typeof value.day !== 'string' || !Number.isFinite(Date.parse(value.day)))
     return { ...value, ...counters, progress };
@@ -356,6 +359,9 @@ export function validDaily(value: DailyState) {
     !count(value.trainings) ||
     !count(value.treasures) ||
     !count(value.duels) ||
+    !Array.isArray(value.duelRivals) ||
+    value.duelRivals.length > 50 ||
+    value.duelRivals.some((id) => typeof id !== 'string' || id.length > 64) ||
     !(typeof value.treasureAt === 'number' && Number.isFinite(value.treasureAt) && value.treasureAt >= 0) ||
     !Array.isArray(value.claimed) ||
     new Set(value.claimed).size !== value.claimed.length ||

@@ -67,11 +67,13 @@ describe('things to do while waiting', () => {
   });
 });
 describe('friendlyBattle', () => {
-  it('pays the first duel wins of the day only', () => {
+  it('pays the first duel win of the day against each rival, up to five rivals', () => {
     let s = juvenile();
     const gold = s.gold;
-    for (let i = 0; i < 7; i++) s = command(s, { type: 'duelReward', result: 'victory' }, now + 60_000);
-    s = command(s, { type: 'duelReward', result: 'defeat' }, now + 60_000);
+    for (let i = 0; i < 3; i++) s = command(s, { type: 'duelReward', result: 'victory', rival: 'same' }, now + 60_000);
+    expect(s.gold).toBe(gold + 120);
+    for (let i = 0; i < 7; i++) s = command(s, { type: 'duelReward', result: 'victory', rival: `r${i}` }, now + 60_000);
+    s = command(s, { type: 'duelReward', result: 'defeat', rival: 'x' }, now + 60_000);
     expect(s.daily.duels).toBe(5);
     expect(s.gold).toBe(gold + 5 * 120);
   });
