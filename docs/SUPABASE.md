@@ -15,6 +15,7 @@ Ce face codul:
 - `supabase/migrations/0005_friends.sql` — prieteni (`friendships`: cerere → acceptare), bifa `profiles.accept_help` („prietenii îmi pot colecta aurul”) și `friend_helps`: un prieten acceptat golește depozitul de aur al celuilalt (funcția `help_friend`, cel mult o dată pe oră per jucător). Jocul proprietarului aplică colectarea la următoarea încărcare, la momentul în care a fost apăsat butonul.
 - `supabase/migrations/0006_friend_battles.sql` — lupte amicale între prieteni (`friend_battles`: cine a atacat, pe cine, rezultatul). Fără premii; doar prietenii acceptați, cel mult o luptă pe minut. Lista de prieteni arată scorul.
 - `supabase/migrations/0007_leaderboard.sql` — funcția `weekly_ranking(since)`: victoriile amicale ale jucătorului și ale prietenilor acceptați din săptămâna curentă (clasamentul săptămânal din lista de prieteni).
+- `supabase/migrations/0008_global_weekly_ranking.sql` — `weekly_ranking(since)` pe toți jucătorii: primii 50 după victorii amicale din săptămână, plus jucătorul curent oriunde s-ar afla.
 - `src/realms/PlayersPanel.tsx` — lista de jucători; un click deschide lumea lor, doar pentru vizionare.
 
 Progresul jucat înainte de conturi, păstrat în browser, se mută în cont la primul login și apoi e șters din browser. Dacă și contul are deja progres, jucătorul alege pe care îl păstrează. La fel, dacă alt dispozitiv a salvat între timp, jocul nu suprascrie nimic singur: arată ambele variante (dinozauri, nivel, stele, aur).

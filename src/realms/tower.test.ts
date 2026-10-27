@@ -56,9 +56,18 @@ describe('weekly tower', () => {
       expect(towerRule(week, n)).toBe(towerRule(week, n));
       const foes = towerFoes(week, n, 30, 'fire');
       expect(foes.length).toBeGreaterThanOrEqual(1);
-      expect(foes.length).toBeLessThanOrEqual(3);
-      expect(foes.every((f) => f.level === 30 + n - 5)).toBe(true);
+      expect(foes.length).toBeLessThanOrEqual(4);
+      expect(foes.filter((f) => !f.boss).every((f) => f.level === 30 + n - 4)).toBe(true);
     }
+    // No family twice on a floor, over many weeks (element floors included).
+    for (let d = 0; d < 40; d++) {
+      const w = new Date(Date.UTC(2030, 0, 7 + 7 * d)).toISOString().slice(0, 10);
+      for (let n = 1; n <= TOWER_FLOORS; n++) {
+        const regular = towerFoes(w, n, 30, 'fire').filter((f) => !f.boss);
+        expect(new Set(regular.map((f) => f.species)).size, `${w} floor ${n}`).toBe(regular.length);
+      }
+    }
+    expect(towerFoes(week, 5, 30, 'fire').at(-1)!.boss).toBe(true);
     expect(towerFoes(week, TOWER_FLOORS, 30, 'fire').at(-1)!.boss).toBe(true);
     const other = '2030-01-07';
     expect(
@@ -73,7 +82,7 @@ describe('weekly tower', () => {
     expect(s.battle!.encounterId).toBe(`tower:${week}:1`);
     expect(isTower(s.battle!.encounterId)).toBe(true);
     expect(s.arenaTickets).toEqual({});
-    expect(s.battle!.foes.every((f) => f.level === 26)).toBe(true);
+    expect(s.battle!.foes.every((f) => f.level === 27)).toBe(true);
     expect(() => run(s, { type: 'towerFight' })).toThrow('juvenile');
   });
 

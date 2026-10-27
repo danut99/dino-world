@@ -277,7 +277,9 @@ export function PlayersPanel({
             )}
             <div className="realm-friends-weekly">
               <h4>🏆 {tr('Clasament săptămânal', 'Weekly ranking')}</h4>
-              <small>{tr('Victorii amicale de luni încoace', 'Friendly wins since Monday')}</small>
+              <small>
+                {tr('Victorii amicale de luni încoace · toți jucătorii', 'Friendly wins since Monday · all players')}
+              </small>
               {!ranking ? (
                 <p className="realm-note">{tr('Se încarcă…', 'Loading…')}</p>
               ) : !ranking.length ? (

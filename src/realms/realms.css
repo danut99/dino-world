@@ -2112,11 +2112,12 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
 .realm-friends-weekly h4 { margin: 0; font-size: 14px; color: #fff1b8; }
 .realm-friends-weekly > small { font-size: 11px; color: #cdbfa8; }
 .realm-friends-weekly ol { display: grid; gap: 4px; margin: 4px 0 0; padding: 0; list-style: none; }
-.realm-rank-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 4px 6px; font-size: 13px; color: #e2d3b2; background: #2f2520; }
-.realm-rank-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff1b8; }
-.realm-rank-row strong em { margin-left: 6px; padding: 1px 6px; font-style: normal; font-size: 10px; color: #2f2520; background: #e0a96a; }
-.realm-rank-row.self { outline: 1px solid #e0a96a; }
-.realm-rank-row .realm-rank-score { color: #f6d77a; white-space: nowrap; }
+.realm-friends-weekly .realm-rank-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 4px 6px; font-size: 13px; color: #e2d3b2; background: #2f2520; }
+.realm-friends-weekly .realm-rank-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff1b8; }
+.realm-friends-weekly .realm-rank-row strong em { margin-left: 6px; padding: 1px 6px; font-style: normal; font-size: 10px; color: #2f2520; background: #e0a96a; }
+.realm-friends-weekly .realm-rank-row.self { outline: 1px solid #e0a96a; }
+.realm-friends-weekly .realm-rank-row .realm-rank-score { color: #f6d77a; white-space: nowrap; }
+.realm-rank .realm-player-portrait { grid-area: auto; }
 
 /* Visiting another player's world: a bar on top with their worlds and the way home; nothing else of the HUD. */
 .realm-visit-bar { position: absolute; z-index: 10; top: max(12px, env(safe-area-inset-top)); left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 14px; width: min(920px, calc(100% - 24px)); box-sizing: border-box; padding: 10px 14px; background: #2f2520f2; border: 2px solid #e0a96a; box-shadow: 0 6px 20px #00000066; color: #e2d3b2; }

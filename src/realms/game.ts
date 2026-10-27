@@ -1838,6 +1838,8 @@ export function towerRule(week: string, floor: number): TowerRule {
 export const towerRuleElement = (rule: TowerRule) => (rule.startsWith('element:') ? (rule.slice(8) as RealmId) : null);
 /** The level tower floors scale from: the team's best level, kept within 10 to 50. */
 export const towerBase = (team: Pick<Dino, 'level'>[]) => Math.min(50, Math.max(10, ...team.map((d) => d.level)));
+/** The foes' level on `floor`: a little under the team on the first floors, above it at the top. */
+export const towerLevel = (base: number, floor: number) => base + floor - 4;
 /** The top floor's boss league: one of the open leagues with a boss (any boss when none is open), fixed by the week. */
 export function towerBossLeague(week: string, open: RealmId[]): RealmId {
   const bosses = Object.keys(ARENA_BOSSES) as RealmId[],
@@ -1846,17 +1848,23 @@ export function towerBossLeague(week: string, open: RealmId[]): RealmId {
   return list[Math.floor(roll(`${TOWER_PREFIX}${week}:boss`) * list.length)];
 }
 /**
- * The foes of tower floor `floor` (1 to TOWER_FLOORS) in `week`: 1 to 3 foes at `base + floor - 5`, the top floor
- * two foes and a boss. The same inputs always give the same foes.
+ * The foes of tower floor `floor` (1 to TOWER_FLOORS) in `week` at `towerLevel`: different families, rarer higher
+ * up, a guardian boss on floor 5 and the boss on top. The same inputs always give the same foes.
  */
 export function towerFoes(week: string, floor: number, base: number, bossLeague: RealmId): Foe[] {
   const seed = towerId(week, floor),
     rule = towerRule(week, floor),
     fixed = towerRuleElement(rule),
-    level = base + floor - 5,
+    level = towerLevel(base, floor),
     pool = towerElements();
-  const count = floor === TOWER_FLOORS ? 2 : 1 + Math.floor(roll(`${seed}:count`) * 3),
-    scale = [1.3, 1, 0.85][count - 1];
+  const count = floor === TOWER_FLOORS ? 2 : floor <= 2 ? 2 : 3,
+    scale = 0.75 + 0.05 * floor,
+    t = floor / TOWER_FLOORS;
+  // Rarer foes higher up: about 1% legendary and 3% epic on floor 1, 10% and 30% on floor 10.
+  const rarityFor = (i: number): Rarity => {
+    const r = roll(`${seed}:${i}:rarity`);
+    return r < 0.1 * t ? 'legendary' : r < 0.4 * t ? 'epic' : r < 0.7 * t + 0.2 ? 'rare' : 'common';
+  };
   const make = (
     species: Species,
     element: RealmId,
@@ -1882,12 +1890,26 @@ export function towerFoes(week: string, floor: number, base: number, bossLeague:
       ...(boss ? { boss } : {}),
     };
   };
-  const foes = Array.from({ length: count }, (_, i) => {
-    const element = fixed ?? pool[Math.floor(roll(`${seed}:${i}:element`) * pool.length)],
-      kinds = playableSpecies(element);
-    const species = kinds[Math.floor(roll(`${seed}:${i}:species`) * kinds.length)];
-    return make(species, element, level >= 25 ? 'adult' : 'juvenile', 'common', scale, scale);
-  });
+  // Every foe of a floor is a different family, from any world unless the rule fixes the element.
+  const candidates = (fixed ? [fixed] : pool)
+    .flatMap((element) => playableSpecies(element).map((species) => ({ species, element })))
+    .map((c) => ({ ...c, order: roll(`${seed}:pick:${c.element}:${c.species}`) }))
+    .sort((a, b) => a.order - b.order);
+  const picked: { species: Species; element: RealmId }[] = [];
+  for (const c of candidates) if (picked.length < count && !picked.some((p) => p.species === c.species)) picked.push(c);
+  // An element with fewer families than foes fields fewer, stronger foes instead of repeating one.
+  const boost = 1 + 0.15 * (count - picked.length);
+  // Mostly adults (with their ultimate), even below level 25; about one foe in four stays juvenile.
+  const stageFor = (i: number): Stage => (level >= 25 || roll(`${seed}:${i}:stage`) < 0.75 ? 'adult' : 'juvenile');
+  const foes = picked.map(({ species, element }, i) =>
+    make(species, element, stageFor(i), rarityFor(i), scale * boost, scale * boost),
+  );
+  const bosses = Object.keys(ARENA_BOSSES) as RealmId[];
+  // A guardian boss halfway up, a little weaker than the one at the top.
+  if (floor === 5) {
+    const league = fixed && ARENA_BOSSES[fixed] ? fixed : bosses[Math.floor(roll(`${seed}:guardian`) * bosses.length)];
+    foes.push(make('boss', league, 'adult', 'epic', BOSS_STATS.hp * 0.8, BOSS_STATS.power * 0.85, true));
+  }
   if (floor === TOWER_FLOORS) {
     const league = fixed && ARENA_BOSSES[fixed] ? fixed : bossLeague;
     foes.push(make('boss', league, 'adult', 'legendary', BOSS_STATS.hp, BOSS_STATS.power, true));
@@ -3440,7 +3462,7 @@ export function parseSave(text: string): Save {
     const towerFoesOf = (t: { week: string; floor: number }) => {
       const first = Array.isArray(b?.foes) ? b.foes[0] : undefined,
         last = Array.isArray(b?.foes) ? b.foes[b.foes.length - 1] : undefined,
-        base = first && integer(first.level, 100) ? first.level - (t.floor - 5) : 0;
+        base = first && integer(first.level, 100) ? first.level - towerLevel(0, t.floor) : 0;
       if (base < 10 || base > 50) return [];
       return towerFoes(t.week, t.floor, base, last?.boss && element(last.element) ? last.element : 'fire');
     };
