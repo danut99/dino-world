@@ -227,7 +227,10 @@ export const ROLE_NAMES: Record<Role, readonly [string, string]> = {
 };
 export const ROLE_ICONS: Record<Role, string> = { tank: '🛡', attacker: '⚔', fast: '💨', support: '💚' };
 export const ROLE_INFO: Record<Role, readonly [string, string]> = {
-  tank: ['Prima lovitură primită pe arenă îi face doar jumătate.', 'The first blow it takes on stage deals half damage.'],
+  tank: [
+    'Prima lovitură primită pe arenă îi face doar jumătate.',
+    'The first blow it takes on stage deals half damage.',
+  ],
   attacker: ['Sub 50% viață, loviturile lui fac +20%.', 'Below 50% health, its strikes deal +20%.'],
   fast: ['Se eschivează mai des.', 'Dodges more often.'],
   support: [
@@ -1414,7 +1417,8 @@ export function treasureSpot(s: Save, now: number) {
 export const statPoints = (d: Pick<Dino, 'level' | 'stage'>) =>
   d.level - 1 + (d.stage === 'baby' ? 0 : 3) + (d.stage === 'adult' ? 3 : 0);
 export const POINT_GROWTH = 0.09;
-export const spentPoints = (d: Pick<Dino, 'points'>) => (d.points ? d.points.hp + d.points.power + d.points.defense : 0);
+export const spentPoints = (d: Pick<Dino, 'points'>) =>
+  d.points ? d.points.hp + d.points.power + d.points.defense : 0;
 export const freePoints = (d: Pick<Dino, 'level' | 'stage' | 'points'>) => statPoints(d) - spentPoints(d);
 export const RESET_COST = (d: Pick<Dino, 'level'>) => 50 * d.level;
 export const stats = (
@@ -1661,7 +1665,8 @@ type Board = Stand & Partial<Pick<Battle, 'team' | 'active'>>;
 export function strikeAbilities(b: Board, d: Fighter): Ability[] {
   const foe = activeFoe(b),
     out: Ability[] = [];
-  if (b.hp !== undefined && raging({ hp: b.hp, maxHp: b.maxHp, species: d.species })) out.push({ on: 'ally', kind: 'rage' });
+  if (b.hp !== undefined && raging({ hp: b.hp, maxHp: b.maxHp, species: d.species }))
+    out.push({ on: 'ally', kind: 'rage' });
   if (shielded(foe)) out.push({ on: 'enemy', kind: 'shield' });
   if (aura(b.foes, b.foeIndex)) out.push({ on: 'enemy', kind: 'aura' });
   return out;
@@ -1681,11 +1686,15 @@ const abilityFactor = (list: Ability[]) =>
     (m, a) =>
       m *
       (a.kind === 'rage'
-        ? a.on === 'enemy' ? ROLE_EFFECTS.foeRage : ROLE_EFFECTS.rage
+        ? a.on === 'enemy'
+          ? ROLE_EFFECTS.foeRage
+          : ROLE_EFFECTS.rage
         : a.kind === 'shield'
           ? ROLE_EFFECTS.shield
           : a.kind === 'aura'
-            ? a.on === 'enemy' ? ROLE_EFFECTS.foeAura : ROLE_EFFECTS.aura
+            ? a.on === 'enemy'
+              ? ROLE_EFFECTS.foeAura
+              : ROLE_EFFECTS.aura
             : 1),
     1,
   );
@@ -1826,8 +1835,7 @@ export function towerRule(week: string, floor: number): TowerRule {
   }
   return r < 0.6 ? 'noHeal' : r < 0.8 ? 'swift' : 'giant';
 }
-export const towerRuleElement = (rule: TowerRule) =>
-  rule.startsWith('element:') ? (rule.slice(8) as RealmId) : null;
+export const towerRuleElement = (rule: TowerRule) => (rule.startsWith('element:') ? (rule.slice(8) as RealmId) : null);
 /** The level tower floors scale from: the team's best level, kept within 10 to 50. */
 export const towerBase = (team: Pick<Dino, 'level'>[]) => Math.min(50, Math.max(10, ...team.map((d) => d.level)));
 /** The top floor's boss league: one of the open leagues with a boss (any boss when none is open), fixed by the week. */
@@ -1849,7 +1857,15 @@ export function towerFoes(week: string, floor: number, base: number, bossLeague:
     pool = towerElements();
   const count = floor === TOWER_FLOORS ? 2 : 1 + Math.floor(roll(`${seed}:count`) * 3),
     scale = [1.3, 1, 0.85][count - 1];
-  const make = (species: Species, element: RealmId, stage: Stage, rarity: Rarity, hp: number, power: number, boss?: true): Foe => {
+  const make = (
+    species: Species,
+    element: RealmId,
+    stage: Stage,
+    rarity: Rarity,
+    hp: number,
+    power: number,
+    boss?: true,
+  ): Foe => {
     const st = stats(level, stage, species, rarity),
       maxHp = Math.max(1, Math.round(st.hp * hp));
     return {
@@ -2586,9 +2602,7 @@ export function command(save: Save, c: Command, now: number): Save {
       require(s.lamps < MAX_LAMPS, 'maxLevel');
       require(s.inventory.lamp > 0, 'materials');
       const spot =
-        c.x === undefined || c.y === undefined
-          ? BUILDABLE_CELLS.find((p) => canLamp(s, p.x, p.y))
-          : { x: c.x, y: c.y };
+        c.x === undefined || c.y === undefined ? BUILDABLE_CELLS.find((p) => canLamp(s, p.x, p.y)) : { x: c.x, y: c.y };
       require(spot && canLamp(s, spot.x, spot.y), 'placement');
       if (!spot) break;
       s.inventory.lamp--;
@@ -2836,7 +2850,8 @@ export function command(save: Save, c: Command, now: number): Save {
       ] as const) {
         const amount = Math.round(x.maxHp * ROLE_EFFECTS.heal);
         if (rule === 'noHeal') continue;
-        if (SPECIES_ROLE[species] !== 'support' || x.healed || amount < 1 || x.hp === 0 || x.hp > x.maxHp - amount) continue;
+        if (SPECIES_ROLE[species] !== 'support' || x.healed || amount < 1 || x.hp === 0 || x.hp > x.maxHp - amount)
+          continue;
         x.hp += amount;
         x.healed = true;
         abilities.push({ on, kind: 'heal', amount });
@@ -3452,7 +3467,10 @@ export function parseSave(text: string): Save {
       integer(f.hp, f.maxHp);
     const report = b?.report;
     // The recap is cosmetic: a malformed one is dropped, not refused.
-    if (b?.bestHit !== undefined && !(b.bestHit && typeof b.bestHit.dinoId === 'string' && integer(b.bestHit.amount, 1e6)))
+    if (
+      b?.bestHit !== undefined &&
+      !(b.bestHit && typeof b.bestHit.dinoId === 'string' && integer(b.bestHit.amount, 1e6))
+    )
       delete b.bestHit;
     if (
       b?.damage !== undefined &&

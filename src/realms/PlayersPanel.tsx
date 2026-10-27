@@ -180,13 +180,8 @@ export function PlayersPanel({
   const [busy, setBusy] = useState(false);
   const [ranking, setRanking] = useState<RankRow[] | null>(null);
   const [pickDefense, setPickDefense] = useState(false);
-  const defense = save.defense
-    .map((id) => save.dinos.find((d) => d.id === id))
-    .filter((d): d is Dino => !!d);
-  const defenseEligible = useCallback(
-    (d: Dino) => (d.stage === 'baby' ? (lang ? 'baby' : 'pui') : null),
-    [lang],
-  );
+  const defense = save.defense.map((id) => save.dinos.find((d) => d.id === id)).filter((d): d is Dino => !!d);
+  const defenseEligible = useCallback((d: Dino) => (d.stage === 'baby' ? (lang ? 'baby' : 'pui') : null), [lang]);
 
   const reloadFriends = () => listFriends(selfId).then(setFriends, () => {});
   useEffect(() => {

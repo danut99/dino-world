@@ -26,9 +26,14 @@ const ENCOUNTER = 'arena-fire-2';
 function ready(species: Species[], level = 30): Save {
   const s = newSave(0);
   s.arenaTickets = Object.fromEntries(ELEMENTS.map((e) => [e.id, 100]));
-  s.dinos = species.map(
-    (sp, i): Dino => ({ id: `d${i}`, species: sp, element: 'water', level, stage: 'adult', nickname: `T${i}` }),
-  );
+  s.dinos = species.map((sp, i): Dino => ({
+    id: `d${i}`,
+    species: sp,
+    element: 'water',
+    level,
+    stage: 'adult',
+    nickname: `T${i}`,
+  }));
   s.team = s.dinos.map((d) => d.id);
   s.champion = 'd0';
   s.habitats = Object.fromEntries(ELEMENTS.map((e) => [e.id, 1]));

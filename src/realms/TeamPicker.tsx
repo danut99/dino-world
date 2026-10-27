@@ -64,7 +64,12 @@ export function TeamPicker({
       {roster.length === 0 ? (
         <p className="team-picker-empty">{tr('Nu ai încă dinozauri.', 'No dinosaurs yet.')}</p>
       ) : (
-        <div className="team-picker-roster ui-paged" ref={pager.ref} role="group" aria-label={label ?? tr('Echipa', 'Team')}>
+        <div
+          className="team-picker-roster ui-paged"
+          ref={pager.ref}
+          role="group"
+          aria-label={label ?? tr('Echipa', 'Team')}
+        >
           {pager.pageItems.map(({ d, reason }) => {
             const place = selected.indexOf(d.id);
             const element = ELEMENTS.find((e) => e.id === d.element)!;
@@ -79,7 +84,14 @@ export function TeamPicker({
                 onClick={() => toggle(d.id)}
               >
                 <span className="team-pick-art">
-                  <DinosaurArt species={d.species} element={d.element} stage={d.stage} paused frame={0} className={rarityClass(d.rarity)} />
+                  <DinosaurArt
+                    species={d.species}
+                    element={d.element}
+                    stage={d.stage}
+                    paused
+                    frame={0}
+                    className={rarityClass(d.rarity)}
+                  />
                 </span>
                 <span className="team-pick-level">
                   <Icon name={elementIcon(d.element)} scale={1} />

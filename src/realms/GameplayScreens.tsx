@@ -776,9 +776,15 @@ function towerRuleText(rule: TowerRule, lang: number) {
     };
   }
   return rule === 'noHeal'
-    ? { short: T(lang, 'Fără vindecări', 'No heals'), long: T(lang, 'Suporturile nu vindecă pe acest etaj.', 'Supports cannot heal on this floor.') }
+    ? {
+        short: T(lang, 'Fără vindecări', 'No heals'),
+        long: T(lang, 'Suporturile nu vindecă pe acest etaj.', 'Supports cannot heal on this floor.'),
+      }
     : rule === 'swift'
-      ? { short: T(lang, 'Agili', 'Swift'), long: T(lang, 'Adversarii se feresc mai des de lovituri.', 'Foes dodge strikes more often.') }
+      ? {
+          short: T(lang, 'Agili', 'Swift'),
+          long: T(lang, 'Adversarii se feresc mai des de lovituri.', 'Foes dodge strikes more often.'),
+        }
       : { short: T(lang, 'Uriaș', 'Giant'), long: T(lang, 'Un adversar are +50% viață.', 'One foe has +50% health.') };
 }
 function towerPrize(n: TowerRewardFloor, lang: number) {
@@ -787,7 +793,9 @@ function towerPrize(n: TowerRewardFloor, lang: number) {
     r.gems && `${r.gems}💎`,
     r.gold && `${r.gold}●`,
     r.food && `${r.food}❧`,
-    ...(Object.entries(r.materials ?? {}) as [ItemId, number][]).map(([id, k]) => `${k} ${ITEMS[id].name[lang].toLowerCase()}`),
+    ...(Object.entries(r.materials ?? {}) as [ItemId, number][]).map(
+      ([id, k]) => `${k} ${ITEMS[id].name[lang].toLowerCase()}`,
+    ),
     r.tickets && `${r.tickets} ${lang ? 'tickets' : 'bilete'}`,
     r.egg && T(lang, 'un ou rar', 'a rare egg'),
   ]
@@ -815,7 +823,10 @@ function ArenaTower({
     : !team.length
       ? tr('Alege o echipă de arenă.', 'Pick an arena team.')
       : team.some((d) => d.stage === 'baby')
-        ? tr('Puii nu pot lupta: echipa trebuie să fie juvenilă sau adultă.', 'Babies cannot fight: the team must be juvenile or adult.')
+        ? tr(
+            'Puii nu pot lupta: echipa trebuie să fie juvenilă sau adultă.',
+            'Babies cannot fight: the team must be juvenile or adult.',
+          )
         : team.some((d) => busyDinos(save).has(d.id))
           ? tr('Un membru al echipei e plecat în expediție.', 'A team member is away on an expedition.')
           : team.some((d) => isTired(save, d.id, now))
@@ -854,7 +865,8 @@ function ArenaTower({
       {!done ? (
         <div className="arena-tower-next">
           <strong>
-            {tr('Etajul', 'Floor')} {next} · {tr('Nv.', 'Lv.')} {foes[0]?.level} · {towerRuleText(towerRule(tower.week, next), lang).short}
+            {tr('Etajul', 'Floor')} {next} · {tr('Nv.', 'Lv.')} {foes[0]?.level} ·{' '}
+            {towerRuleText(towerRule(tower.week, next), lang).short}
           </strong>
           <p>{towerRuleText(towerRule(tower.week, next), lang).long}</p>
           <div className="arena-tower-foes">
@@ -874,12 +886,19 @@ function ArenaTower({
               )}
             </p>
           )}
-          <button type="button" className="realm-button" disabled={!!blocker} onClick={() => run({ type: 'towerFight' })}>
+          <button
+            type="button"
+            className="realm-button"
+            disabled={!!blocker}
+            onClick={() => run({ type: 'towerFight' })}
+          >
             {tr(`Luptă etajul ${next}`, `Fight floor ${next}`)}
           </button>
         </div>
       ) : (
-        <p className="arena-tower-next">{tr('Ai cucerit tot turnul! Revino luni.', 'You conquered the whole tower! Come back on Monday.')}</p>
+        <p className="arena-tower-next">
+          {tr('Ai cucerit tot turnul! Revino luni.', 'You conquered the whole tower! Come back on Monday.')}
+        </p>
       )}
       <div className="arena-tower-chests">
         {TOWER_CHESTS.map((n) => {
@@ -1803,7 +1822,8 @@ export function BattleScreen({
               <p className="result-recap">
                 {battle.bestHit && (
                   <span>
-                    {tr('Cea mai mare lovitură', 'Biggest hit')}: {battle.bestHit.amount} ({name(battle.bestHit.dinoId)})
+                    {tr('Cea mai mare lovitură', 'Biggest hit')}: {battle.bestHit.amount} ({name(battle.bestHit.dinoId)}
+                    )
                   </span>
                 )}
                 {mvp && (
@@ -1825,22 +1845,28 @@ export function BattleScreen({
                 )
               : tower
                 ? battle.result === 'victory'
-                  ? tr(`Etajul ${tower.floor} cucerit! Fără odihnă: urcă mai departe.`, `Floor ${tower.floor} conquered! No rest: climb on.`)
-                  : tr('În turn echipa nu obosește: încearcă din nou.', 'The team does not tire in the tower: try again.')
-              : battle.result === 'victory'
-                ? tr(
-                    `Odihnă: ${restMinutes} min${battle.team.some((a) => a.hp === 0) ? `, căzuții ${ARENA_REST.fallen} min` : ''}.`,
-                    `Rest: ${restMinutes} min${battle.team.some((a) => a.hp === 0) ? `, the fallen ${ARENA_REST.fallen} min` : ''}.`,
-                  )
-                : battle.result === 'draw'
                   ? tr(
-                      `Biletul ți-a fost returnat. Echipa se odihnește ${restMinutes} min.`,
-                      `Your ticket was returned. The team rests ${restMinutes} min.`,
+                      `Etajul ${tower.floor} cucerit! Fără odihnă: urcă mai departe.`,
+                      `Floor ${tower.floor} conquered! No rest: climb on.`,
                     )
                   : tr(
-                      `Echipa se întoarce în siguranță și se odihnește ${restMinutes} min. Încearcă un element mai potrivit sau niveluri mai mari.`,
-                      `The team returns safely and rests ${restMinutes} min. Try a better-suited element or higher levels.`,
-                    )}
+                      'În turn echipa nu obosește: încearcă din nou.',
+                      'The team does not tire in the tower: try again.',
+                    )
+                : battle.result === 'victory'
+                  ? tr(
+                      `Odihnă: ${restMinutes} min${battle.team.some((a) => a.hp === 0) ? `, căzuții ${ARENA_REST.fallen} min` : ''}.`,
+                      `Rest: ${restMinutes} min${battle.team.some((a) => a.hp === 0) ? `, the fallen ${ARENA_REST.fallen} min` : ''}.`,
+                    )
+                  : battle.result === 'draw'
+                    ? tr(
+                        `Biletul ți-a fost returnat. Echipa se odihnește ${restMinutes} min.`,
+                        `Your ticket was returned. The team rests ${restMinutes} min.`,
+                      )
+                    : tr(
+                        `Echipa se întoarce în siguranță și se odihnește ${restMinutes} min. Încearcă un element mai potrivit sau niveluri mai mari.`,
+                        `The team returns safely and rests ${restMinutes} min. Try a better-suited element or higher levels.`,
+                      )}
           </p>
           {save.rewardPending && (
             <>

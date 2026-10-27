@@ -435,7 +435,9 @@ export function runBot(options: BotOptions): BotResult {
         return (Object.entries(recipe.cost) as [ItemId, number][]).every(
           ([item, n]) =>
             s.inventory[item] - n >=
-            (['wood', 'stone', 'fiber', 'crystal'].includes(item) && id !== 'evolution' && id !== 'provisions' ? (reserve[item] ?? 0) : 0) +
+            (['wood', 'stone', 'fiber', 'crystal'].includes(item) && id !== 'evolution' && id !== 'provisions'
+              ? (reserve[item] ?? 0)
+              : 0) +
               kept(item),
         );
       });

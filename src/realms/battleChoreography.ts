@@ -43,7 +43,10 @@ export function fighter(manifest: SpriteManifest | null | undefined): Fighter {
       const c = se[clip];
       if (!c) return Math.round(FALLBACK_MS * 0.55);
       const frame = c.impactFrame ?? Math.floor(c.durationsMs.length * 0.55);
-      return Math.min(c.durationsMs.slice(0, frame).reduce((a, b) => a + b, 0), MAX_MS);
+      return Math.min(
+        c.durationsMs.slice(0, frame).reduce((a, b) => a + b, 0),
+        MAX_MS,
+      );
     },
   };
 }
@@ -68,13 +71,26 @@ export function entrance(ally: Fighter, enemy: Fighter, alive: { ally: boolean; 
  * The relay: the next fighter of `side` (or of both sides) walks in while the other holds its ground. Played after
  * a round whose report has a `swap`, once the newcomer's sprite is loaded.
  */
-export function swapEntrance(side: Unit | 'both', ally: Fighter, enemy: Fighter, alive: { ally: boolean; enemy: boolean }): Step[] {
+export function swapEntrance(
+  side: Unit | 'both',
+  ally: Fighter,
+  enemy: Fighter,
+  alive: { ally: boolean; enemy: boolean },
+): Step[] {
   const walks = (unit: Unit) => side === 'both' || side === unit;
   const ms = Math.max(
     walks('ally') ? (ally.clips.has('walk') ? ally.ms('walk') : 900) : 0,
     walks('enemy') ? (enemy.clips.has('walk') ? enemy.ms('walk') : 900) : 0,
   );
-  return [{ ally: walks('ally') ? 'walk' : 'idle', enemy: walks('enemy') ? 'walk' : 'idle', ms: Math.min(ms, 1600), enter: side }, rest(alive)];
+  return [
+    {
+      ally: walks('ally') ? 'walk' : 'idle',
+      enemy: walks('enemy') ? 'walk' : 'idle',
+      ms: Math.min(ms, 1600),
+      enter: side,
+    },
+    rest(alive),
+  ];
 }
 
 /**
@@ -83,7 +99,12 @@ export function swapEntrance(side: Unit | 'both', ally: Fighter, enemy: Fighter,
  * ally takes, blocks (turning part of it back) or dodges. HP is revealed on the beat where each blow connects.
  * Role abilities are called out on the beat they change; a support's heal closes the round.
  */
-export function exchange(r: RoundReport, ally: Fighter, enemy: Fighter, alive: { ally: boolean; enemy: boolean }): Step[] {
+export function exchange(
+  r: RoundReport,
+  ally: Fighter,
+  enemy: Fighter,
+  alive: { ally: boolean; enemy: boolean },
+): Step[] {
   const steps: Step[] = [];
   const fired = (on: Unit, ...kinds: AbilityKind[]): Callout[] =>
     (r.abilities ?? []).filter((a) => a.on === on && kinds.includes(a.kind)).map((a) => ({ ...a }));
@@ -137,7 +158,10 @@ export function exchange(r: RoundReport, ally: Fighter, enemy: Fighter, alive: {
       ally: 'defend',
       enemy: 'defend',
       ms: Math.max(ally.ms('defend'), enemy.ms('defend'), MIN_BEAT_MS),
-      say: [{ on: 'ally', kind: 'guard' }, { on: 'enemy', kind: 'guard' }],
+      say: [
+        { on: 'ally', kind: 'guard' },
+        { on: 'enemy', kind: 'guard' },
+      ],
     });
   }
   if (r.foe === 'attack' || r.foe === 'ultimate') {
@@ -158,7 +182,11 @@ export function exchange(r: RoundReport, ally: Fighter, enemy: Fighter, alive: {
     steps.push({
       ally: landing,
       enemy: blow,
-      ms: Math.max(enemy.ms(blow) - windup, !alive.ally ? ally.ms('death') : guard || r.dodged ? MIN_BEAT_MS : ally.ms('hurt'), MIN_BEAT_MS),
+      ms: Math.max(
+        enemy.ms(blow) - windup,
+        !alive.ally ? ally.ms('death') : guard || r.dodged ? MIN_BEAT_MS : ally.ms('hurt'),
+        MIN_BEAT_MS,
+      ),
       reveal: 'ally',
       revealHp: before(r.hpAfter, 'ally'),
       impact: r.dodged ? undefined : { on: 'ally', kind: guard ? 'guard' : foeUlt ? 'ultimate' : 'hit' },
@@ -181,7 +209,10 @@ export function exchange(r: RoundReport, ally: Fighter, enemy: Fighter, alive: {
         reveal: 'enemy',
         revealHp: before(r.enemyAfter, 'enemy'),
         impact: { on: 'enemy', kind: 'reflect' },
-        say: [{ on: 'enemy', kind: 'reflect', amount: r.reflected }, ...(!alive.enemy ? [{ on: 'enemy', kind: 'ko' } as Callout] : [])],
+        say: [
+          { on: 'enemy', kind: 'reflect', amount: r.reflected },
+          ...(!alive.enemy ? [{ on: 'enemy', kind: 'ko' } as Callout] : []),
+        ],
       });
     }
   }

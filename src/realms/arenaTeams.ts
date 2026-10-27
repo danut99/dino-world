@@ -86,7 +86,9 @@ export function arenaFoes(encounterId: string): Foe[] {
     };
   };
   const stage: Stage = spec.adult || level >= 25 ? 'adult' : 'juvenile';
-  const foes = Array.from({ length: spec.count }, (_, i) => make(foeSpecies(league, tier, i), stage, 'common', spec.hp, spec.power));
+  const foes = Array.from({ length: spec.count }, (_, i) =>
+    make(foeSpecies(league, tier, i), stage, 'common', spec.hp, spec.power),
+  );
   if (tier === 3 && ARENA_BOSSES[league])
     foes.push(make('boss', 'adult', 'legendary', BOSS_STATS.hp, BOSS_STATS.power, true));
   return foes;

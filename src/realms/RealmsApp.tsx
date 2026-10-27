@@ -880,7 +880,10 @@ export default function RealmsApp({
               'You did every Legend trial this week. Come back on Monday.',
             ),
             towerDone: tr('Ai urcat tot turnul săptămâna asta.', 'You climbed the whole tower this week.'),
-            towerFloor: tr('Urcă mai sus în turn ca să deschizi cufărul.', 'Climb higher in the tower to open this chest.'),
+            towerFloor: tr(
+              'Urcă mai sus în turn ca să deschizi cufărul.',
+              'Climb higher in the tower to open this chest.',
+            ),
             towerClaimed: tr('Cufărul turnului e deja deschis.', 'This tower chest is already open.'),
           } as Record<string, string>
         )[code] ?? tr('Acțiunea nu este disponibilă acum.', 'That action is not available yet.'),
@@ -1162,7 +1165,10 @@ export default function RealmsApp({
                 (last.result === 'draw'
                   ? tr(`${last.attackerName} te-a atacat: egalitate.`, `${last.attackerName} attacked you: a draw.`)
                   : last.result === 'victory'
-                    ? tr(`${last.attackerName} te-a atacat și a câștigat.`, `${last.attackerName} attacked you and won.`)
+                    ? tr(
+                        `${last.attackerName} te-a atacat și a câștigat.`,
+                        `${last.attackerName} attacked you and won.`,
+                      )
                     : tr(
                         `${last.attackerName} te-a atacat și a pierdut!`,
                         `${last.attackerName} attacked you and lost!`,
