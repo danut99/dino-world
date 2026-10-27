@@ -1840,8 +1840,8 @@ export function BattleScreen({
           <p className="result-rest">
             {friendly
               ? tr(
-                  `Luptă amicală cu ${friendly}: fără premii și fără odihnă, doar pentru scor.`,
-                  `Friendly fight with ${friendly}: no rewards and no rest, just for the score.`,
+                  `Duel cu ${friendly}: victoria intră în clasamentul săptămânal, iar primele victorii ale zilei aduc aur și hrană.`,
+                  `Duel with ${friendly}: the win counts on the weekly leaderboard, and the day's first wins pay gold and food.`,
                 )
               : tower
                 ? battle.result === 'victory'
@@ -1928,7 +1928,7 @@ export function BattleScreen({
     <Frame
       title={
         friendly
-          ? tr(`Luptă amicală · ${friendly}`, `Friendly fight · ${friendly}`)
+          ? tr(`Duel · ${friendly}`, `Duel · ${friendly}`)
           : tower
             ? tr(`Turnul · Etajul ${tower.floor}`, `Tower · Floor ${tower.floor}`)
             : encounter!.name[lang]

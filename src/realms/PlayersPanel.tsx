@@ -471,6 +471,16 @@ export function PlayersPanel({
                         +
                       </button>
                     )}
+                    {!self && (
+                      <button
+                        className="realm-player-add realm-player-duel"
+                        aria-label={tr(`Duel cu ${p.name}`, `Duel ${p.name}`)}
+                        title={tr('Duel', 'Duel')}
+                        onClick={() => onChallenge(p)}
+                      >
+                        ⚔
+                      </button>
+                    )}
                   </li>
                 );
               })}

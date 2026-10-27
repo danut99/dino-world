@@ -1261,6 +1261,8 @@ export type Command =
   | { type: 'pet' | 'train'; dinoId: string }
   /** Ends a finished training (+1 level) or picks up the island's lost treasure. */
   | { type: 'claimTraining' | 'treasure' }
+  /** A duel against another player ended: the first DUEL.rewards wins of the day pay gold and food. */
+  | { type: 'duelReward'; result: 'victory' | 'defeat' | 'draw' }
   /** Wakes a resting dinosaur (the champion when none is given), or with `team` every resting team member. */
   | { type: 'gemRest'; dinoId?: string; team?: boolean }
   | { type: 'gemSpin' };
@@ -1389,6 +1391,7 @@ export const levelCap = (stage: Stage) => (stage === 'baby' ? 9 : stage === 'juv
 export const PET = { perDay: 5, food: 10 };
 export const TRAINING = { minutes: 30, perDay: 3 };
 export const TREASURE = { perDay: 4, everyMs: 2 * 3_600_000 };
+export const DUEL = { rewards: 5, gold: 120, food: 60 };
 /** Whether a treasure waits on the island: up to TREASURE.perDay a day, TREASURE.everyMs apart. */
 export const treasureReady = (s: Save, now: number) => {
   const day = dailyState(s, now);
@@ -2278,6 +2281,14 @@ export function command(save: Save, c: Command, now: number): Save {
       // Fed up to the evolution gate meanwhile: the level waits for nothing, it is simply not added.
       if (d && d.level < levelCap(d.stage)) d.level++;
       s.training = null;
+      break;
+    }
+    case 'duelReward': {
+      require(['victory', 'defeat', 'draw'].includes(c.result), 'duel');
+      if (c.result !== 'victory' || s.daily.duels >= DUEL.rewards) break;
+      s.daily.duels++;
+      s.gold += DUEL.gold;
+      s.food += DUEL.food;
       break;
     }
     case 'treasure': {

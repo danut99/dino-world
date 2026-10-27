@@ -67,6 +67,14 @@ describe('things to do while waiting', () => {
   });
 });
 describe('friendlyBattle', () => {
+  it('pays the first duel wins of the day only', () => {
+    let s = juvenile();
+    const gold = s.gold;
+    for (let i = 0; i < 7; i++) s = command(s, { type: 'duelReward', result: 'victory' }, now + 60_000);
+    s = command(s, { type: 'duelReward', result: 'defeat' }, now + 60_000);
+    expect(s.daily.duels).toBe(5);
+    expect(s.gold).toBe(gold + 5 * 120);
+  });
   it("fights the friend's team to the end without touching tickets, rest or rewards", async () => {
     const { autoPlay } = await import('./autoBattle');
     const me = juvenile(),

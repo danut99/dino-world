@@ -27,6 +27,7 @@ import {
   advance,
   friendCollect,
   friendlyBattle,
+  DUEL,
   isTower,
   champion,
   command,
@@ -1076,8 +1077,34 @@ export default function RealmsApp({
     try {
       const next = command(fight.save, c, Date.now());
       const result = next.battle?.result;
-      if (result && !fight.save.battle?.result && account)
-        recordFriendBattle(account.user.id, fight.id, result).catch(() => {});
+      if (result && !fight.save.battle?.result) {
+        const before = saveRef.current.daily.duels;
+        run({ type: 'duelReward', result });
+        const paid = saveRef.current.daily.duels > before;
+        setMessage(
+          result !== 'victory'
+            ? tr('Duelul s-a terminat. Încearcă din nou!', 'The duel is over. Try again!')
+            : paid
+              ? tr(
+                  `Victorie! +${DUEL.gold} aur, +${DUEL.food} hrană (${saveRef.current.daily.duels}/${DUEL.rewards} azi).`,
+                  `Victory! +${DUEL.gold} gold, +${DUEL.food} food (${saveRef.current.daily.duels}/${DUEL.rewards} today).`,
+                )
+              : tr(
+                  'Victorie! Premiile de azi s-au terminat, dar victoria intră în clasament.',
+                  "Victory! Today's prizes are used up, but the win counts on the leaderboard.",
+                ),
+        );
+        if (account)
+          recordFriendBattle(account.user.id, fight.id, result).catch((e) => {
+            console.error('Duel result not saved', e);
+            setMessage(
+              tr(
+                'Rezultatul nu s-a putut salva în clasament. Mai încearcă peste un minut.',
+                'The result could not be saved to the leaderboard. Try again in a minute.',
+              ),
+            );
+          });
+      }
       friendRef.current = { ...fight, save: next };
       setFriendFight(friendRef.current);
       return true;
