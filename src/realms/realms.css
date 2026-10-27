@@ -2118,6 +2118,12 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
 .realm-friends-weekly .realm-rank-row.self { outline: 1px solid #e0a96a; }
 .realm-friends-weekly .realm-rank-row .realm-rank-score { color: #f6d77a; white-space: nowrap; }
 .realm-rank .realm-player-portrait { grid-area: auto; }
+/* Leaderboard rows: one button per row; the weekly wins list has no portrait column. */
+.realm-leaderboard .realm-rank-row { display: block; min-width: 0; }
+.realm-rank.no-portrait { grid-template-columns: 40px minmax(0, 1fr) auto; }
+/* Defense team and the help switch sit below the friends, as settings. */
+.realm-friends-settings { display: grid; gap: 8px; }
+.realm-friends:has(> .realm-note:only-child) { padding-bottom: 8px; }
 
 /* Visiting another player's world: a bar on top with their worlds and the way home; nothing else of the HUD. */
 .realm-visit-bar { position: absolute; z-index: 10; top: max(12px, env(safe-area-inset-top)); left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 14px; width: min(920px, calc(100% - 24px)); box-sizing: border-box; padding: 10px 14px; background: #2f2520f2; border: 2px solid #e0a96a; box-shadow: 0 6px 20px #00000066; color: #e2d3b2; }
