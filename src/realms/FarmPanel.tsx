@@ -15,8 +15,8 @@ export const duration = (seconds: number) =>
       : `${seconds}s`;
 
 /**
- * The farm: every plot on one row, the six crops on a strip under it (locked ones greyed with the level that opens
- * them), and the next level on its own tab with everything it brings.
+ * The farm: every plot on one row, the three crops under it (each says how much food and for how long you are
+ * away), and the next level on its own tab with what it brings.
  */
 export function FarmPanel({
   save,
@@ -57,11 +57,16 @@ export function FarmPanel({
   const target = picked !== null && picked < save.plots.length && !save.plots[picked] ? picked : freePlot;
   const readyFood = farmReadyFood(save, now);
   const busy = save.plots.filter((p) => p).length;
-  // Every crop the next level opens.
-  const nextCrops = next ? CROPS.filter((c) => c.level === save.farmLevel + 1) : [];
   const crop = CROPS.find((c) => c.id === cropId)!;
   const cropLocked = crop.level > save.farmLevel;
   const idBase = 'farm';
+  const when: Record<CropId, string> = {
+    ferns: tr('când joci acum', 'while you play'),
+    cicadas: tr('pentru o pauză', 'for a break'),
+    feast: tr('peste noapte', 'overnight'),
+  };
+  const fmt = (n: number) => n.toLocaleString(lang ? 'en-US' : 'ro-RO');
+  const best = CROPS[CROPS.length - 1];
 
   return (
     <div className="fit-panel realm-farm farm-panel">
@@ -75,7 +80,8 @@ export function FarmPanel({
             {busy}/{level.plots} {tr('straturi active', 'active plots')} · {tr('recoltă', 'harvest')} ×{level.yield}
           </strong>
           <small>
-            <Icon name="food" scale={1} /> {Math.floor(save.food).toLocaleString(lang ? 'en-US' : 'ro-RO')} {tr('hrană', 'food')} · <Icon name="gold" scale={1} /> {Math.floor(save.gold).toLocaleString(lang ? 'en-US' : 'ro-RO')}
+            <Icon name="food" scale={1} /> {fmt(Math.floor(save.food))} {tr('hrană', 'food')} ·{' '}
+            {tr('Hrana îți crește dinozaurii.', 'Food grows your dinosaurs.')}
           </small>
         </div>
         <div className="pk-head-actions">
@@ -95,8 +101,12 @@ export function FarmPanel({
         active={tab}
         onChange={setTab}
         tabs={[
-          { id: 'field', label: tr('Câmp', 'Field') },
-          { id: 'upgrade', label: next ? `${tr('Nivel', 'Level')} ${save.farmLevel + 1}` : tr('Nivel maxim', 'Max level') },
+          { id: 'field', label: tr('Câmp', 'Field'), state: readyFood > 0 ? 'ready' : busy ? 'busy' : undefined },
+          {
+            id: 'upgrade',
+            label: next ? `${tr('Nivel', 'Level')} ${save.farmLevel + 1}` : tr('Nivel maxim', 'Max level'),
+            state: save.construction?.target === 'farm' ? 'busy' : undefined,
+          },
         ]}
       />
       {tab === 'field' ? (
@@ -117,7 +127,12 @@ export function FarmPanel({
               const p = save.plots[i];
               if (!p)
                 return (
-                  <button key={i} className={`farm-plot empty ${i === target ? 'on' : ''}`} onClick={() => setPicked(i)} aria-pressed={i === target}>
+                  <button
+                    key={i}
+                    className={`farm-plot empty ${i === target ? 'on' : ''}`}
+                    onClick={() => setPicked(i)}
+                    aria-pressed={i === target}
+                  >
                     <span>＋</span>
                     <small>{tr('Liber', 'Empty')}</small>
                   </button>
@@ -133,7 +148,12 @@ export function FarmPanel({
                   <div className="pk-meter" style={{ '--meter': 'var(--px-moss-1)' } as React.CSSProperties}>
                     <i style={{ width: `${done * 100}%` }} />
                   </div>
-                  <button className="realm-gem-finish" disabled={save.gems < gemsToFinish(left)} onClick={() => run({ type: 'gemFinish', target: 'plot', plot: i })} title={tr('Termină acum cu diamante', 'Finish now with diamonds')}>
+                  <button
+                    className="realm-gem-finish"
+                    disabled={save.gems < gemsToFinish(left)}
+                    onClick={() => run({ type: 'gemFinish', target: 'plot', plot: i })}
+                    title={tr('Termină acum cu diamante', 'Finish now with diamonds')}
+                  >
                     ⚡ {gemsToFinish(left)} 💎
                   </button>
                 </div>
@@ -150,11 +170,30 @@ export function FarmPanel({
             {CROPS.map((c) => {
               const locked = c.level > save.farmLevel;
               return (
-                <button key={c.id} className={`farm-crop${locked ? ' locked' : ''}`} aria-pressed={cropId === c.id} onClick={() => setCropId(c.id)} title={c.name[lang]}>
+                <button
+                  key={c.id}
+                  className={`farm-crop${locked ? ' locked' : ''}`}
+                  aria-pressed={cropId === c.id}
+                  onClick={() => setCropId(c.id)}
+                  title={c.name[lang]}
+                >
                   <span className="farm-crop-icon">{c.icon}</span>
                   <span className="farm-crop-body">
                     <strong>{c.name[lang]}</strong>
-                    <small className="pk-num">{locked ? `🔒 ${tr('Nivel', 'Level')} ${c.level}` : `${duration(c.seconds)} · +${farmYield(save.farmLevel, c.id)}`}</small>
+                    {locked ? (
+                      <small className="pk-num">
+                        🔒 {tr('Nivel', 'Level')} {c.level}
+                      </small>
+                    ) : (
+                      <>
+                        <small className="pk-num farm-crop-food">
+                          +{fmt(farmYield(save.farmLevel, c.id))} {tr('hrană', 'food')}
+                        </small>
+                        <small className="pk-num">
+                          ⏱ {duration(c.seconds)} · {when[c.id]}
+                        </small>
+                      </>
+                    )}
                   </span>
                 </button>
               );
@@ -165,7 +204,15 @@ export function FarmPanel({
               <b>
                 {crop.icon} {crop.name[lang]}
               </b>{' '}
-              · ❧ <b className="pk-num">+{farmYield(save.farmLevel, crop.id)}</b> · ⏱ <b className="pk-num">{duration(crop.seconds)}</b> · {crop.cost ? <><Icon name="gold" scale={1} /> <b className="pk-num">{crop.cost}</b></> : tr('gratuit', 'free')}
+              · ❧ <b className="pk-num">+{farmYield(save.farmLevel, crop.id)}</b> · ⏱{' '}
+              <b className="pk-num">{duration(crop.seconds)}</b> ·{' '}
+              {crop.cost ? (
+                <>
+                  <Icon name="gold" scale={1} /> <b className="pk-num">{crop.cost}</b>
+                </>
+              ) : (
+                tr('gratuit', 'free')
+              )}
             </span>
             {cropLocked ? (
               <button className="realm-link" onClick={() => setTab('upgrade')}>
@@ -181,7 +228,9 @@ export function FarmPanel({
                 if (run({ type: 'plant', crop: crop.id, plot: target })) setPicked(null);
               }}
             >
-              {target >= 0 ? `${tr('Plantează pe stratul', 'Plant on plot')} ${target + 1}` : tr('Straturi ocupate', 'Plots occupied')}
+              {target >= 0
+                ? `${tr('Plantează pe stratul', 'Plant on plot')} ${target + 1}`
+                : tr('Straturi ocupate', 'Plots occupied')}
             </button>
           </div>
         </TabPanel>
@@ -192,7 +241,10 @@ export function FarmPanel({
               <div className="farm-levels">
                 <div className="pk-box">
                   <h3 className="pk-title">
-                    {tr('Acum', 'Now')} <small>{tr('Nivel', 'Level')} {save.farmLevel}</small>
+                    {tr('Acum', 'Now')}{' '}
+                    <small>
+                      {tr('Nivel', 'Level')} {save.farmLevel}
+                    </small>
                   </h3>
                   <ul>
                     <li>
@@ -208,7 +260,10 @@ export function FarmPanel({
                 </span>
                 <div className="pk-box farm-next">
                   <h3 className="pk-title">
-                    {tr('Nivelul următor', 'Next level')} <small>{tr('Nivel', 'Level')} {save.farmLevel + 1}</small>
+                    {tr('Nivelul următor', 'Next level')}{' '}
+                    <small>
+                      {tr('Nivel', 'Level')} {save.farmLevel + 1}
+                    </small>
                   </h3>
                   <ul>
                     <li>
@@ -217,11 +272,10 @@ export function FarmPanel({
                     <li>
                       ❧ <b className="pk-num">×{next.yield}</b> {tr('hrană per recoltă', 'food per harvest')}
                     </li>
-                    {nextCrops.map((c) => (
-                      <li key={c.id}>
-                        {c.icon} {tr('Cultură nouă', 'New crop')}: <b>{c.name[lang]}</b> · +{farmYield(save.farmLevel + 1, c.id)} / {duration(c.seconds)}
-                      </li>
-                    ))}
+                    <li>
+                      {best.icon} {best.name[lang]}: +{fmt(farmYield(save.farmLevel, best.id))} →{' '}
+                      <b className="pk-num">+{fmt(farmYield(save.farmLevel + 1, best.id))}</b> {tr('hrană', 'food')}
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -241,7 +295,12 @@ export function FarmPanel({
           ) : (
             <div className="pk-empty">
               <Icon name="star" scale={3} />
-              <p className="pk-note">{tr('Ferma e la nivelul maxim. Toate culturile sunt deschise.', 'The farm is at max level. Every crop is open.')}</p>
+              <p className="pk-note">
+                {tr(
+                  `Ferma e la nivelul maxim: ${level.plots} straturi și recoltă ×${level.yield}.`,
+                  `The farm is at max level: ${level.plots} plots and harvests ×${level.yield}.`,
+                )}
+              </p>
             </div>
           )}
         </TabPanel>

@@ -22,6 +22,7 @@ import {
   isTired,
   rarityOf,
   REALM_NAMES,
+  MASTERED_SHARE,
   rewardPreview,
   seasonStep,
   SPECIES_NAMES,
@@ -45,6 +46,7 @@ import {
   rest,
   runMs,
   swapEntrance,
+  type BattleAction,
   type Fighter,
   type Step,
   type Unit,
@@ -53,7 +55,7 @@ import { useReducedMotion } from './useMotion';
 import { playSound } from './sound';
 import { worldThumb } from './worldArt';
 import { ArenaOpponent } from './ArenaOpponent';
-import { movesMemory, nextMove, predictFight } from './autoBattle';
+import { availableMoves, movesMemory, nextMove, predictFight } from './autoBattle';
 import { calloutText } from './battleCallouts';
 import { UpgradeCard } from './UpgradeCard';
 import { TeamPicker } from './TeamPicker';
@@ -147,8 +149,12 @@ function Frame({
       }}
     >
       {(view === 'workshop' || view === 'battle') && (
-        <button type="button" onClick={close} className="gameplay-close gameplay-floating-close"
-          aria-label={T(lang, 'Înapoi pe insulă', 'Back to island')}>
+        <button
+          type="button"
+          onClick={close}
+          className="gameplay-close gameplay-floating-close"
+          aria-label={T(lang, 'Înapoi pe insulă', 'Back to island')}
+        >
           <Icon name="close" />
         </button>
       )}
@@ -159,7 +165,19 @@ function Frame({
 export function GameplayScreen(props: Props & { view: GameplayView }) {
   const { view, save, now, lang, run, close, navigate, build } = props;
   const tr = (ro: string, en: string) => T(lang, ro, en);
-  const [selected, setSelected] = useState('training'),
+  const startDestination = () => {
+    let id = currentTrip(save)?.regionId ?? frontierRegion(save).id;
+    try {
+      const remembered = localStorage.getItem('dino-expedition-destination');
+      // A region already crossed is not reopened: it would land on its patrols instead of the next stage to advance.
+      if (regionById(remembered ?? '') && regionProgress(save, remembered!) < REGION_STAGES) id = remembered!;
+    } catch {
+      /* Optional navigation memory. */
+    }
+    return id;
+  };
+  // Chosen before the first render, so the guide never opens on a placeholder region and switches tabs for it.
+  const [selected, setSelected] = useState(startDestination),
     [recipeId, setRecipe] = useState('provisions');
   const detailRef = useRef<HTMLElement>(null);
   const selectDestination = (id: string) => {
@@ -176,6 +194,7 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
     if (view === 'workshop') setRecipe(props.initialRecipe ?? 'provisions');
   }, [view, props.initialRecipe]);
   const mapRef = useRef<HTMLDivElement>(null),
+    listRef = useRef<HTMLElement>(null),
     mapDrag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
   const [mapZoom, setMapZoom] = useState(1),
     [mapPan, setMapPan] = useState({ x: 0, y: 0 }),
@@ -195,14 +214,7 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
   }, [view]);
   useEffect(() => {
     if (view !== 'expedition') return;
-    let id = currentTrip(save)?.regionId ?? frontierRegion(save).id;
-    try {
-      const remembered = localStorage.getItem('dino-expedition-destination');
-      if (regionById(remembered ?? '')) id = remembered!;
-    } catch {
-      /* Optional navigation memory. */
-    }
-    setSelected(id);
+    setSelected(startDestination());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
   const region = regionById(selected) ?? REGIONS[0];
@@ -318,9 +330,59 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
               <span>{tr('Mărește și trage pentru explorare', 'Zoom and drag to explore')}</span>
             </div>
           </div>
+          <section ref={listRef} className="destination-list" aria-label={tr('Toate destinațiile', 'All destinations')}>
+            <h3>
+              {tr('Toate destinațiile', 'All destinations')}{' '}
+              <small>
+                {REGIONS.filter((r) => regionProgress(save, r.id) >= REGION_STAGES).length}/{REGIONS.length}{' '}
+                {tr('traversate', 'crossed')}
+              </small>
+            </h3>
+            <ol>
+              {REGIONS.map((r) => {
+                const progress = regionProgress(save, r.id),
+                  element = ELEMENTS.find((el) => el.id === r.element)!,
+                  locked = regionLocked(save, r.id),
+                  away = save.expeditions.some((x) => x.regionId === r.id);
+                return (
+                  <li key={r.id}>
+                    <button
+                      type="button"
+                      className={`${r.id === selected ? 'selected' : ''}${locked ? ' locked' : ''}${progress >= REGION_STAGES ? ' cleared' : ''}`}
+                      style={{ '--region-color': element.color } as CSSProperties}
+                      aria-pressed={r.id === selected}
+                      onClick={() => selectDestination(r.id)}
+                    >
+                      <span className="destination-list-icon">
+                        {locked ? (
+                          '🔒'
+                        ) : progress >= REGION_STAGES ? (
+                          '✓'
+                        ) : (
+                          <Icon name={elementIcon(r.element)} scale={2} />
+                        )}
+                      </span>
+                      <span className="destination-list-name">
+                        <strong>{r.name[lang]}</strong>
+                        <small>{element.name[lang]}</small>
+                      </span>
+                      <span className="destination-list-progress">
+                        {away && '⏳ '}
+                        {progress}/{REGION_STAGES}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
           <aside ref={detailRef} className="adventure-detail expedition-detail">
-            <button type="button" onClick={close} className="gameplay-close expedition-panel-close"
-              aria-label={tr('Înapoi pe insulă', 'Back to island')}>
+            <button
+              type="button"
+              onClick={close}
+              className="gameplay-close expedition-panel-close"
+              aria-label={tr('Înapoi pe insulă', 'Back to island')}
+            >
               <Icon name="close" />
             </button>
             <div className="destination-cover" style={{ backgroundImage: `url('${worldThumb(region.element)}')` }}>
@@ -345,7 +407,10 @@ export function GameplayScreen(props: Props & { view: GameplayView }) {
               />
               <button
                 className="realm-button secondary mobile-destination-picker"
-                onClick={() => mapRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })}
+                onClick={() => {
+                  const list = listRef.current;
+                  (list?.offsetParent ? list : mapRef.current)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+                }}
               >
                 ↓ {tr('Toate destinațiile', 'All destinations')}
               </button>
@@ -474,7 +539,14 @@ function ArenaView({ save, now, lang, run, close, navigate, build }: ArenaProps)
   if (save.battle)
     return (
       <div className="adventure-layout battle-focus">
-        <button type="button" className="gameplay-close arena-battle-close" onClick={close} aria-label={tr('Înapoi pe insulă', 'Back to island')}><Icon name="close" /></button>
+        <button
+          type="button"
+          className="gameplay-close arena-battle-close"
+          onClick={close}
+          aria-label={tr('Înapoi pe insulă', 'Back to island')}
+        >
+          <Icon name="close" />
+        </button>
         <div className="arena-lobby-scene">
           <BattleScreen save={save} lang={lang} run={run} close={close} embedded />
         </div>
@@ -490,6 +562,18 @@ function ArenaView({ save, now, lang, run, close, navigate, build }: ArenaProps)
   return (
     <div className="arena-view">
       {shop && <ArenaTicketShop save={save} lang={lang} run={run} back={() => setShop(false)} focus={league} />}
+      <header className="arena-phone-head">
+        <h2>{tr('Arena PvE', 'PvE Arena')}</h2>
+        <button
+          type="button"
+          className="gameplay-close"
+          onClick={close}
+          aria-label={tr('Înapoi pe insulă', 'Back to island')}
+          title={tr('Înapoi pe insulă', 'Back to island')}
+        >
+          <Icon name="close" />
+        </button>
+      </header>
       <div className="arena-stage-pane">
         <div className="arena-league-chips" role="group" aria-label={tr('Ligi', 'Leagues')}>
           {ELEMENTS.map((e) => {
@@ -587,23 +671,31 @@ function ArenaView({ save, now, lang, run, close, navigate, build }: ArenaProps)
       </div>
       <aside className="arena-side">
         <div className="arena-side-toolbar">
-        <Tabs
-          idBase={idBase}
-          label={tr('Secțiuni arenă', 'Arena sections')}
-          className="arena-tabs"
-          active={tab}
-          onChange={setTab}
-          tabs={[
-            { id: 'fight', label: tr('Luptă', 'Fight') },
-            {
-              id: 'team',
-              label: tr('Echipă', 'Team'),
-              badge: save.team.filter((id) => isTired(save, id, now)).length ? '💤' : undefined,
-            },
-            { id: 'gate', label: tr('Poartă', 'Gate') },
-          ]}
-        />
-        <button type="button" className="gameplay-close" onClick={close} aria-label={tr('Înapoi pe insulă', 'Back to island')} title={tr('Înapoi pe insulă', 'Back to island')}><Icon name="close" /></button>
+          <Tabs
+            idBase={idBase}
+            label={tr('Secțiuni arenă', 'Arena sections')}
+            className="arena-tabs"
+            active={tab}
+            onChange={setTab}
+            tabs={[
+              { id: 'fight', label: tr('Luptă', 'Fight') },
+              {
+                id: 'team',
+                label: tr('Echipă', 'Team'),
+                badge: save.team.filter((id) => isTired(save, id, now)).length ? '💤' : undefined,
+              },
+              { id: 'gate', label: tr('Poartă', 'Gate') },
+            ]}
+          />
+          <button
+            type="button"
+            className="gameplay-close"
+            onClick={close}
+            aria-label={tr('Înapoi pe insulă', 'Back to island')}
+            title={tr('Înapoi pe insulă', 'Back to island')}
+          >
+            <Icon name="close" />
+          </button>
         </div>
         {tab === 'fight' && (
           <TabPanel idBase={idBase} id="fight" className="arena-tab">
@@ -774,6 +866,7 @@ function ArenaFight({
         {tr('RECOMPENSE', 'REWARDS')}
         <small>
           {reward.repeat ? tr('REJUCARE', 'REPLAY') : tr('PRIMA VICTORIE', 'FIRST WIN')}
+          {reward.mastered && ` · ${tr('3★: aur și hrană', '3★: gold and food')} ×${MASTERED_SHARE}`}
           {team.length > 1 && ` · ${tr('echipă', 'team')} ×${teamReward(team.length)}`}
         </small>
       </div>
@@ -862,7 +955,7 @@ function ArenaFight({
           🎟 {tr('Bilete', 'Tickets')} {element.name[lang].toLowerCase()}: <b>{tickets}</b>
           {!tickets && ` · ${tr('trebuie 1', 'need 1')}`}
         </span>
-        <button type="button" className="realm-button secondary" onClick={openShop}>
+        <button type="button" className={`realm-button${tickets ? ' secondary' : ''}`} onClick={openShop}>
           {tr('Cumpără', 'Buy')} · {arenaTicketPrice(league)}●
         </button>
       </div>
@@ -1051,9 +1144,10 @@ export function BattleScreen({
   run,
   close,
   embedded = false,
-}: Pick<Props, 'save' | 'lang' | 'run' | 'close'> & { embedded?: boolean }) {
+  friendly,
+}: Pick<Props, 'save' | 'lang' | 'run' | 'close'> & { embedded?: boolean; friendly?: string }) {
   const battle = save.battle!,
-    encounter = ENCOUNTERS.find((e) => e.id === battle.encounterId)!;
+    encounter = ENCOUNTERS.find((e) => e.id === battle.encounterId);
   const tr = (ro: string, en: string) => T(lang, ro, en);
   // The pair on stage. It follows the fight's active pair, but only once a fallen fighter's round has been told.
   const [view, setView] = useState({ ally: battle.active, foe: battle.foeIndex });
@@ -1090,6 +1184,23 @@ export function BattleScreen({
         /* Optional preference. */
       }
       return next;
+    });
+  // Auto plays every round with the planner; off, the fight waits for the player's move each round.
+  const [auto, setAuto] = useState(() => {
+    try {
+      return localStorage.getItem('dino-realms-battle-auto') !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const toggleAuto = () =>
+    setAuto((v) => {
+      try {
+        localStorage.setItem('dino-realms-battle-auto', v ? '0' : '1');
+      } catch {
+        /* Optional preference. */
+      }
+      return !v;
     });
   useEffect(() => {
     let active = true;
@@ -1217,7 +1328,7 @@ export function BattleScreen({
   const ultimate = step?.ally === 'ultimate' || step?.enemy === 'ultimate';
   // The fight plays itself: after each beat settles, the planner picks the next move for the fighter on stage.
   useEffect(() => {
-    if (!told || battle.result) return;
+    if (!auto || !told || battle.result) return;
     const timer = setTimeout(
       () => {
         const next = nextMove(save, memory.current);
@@ -1227,7 +1338,30 @@ export function BattleScreen({
     );
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [told, battle.result, battle.round]);
+  }, [auto, told, battle.result, battle.round]);
+  const fighterOnStage = save.dinos.find((x) => x.id === battle.dinoId)!;
+  const moves = availableMoves(battle, fighterOnStage);
+  const manualReady = !auto && told && !battle.result;
+  const play = (move: BattleAction) => {
+    if (!manualReady || !moves[move]) return;
+    // The planner remembers the player's moves too, so Auto or Skip pick up the repertoire from here.
+    memory.current(battle.dinoId).add(move);
+    run({ type: 'action', action: move });
+  };
+  useEffect(() => {
+    if (!manualReady) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || (e.target as HTMLElement | null)?.closest('input, textarea, select'))
+        return;
+      const move = ({ '1': 'basic', '2': 'defend', '3': 'ultimate' } as Record<string, BattleAction>)[e.key];
+      if (!move) return;
+      e.preventDefault();
+      play(move);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manualReady, battle.round, moves.ultimate]);
   /**
    * Skip: the planner plays every remaining round at once, through the same commands, and the screen jumps to
    * the closing pose and the result.
@@ -1268,7 +1402,7 @@ export function BattleScreen({
               'active' | 'waiting' | 'fallen',
         );
   const cap = roundCap(battle.foes.length);
-  const tier = arenaTier(encounter.id);
+  const tier = arenaTier(battle.encounterId);
   const restMinutes = battle.result === 'victory' ? ARENA_REST.win[tier - 1] : ARENA_REST.defeat;
   const nextSeason = ARENA_SEASON[seasonStep(save.arena.weekWins)];
   const seasonReached = battle.result === 'victory' && !!nextSeason && save.arena.weekWins + 1 >= nextSeason.wins;
@@ -1280,6 +1414,15 @@ export function BattleScreen({
       >
         {!battle.result && (
           <div className="battle-controls">
+            <button
+              type="button"
+              className={auto ? 'active' : ''}
+              aria-pressed={auto}
+              onClick={toggleAuto}
+              title={tr('Luptă automată', 'Automatic fight')}
+            >
+              Auto
+            </button>
             <button
               type="button"
               className={speed === 2 ? 'active' : ''}
@@ -1297,6 +1440,49 @@ export function BattleScreen({
             >
               {tr('Sari peste', 'Skip')} ⏭
             </button>
+          </div>
+        )}
+        {!battle.result && !auto && (
+          <div className="battle-moves" role="group" aria-label={tr('Mutări', 'Moves')}>
+            {(
+              [
+                [
+                  'basic',
+                  '1',
+                  tr('Atac', 'Attack'),
+                  tr('Lovitură simplă; umple bara de energie.', 'A plain strike; fills the energy bar.'),
+                ],
+                [
+                  'defend',
+                  '2',
+                  tr('Apărare', 'Defend'),
+                  tr(
+                    'Primești mai puțin și întorci o parte din lovitură.',
+                    'Take less damage and turn part of the blow back.',
+                  ),
+                ],
+                [
+                  'ultimate',
+                  '3',
+                  tr('Ultimate', 'Ultimate'),
+                  fighterOnStage.stage !== 'adult'
+                    ? tr('Doar dinozaurii adulți au ultimate.', 'Only adult dinosaurs have an ultimate.')
+                    : tr('Lovitură puternică; cere bara de energie plină.', 'A heavy strike; needs a full energy bar.'),
+                ],
+              ] as [BattleAction, string, string, string][]
+            ).map(([move, key, label, hint]) => (
+              <button
+                key={move}
+                type="button"
+                className={`battle-move move-${move}`}
+                onClick={() => play(move)}
+                disabled={!manualReady || !moves[move]}
+                title={`${hint} (${key})`}
+                aria-keyshortcuts={key}
+              >
+                <kbd aria-hidden="true">{key}</kbd> {label}
+              </button>
+            ))}
           </div>
         )}
         <div className="battle-stage" ref={stageRef}>
@@ -1400,20 +1586,25 @@ export function BattleScreen({
             })}
           </div>
           <p className="result-rest">
-            {battle.result === 'victory'
+            {friendly
               ? tr(
-                  `Odihnă: ${restMinutes} min${battle.team.some((a) => a.hp === 0) ? `, căzuții ${ARENA_REST.fallen} min` : ''}.`,
-                  `Rest: ${restMinutes} min${battle.team.some((a) => a.hp === 0) ? `, the fallen ${ARENA_REST.fallen} min` : ''}.`,
+                  `Luptă amicală cu ${friendly}: fără premii și fără odihnă, doar pentru scor.`,
+                  `Friendly fight with ${friendly}: no rewards and no rest, just for the score.`,
                 )
-              : battle.result === 'draw'
+              : battle.result === 'victory'
                 ? tr(
-                    `Biletul ți-a fost returnat. Echipa se odihnește ${restMinutes} min.`,
-                    `Your ticket was returned. The team rests ${restMinutes} min.`,
+                    `Odihnă: ${restMinutes} min${battle.team.some((a) => a.hp === 0) ? `, căzuții ${ARENA_REST.fallen} min` : ''}.`,
+                    `Rest: ${restMinutes} min${battle.team.some((a) => a.hp === 0) ? `, the fallen ${ARENA_REST.fallen} min` : ''}.`,
                   )
-                : tr(
-                    `Echipa se întoarce în siguranță și se odihnește ${restMinutes} min. Încearcă un element mai potrivit sau niveluri mai mari.`,
-                    `The team returns safely and rests ${restMinutes} min. Try a better-suited element or higher levels.`,
-                  )}
+                : battle.result === 'draw'
+                  ? tr(
+                      `Biletul ți-a fost returnat. Echipa se odihnește ${restMinutes} min.`,
+                      `Your ticket was returned. The team rests ${restMinutes} min.`,
+                    )
+                  : tr(
+                      `Echipa se întoarce în siguranță și se odihnește ${restMinutes} min. Încearcă un element mai potrivit sau niveluri mai mari.`,
+                      `The team returns safely and rests ${restMinutes} min. Try a better-suited element or higher levels.`,
+                    )}
           </p>
           {save.rewardPending && (
             <>
@@ -1456,10 +1647,12 @@ export function BattleScreen({
               </p>
             </>
           )}
-          <button className="realm-button" onClick={() => run({ type: 'claim' })}>
-            {save.rewardPending
-              ? tr('Colectează recompensa', 'Claim reward')
-              : tr('Înapoi în arenă', 'Back to the arena')}
+          <button className="realm-button" onClick={() => (friendly ? close() : run({ type: 'claim' }))}>
+            {friendly
+              ? tr('Înapoi', 'Back')
+              : save.rewardPending
+                ? tr('Colectează recompensa', 'Claim reward')
+                : tr('Înapoi în arenă', 'Back to the arena')}
           </button>
         </div>
       ) : null}
@@ -1468,7 +1661,12 @@ export function BattleScreen({
   return embedded ? (
     <div className="arena-embedded-battle">{content}</div>
   ) : (
-    <Frame title={encounter.name[lang]} view="battle" close={close} lang={lang}>
+    <Frame
+      title={friendly ? tr(`Luptă amicală · ${friendly}`, `Friendly fight · ${friendly}`) : encounter!.name[lang]}
+      view="battle"
+      close={close}
+      lang={lang}
+    >
       {content}
     </Frame>
   );

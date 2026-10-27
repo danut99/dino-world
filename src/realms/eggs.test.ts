@@ -21,7 +21,10 @@ const now = 1_800_000_000_000;
 const run = (s: Save, ...cs: Command[]) => cs.reduce((x, c) => command(x, c, now), s);
 const roundTrip = (s: Save) => expect(parseSave(JSON.stringify(s))).toEqual(s);
 /** Finishes the upgrade being built at once, with diamonds. */
-const finishBuild: Command[] = [{ type: 'addGems', amount: 100 }, { type: 'gemFinish', target: 'construction' }];
+const finishBuild: Command[] = [
+  { type: 'addGems', amount: 100 },
+  { type: 'gemFinish', target: 'construction' },
+];
 /** A save with Ignis hatched, a market and plenty of resources. */
 function rich(): Save {
   let s = run(newSave(now), { type: 'incubate' }, { type: 'devSkip' }, { type: 'hatch' }, { type: 'devResources' });
@@ -69,10 +72,15 @@ describe('eggs, hatchery, market and habitats', () => {
     expect(s.gold).toBe(gold - 300);
     expect(s.eggs.at(-1)!.seconds).toBe(EGG_SECONDS.market);
     s.habitats.dark = 1;
-    expect(() => run(s, { type: 'buyEgg', species: 'raptor', element: 'dark' })).toThrow('fightEgg');
+    expect(run(s, { type: 'buyEgg', species: 'dilophosaurus', element: 'dark' }).gold).toBe(gold - 300 - 5200);
+    expect(() => run(s, { type: 'buyEgg', species: 'boss', element: 'dark' })).toThrow('fightEgg');
     s.habitats.water = 1;
     s.habitats.earth = 1;
-    s = run(s, { type: 'buyEgg', species: 'raptor', element: 'water' }, { type: 'buyEgg', species: 'terrasaur', element: 'earth' });
+    s = run(
+      s,
+      { type: 'buyEgg', species: 'raptor', element: 'water' },
+      { type: 'buyEgg', species: 'terrasaur', element: 'earth' },
+    );
     expect(s.gold).toBe(gold - 300 - 600 - 1000);
     expect(s.eggs.map((e) => e.element)).toEqual(['fire', 'water', 'earth']);
     roundTrip(s);
@@ -99,7 +107,14 @@ describe('eggs, hatchery, market and habitats', () => {
   it('keeps a ready egg waiting while the habitat is full, until the habitat grows', () => {
     let s = rich();
     for (const species of ['trex', 'trex'] as const) s = run(s, { type: 'buyEgg', species, element: 'fire' });
-    s = run(s, { type: 'upgradeHatchery' }, ...finishBuild, { type: 'incubate' }, { type: 'incubate' }, { type: 'devSkip' });
+    s = run(
+      s,
+      { type: 'upgradeHatchery' },
+      ...finishBuild,
+      { type: 'incubate' },
+      { type: 'incubate' },
+      { type: 'devSkip' },
+    );
     s = run(s, { type: 'hatch' });
     expect(s.dinos).toHaveLength(2);
     expect(() => run(s, { type: 'hatch' })).toThrow('habitatFull');
@@ -129,8 +144,9 @@ describe('eggs, hatchery, market and habitats', () => {
     s.dinos.push({ id: 'zip', species: 'raptor', element: 'earth', level: 12, stage: 'juvenile', nickname: 'Zip' });
     s.habitats.earth = 1;
     expect(() => run(s, { type: 'battle', encounterId: 'arena-fire-1' })).toThrow('juvenile');
-    // Ignis is still a baby: the leader alone is not enough, the whole team must be able to fight.
-    expect(run(s, { type: 'setChampion', dinoId: 'zip' }).team).toEqual(['zip', 'ignis']);
+    // Ignis is still a baby: it cannot lead, and it leaves the team when another dinosaur takes the lead.
+    expect(() => run(s, { type: 'setChampion', dinoId: 'ignis' })).toThrow('juvenile');
+    expect(run(s, { type: 'setChampion', dinoId: 'zip' }).team).toEqual(['zip']);
     expect(() => run(s, { type: 'setTeam', dinoIds: ['zip', 'ignis'] })).toThrow('juvenile');
     s = run(s, { type: 'setTeam', dinoIds: ['zip'] }, { type: 'battle', encounterId: 'arena-fire-1' });
     expect(s.team).toEqual(['zip']);
@@ -172,7 +188,15 @@ describe('eggs, hatchery, market and habitats', () => {
       { id: 'b', species: 'ignasaur', element: 'fire', level: 3, stage: 'baby', nickname: 'B' },
       { id: 'j', species: 'ignasaur', element: 'fire', level: 12, stage: 'juvenile', nickname: 'J', rarity: 'rare' },
       { id: 'a', species: 'ignasaur', element: 'fire', level: 30, stage: 'adult', nickname: 'A', rarity: 'epic' },
-      { id: 'boss', species: 'boss', element: 'fire', level: 10, stage: 'juvenile', nickname: 'Ignaroth', rarity: 'legendary' },
+      {
+        id: 'boss',
+        species: 'boss',
+        element: 'fire',
+        level: 10,
+        stage: 'juvenile',
+        nickname: 'Ignaroth',
+        rarity: 'legendary',
+      },
     );
     s.habitats.fire = 5;
     s.discovered = ['trex_fire', 'ignasaur_fire', 'boss_fire'];
@@ -226,7 +250,18 @@ describe('arena leagues', () => {
 
   it('tells the story in ten chapters: one opening chapter, then one per world in unlock order', () => {
     expect(STORY_CHAPTERS.map((c) => c.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    expect(STORY_CHAPTERS.map((c) => c.world)).toEqual([null, 'water', 'earth', 'nature', 'ice', 'lightning', 'wind', 'dark', 'light', 'arcane']);
+    expect(STORY_CHAPTERS.map((c) => c.world)).toEqual([
+      null,
+      'water',
+      'earth',
+      'nature',
+      'ice',
+      'lightning',
+      'wind',
+      'dark',
+      'light',
+      'arcane',
+    ]);
     expect(new Set(QUEST_EGGS.map((q) => q.id)).size).toBe(QUEST_EGGS.length);
     for (const c of STORY_CHAPTERS) {
       expect(c.steps.length).toBeGreaterThanOrEqual(3);
@@ -276,7 +311,13 @@ describe('arena leagues', () => {
     s.dinos = [{ id: 'ignis', species: 'trex', element: 'fire', level: 10, stage: 'juvenile', nickname: 'Ignis' }];
     s.champion = 'ignis';
     s.team = ['ignis'];
-    s.eggs = Array.from({ length: BALANCE.maxEggs }, (_, i) => ({ id: `e${i}`, species: 'trex' as const, element: 'fire' as const, seconds: 600, hatchAt: null }));
+    s.eggs = Array.from({ length: BALANCE.maxEggs }, (_, i) => ({
+      id: `e${i}`,
+      species: 'trex' as const,
+      element: 'fire' as const,
+      seconds: 600,
+      hatchAt: null,
+    }));
     s.expeditionProgress = { training: 5 };
     s.buildings.push({ id: 'farm', kind: 'farm', x: 5, y: 8 });
     s.questEggs = STORY_CHAPTERS[0].steps.slice(0, -1).map((q) => q.id);
@@ -309,7 +350,8 @@ describe('the reordered story', () => {
       ['w-arcane-open', 'w-arcane-trip', 'w-arcane-boss', 'w-arcane-collection'],
     ]);
     // Goals pay 80·ch + 40 gold and 50·ch + 30 food.
-    for (const c of STORY_CHAPTERS) for (const q of c.steps) expect([q.gold, q.food]).toEqual([80 * c.number + 40, 50 * c.number + 30]);
+    for (const c of STORY_CHAPTERS)
+      for (const q of c.steps) expect([q.gold, q.food]).toEqual([80 * c.number + 40, 50 * c.number + 30]);
   });
 
   it('is playable in order: every world opens after the previous region is crossed, gated leagues after the gate', () => {
@@ -349,7 +391,9 @@ describe('the reordered story', () => {
     const families = COLLECTION.filter((id) => !id.startsWith('boss_'));
     expect(step('w-wind-families').done({ ...s, discovered: [...families.slice(0, 11), 'boss_fire'] })).toBe(false);
     expect(step('w-wind-families').progress!({ ...s, discovered: families.slice(0, 12) })).toEqual([12, 12]);
-    expect(step('w-dark-bosses').done({ ...s, cleared: ['arena-fire-3', 'arena-water-3', 'arena-earth-3'] })).toBe(true);
+    expect(step('w-dark-bosses').done({ ...s, cleared: ['arena-fire-3', 'arena-water-3', 'arena-earth-3'] })).toBe(
+      true,
+    );
     expect(step('w-light-builder').done({ ...s, farmLevel: 5, workshopLevel: 2 })).toBe(false);
     expect(step('w-light-builder').done({ ...s, farmLevel: 5, workshopLevel: 3 })).toBe(true);
     expect(step('w-arcane-boss').hint[1]).toContain('level 50');

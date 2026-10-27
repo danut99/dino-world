@@ -11,6 +11,7 @@ import {
   scaleDailyReward,
   weekId,
   wheelPrize,
+  wheelPrizes,
   WHEEL_PRIZES,
   type DailyQuestId,
 } from './daily';
@@ -47,14 +48,22 @@ describe('daily rewards', () => {
     const won = command(original, { type: 'spinDaily' }, now);
     expect(won.daily).toMatchObject({ spins: 1 });
     const prize = WHEEL_PRIZES[won.daily.spin!];
-    expect(won.gold + won.food).toBe(original.gold + original.food + (prize.reward.gold ?? 0) + (prize.reward.food ?? 0));
+    expect(won.gold + won.food).toBe(
+      original.gold + original.food + (prize.reward.gold ?? 0) + (prize.reward.food ?? 0),
+    );
     // The same save and moment give the same prize; another moment may not.
     expect(command(original, { type: 'spinDaily' }, now)).toEqual(won);
-    expect(new Set(Array.from({ length: 40 }, (_, i) => command(original, { type: 'spinDaily' }, now + i * 1000).daily.spin)).size).toBeGreaterThan(2);
+    expect(
+      new Set(Array.from({ length: 40 }, (_, i) => command(original, { type: 'spinDaily' }, now + i * 1000).daily.spin))
+        .size,
+    ).toBeGreaterThan(2);
     expect(parseSave(JSON.stringify(won))).toEqual(won);
     expect(() => command(won, { type: 'spinDaily' }, now + 1000)).toThrow('dailyClaimed');
     expect(() => command(won, { type: 'spinDaily' }, now - 86400000)).toThrow('dailyClaimed');
-    expect(command(won, { type: 'spinDaily' }, Date.UTC(2026, 9, 25, 12)).daily).toMatchObject({ day: '2026-10-25', spins: 1 });
+    expect(command(won, { type: 'spinDaily' }, Date.UTC(2026, 9, 25, 12)).daily).toMatchObject({
+      day: '2026-10-25',
+      spins: 1,
+    });
   });
   it('keeps progression, pays quests and completion bonus once, resets counters daily', () => {
     let save = newSave(now);
@@ -86,26 +95,33 @@ describe('daily rewards', () => {
   });
   it('tracks successful feeding, plot harvests, crafts and completed trips automatically', () => {
     let save = newSave(now);
-    save.dinos = [{ id: 'd', species: 'trex', element: 'fire', stage: 'juvenile', level: 10, nickname: 'Ignis' }]; save.champion = 'd';
-    save.gold = 10000; save.food = 10000;
-    for (const [kind, x, y] of [['farm',5,8],['workshop',6,1],['portal',8,5]] as const) save = command(save,{type:'build',kind,x,y},now);
+    save.dinos = [{ id: 'd', species: 'trex', element: 'fire', stage: 'juvenile', level: 10, nickname: 'Ignis' }];
+    save.champion = 'd';
+    save.gold = 10000;
+    save.food = 10000;
+    for (const [kind, x, y] of [
+      ['farm', 5, 8],
+      ['workshop', 6, 1],
+      ['portal', 8, 5],
+    ] as const)
+      save = command(save, { type: 'build', kind, x, y }, now);
     save = command(save, { type: 'feed' }, now);
     expect(save.daily.progress.feed).toBe(1);
     // Feeding several levels at once counts each of them.
     save = command(save, { type: 'feed', times: 2 }, now);
     expect(save.daily.progress.feed).toBe(3);
-    save = command(save,{type:'plant'},now);
-    expect(() => command(save,{type:'harvest'},now)).toThrow('timer');
+    save = command(save, { type: 'plant' }, now);
+    expect(() => command(save, { type: 'harvest' }, now)).toThrow('timer');
     expect(save.daily.progress.harvest).toBe(0);
-    save = command(save,{type:'harvest'},now+120000);
+    save = command(save, { type: 'harvest' }, now + 300000);
     expect(save.daily.progress.harvest).toBe(1);
-    save = command(save,{type:'craft',recipeId:'provisions'},now+120000);
+    save = command(save, { type: 'craft', recipeId: 'provisions' }, now + 300000);
     const job = save.crafting[0];
-    save = command(save,{type:'claimCraft',jobId:job.id},job.endsAt);
+    save = command(save, { type: 'claimCraft', jobId: job.id }, job.endsAt);
     expect(save.daily.progress.craft).toBe(1);
-    save = command(save,{type:'expedition',regionId:'training',team:['d']},job.endsAt);
+    save = command(save, { type: 'expedition', regionId: 'training', team: ['d'] }, job.endsAt);
     expect(save.daily.progress.expedition).toBe(0);
-    save = command(save,{type:'claimExpedition'},currentTrip(save)!.endsAt);
+    save = command(save, { type: 'claimExpedition' }, currentTrip(save)!.endsAt);
     expect(save.daily.progress.expedition).toBe(1);
     expect(parseSave(JSON.stringify(save))).toEqual(save);
   });
@@ -114,25 +130,35 @@ describe('daily rewards', () => {
     // A claim without the progress behind it is dropped on load, so it can never pay out.
     save.daily.claimed = [save.daily.quests[0]];
     expect(parseSave(JSON.stringify(save)).daily.claimed).toEqual([]);
-    for (const daily of [{ spin: 99, spins: 1 }, { spin: 0, spins: 0 }, { quests: ['feed', 'feed', 'win'] }, { quests: ['dance', 'feed', 'win'] }, { rerolls: -1 }]) {
+    for (const daily of [
+      { spin: 99, spins: 1 },
+      { spin: 0, spins: 0 },
+      { quests: ['feed', 'feed', 'win'] },
+      { quests: ['dance', 'feed', 'win'] },
+      { rerolls: -1 },
+    ]) {
       const invalid = newSave(now);
-      expect(() => parseSave(JSON.stringify({ ...invalid, daily: { ...invalid.daily, ...daily } })), JSON.stringify(daily)).toThrow('Invalid daily');
+      expect(
+        () => parseSave(JSON.stringify({ ...invalid, daily: { ...invalid.daily, ...daily } })),
+        JSON.stringify(daily),
+      ).toThrow('Invalid daily');
     }
   });
   it('counts a finished battle only after the result is collected', () => {
     let save = fighter();
-    save = command(save,{type:'battle',encounterId:'arena-fire-1'},now);
-    for(let i=0;i<30 && !save.battle?.result;i++) save = command(save,{type:'action',action:'basic'},now);
+    save = command(save, { type: 'battle', encounterId: 'arena-fire-1' }, now);
+    for (let i = 0; i < 30 && !save.battle?.result; i++) save = command(save, { type: 'action', action: 'basic' }, now);
     expect(save.battle?.result).toBeTruthy();
     expect(save.daily.progress.battle).toBe(0);
-    save = command(save,{type:'claim'},now);
+    save = command(save, { type: 'claim' }, now);
     expect(save.daily.progress.battle).toBe(1);
-    expect(() => command(save,{type:'claim'},now)).toThrow('battle');
+    expect(() => command(save, { type: 'claim' }, now)).toThrow('battle');
   });
   it('uses disclosed weighted prizes and varied daily missions', () => {
-    expect(WHEEL_PRIZES.reduce((sum,p) => sum+p.weight,0)).toBe(100);
-    expect(wheelPrize(0)).toBe(0); expect(wheelPrize(0.9999)).toBe(WHEEL_PRIZES.length - 1);
-    expect(new Set(['2026-10-24','2026-10-25','2026-10-26'].map(day => dailyQuests(day).join(','))).size).toBe(3);
+    expect(WHEEL_PRIZES.reduce((sum, p) => sum + p.weight, 0)).toBe(100);
+    expect(wheelPrize(0)).toBe(0);
+    expect(wheelPrize(0.9999)).toBe(WHEEL_PRIZES.length - 1);
+    expect(new Set(['2026-10-24', '2026-10-25', '2026-10-26'].map((day) => dailyQuests(day).join(','))).size).toBe(3);
   });
 });
 
@@ -151,7 +177,13 @@ describe('daily mission pool', () => {
     const day = '2026-10-24';
     const today = dailyQuests(day);
     const stale = (Object.keys(DAILY_QUESTS) as DailyQuestId[]).find((id) => !today.includes(id))!;
-    const old = { day, progress: { feed: 3, harvest: 2, craft: 1, battle: 1, expedition: 1 }, claimed: [stale], bonus: true, spin: 2 } as never;
+    const old = {
+      day,
+      progress: { feed: 3, harvest: 2, craft: 1, battle: 1, expedition: 1 },
+      claimed: [stale],
+      bonus: true,
+      spin: 2,
+    } as never;
     const fixed = normalizeDaily(old);
     expect(fixed.claimed).toEqual([]);
     expect(fixed.bonus).toBe(false);
@@ -162,8 +194,13 @@ describe('daily mission pool', () => {
   });
   it('counts planting, starting crafts, gold collection and battle wins', () => {
     let save = fighter();
-    save.gold = 10000; save.food = 10000;
-    for (const [kind, x, y] of [['farm', 5, 8], ['workshop', 6, 1]] as const) save = command(save, { type: 'build', kind, x, y }, now);
+    save.gold = 10000;
+    save.food = 10000;
+    for (const [kind, x, y] of [
+      ['farm', 5, 8],
+      ['workshop', 6, 1],
+    ] as const)
+      save = command(save, { type: 'build', kind, x, y }, now);
     save = command(save, { type: 'plant' }, now);
     expect(save.daily.progress.plant).toBe(1);
     save = command(save, { type: 'craft', recipeId: 'provisions' }, now);
@@ -186,7 +223,11 @@ describe('daily missions the player can do', () => {
     const save = fighter(14);
     save.gold = 10_000;
     save.food = 10_000;
-    save.buildings.push({ id: 'farm', kind: 'farm', x: 5, y: 8 }, { id: 'workshop', kind: 'workshop', x: 6, y: 1 }, { id: 'portal', kind: 'portal', x: 8, y: 5 });
+    save.buildings.push(
+      { id: 'farm', kind: 'farm', x: 5, y: 8 },
+      { id: 'workshop', kind: 'workshop', x: 6, y: 1 },
+      { id: 'portal', kind: 'portal', x: 8, y: 5 },
+    );
     save.portalLevel = 1;
     save.expeditionProgress = { training: 3 };
     save.inventory.provisions = 5;
@@ -202,7 +243,9 @@ describe('daily missions the player can do', () => {
     // Patrols open at a region's third stage; the arena needs a dinosaur old enough to fight.
     expect(DAILY_QUESTS.patrol.available({ ...all, expeditionProgress: { training: 2 } })).toBe(false);
     expect(DAILY_QUESTS.win.available({ ...all, dinos: [{ ...all.dinos[0], stage: 'baby', level: 5 }] })).toBe(false);
-    expect(DAILY_QUESTS.startCraft.available({ ...all, buildings: all.buildings.filter((b) => b.kind !== 'workshop') })).toBe(false);
+    expect(
+      DAILY_QUESTS.startCraft.available({ ...all, buildings: all.buildings.filter((b) => b.kind !== 'workshop') }),
+    ).toBe(false);
   });
   it('draws the day once, seeded, only among available missions', () => {
     const save = established();
@@ -245,10 +288,16 @@ describe('daily missions the player can do', () => {
     expect(() => command(save, { type: 'rerollDailyQuest', quest: save.daily.quests[2] }, now)).toThrow('gems');
     // A finished mission stays; one not drawn today cannot be swapped.
     const last = save.daily.quests[2];
-    const done = { ...save, gems: 50, daily: { ...save.daily, progress: { ...save.daily.progress, [last]: DAILY_QUESTS[last].target } } };
+    const done = {
+      ...save,
+      gems: 50,
+      daily: { ...save.daily, progress: { ...save.daily.progress, [last]: DAILY_QUESTS[last].target } },
+    };
     expect(() => command(done, { type: 'rerollDailyQuest', quest: last }, now)).toThrow('dailyReroll');
     const missing = (Object.keys(DAILY_QUESTS) as DailyQuestId[]).find((id) => !save.daily.quests.includes(id))!;
-    expect(() => command({ ...save, gems: 50 }, { type: 'rerollDailyQuest', quest: missing }, now)).toThrow('dailyQuest');
+    expect(() => command({ ...save, gems: 50 }, { type: 'rerollDailyQuest', quest: missing }, now)).toThrow(
+      'dailyQuest',
+    );
     // The next day starts with a free swap again.
     expect(advance(save, now + 86_400_000).daily.rerolls).toBe(0);
   });
@@ -259,7 +308,11 @@ describe('daily missions the player can do', () => {
   });
   it('pays more in later chapters: ×(1 + 0.15 · (chapter − 1)), the chest diamond as it is', () => {
     expect([1, 2, 3, 10].map(dailyScale)).toEqual([1, 1.15, 1.3, 2.35]);
-    expect(scaleDailyReward({ gold: 80, materials: { fiber: 5 }, gems: 1 }, 3)).toEqual({ gold: 104, materials: { fiber: 7 }, gems: 1 });
+    expect(scaleDailyReward({ gold: 80, materials: { fiber: 5 }, gems: 1 }, 3)).toEqual({
+      gold: 104,
+      materials: { fiber: 7 },
+      gems: 1,
+    });
     let save = established();
     save.questEggs = STORY_CHAPTERS.slice(0, 2).flatMap((c) => c.steps.map((q) => q.id));
     expect(storyLevel(save)).toBe(3);
@@ -320,5 +373,18 @@ describe('the daily wheel', () => {
     expect(spun.arenaTickets).toEqual({ [realm]: 2 });
     expect(command(save, { type: 'spinDaily' }, t)).toEqual(spun);
     expect(parseSave(JSON.stringify(spun))).toEqual(spun);
+  });
+  it('pays gold and food instead of tickets before the arena is built, the same for the same spin', () => {
+    const slice = WHEEL_PRIZES.findIndex((p) => p.reward.tickets);
+    const save = newSave(now);
+    expect(wheelPrizes(save)[slice].reward).toEqual({ gold: 200, food: 100 });
+    expect(wheelPrizes(fighter())).toBe(WHEEL_PRIZES);
+    let t = now;
+    while (command(save, { type: 'spinDaily' }, t).daily.spin !== slice) t += 1000;
+    const spun = command(save, { type: 'spinDaily' }, t);
+    expect(spun.arenaTickets).toEqual(save.arenaTickets);
+    expect(spun.notice?.tickets).toBeUndefined();
+    expect([spun.gold - save.gold, spun.food - save.food]).toEqual([200, 100]);
+    expect(command(save, { type: 'spinDaily' }, t)).toEqual(spun);
   });
 });

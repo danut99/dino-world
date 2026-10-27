@@ -98,9 +98,16 @@
   max-width: none;
   margin-top: 20%;
 }
-.realms-app .dino-roster-item[data-rarity='rare'] .dino-sheet-thumb { border-color: #4aa3ff; }
-.realms-app .dino-roster-item[data-rarity='epic'] .dino-sheet-thumb { border-color: #b26bff; }
-.realms-app .dino-roster-item[data-rarity='legendary'] .dino-sheet-thumb { border-color: #f6d77a; box-shadow: 0 0 8px #f6d77a88; }
+.realms-app .dino-roster-item[data-rarity='rare'] .dino-sheet-thumb {
+  border-color: #4aa3ff;
+}
+.realms-app .dino-roster-item[data-rarity='epic'] .dino-sheet-thumb {
+  border-color: #b26bff;
+}
+.realms-app .dino-roster-item[data-rarity='legendary'] .dino-sheet-thumb {
+  border-color: #f6d77a;
+  box-shadow: 0 0 8px #f6d77a88;
+}
 .realms-app .dino-roster-name {
   display: grid;
   gap: 1px;
@@ -121,8 +128,8 @@
 }
 .realms-app .dino-sheet-crown {
   position: absolute;
-  top: -5px;
-  right: -3px;
+  top: 4px;
+  right: 6px;
   font-size: 14px;
   color: #f6d77a;
   text-shadow: 1px 1px 0 #1b1411;
@@ -134,10 +141,11 @@
   min-height: 0;
   overflow: hidden;
   background:
-    linear-gradient(transparent 70%, #00000055),
-    linear-gradient(color-mix(in srgb, var(--el) 16%, #241c2c), #120d0b);
+    linear-gradient(transparent 70%, #00000055), linear-gradient(color-mix(in srgb, var(--el) 16%, #241c2c), #120d0b);
   border: 2px solid var(--px-stone-3);
-  box-shadow: inset 0 0 0 2px #1b1411, inset 0 -40px 60px #00000066;
+  box-shadow:
+    inset 0 0 0 2px #1b1411,
+    inset 0 -40px 60px #00000066;
 }
 .realms-app .dino-sheet-stage::before {
   content: '';
@@ -171,7 +179,10 @@
   translate: -50% 0;
   border-radius: 50%;
   background: radial-gradient(ellipse at 50% 40%, #6b5a48 0 45%, #3d332d 60%, #1b1411 72%, transparent 74%);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--el) 70%, transparent), 0 0 22px color-mix(in srgb, var(--el) 55%, transparent), 0 10px 18px #000000aa;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--el) 70%, transparent),
+    0 0 22px color-mix(in srgb, var(--el) 55%, transparent),
+    0 10px 18px #000000aa;
 }
 .realms-app .dino-sheet-figure > .dinosaur-art {
   position: absolute;
@@ -191,9 +202,21 @@
   border: 1px solid var(--el);
   color: var(--px-amber-0);
 }
-.realms-app .dino-sheet-element { left: 8px; }
-.realms-app .dino-sheet-champion { right: 8px; border-color: #f6d77a; color: #f6d77a; }
-.realms-app .dino-sheet-away { left: 8px; top: auto; bottom: 8px; border-color: var(--px-sea-1); color: var(--px-sea-0); }
+.realms-app .dino-sheet-element {
+  left: 8px;
+}
+.realms-app .dino-sheet-champion {
+  right: 8px;
+  border-color: #f6d77a;
+  color: #f6d77a;
+}
+.realms-app .dino-sheet-away {
+  left: 8px;
+  top: auto;
+  bottom: 8px;
+  border-color: var(--px-sea-1);
+  color: var(--px-sea-0);
+}
 
 /* info column: name, growth, tabs */
 .realms-app .dino-sheet-info {
@@ -216,14 +239,30 @@
   align-content: center;
   width: 56px;
   height: 56px;
+  /* room for the ring and glow drawn outside by box-shadow, which the scrolling column would clip */
+  margin: 8px 4px 4px 8px;
   border-radius: 50%;
   font-family: var(--font-display);
   background: radial-gradient(circle, #3d2f24, #1b1411);
-  box-shadow: 0 0 0 3px #e9c46a, 0 0 0 6px #1b1411, 0 0 16px color-mix(in srgb, var(--el) 60%, transparent);
+  box-shadow:
+    0 0 0 3px #e9c46a,
+    0 0 0 6px #1b1411,
+    0 0 16px color-mix(in srgb, var(--el) 60%, transparent);
 }
-.realms-app .dino-sheet-level strong { font-size: 24px; line-height: 1; color: #fff1b8; text-shadow: 2px 2px 0 #1b1411; }
-.realms-app .dino-sheet-level small { font-size: 8px; letter-spacing: 1px; color: #e0a96a; }
-.realms-app .dino-sheet-name { min-width: 0; }
+.realms-app .dino-sheet-level strong {
+  font-size: 24px;
+  line-height: 1;
+  color: #fff1b8;
+  text-shadow: 2px 2px 0 #1b1411;
+}
+.realms-app .dino-sheet-level small {
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #e0a96a;
+}
+.realms-app .dino-sheet-name {
+  min-width: 0;
+}
 .realms-app .dino-sheet-info h3 {
   overflow: hidden;
   font-size: 22px;
@@ -240,13 +279,25 @@
   font-size: 14px;
   color: var(--px-bone-3);
 }
-.realms-app .dino-sheet-growth { display: grid; gap: 3px; }
-.realms-app .dino-sheet-growth small { font-size: 13px; color: #f6d77a; }
+.realms-app .dino-sheet-growth {
+  display: grid;
+  gap: 3px;
+}
+.realms-app .dino-sheet-growth small {
+  font-size: 13px;
+  color: #f6d77a;
+}
 .realms-app .dino-tab {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding-top: 2px;
+}
+/* Short screens (landscape phones, "More" open): the tab scrolls instead of cutting its last buttons. */
+.realms-app .dino-tab.fit-fill {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .realms-app .dino-sheet-note {
   padding: 6px 10px;
@@ -256,7 +307,13 @@
   background: #1b1411;
   border-left: 3px solid var(--el);
 }
-.realms-app .dino-sheet-stats { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.realms-app .dino-sheet-stats {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 .realms-app .dino-sheet-stats li {
   display: grid;
   grid-template-columns: 16px 70px minmax(0, 1fr) 44px;
@@ -265,7 +322,11 @@
   font-size: 14px;
   color: var(--px-bone-2);
 }
-.realms-app .dino-sheet-stats li b { justify-self: end; font-size: 15px; color: #fff1b8; }
+.realms-app .dino-sheet-stats li b {
+  justify-self: end;
+  font-size: 15px;
+  color: #fff1b8;
+}
 .realms-app .dino-ages {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -329,39 +390,193 @@
   font-size: 14px;
   color: var(--px-bone-2);
 }
-.realms-app .dino-sheet-income b { color: #f6d77a; }
-.realms-app .dino-tab-foot > .realm-button { margin-left: auto; }
-.realms-app .dino-path {
-  display: flex;
-  gap: 4px;
+.realms-app .dino-sheet-income b {
+  color: #f6d77a;
+}
+.realms-app .dino-tab-foot > .realm-button {
+  margin-left: auto;
+}
+/* Grow tab: three pictures of the path (baby → juvenile → adult), one big feed button, extras folded under "More". */
+.realms-app .dino-evo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.realms-app .dino-path li {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 3px 6px;
-  font-size: 13px;
-  font-weight: 700;
+.realms-app .dino-evo li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 4px 2px;
   text-align: center;
-  white-space: nowrap;
-  color: var(--px-stone-1);
   background: var(--px-ui-5);
-  border: 1px solid var(--px-stone-4);
+  border: 2px solid var(--px-stone-4);
 }
-.realms-app .dino-path li small { font-size: 11px; color: inherit; }
-.realms-app .dino-path li.reached { color: var(--px-bone-2); border-color: var(--px-stone-2); }
-.realms-app .dino-path li.current { color: var(--px-amber-0); border-color: var(--px-amber-2); box-shadow: inset 0 -2px 0 var(--px-amber-2); }
+.realms-app .dino-evo li + li::before {
+  content: '▶';
+  position: absolute;
+  top: 50%;
+  left: -15px;
+  font-size: 11px;
+  color: var(--px-stone-1);
+  transform: translateY(-50%);
+}
+.realms-app .dino-evo li.reached + li::before {
+  color: var(--px-amber-1);
+}
+.realms-app .dino-evo li.current {
+  border-color: var(--px-amber-1);
+  box-shadow: 0 0 10px #f6d27744;
+}
+.realms-app .dino-evo-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 64px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.realms-app .dino-evo-art .dinosaur-art {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.realms-app .dino-evo li.locked .dinosaur-art {
+  filter: brightness(0) drop-shadow(0 0 1px #7a6a5a);
+  opacity: 0.55;
+}
+.realms-app .dino-evo small {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--px-bone-2);
+}
+.realms-app .dino-evo li.current small {
+  color: var(--px-amber-0);
+}
+.realms-app .dino-evo li.locked small {
+  color: var(--px-stone-1);
+}
+.realms-app .fit-panel .dino-feed-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  font-size: 18px !important;
+}
+/* The Grow tab is green like its feed button, so it reads as the main one. */
+/* Free things to do while food grows: pet (a heart pops) and train (a free level). */
+.realms-app .dino-care {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.realms-app .dino-care > .realm-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 6px;
+  line-height: 1.1;
+  text-align: center;
+}
+.realms-app .dino-care .dino-sheet-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  font-size: 11px;
+  white-space: nowrap;
+  background: none;
+  opacity: 0.85;
+}
+.realms-app .dino-pet.petted::before {
+  content: '❤';
+  position: absolute;
+  color: #ff7a9a;
+  font-size: 20px;
+  pointer-events: none;
+  animation: dino-pet-heart 0.8s ease-out forwards;
+}
+.realms-app .dino-pet {
+  position: relative;
+}
+@keyframes dino-pet-heart {
+  from {
+    opacity: 1;
+    translate: 0 0;
+    scale: 0.8;
+  }
+  to {
+    opacity: 0;
+    translate: 0 -34px;
+    scale: 1.4;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .realms-app .dino-pet.petted::before {
+    animation: none;
+    opacity: 0;
+  }
+}
+.realms-app .dino-sheet-info .ui-tab[id$='-tab-grow'] {
+  color: #e6f7d8;
+  background: #3f7a35;
+  box-shadow:
+    inset 2px 2px 0 #6fb15c,
+    inset -2px 0 0 #2a5424;
+}
+.realms-app .dino-sheet-info .ui-tab[id$='-tab-grow'][aria-selected='true'] {
+  color: #fff;
+  background: #4f9a41;
+  box-shadow:
+    inset 2px 2px 0 #8fd27a,
+    inset -2px 0 0 #2a5424,
+    0 2px 0 #4f9a41;
+}
+.realms-app .dino-feed-main > small {
+  font-size: 12px;
+  opacity: 0.85;
+}
+.realms-app .dino-feed-main .dino-sheet-cost {
+  padding: 2px 8px;
+  font-size: 14px;
+}
+.realms-app .dino-grow-more > summary {
+  width: max-content;
+  padding: 2px 0;
+  font-size: 13px;
+  color: var(--px-amber-1);
+  cursor: pointer;
+}
+.realms-app .dino-grow-more[open] > summary {
+  margin-bottom: 6px;
+}
+.realms-app .dino-sheet.solo {
+  grid-template-columns: minmax(150px, 0.9fr) minmax(0, 1.1fr);
+}
+.realms-app .dino-sheet.solo > .dino-roster {
+  display: none;
+}
 .realms-app .dino-grow-buttons {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 .realms-app .dino-grow-buttons > .realm-button {
-  justify-content: space-between;
+  justify-content: center;
+  flex-wrap: wrap;
   min-width: 0;
-  gap: 6px;
+  gap: 2px 6px;
+  padding-inline: 8px;
+  text-align: center;
 }
 .realms-app .dino-grow-buttons > .realm-button.premium,
 .realms-app .dino-grow-buttons > .dino-sheet-evolve {
@@ -378,7 +593,11 @@
 .realms-app .dino-sheet-evolve {
   animation: dino-sheet-pulse 1.2s ease-in-out infinite alternate;
 }
-@keyframes dino-sheet-pulse { to { filter: brightness(1.18); } }
+@keyframes dino-sheet-pulse {
+  to {
+    filter: brightness(1.18);
+  }
+}
 .realms-app .dino-tab .habitat-stats {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -461,11 +680,23 @@
   text-overflow: ellipsis;
   color: var(--px-bone-0);
 }
-.realms-app .hatch-nest small { font-size: 13px; color: var(--px-bone-3); }
-.realms-app .hatch-nest .pk-meter { width: 80%; }
-.realms-app .hatch-nest.locked { border-image: var(--frame-slot); opacity: 0.7; }
-.realms-app button.hatch-nest.free { cursor: pointer; }
-.realms-app button.hatch-nest.free:hover:not(:disabled) { filter: brightness(1.12); }
+.realms-app .hatch-nest small {
+  font-size: 13px;
+  color: var(--px-bone-3);
+}
+.realms-app .hatch-nest .pk-meter {
+  width: 80%;
+}
+.realms-app .hatch-nest.locked {
+  border-image: var(--frame-slot);
+  opacity: 0.7;
+}
+.realms-app button.hatch-nest.free {
+  cursor: pointer;
+}
+.realms-app button.hatch-nest.free:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
 .realms-app .hatch-nest-bed {
   width: 56px;
   height: 22px;
@@ -477,8 +708,12 @@
   border-image: var(--frame-card-active);
   box-shadow: 0 0 16px color-mix(in srgb, var(--egg-glow) 45%, transparent);
 }
-.realms-app .hatch-nest.warming .realm-egg { filter: drop-shadow(0 0 8px var(--egg-glow)); }
-.realms-app .hatch-nest > .realm-button { width: 100%; }
+.realms-app .hatch-nest.warming .realm-egg {
+  filter: drop-shadow(0 0 8px var(--egg-glow));
+}
+.realms-app .hatch-nest > .realm-button {
+  width: 100%;
+}
 .realms-app .pk-upgrade {
   display: flex;
   flex-wrap: wrap;
@@ -489,8 +724,12 @@
   font-size: 14px;
   color: var(--px-bone-2);
 }
-.realms-app .pk-upgrade-what b { color: var(--px-bone-0); }
-.realms-app .pk-upgrade > .realm-button { margin-left: auto; }
+.realms-app .pk-upgrade-what b {
+  color: var(--px-bone-0);
+}
+.realms-app .pk-upgrade > .realm-button {
+  margin-left: auto;
+}
 .realms-app .pk-paged-tab {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
@@ -515,7 +754,9 @@
   align-items: center;
   gap: 6px;
 }
-.realms-app .hatch-egg-actions .realm-button { min-height: 34px; }
+.realms-app .hatch-egg-actions .realm-button {
+  min-height: 34px;
+}
 .realms-app .pk-sell {
   min-height: 30px;
   padding: 2px 8px;
@@ -526,7 +767,10 @@
   background: var(--px-stone-4);
   border: 1px solid var(--px-outline);
 }
-.realms-app .pk-sell.confirm { color: var(--px-outline); background: var(--px-amber-1); }
+.realms-app .pk-sell.confirm {
+  color: var(--px-outline);
+  background: var(--px-amber-1);
+}
 .realms-app .pk-empty {
   display: grid;
   place-content: center;
@@ -536,7 +780,9 @@
   padding: 10px;
   text-align: center;
 }
-.realms-app .pk-empty .pk-note { max-width: 420px; }
+.realms-app .pk-empty .pk-note {
+  max-width: 420px;
+}
 
 /* ============================== Market ============================== */
 .realms-app .market-panel {
@@ -572,16 +818,29 @@
   border-image: var(--frame-card);
   image-rendering: pixelated;
 }
-.realms-app .market-egg .realm-egg { filter: drop-shadow(0 0 10px var(--egg-glow)); }
-.realms-app .market-egg strong { font-size: 16px; color: var(--px-bone-0); }
-.realms-app .market-egg small { font-size: 13px; color: var(--px-bone-3); }
-.realms-app .market-egg .realm-button { width: 100%; gap: 6px; }
+.realms-app .market-egg .realm-egg {
+  filter: drop-shadow(0 0 10px var(--egg-glow));
+}
+.realms-app .market-egg strong {
+  font-size: 16px;
+  color: var(--px-bone-0);
+}
+.realms-app .market-egg small {
+  font-size: 13px;
+  color: var(--px-bone-3);
+}
+.realms-app .market-egg .realm-button {
+  width: 100%;
+  gap: 6px;
+}
 
 /* ============================== Habitats ============================== */
 .realms-app .habitats-panel {
   --fit-rows: auto auto minmax(0, 1fr) auto;
 }
-.realms-app .habitats-panel .pk-head-text .pk-meter { margin-top: 3px; }
+.realms-app .habitats-panel .pk-head-text .pk-meter {
+  margin-top: 3px;
+}
 .realms-app .habitat-tiles {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -604,12 +863,26 @@
   box-shadow: inset 3px 0 0 var(--realm-color);
   image-rendering: pixelated;
 }
-.realms-app .habitat-tile:hover { filter: brightness(1.1); }
-.realms-app .habitat-tile[aria-pressed='true'] { border-image: var(--frame-card-active); }
-.realms-app .habitat-tile.locked { filter: saturate(0.35) brightness(0.8); }
-.realms-app .habitat-tile.locked.next { filter: none; box-shadow: inset 3px 0 0 var(--px-amber-1); }
-.realms-app .habitat-tile.locked[aria-pressed='true'] { filter: saturate(0.6); }
-.realms-app .habitat-tile > span { display: grid; min-width: 0; }
+.realms-app .habitat-tile:hover {
+  filter: brightness(1.1);
+}
+.realms-app .habitat-tile[aria-pressed='true'] {
+  border-image: var(--frame-card-active);
+}
+.realms-app .habitat-tile.locked {
+  filter: saturate(0.35) brightness(0.8);
+}
+.realms-app .habitat-tile.locked.next {
+  filter: none;
+  box-shadow: inset 3px 0 0 var(--px-amber-1);
+}
+.realms-app .habitat-tile.locked[aria-pressed='true'] {
+  filter: saturate(0.6);
+}
+.realms-app .habitat-tile > span {
+  display: grid;
+  min-width: 0;
+}
 .realms-app .habitat-tile strong {
   overflow: hidden;
   font-size: 14px;
@@ -639,7 +912,10 @@
   min-width: 0;
   min-height: 0;
 }
-.realms-app .habitat-detail-info .habitat-stats { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.realms-app .habitat-detail-info .habitat-stats {
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .realms-app .habitat-buttons {
   display: flex;
   flex-wrap: wrap;
@@ -656,78 +932,258 @@
   border: 2px solid var(--px-outline);
   box-shadow: inset 0 0 0 2px var(--px-stone-5);
 }
-.realms-app .pk-lamp > .pk-lamp-icon { width: 36px; height: 36px; }
-.realms-app .pk-lamp > .realm-button { flex: none; }
+.realms-app .pk-lamp > .pk-lamp-icon {
+  width: 36px;
+  height: 36px;
+}
+.realms-app .pk-lamp > .realm-button {
+  flex: none;
+}
 
 /* ============================== short landscape ============================== */
 @media (max-height: 500px) {
-  .realms-app .dino-sheet { grid-template-columns: 196px minmax(120px, 0.6fr) minmax(0, 1.4fr); gap: 8px; }
-  .realms-app .dino-roster-list { --paged-row: 46px; gap: 4px; }
-  .realms-app .dino-roster-item { grid-template-columns: 32px minmax(0, 1fr); gap: 6px; border-width: 4px; }
-  .realms-app .dino-sheet-thumb { width: 32px; height: 32px; }
-  .realms-app .dino-roster-name strong { font-size: 13px; }
-  .realms-app .dino-sheet-info { gap: 5px; }
-  .realms-app .dino-sheet-level { width: 38px; height: 38px; box-shadow: 0 0 0 2px #e9c46a, 0 0 0 4px #1b1411; }
-  .realms-app .dino-sheet-level strong { font-size: 17px; }
-  .realms-app .dino-sheet-level small { display: none; }
-  .realms-app .dino-sheet-info h3 { font-size: 17px; }
-  .realms-app .dino-sheet-info header p { font-size: 12px; }
-  .realms-app .dino-sheet-growth small { font-size: 12px; }
-  .realms-app .dino-tab { gap: 5px; }
-  .realms-app .dino-sheet-stats { gap: 3px; }
-  .realms-app .dino-sheet-stats li { font-size: 13px; grid-template-columns: 16px 62px minmax(0, 1fr) 40px; }
-  .realms-app .dino-sheet-note { padding: 3px 8px; font-size: 12px; }
-  .realms-app .dino-path li { padding: 1px 4px; font-size: 12px; }
-  .realms-app .dino-grow-buttons { gap: 4px; }
-  .realms-app .dino-ages { display: none; }
-  .realms-app .dino-ages + .dino-tab-foot { margin-top: auto; }
-  .realms-app .dino-grow-buttons > .realm-button { min-height: 31px; }
-  .realms-app .dino-tab .pk-note { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-  .realms-app .dino-tab .habitat-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .realms-app .dino-habitat-strip { padding: 2px 8px; font-size: 13px; }
-  .realms-app .habitat-stats dd { font-size: 14px; }
-  .realms-app .habitat-stats > div { padding: 2px 6px; }
-  .realms-app .habitat-stats dt { font-size: 11px; }
+  .realms-app .dino-sheet {
+    grid-template-columns: 196px minmax(120px, 0.6fr) minmax(0, 1.4fr);
+    gap: 8px;
+  }
+  .realms-app .dino-roster-list {
+    --paged-row: 46px;
+    gap: 4px;
+  }
+  .realms-app .dino-roster-item {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 6px;
+    border-width: 4px;
+  }
+  .realms-app .dino-sheet-thumb {
+    width: 32px;
+    height: 32px;
+  }
+  .realms-app .dino-roster-name strong {
+    font-size: 13px;
+  }
+  .realms-app .dino-sheet-info {
+    gap: 5px;
+  }
+  .realms-app .dino-sheet-level {
+    width: 38px;
+    height: 38px;
+    box-shadow:
+      0 0 0 2px #e9c46a,
+      0 0 0 4px #1b1411;
+  }
+  .realms-app .dino-sheet-level strong {
+    font-size: 17px;
+  }
+  .realms-app .dino-sheet-level small {
+    display: none;
+  }
+  .realms-app .dino-sheet-info h3 {
+    font-size: 17px;
+  }
+  .realms-app .dino-sheet-info header p {
+    font-size: 12px;
+  }
+  .realms-app .dino-sheet-growth small {
+    font-size: 12px;
+  }
+  .realms-app .dino-tab {
+    gap: 5px;
+  }
+  .realms-app .dino-sheet-stats {
+    gap: 3px;
+  }
+  .realms-app .dino-sheet-stats li {
+    font-size: 13px;
+    grid-template-columns: 16px 62px minmax(0, 1fr) 40px;
+  }
+  .realms-app .dino-sheet-note {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+  .realms-app .dino-evo-art {
+    height: 40px;
+  }
+  .realms-app .fit-panel .dino-feed-main {
+    min-height: 38px;
+    font-size: 15px !important;
+  }
+  .realms-app .dino-sheet.solo {
+    grid-template-columns: minmax(120px, 0.6fr) minmax(0, 1.4fr);
+  }
+  .realms-app .dino-grow-buttons {
+    gap: 4px;
+  }
+  .realms-app .dino-ages {
+    display: none;
+  }
+  .realms-app .dino-ages + .dino-tab-foot {
+    margin-top: auto;
+  }
+  .realms-app .dino-grow-buttons > .realm-button {
+    min-height: 31px;
+  }
+  .realms-app .dino-tab .pk-note {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .realms-app .dino-tab .habitat-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .realms-app .dino-habitat-strip {
+    padding: 2px 8px;
+    font-size: 13px;
+  }
+  .realms-app .habitat-stats dd {
+    font-size: 14px;
+  }
+  .realms-app .habitat-stats > div {
+    padding: 2px 6px;
+  }
+  .realms-app .habitat-stats dt {
+    font-size: 11px;
+  }
 
-  .realms-app .hatch-nest { gap: 3px; padding: 3px; border-width: 4px; }
-  .realms-app .hatch-nest .realm-egg { width: 40px !important; height: 40px !important; }
-  .realms-app .hatch-nest .realm-egg img { width: 40px; height: 40px; }
-  .realms-app .hatch-nest:is(.ready, .warming) { flex-flow: row wrap; align-content: center; column-gap: 6px; }
-  .realms-app .hatch-nest:is(.ready, .warming) > strong { flex: 1 1 0; min-width: 0; text-align: left; }
-  .realms-app .hatch-nest:is(.ready, .warming) > :is(.realm-button, .pk-meter) { flex: 1 1 100%; }
-  .realms-app .hatch-nest .realm-egg { width: 32px !important; height: 32px !important; }
-  .realms-app .hatch-nest .realm-egg img { width: 32px; height: 32px; }
-  .realms-app .hatch-nest small { font-size: 12px; }
-  .realms-app .hatch-shelf, .realms-app .hatch-owed { --paged-min: 300px; --paged-row: 54px; }
-  .realms-app :is(.hatch-shelf, .hatch-owed) .ui-card-art { width: 36px; height: 36px; }
+  .realms-app .hatch-nest {
+    gap: 3px;
+    padding: 3px;
+    border-width: 4px;
+  }
+  .realms-app .hatch-nest .realm-egg {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  .realms-app .hatch-nest .realm-egg img {
+    width: 40px;
+    height: 40px;
+  }
+  .realms-app .hatch-nest:is(.ready, .warming) {
+    flex-flow: row wrap;
+    align-content: center;
+    column-gap: 6px;
+  }
+  .realms-app .hatch-nest:is(.ready, .warming) > strong {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: left;
+  }
+  .realms-app .hatch-nest:is(.ready, .warming) > :is(.realm-button, .pk-meter) {
+    flex: 1 1 100%;
+  }
+  .realms-app .hatch-nest .realm-egg {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .realms-app .hatch-nest .realm-egg img {
+    width: 32px;
+    height: 32px;
+  }
+  .realms-app .hatch-nest small {
+    font-size: 12px;
+  }
+  .realms-app .hatch-shelf,
+  .realms-app .hatch-owed {
+    --paged-min: 300px;
+    --paged-row: 54px;
+  }
+  .realms-app :is(.hatch-shelf, .hatch-owed) .ui-card-art {
+    width: 36px;
+    height: 36px;
+  }
 
-  .realms-app .market-egg { padding: 4px 8px; gap: 3px; }
-  .realms-app .market-egg .realm-egg { width: 44px !important; height: 44px !important; }
-  .realms-app .market-egg .realm-egg img { width: 44px; height: 44px; }
+  .realms-app .market-egg {
+    padding: 4px 8px;
+    gap: 3px;
+  }
+  .realms-app .market-egg .realm-egg {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .realms-app .market-egg .realm-egg img {
+    width: 44px;
+    height: 44px;
+  }
 
-  .realms-app .habitat-tile { min-height: 40px; gap: 5px; border-width: 4px; padding: 0 4px; }
-  .realms-app .habitat-tile strong { font-size: 13px; }
-  .realms-app .habitat-tile small { display: none; }
-  .realms-app .habitat-tile { min-height: 34px; }
-  .realms-app .habitat-detail { gap: 10px; }
-  .realms-app .habitat-detail-info .habitat-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .realms-app .habitat-detail .habitat-buttons { flex-wrap: nowrap; }
-  .realms-app .habitat-detail-action { flex-flow: row wrap; align-items: center; align-content: flex-start; }
-  .realms-app .habitat-detail .pk-upgrade-extra { display: none; }
-  .realms-app .habitat-detail .habitat-buttons { flex: 1 1 100%; }
-  .realms-app .pk-lamp > .pk-lamp-icon, .realms-app .pk-head > .pk-lamp-icon { width: 34px; height: 34px; }
-  .realms-app .habitat-detail .habitat-buttons .realm-link { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  .realms-app .pk-lamp .pk-head-text > small { display: none; }
-  .realms-app .habitat-detail-info, .realms-app .habitat-detail-action { gap: 5px; }
-  .realms-app .pk-lamp { padding: 2px 6px; }
+  .realms-app .habitat-tile {
+    min-height: 40px;
+    gap: 5px;
+    border-width: 4px;
+    padding: 0 4px;
+  }
+  .realms-app .habitat-tile strong {
+    font-size: 13px;
+  }
+  .realms-app .habitat-tile small {
+    display: none;
+  }
+  .realms-app .habitat-tile {
+    min-height: 34px;
+  }
+  .realms-app .habitat-detail {
+    gap: 10px;
+  }
+  .realms-app .habitat-detail-info .habitat-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .realms-app .habitat-detail .habitat-buttons {
+    flex-wrap: nowrap;
+  }
+  .realms-app .habitat-detail-action {
+    flex-flow: row wrap;
+    align-items: center;
+    align-content: flex-start;
+  }
+  .realms-app .habitat-detail .pk-upgrade-extra {
+    display: none;
+  }
+  .realms-app .habitat-detail .habitat-buttons {
+    flex: 1 1 100%;
+  }
+  .realms-app .pk-lamp > .pk-lamp-icon,
+  .realms-app .pk-head > .pk-lamp-icon {
+    width: 34px;
+    height: 34px;
+  }
+  .realms-app .habitat-detail .habitat-buttons .realm-link {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .realms-app .pk-lamp .pk-head-text > small {
+    display: none;
+  }
+  .realms-app .habitat-detail-info,
+  .realms-app .habitat-detail-action {
+    gap: 5px;
+  }
+  .realms-app .pk-lamp {
+    padding: 2px 6px;
+  }
 }
 @media (max-width: 700px) {
-  .realms-app .dino-ages-art { width: 48px; height: 42px; }
-  .realms-app .dino-sheet { grid-template-columns: 170px minmax(0, 1fr); }
-  .realms-app .dino-sheet-stage { display: none; }
-  .realms-app .habitat-tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .realms-app .habitat-tile strong { display: none; }
+  .realms-app .dino-ages-art {
+    width: 48px;
+    height: 42px;
+  }
+  .realms-app .dino-sheet {
+    grid-template-columns: 170px minmax(0, 1fr);
+  }
+  .realms-app .dino-sheet.solo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .realms-app .dino-sheet-stage {
+    display: none;
+  }
+  .realms-app .habitat-tiles {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .realms-app .habitat-tile strong {
+    display: none;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .realms-app .dino-sheet-evolve { animation: none; }
+  .realms-app .dino-sheet-evolve {
+    animation: none;
+  }
 }

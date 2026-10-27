@@ -103,6 +103,7 @@
   letter-spacing: 3px;
   margin: 8px 0 0 2px;
   color: #f6eed9;
+  white-space: nowrap;
 }
 .realm-brand-mark {
   font-size: 40px;
@@ -1770,6 +1771,14 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
   .realm-nav > button { min-width: 0; flex: 1; padding-inline: 9px; }
   .realm-nav > .realm-collect { min-width: 0; }
 }
+/* Tablet widths: no room for the tagline; the story header keeps its label whole and the chapter counter gives way. */
+@media (min-width: 761px) and (max-width: 1050px) {
+  .realm-brand small { display: none; }
+  .realm-quest-top { gap: 6px; }
+  .realm-quest-top > span:first-child { font-size: 14px; }
+  .realm-quest-top > .realm-quest-label { flex-shrink: 0; overflow: visible; }
+  .realm-quest-top small { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+}
 @media (max-width: 760px) {
   .realms-app { --mobile-bottom: max(12px, env(safe-area-inset-bottom)); }
   .realm-hud {
@@ -2063,6 +2072,37 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
 .realm-player-main small { font-size: 11px; color: #cdbfa8; }
 .realm-player-seen { grid-area: seen; justify-self: end; font-size: 10px; color: #a39380; }
 .realm-player-visit { grid-area: visit; justify-self: end; font-size: 11px; color: #e0a96a; }
+.realm-player-row { display: flex; gap: 6px; }
+.realm-player-row .realm-player { flex: 1; min-width: 0; }
+.realm-player-add { flex: none; width: 44px; font: inherit; font-size: 22px; color: #2f2520; background: #e0a96a; border: 1px solid #fff1b8; cursor: pointer; }
+.realm-player-add:disabled { opacity: 0.6; cursor: default; }
+.realm-leaderboard { display: flex; flex-direction: column; gap: 10px; }
+.realm-leaderboard .pk-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.realm-leaderboard ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.realm-rank { display: grid; grid-template-columns: 40px 44px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 6px 12px; text-align: left; font: inherit; color: #e2d3b2; background: #241c18; border: 1px solid #a3938055; cursor: pointer; }
+.realm-rank:hover:not(:disabled), .realm-rank:focus-visible { border-color: #e0a96a; background: #2f2520; }
+.realm-rank:disabled { cursor: default; }
+.realm-rank .realm-player-portrait { width: 44px; height: 44px; }
+.realm-rank strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #fff1b8; }
+.realm-rank strong em { margin-left: 6px; padding: 1px 6px; font-style: normal; font-size: 10px; color: #2f2520; background: #e0a96a; }
+.realm-rank-place { font-family: var(--font-display); font-size: 16px; text-align: center; color: #cdbfa8; }
+.realm-rank-row.podium .realm-rank-place { font-size: 24px; }
+.realm-rank-row.podium .realm-rank { border-color: #e0a96a88; }
+.realm-rank-row.self .realm-rank { background: #3a2e27; border-color: #9be38f; }
+.realm-rank-score { font-family: var(--font-display); font-size: 15px; color: #f6d77a; white-space: nowrap; }
+.realm-rank-gap { text-align: center; color: #a39380; }
+/* Friends: the help switch, then requests and friends, each with its actions. */
+.realm-friends { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid #a3938055; }
+.realm-friends h3 { margin: 0; font-size: 15px; color: #fff1b8; }
+.realm-friends-help { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; background: #241c18; border: 1px solid #a3938055; cursor: pointer; }
+.realm-friends-help input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: #e0a96a; }
+.realm-friends-help span, .realm-friend > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; color: #e2d3b2; }
+.realm-friends-help small, .realm-friend small { font-size: 11px; color: #cdbfa8; }
+.realm-friend { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #241c18; border: 1px solid #a3938055; }
+.realm-friend > span { flex: 1; }
+.realm-friend strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff1b8; }
+.realm-friend .realm-button { flex: none; min-height: 40px; }
+.realm-friend small.realm-friend-score { color: #f6d77a; }
 
 /* Visiting another player's world: a bar on top with their worlds and the way home; nothing else of the HUD. */
 .realm-visit-bar { position: absolute; z-index: 10; top: max(12px, env(safe-area-inset-top)); left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 14px; width: min(920px, calc(100% - 24px)); box-sizing: border-box; padding: 10px 14px; background: #2f2520f2; border: 2px solid #e0a96a; box-shadow: 0 6px 20px #00000066; color: #e2d3b2; }

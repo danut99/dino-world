@@ -1,4 +1,14 @@
-import { command, ELEMENTS, foeMove, incomingDamage, strikeAgainst, ULTIMATE_POWER, type Battle, type Dino, type Save } from './game';
+import {
+  command,
+  ELEMENTS,
+  foeMove,
+  incomingDamage,
+  strikeAgainst,
+  ULTIMATE_POWER,
+  type Battle,
+  type Dino,
+  type Save,
+} from './game';
 import type { BattleAction } from './battleChoreography';
 
 type Board = Pick<Battle, 'energy' | 'enemy' | 'hp' | 'round' | 'enemyEnergy' | 'foes' | 'foeIndex'>;
@@ -11,7 +21,11 @@ type Board = Pick<Battle, 'energy' | 'enemy' | 'hp' | 'round' | 'enemyEnergy' | 
  * `foeMove`): it braces for the opponent's ultimate and never wastes its own into a raised shield.
  * `shown` lists the moves this fighter already played; a fighter stepping in after a relay starts a new list.
  */
-export function autoAction(b: Board, d: Pick<Dino, 'level' | 'stage' | 'species' | 'element' | 'rarity'>, shown: ReadonlySet<BattleAction>): BattleAction {
+export function autoAction(
+  b: Board,
+  d: Pick<Dino, 'level' | 'stage' | 'species' | 'element' | 'rarity'>,
+  shown: ReadonlySet<BattleAction>,
+): BattleAction {
   const adult = d.stage === 'adult';
   const foe = foeMove(b);
   const power = foe === 'ultimate' ? ULTIMATE_POWER : 1;
@@ -31,6 +45,15 @@ export function autoAction(b: Board, d: Pick<Dino, 'level' | 'stage' | 'species'
   // Under heavy pressure, raise the guard again from time to time.
   if (canGuard && b.energy < 100 && b.hp <= Math.floor(incomingDamage(b, d, false) * power) * 2) return 'defend';
   return 'basic';
+}
+
+/** Moves the player may pick this round; mirrors the reducer's 'energy' rule for the ultimate. */
+export function availableMoves(
+  b: Board,
+  d: Pick<Dino, 'level' | 'stage' | 'species' | 'element' | 'rarity'>,
+): Record<BattleAction, boolean> {
+  const ultimate = d.stage === 'adult' && (b.energy >= 100 || strikeAgainst(b, d, 'basic') >= b.enemy);
+  return { basic: true, defend: true, ultimate };
 }
 
 /**
@@ -59,7 +82,8 @@ export function nextMove(s: Save, memory: ReturnType<typeof movesMemory>): Battl
 
 /** Plays a running fight to its end with the planner, through the same commands. */
 export function autoPlay(s: Save, now: number, memory = movesMemory()): Save {
-  for (let move = nextMove(s, memory); move; move = nextMove(s, memory)) s = command(s, { type: 'action', action: move }, now);
+  for (let move = nextMove(s, memory); move; move = nextMove(s, memory))
+    s = command(s, { type: 'action', action: move }, now);
   return s;
 }
 

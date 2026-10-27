@@ -100,7 +100,9 @@
     inset 2px 2px 0 var(--px-stone-3),
     inset -2px 0 0 var(--px-stone-5);
   translate: 0 2px;
-  transition: translate 80ms, filter 80ms;
+  transition:
+    translate 80ms,
+    filter 80ms;
 }
 .realms-app .ui-tab:hover:not(:disabled, [aria-selected='true']) {
   color: var(--px-bone-1);
@@ -119,6 +121,52 @@
 }
 .realms-app .ui-tab:disabled {
   opacity: 0.5;
+}
+/* Something under way behind the tab: amber with an hourglass; something ready to collect: pulsing green. */
+.realms-app .ui-tab[data-state='busy']:not([aria-selected='true']) {
+  color: #2a1a0c;
+  text-shadow: none;
+  background: #d9a441;
+  box-shadow:
+    inset 2px 2px 0 #f6d277,
+    inset -2px 0 0 #a8742a;
+}
+.realms-app .ui-tab[data-state='ready']:not([aria-selected='true']) {
+  color: #fff;
+  background: #4f9a41;
+  box-shadow:
+    inset 2px 2px 0 #8fd27a,
+    inset -2px 0 0 #2a5424;
+  animation: ui-tab-ready 1.2s ease-in-out infinite alternate;
+}
+.realms-app .ui-tab-hourglass {
+  display: inline-block;
+  font-size: 0.9em;
+  animation: ui-tab-hourglass 2s ease-in-out infinite;
+}
+@keyframes ui-tab-ready {
+  to {
+    filter: brightness(1.25);
+  }
+}
+@keyframes ui-tab-hourglass {
+  0%,
+  40% {
+    rotate: 0deg;
+  }
+  50%,
+  90% {
+    rotate: 180deg;
+  }
+  100% {
+    rotate: 360deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .realms-app .ui-tab[data-state],
+  .realms-app .ui-tab-hourglass {
+    animation: none;
+  }
 }
 .realms-app .ui-tab:focus-visible {
   outline: 2px solid var(--px-gale-1);

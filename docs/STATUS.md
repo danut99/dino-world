@@ -94,4 +94,4 @@ lui (cryptoraptor) vine acum cu bossul, nu după colecția completă. Capitolul 
 - Pachetele de diamante plătite (sunt „în curând”).
 - Recompensele repetărilor din arenă depășesc puțin prețul biletului (mai ales la Campion), deci luptele repetate
   aduc ceva aur și hrană; sunt limitate de bilete și de odihna dinozaurilor (vezi BALANCE.md).
-- Validarea comenzilor pe server (salvarea în cloud are încredere în client).
+- Validarea comenzilor pe server: salvarea în cloud are încă încredere în client, dar o pază de bază (`0004_save_guard.sql`) refuză revizii mai vechi și creșteri absurde de aur/diamante.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advance, command, newSave, parseSave, type Save } from './game';
+import { advance, command, farmYield, newSave, parseSave, type Save } from './game';
 import { ELEMENTS } from './game';
 import { REGIONS } from './content';
 const now = 1_800_000_000_000;
@@ -62,7 +62,11 @@ describe('reference utility systems', () => {
       { id: 'b', recipeId: 'blocks', startedAt: now + 300_000, endsAt: now + 600_000 },
     ];
     const loaded = parseSave(JSON.stringify(old));
-    expect(loaded.inventory).toEqual({ ...s.inventory, wood: s.inventory.wood + 15 + 10, stone: s.inventory.stone + 10 + 10 });
+    expect(loaded.inventory).toEqual({
+      ...s.inventory,
+      wood: s.inventory.wood + 15 + 10,
+      stone: s.inventory.stone + 10 + 10,
+    });
     expect(loaded.crafting).toEqual([]);
     expect(parseSave(JSON.stringify(loaded))).toEqual(loaded);
   });
@@ -74,7 +78,7 @@ describe('reference utility systems', () => {
     expect(() => command(loaded, { type: 'claimCraft', jobId: s.crafting[0].id }, now + 179_999)).toThrow();
     s = command(loaded, { type: 'collectAvailable' }, now + 601_000);
     expect(s.inventory.provisions).toBe(2);
-    expect(s.food).toBe(400 - 2 * 30 + 3);
+    expect(s.food).toBe(400 - 2 * 30 + 10);
     const again = command(s, { type: 'collectAvailable' }, now + 601_000);
     expect(again.inventory).toEqual(s.inventory);
     expect(again.food).toBe(s.food);
@@ -94,9 +98,18 @@ describe('reference utility systems', () => {
     expect(s.cleared).toEqual(['arena-fire-1']);
     expect(s.inventory.wood).toBe(45);
     expect(() => command(s, { type: 'claim' }, now)).toThrow();
-    // A repeat pays a quarter of the first win; the team rests two minutes after an apprentice win.
+    // A repeat pays a quarter of the first win, and half of that gold and food once the fight has 3★; the team
+    // rests two minutes after an apprentice win.
     expect(() => command(s, { type: 'battle', encounterId: 'arena-fire-1' }, now)).toThrow('tired');
-    expect(command(s, { type: 'battle', encounterId: 'arena-fire-1' }, now + 2 * 60_000).battle?.reward.gold).toBe(50);
+    expect(s.stars['arena-fire-1']).toBe(3);
+    const mastered = command(s, { type: 'battle', encounterId: 'arena-fire-1' }, now + 2 * 60_000).battle!.reward;
+    expect(mastered).toMatchObject({ gold: 25, food: 10, materials: { wood: 4, stone: 3 } });
+    const repeat = command(
+      { ...s, stars: { 'arena-fire-1': 2 } },
+      { type: 'battle', encounterId: 'arena-fire-1' },
+      now + 2 * 60_000,
+    ).battle!.reward;
+    expect(repeat).toMatchObject({ gold: 50, food: 20, materials: { wood: 4, stone: 3 } });
   });
   it('rejects invalid crafting imports and applies income upgrades prospectively', () => {
     let s = withHero(built());
@@ -108,7 +121,12 @@ describe('reference utility systems', () => {
       gold: 3300 - 900,
       habitats: { fire: 1 },
       inventory: { habitatKit: 0 },
-      construction: { target: 'habitat:fire', level: 2, startedAt: now + 3_600_000, endsAt: now + 3_600_000 + 15 * 60_000 },
+      construction: {
+        target: 'habitat:fire',
+        level: 2,
+        startedAt: now + 3_600_000,
+        endsAt: now + 3_600_000 + 15 * 60_000,
+      },
     });
     const later = advance(s, now + 7_200_000);
     expect(later.habitats.fire).toBe(2);
@@ -123,14 +141,14 @@ describe('reference utility systems', () => {
       ),
     ).toThrow();
   });
-  it('adds a lamp at a time, up to five, each paying 3% more habitat gold', () => {
+  it('adds a lamp at a time, up to five, each paying 5% more habitat gold', () => {
     let s = withHero(built());
     s.inventory.lamp = 6;
     const base = advance(s, now + 3_600_000).storedGold;
     for (let i = 0; i < 5; i++) s = command(s, { type: 'placeLamp' }, now);
     expect(() => command(s, { type: 'placeLamp' }, now)).toThrow('maxLevel');
     expect(s).toMatchObject({ lamps: 5, inventory: { lamp: 1 } });
-    expect(advance(s, now + 3_600_000).storedGold).toBeCloseTo(base * 1.15);
+    expect(advance(s, now + 3_600_000).storedGold).toBeCloseTo(base * 1.25);
     expect(parseSave(JSON.stringify(s))).toEqual(s);
   });
 });
@@ -160,28 +178,31 @@ describe('farm levels, plots and crops', () => {
     for (let i = 0; i < 6; i++) s = command(s, { type: 'plant' }, now);
     expect(() => command(s, { type: 'plant' }, now)).toThrow('plots');
     const food = s.food;
-    s = command(s, { type: 'harvest' }, now + 120_000);
-    expect(s.food).toBe(food + 6 * Math.round(3 * 1.6));
+    s = command(s, { type: 'harvest' }, now + 300_000);
+    expect(s.food).toBe(food + 6 * 10 * 2.5);
     expect(parseSave(JSON.stringify(s))).toEqual(s);
   });
-  it('charges more and waits longer for bigger crops, gated by farm level', () => {
+  it('opens all three crops at once: longer ones cost more and give more food', () => {
     let s = farm();
-    expect(() => command(s, { type: 'plant', crop: 'ginkgo' }, now)).toThrow('locked');
     s = command(s, { type: 'plant', crop: 'cicadas' }, now);
     expect(s.gold).toBe(900 - 5);
-    expect(() => command(s, { type: 'harvest' }, now + 899_999)).toThrow();
-    s = command(s, { type: 'harvest', plot: 0 }, now + 900_000);
-    expect(s.food).toBe(415);
+    expect(() => command(s, { type: 'harvest' }, now + 3_599_999)).toThrow();
+    s = command(s, { type: 'harvest', plot: 0 }, now + 3_600_000);
+    expect(s.food).toBe(460);
+    expect(() => command(s, { type: 'plant', crop: 'feast' }, now)).not.toThrow();
   });
-  it('unlocks one more crop at every farm level, the last at level five', () => {
-    let s = farm();
-    s.gold = 30_000;
-    s.inventory = { ...s.inventory, wood: 200, stone: 150, crystal: 10 };
-    for (const [level, crop] of [[2, 'ginkgo'], [3, 'meat'], [4, 'amber'], [5, 'feast']] as const) {
-      expect(() => command(s, { type: 'plant', crop }, now)).toThrow('locked');
-      s = upgradeFarm(s);
-      expect(s.farmLevel).toBe(level);
-      expect(() => command(s, { type: 'plant', crop }, now)).not.toThrow();
-    }
+  it('multiplies every harvest with the farm level', () => {
+    expect([1, 2, 3, 4, 5].map((level) => farmYield(level, 'feast'))).toEqual([350, 438, 525, 700, 875]);
+  });
+  it('replants crops from older saves as the closest current crop', () => {
+    const s = farm();
+    s.plots = [
+      { crop: 'ginkgo' as never, readyAt: now },
+      { crop: 'amber' as never, readyAt: now },
+    ];
+    expect(parseSave(JSON.stringify(s)).plots).toEqual([
+      { crop: 'cicadas', readyAt: now },
+      { crop: 'feast', readyAt: now },
+    ]);
   });
 });

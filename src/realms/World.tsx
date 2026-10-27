@@ -8,7 +8,19 @@ import { drawArena, arenaState } from './animatedArena';
 import { drawWorkshop, WORKSHOP_ART, WORKSHOP_GROUND } from './animatedWorkshop';
 import { drawFarm, farmGround, isAnimatedFarm } from './animatedFarm';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { advance, canPlace, ELEMENTS, farmNextAt, rarityOf, type Building, type Save, type RealmId } from './game';
+import {
+  advance,
+  canBuild,
+  ELEMENTS,
+  farmNextAt,
+  rarityOf,
+  REALM_NAMES,
+  treasureReady,
+  treasureSpot,
+  type Building,
+  type Save,
+  type RealmId,
+} from './game';
 import { constrainPan, constrainHomePan, SCENE } from './camera';
 import { buildingLevel, groundLine, LEVELED, measureGround, TIERED, tierArt } from './buildingTiers';
 import { worldArt } from './worldArt';
@@ -53,13 +65,97 @@ const HOME_SRC = HOME_ISLAND.art,
   HOME_SKY: [string, string, string] = ['#13183a', '#2c4a7a', '#bfe8ff'],
   CONCEPTS_SRC = '/realms/building-concepts.webp';
 const utilitySrc = (kind: UtilityKind) =>
-  kind === 'portal' ? PORTAL_ART : kind === 'market' ? '/realms/gameplay/market-building-pixel.webp' : '/realms/gameplay/utility-buildings-pixel.webp';
+  kind === 'portal'
+    ? PORTAL_ART
+    : kind === 'market'
+      ? '/realms/gameplay/market-building-pixel.webp'
+      : '/realms/gameplay/utility-buildings-pixel.webp';
 /** Camera zoom range; buttons move in ten percentage point steps. Zooming out stops while the
  *  artwork still fills the screen (see `minZoom`). */
 const MAX_ZOOM = 2.5;
 const BUTTON_ZOOM_STEP = 0.1;
 /** Insula principală e mare: pornește micșorată, cu tot platoul în cadru. */
 const HOME_ZOOM = 0.8;
+/** Open sky between the current island and its neighbours, in scene pixels. */
+const ISLAND_GAP = 160;
+/** Below this zoom the camera roams the whole chain of islands. */
+const CHAIN_ZOOM = 0.6;
+type Place = 'home' | RealmId;
+const islandFrame = (id: Place) => {
+  const isl = id === 'home' ? HOME_ISLAND : ISLANDS[id];
+  return { x: isl.offset[0], y: isl.offset[1], w: isl.size[0] * isl.scale, h: isl.size[1] * isl.scale };
+};
+/** Two crossed chains with a padlock where they meet, over a locked world. */
+function drawChains(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number) {
+  const count = 15,
+    link = size / count;
+  for (const dir of [-1, 1]) {
+    const angle = Math.atan2(dir * 0.6, 1);
+    for (let i = 0; i < count; i++) {
+      const t = (i + 0.5) / count - 0.5;
+      ctx.save();
+      ctx.translate(cx + t * size, cy + dir * t * size * 0.6);
+      ctx.rotate(angle);
+      for (const [color, width] of [
+        ['#1d2029', link * 0.3],
+        ['#9aa3b5', link * 0.14],
+      ] as const) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        if (i % 2) {
+          ctx.beginPath();
+          ctx.moveTo(-link * 0.6, 0);
+          ctx.lineTo(link * 0.6, 0);
+          ctx.stroke();
+        } else ctx.strokeRect(-link * 0.55, -link * 0.28, link * 1.1, link * 0.56);
+      }
+      ctx.restore();
+    }
+  }
+  const w = size * 0.14,
+    h = w * 0.8;
+  ctx.lineWidth = w * 0.16;
+  ctx.strokeStyle = '#1d2029';
+  ctx.beginPath();
+  ctx.arc(cx, cy - h * 0.45, w * 0.3, Math.PI, 0);
+  ctx.stroke();
+  ctx.lineWidth = w * 0.08;
+  ctx.strokeStyle = '#c3c9d6';
+  ctx.stroke();
+  ctx.fillStyle = '#1d2029';
+  ctx.fillRect(cx - w / 2 - w * 0.06, cy - h * 0.45 - w * 0.06, w * 1.12, h + w * 0.12);
+  ctx.fillStyle = '#d9a441';
+  ctx.fillRect(cx - w / 2, cy - h * 0.45, w, h);
+  ctx.fillStyle = '#f6d277';
+  ctx.fillRect(cx - w / 2, cy - h * 0.45, w, h * 0.18);
+  ctx.fillStyle = '#1d2029';
+  ctx.fillRect(cx - w * 0.07, cy - h * 0.1, w * 0.14, h * 0.35);
+}
+/** A label pill; `anchor` -1 puts `x` at its left edge, 1 at its right edge, 0 in the middle. */
+function pill(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  active: boolean,
+  anchor: -1 | 0 | 1 = 0,
+) {
+  ctx.font = `600 ${size}px 'Pixelify Sans', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width + size * 1.4,
+    h = size * 1.9,
+    cx = x - (anchor * w) / 2;
+  ctx.fillStyle = active ? '#f6d277' : '#0d1428d9';
+  ctx.fillRect(cx - w / 2, y - h / 2, w, h);
+  ctx.strokeStyle = active ? '#fff0af' : '#f0e6be66';
+  ctx.lineWidth = Math.max(1, size / 8);
+  ctx.strokeRect(cx - w / 2, y - h / 2, w, h);
+  ctx.fillStyle = active ? '#2a1a0c' : '#ffffff';
+  ctx.fillText(text, cx, y);
+  ctx.textBaseline = 'alphabetic';
+}
 /**
  * Drawn building size, in scene pixels. 192 is the exact width of the 3×3 footprint; buildings are drawn a
  * quarter larger so they read clearly at the island's default zoom. The ground line keeps the base anchored on
@@ -84,21 +180,49 @@ export function drawBuilding(
   if (b.kind === 'workshop' && texture && standalone) {
     const state = workshopState(texture);
     if (state) {
-      const size = BUILDING_SIZE * .9 * 240 / state.width;
-      drawWorkshopTier(ctx, texture, animationMs, Math.round(p.x-size/2), Math.round(p.y-state.ground*size), size);
+      const size = (BUILDING_SIZE * 0.9 * 240) / state.width;
+      drawWorkshopTier(
+        ctx,
+        texture,
+        animationMs,
+        Math.round(p.x - size / 2),
+        Math.round(p.y - state.ground * size),
+        size,
+      );
       return;
     }
   }
   if (b.kind === 'portal' && texture && standalone && texture.src.endsWith(PORTAL_ART)) {
-    drawPortal(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - PORTAL_GROUND * BUILDING_SIZE), BUILDING_SIZE);
+    drawPortal(
+      ctx,
+      texture,
+      animationMs,
+      Math.round(p.x - BUILDING_SIZE / 2),
+      Math.round(p.y - PORTAL_GROUND * BUILDING_SIZE),
+      BUILDING_SIZE,
+    );
     return;
   }
   if (b.kind === 'workshop' && texture && standalone && texture.src.endsWith(WORKSHOP_ART)) {
-    drawWorkshop(ctx, texture, animationMs, Math.round(p.x - BUILDING_SIZE / 2), Math.round(p.y - WORKSHOP_GROUND * BUILDING_SIZE), BUILDING_SIZE);
+    drawWorkshop(
+      ctx,
+      texture,
+      animationMs,
+      Math.round(p.x - BUILDING_SIZE / 2),
+      Math.round(p.y - WORKSHOP_GROUND * BUILDING_SIZE),
+      BUILDING_SIZE,
+    );
     return;
   }
   if (b.kind === 'farm' && texture && standalone && isAnimatedFarm(texture)) {
-    drawFarm(ctx, texture, animationMs, Math.round(p.x - FARM_SIZE / 2), Math.round(p.y - farmGround(texture) * FARM_SIZE), FARM_SIZE);
+    drawFarm(
+      ctx,
+      texture,
+      animationMs,
+      Math.round(p.x - FARM_SIZE / 2),
+      Math.round(p.y - farmGround(texture) * FARM_SIZE),
+      FARM_SIZE,
+    );
     return;
   }
 
@@ -439,6 +563,9 @@ export default function World({
   covered = false,
   onProgress,
   cameraAction,
+  neighbors,
+  onNavigate,
+  treasures = false,
 }: {
   save: Save;
   placing: boolean;
@@ -455,6 +582,11 @@ export default function World({
   /** Reports how many of the images this view needs have loaded, until all of them have. */
   onProgress?: (done: number, total: number) => void;
   cameraAction?: ReactNode;
+  /** Islands beside this one: shown when zoomed out, reached by dragging past the edge or tapping them. */
+  neighbors?: { order: Place[]; locked: Place[] };
+  onNavigate?: (to: Place) => void;
+  /** Shows the lost treasure on the main island when one waits (your own island only). */
+  treasures?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null),
     image = useRef<HTMLImageElement | null>(null),
@@ -467,23 +599,38 @@ export default function World({
   const reducedMotion = useReducedMotion();
   useEffect(() => {
     let active = true;
-    const residents = realm === 'home' ? [] : save.dinos.filter(d => d.element === realm);
+    const residents = save.dinos.filter(
+      (d) => d.element === realm || (neighbors?.order.includes(d.element) && !neighbors.locked.includes(d.element)),
+    );
     for (const d of residents) {
       const id = `${d.species}_${d.element}_${d.stage}`;
       if (animatedArt.current.has(id)) continue;
-      loadAnimation(d.species, d.element, d.stage).then(async manifest => {
+      loadAnimation(d.species, d.element, d.stage).then(async (manifest) => {
         if (!manifest || !active) return;
         const images = new Map<string, HTMLImageElement>();
-        await Promise.all(Object.values(manifest.clips).flatMap(clips => Object.values(clips ?? {}))
-          .map(async clip => { try { images.set(clip.sheet, await loadSpriteImage(clip.sheet)); } catch { /* Retain concept fallback. */ } }));
+        await Promise.all(
+          Object.values(manifest.clips)
+            .flatMap((clips) => Object.values(clips ?? {}))
+            .map(async (clip) => {
+              try {
+                images.set(clip.sheet, await loadSpriteImage(clip.sheet));
+              } catch {
+                /* Retain concept fallback. */
+              }
+            }),
+        );
         if (active) {
           animatedArt.current.set(id, { manifest, images });
-          setLoaded(n => n + 1);
+          setLoaded((n) => n + 1);
         }
       });
     }
-    return () => { active = false; animatedArt.current.clear(); };
-  }, [realm, save.dinos]);
+    return () => {
+      active = false;
+      animatedArt.current.clear();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realm, save.dinos, neighbors?.order.join(), neighbors?.locked.join()]);
   /** Images that finished loading or failed: either way, nothing more to wait for. */
   const settled = useRef(new Set<string>());
   const settle = (src: string) => {
@@ -508,7 +655,7 @@ export default function World({
     pendingPan.current = point;
     cameraDirty.current = true;
     if (reducedMotion && panFrame.current === null) {
-      panFrame.current = requestAnimationFrame(time => {
+      panFrame.current = requestAnimationFrame((time) => {
         panFrame.current = null;
         drawNow.current?.(time);
       });
@@ -520,8 +667,64 @@ export default function World({
     if (pendingPan.current) setPan(pendingPan.current);
     pendingPan.current = null;
   };
-  useEffect(() => () => { if (panFrame.current !== null) cancelAnimationFrame(panFrame.current); }, []);
+  /** How far the camera is pulled past its limit towards a neighbour (scene px, + reveals `prev`). */
+  const swipe = useRef({ offset: 0, trigger: 1, ready: false });
+  const spring = useRef<number | null>(null),
+    springTo = useRef<{ x: number; y: number } | null>(null);
+  const springBack = (to: { x: number; y: number }) => {
+    const from = livePan.current,
+      start = performance.now();
+    if (reducedMotion) {
+      queuePan(to);
+      commitPan();
+      return;
+    }
+    springTo.current = to;
+    const step = (t: number) => {
+      const k = Math.min(1, (t - start) / 180),
+        e = 1 - (1 - k) ** 3;
+      queuePan({ x: from.x + (to.x - from.x) * e, y: to.y });
+      if (k < 1) spring.current = requestAnimationFrame(step);
+      else {
+        spring.current = springTo.current = null;
+        commitPan();
+      }
+    };
+    spring.current = requestAnimationFrame(step);
+  };
+  useEffect(
+    () => () => {
+      if (panFrame.current !== null) cancelAnimationFrame(panFrame.current);
+      if (spring.current !== null) cancelAnimationFrame(spring.current);
+    },
+    [],
+  );
+  const order = neighbors?.order ?? [],
+    at = order.indexOf(realm),
+    prev = at < 0 ? undefined : order[at - 1],
+    next = at < 0 ? undefined : order[at + 1];
+  // Every other island in the chain, laid out outwards from the current one; the first per side is adjacent.
+  const sides: { side: -1 | 1; id: Place; locked: boolean; x: number; y: number; w: number; h: number }[] = [];
+  if (at >= 0)
+    for (const side of [-1, 1] as const) {
+      let edge = islandFrame(realm).w / 2;
+      for (let i = at + side; i >= 0 && i < order.length; i += side) {
+        const id = order[i],
+          f = islandFrame(id),
+          centre = edge + ISLAND_GAP + f.w / 2;
+        sides.push({ side, id, locked: !!neighbors?.locked.includes(id), ...f, x: f.x + side * centre });
+        edge = centre + f.w / 2;
+      }
+    }
+  const reach = {
+    left: Math.min(islandFrame(realm).x, ...sides.map((n) => n.x)),
+    right: Math.max(islandFrame(realm).x + islandFrame(realm).w, ...sides.map((n) => n.x + n.w)),
+  };
+  const placeName = (id: Place) =>
+    `${neighbors?.locked?.includes(id) ? '🔒 ' : ''}${id === 'home' ? (lang ? 'Main island' : 'Insula principală') : REALM_NAMES[id][lang]}`;
   const [viewport, setViewport] = useState({ width: SCENE.width, height: SCENE.height });
+  const view = useRef(viewport);
+  view.current = viewport;
   // Canvas pixels per scene pixel, so the canvas matches the screen instead of being stretched by CSS.
   const [resolution, setResolution] = useState(1);
   const [panning, setPanning] = useState(false),
@@ -542,8 +745,12 @@ export default function World({
     }
   };
   // Elemental worlds are a whole island on a night sky that fills the scene; the camera keeps the scene in view.
-  const boundPan = (point: { x: number; y: number }, scale: number, view: { width: number; height: number }) =>
-    realm === 'home' ? constrainHomePan(point, scale, view) : constrainPan(point, scale, view);
+  const boundPan = (point: { x: number; y: number }, scale: number, view: { width: number; height: number }) => {
+    const p = realm === 'home' ? constrainHomePan(point, scale, view) : constrainPan(point, scale, view);
+    // Zoomed out, the camera travels the whole chain; closer in, dragging past the edge switches island.
+    if (!sides.length || scale >= CHAIN_ZOOM) return p;
+    return { x: Math.max(-(reach.right - 768) * scale, Math.min(-(reach.left - 768) * scale, point.x)), y: p.y };
+  };
   const cameraPan = boundPan(pan, zoom, viewport);
   useLayoutEffect(() => {
     livePan.current = cameraPan;
@@ -554,8 +761,9 @@ export default function World({
 
   // Zooming out stops while the artwork still covers the whole screen, so no empty margin ever shows.
   // Cerul de noapte se întinde dincolo de scenă, deci se poate micșora până se vede toată insula.
-  const minZoom = realm === 'home' ? 0.4 : 0.7;
-  const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
+  // With neighbours, zooming further out brings them into view.
+  const minZoom = sides.length ? 0.15 : realm === 'home' ? 0.4 : 0.7;
+  const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean; over: number } | null>(null);
   // Press and hold a building on the home island to pick it up and drag it to a new spot.
   const holdTimer = useRef<number | null>(null);
   const [held, setHeld] = useState<{ id: string; ox: number; oy: number } | null>(null);
@@ -571,8 +779,8 @@ export default function World({
       .find((b) => {
         const q = project(b.x + 1.5, b.y + 1.5);
         const size = b.kind === 'hatchery' ? HATCHERY_SIZE : b.kind === 'farm' ? FARM_SIZE : BUILDING_SIZE;
-        const lift = BUILDING_LIFT * size / BUILDING_SIZE;
-        return Math.abs(p.x - q.x) < size / 2 && p.y < q.y + 40 * size / BUILDING_SIZE && p.y > q.y - lift;
+        const lift = (BUILDING_LIFT * size) / BUILDING_SIZE;
+        return Math.abs(p.x - q.x) < size / 2 && p.y < q.y + (40 * size) / BUILDING_SIZE && p.y > q.y - lift;
       });
   // Target top-left cell for the held building, keeping the grab point under the pointer.
   const heldCell = (p: { x: number; y: number }, h: { ox: number; oy: number }) => {
@@ -643,7 +851,12 @@ export default function World({
   const artFor = (kind: UtilityKind): [HTMLImageElement | null, boolean] => {
     const tier = tierArt(save, kind),
       img = tier ? tierImages.current[tier] : null;
-    return img ? [img, true] : [utilityArt.current[kind] ?? (kind === 'market' ? null : buildings.current), kind === 'portal' && !!utilityArt.current[kind]];
+    return img
+      ? [img, true]
+      : [
+          utilityArt.current[kind] ?? (kind === 'market' ? null : buildings.current),
+          kind === 'portal' && !!utilityArt.current[kind],
+        ];
   };
   // A short burst over a building the moment it reaches a new level.
   const levelOf = (kind: UtilityKind) => buildingLevel(save, kind)?.level ?? 0;
@@ -689,6 +902,19 @@ export default function World({
       active = false;
     };
   }, [realm]);
+  useEffect(() => {
+    for (const id of order) {
+      if (id === 'home' || worlds.current[id]) continue;
+      const img = new Image();
+      img.onload = () => {
+        worlds.current[id] = img;
+        settle(worldArt(id));
+      };
+      img.onerror = () => settle(worldArt(id));
+      img.src = worldArt(id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order.join()]);
   // The view shows only once its real artwork is in, so the drawn stand-ins never flash on screen.
   const needed =
     realm === 'home'
@@ -722,196 +948,304 @@ export default function World({
       ctx = canvas?.getContext('2d');
     if (!ctx || !canvas) return;
     const owned = realm === 'home' ? [] : save.dinos.filter((x) => x.element === realm);
-    let raf = 0, lastPaint = -Infinity;
+    let raf = 0,
+      lastPaint = -Infinity;
     const paint = (time: number) => {
-    const cameraPan = livePan.current;
-    const dragging = !!drag.current?.moved;
-    const paintInterval = realm === 'arcane' || realm === 'lightning' ? 1000 / 30 - 0.5 : 80;
-    if (!document.hidden && (cameraDirty.current || time - lastPaint >= (dragging || held || placing ? 0 : paintInterval) || reducedMotion || covered)) {
-    cameraDirty.current = false;
-    lastPaint = time;
-    const host = canvas.parentElement;
-    if (host) {
-      host.dataset.cameraX = String(cameraPan.x);
-      host.dataset.cameraY = String(cameraPan.y);
-    }
-    if (overlay.current) {
-      overlay.current.style.translate = `${(cameraPan.x - committedPan.current.x) * displayScale.current}px ${(cameraPan.y - committedPan.current.y) * displayScale.current}px`;
-    }
-    ctx.setTransform(resolution, 0, 0, resolution, 0, 0);
-    ctx.clearRect(0, 0, 1536, 1024);
-    // A sky matching the artwork's border, under it in case rounding leaves a sliver at the edge.
-    const margin = ctx.createLinearGradient(0, 0, 0, 1024);
-    margin.addColorStop(0, realm === 'home' ? '#338bfd' : '#10223d');
-    margin.addColorStop(1, realm === 'home' ? '#c4d5fa' : '#29445c');
-    ctx.fillStyle = margin;
-    ctx.fillRect(0, 0, 1536, 1024);
-    // Zoomed in, smoothing blurs the pixel art; nearest-neighbour keeps every pixel crisp.
-    ctx.imageSmoothingEnabled = false;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.save();
-    ctx.translate(768 + cameraPan.x, 512 + cameraPan.y);
-    ctx.scale(zoom, zoom);
-    ctx.translate(-768, -512);
-    {
-      const [skyTop, skyBottom, glow] = realm === 'home' ? HOME_SKY : SKIES[realm];
-      const sky = ctx.createLinearGradient(0, 0, 0, 1024);
-      sky.addColorStop(0, skyTop);
-      sky.addColorStop(1, skyBottom);
-      ctx.fillStyle = sky;
-      if (realm === 'home') {
-        // Fill the entire visible canvas in world coordinates, even at the drag limits.
-        const left = 768 + (-768 - cameraPan.x) / zoom;
-        const top = 512 + (-512 - cameraPan.y) / zoom;
-        ctx.fillRect(left - 2, top - 2, 1536 / zoom + 4, 1024 / zoom + 4);
-      } else {
-        ctx.fillRect(-480, -240, 2496, 1504);
-      }
-      // stele pixel, fixe, cu o licărire lentă
-      for (let i = 0; i < 110; i++) {
-        const twinkle = reducedMotion ? 1 : 0.55 + 0.45 * Math.sin(time / 700 + i * 1.7);
-        ctx.globalAlpha = (i % 4 ? 0.55 : 0.9) * twinkle;
-        ctx.fillStyle = i % 5 ? '#ffffff' : glow;
-        const sz = i % 7 ? 2 : 4;
-        ctx.fillRect((((i * 317 + 43) % 2496) - 480) & ~1, (((i * 211 + 61) % 1504) - 240) & ~1, sz, sz);
-      }
-      ctx.globalAlpha = 1;
-    }
-    if (realm === 'home') {
-      if (image.current) {
-        ctx.drawImage(image.current, HOME_ISLAND.offset[0], HOME_ISLAND.offset[1], HOME_ISLAND.size[0] * 2, HOME_ISLAND.size[1] * 2);
-        if (!reducedMotion) {
-          drawIslandAtmosphere(ctx, image.current, 'home', time, HOME_ISLAND.offset, HOME_ISLAND.size[0] * 2 / image.current.naturalWidth);
+      const cameraPan = livePan.current;
+      const dragging = !!drag.current?.moved;
+      const paintInterval = realm === 'arcane' || realm === 'lightning' ? 1000 / 30 - 0.5 : 80;
+      if (
+        !document.hidden &&
+        (cameraDirty.current ||
+          time - lastPaint >= (dragging || held || placing ? 0 : paintInterval) ||
+          reducedMotion ||
+          covered)
+      ) {
+        cameraDirty.current = false;
+        lastPaint = time;
+        const host = canvas.parentElement;
+        if (host) {
+          host.dataset.cameraX = String(cameraPan.x);
+          host.dataset.cameraY = String(cameraPan.y);
         }
-      }
-    } else {
-      const environment = worlds.current[realm];
-      if (environment) {
-        const isl = ISLANDS[realm];
-        ctx.drawImage(realm === 'fire' && !reducedMotion ? islandBaseImage(environment, 'fire') : environment,
-          isl.offset[0], isl.offset[1], isl.size[0] * isl.scale, isl.size[1] * isl.scale);
-        if (!reducedMotion) {
-          if (realm === 'water' || realm === 'fire') drawIslandAtmosphere(ctx, environment, realm, time, isl.offset, isl.scale);
-          else drawElementalAtmosphere(ctx, environment, realm, time, isl.offset, isl.scale);
+        if (overlay.current) {
+          overlay.current.style.translate = `${(cameraPan.x - committedPan.current.x) * displayScale.current}px ${(cameraPan.y - committedPan.current.y) * displayScale.current}px`;
         }
-      }
-    }
-    ctx.imageSmoothingEnabled = false;
-    if (showGhost) {
-      for (const { x, y } of BUILDABLE_CELLS) {
-        const p = project(x, y);
-        polygon(
-          ctx,
-          [
-            [p.x, p.y],
-            [p.x + GRID.w, p.y + GRID.h],
-            [p.x, p.y + GRID.h * 2],
-            [p.x - GRID.w, p.y + GRID.h],
-          ],
-          (x + y) % 2 ? '#e5f4b01c' : '#284a3820',
-          '#f0e6be35',
-        );
-      }
-    }
-    if (realm === 'home')
-      [...save.buildings]
-        .sort((a, b) => a.x + a.y - b.x - b.y)
-        .forEach((b) => {
-          if (b.id === held?.id) ctx.globalAlpha = 0.3;
-          drawBuilding(ctx, b, ...artFor(b.kind as UtilityKind), reducedMotion ? 0 : time);
-          ctx.globalAlpha = 1;
-        });
-    if (realm === 'home')
-      for (let i = 0; i < save.lamps; i++) {
-        const p = project(2 + i * 2, 10);
-        ctx.fillStyle = '#584332';
-        ctx.fillRect(p.x - 3, p.y - 32, 6, 32);
-        ctx.fillStyle = '#f6d277';
-        ctx.fillRect(p.x - 8, p.y - 43, 16, 13);
-        ctx.fillStyle = '#fff0af';
-        ctx.fillRect(p.x - 4, p.y - 40, 8, 7);
-      }
-    // Worlds show only the dinosaurs the player owns there.
-    if (realm !== 'home')
-      owned.forEach((x, i) => {
-        const spots = ISLANDS[realm as RealmId].spots;
-        const anchor = spots[i % spots.length];
-        const phase = reducedMotion ? 0 : ((time + i * 1700) % 10000) / 1000;
-        const walking = (phase >= 3 && phase < 5) || phase >= 8;
-        const returning = phase >= 8;
-        const travel = phase < 3 ? 0 : phase < 5 ? (phase - 3) / 2 : phase < 8 ? 1 : 1 - (phase - 8) / 2;
-        const art = animatedArt.current.get(`${x.species}_${x.element}_${x.stage}`);
-        const facing = 'se';
-        const clip = art?.manifest.clips[facing]?.[walking ? 'walk' : 'idle'];
-        const sheet = clip && art?.images.get(clip.sheet);
-        const p = { x: anchor.x + (sheet ? travel * 64 : 0), y: anchor.y };
-        if (clip && sheet && art) {
-          const size = x.stage === 'baby' ? 128 : x.stage === 'juvenile' ? 176 : 224;
-          const m = art.manifest;
-          const factor = size / m.sourceSize.height;
-          ctx.save();
-          ctx.translate(Math.round(p.x), Math.round(p.y));
-          if (returning) ctx.scale(-1, 1);
-          const clipTime = walking ? (phase - (returning ? 8 : 3)) * 1000 : time + i * 137;
-          // Rare, epic and legendary residents glow in their rarity's colour; the glow breathes unless motion is reduced.
-          const glow = RARITY_CANVAS[rarityOf(x)].glow;
-          if (glow) {
-            ctx.shadowColor = glow;
-            ctx.shadowBlur = (rarityOf(x) === 'rare' ? 6 : 12) + (reducedMotion ? 0 : 4 * Math.sin(time / 400 + i));
+        ctx.setTransform(resolution, 0, 0, resolution, 0, 0);
+        ctx.clearRect(0, 0, 1536, 1024);
+        // A sky matching the artwork's border, under it in case rounding leaves a sliver at the edge.
+        const margin = ctx.createLinearGradient(0, 0, 0, 1024);
+        margin.addColorStop(0, realm === 'home' ? '#338bfd' : '#10223d');
+        margin.addColorStop(1, realm === 'home' ? '#c4d5fa' : '#29445c');
+        ctx.fillStyle = margin;
+        ctx.fillRect(0, 0, 1536, 1024);
+        // Zoomed in, smoothing blurs the pixel art; nearest-neighbour keeps every pixel crisp.
+        ctx.imageSmoothingEnabled = false;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.save();
+        ctx.translate(768 + cameraPan.x, 512 + cameraPan.y);
+        ctx.scale(zoom, zoom);
+        ctx.translate(-768, -512);
+        {
+          const [skyTop, skyBottom, glow] = realm === 'home' ? HOME_SKY : SKIES[realm];
+          const sky = ctx.createLinearGradient(0, 0, 0, 1024);
+          sky.addColorStop(0, skyTop);
+          sky.addColorStop(1, skyBottom);
+          ctx.fillStyle = sky;
+          // Fill the entire visible canvas in world coordinates, even at the drag limits.
+          const left = 768 + (-768 - cameraPan.x) / zoom;
+          const top = 512 + (-512 - cameraPan.y) / zoom;
+          ctx.fillRect(left - 2, top - 2, 1536 / zoom + 4, 1024 / zoom + 4);
+          // stele pixel, fixe, cu o licărire lentă; cu vecini, cerul larg se repetă pe toată lungimea lanțului
+          const right = left + 1536 / zoom;
+          for (let i = 0; i < (sides.length ? 440 : 110); i++) {
+            const wide = i >= 110,
+              bx = wide ? ((i * 317 + 43) % 5376) - 1920 : ((i * 317 + 43) % 2496) - 480,
+              y = wide ? ((i * 211 + 61) % 3072) - 1024 : ((i * 211 + 61) % 1504) - 240;
+            const twinkle = reducedMotion ? 1 : 0.55 + 0.45 * Math.sin(time / 700 + i * 1.7);
+            ctx.globalAlpha = (i % 4 ? 0.55 : 0.9) * twinkle;
+            ctx.fillStyle = i % 5 ? '#ffffff' : glow;
+            const sz = i % 7 ? 2 : 4;
+            if (!wide) {
+              ctx.fillRect(bx & ~1, y & ~1, sz, sz);
+              continue;
+            }
+            for (let k = Math.ceil((left - 4 - bx) / 5376); bx + k * 5376 < right; k++) {
+              const x = bx + k * 5376;
+              if (x >= -480 && x < 2016 && y >= -240 && y < 1264) continue;
+              ctx.fillRect(x & ~1, y & ~1, sz, sz);
+            }
           }
-          drawSprite(ctx, sheet, clip, frameAt(clip, reducedMotion ? 0 : clipTime),
-            -m.pivot.x * factor, -m.pivot.y * factor, m.sourceSize.width * factor, size, m);
+          ctx.globalAlpha = 1;
+        }
+        if (realm === 'home') {
+          if (image.current) {
+            ctx.drawImage(
+              image.current,
+              HOME_ISLAND.offset[0],
+              HOME_ISLAND.offset[1],
+              HOME_ISLAND.size[0] * 2,
+              HOME_ISLAND.size[1] * 2,
+            );
+            if (!reducedMotion) {
+              drawIslandAtmosphere(
+                ctx,
+                image.current,
+                'home',
+                time,
+                HOME_ISLAND.offset,
+                (HOME_ISLAND.size[0] * 2) / image.current.naturalWidth,
+              );
+            }
+          }
+        } else {
+          const environment = worlds.current[realm];
+          if (environment) {
+            const isl = ISLANDS[realm];
+            ctx.drawImage(
+              realm === 'fire' && !reducedMotion ? islandBaseImage(environment, 'fire') : environment,
+              isl.offset[0],
+              isl.offset[1],
+              isl.size[0] * isl.scale,
+              isl.size[1] * isl.scale,
+            );
+            if (!reducedMotion) {
+              if (realm === 'water' || realm === 'fire')
+                drawIslandAtmosphere(ctx, environment, realm, time, isl.offset, isl.scale);
+              else drawElementalAtmosphere(ctx, environment, realm, time, isl.offset, isl.scale);
+            }
+          }
+        }
+        const drawHomeObjects = () => {
+          [...save.buildings]
+            .sort((a, b) => a.x + a.y - b.x - b.y)
+            .forEach((b) => {
+              if (b.id === held?.id) ctx.globalAlpha = 0.3;
+              drawBuilding(ctx, b, ...artFor(b.kind as UtilityKind), reducedMotion ? 0 : time);
+              ctx.globalAlpha = 1;
+            });
+          for (let i = 0; i < save.lamps; i++) {
+            const p = project(2 + i * 2, 10);
+            ctx.fillStyle = '#584332';
+            ctx.fillRect(p.x - 3, p.y - 32, 6, 32);
+            ctx.fillStyle = '#f6d277';
+            ctx.fillRect(p.x - 8, p.y - 43, 16, 13);
+            ctx.fillStyle = '#fff0af';
+            ctx.fillRect(p.x - 4, p.y - 40, 8, 7);
+          }
+        };
+        for (const n of sides) {
+          const img = n.id === 'home' ? image.current : worlds.current[n.id];
+          if (!img) continue;
+          ctx.globalAlpha = n.locked ? 0.75 : 0.9;
+          if (n.locked) ctx.filter = 'grayscale(0.75) brightness(0.55)';
+          ctx.drawImage(img, n.x, n.y, n.w, n.h);
+          ctx.filter = 'none';
+          ctx.globalAlpha = 1;
+          if (n.locked) drawChains(ctx, n.x + n.w / 2, n.y + n.h / 2, Math.min(n.w, n.h) * 0.8);
+          if (n.id === 'home') {
+            ctx.save();
+            ctx.translate(n.x - islandFrame('home').x, 0);
+            drawHomeObjects();
+            ctx.restore();
+          }
+        }
+        ctx.imageSmoothingEnabled = false;
+        if (showGhost) {
+          for (const { x, y } of BUILDABLE_CELLS) {
+            const p = project(x, y);
+            polygon(
+              ctx,
+              [
+                [p.x, p.y],
+                [p.x + GRID.w, p.y + GRID.h],
+                [p.x, p.y + GRID.h * 2],
+                [p.x - GRID.w, p.y + GRID.h],
+              ],
+              (x + y) % 2 ? '#e5f4b01c' : '#284a3820',
+              '#f0e6be35',
+            );
+          }
+        }
+        if (realm === 'home') drawHomeObjects();
+        // Worlds show only the dinosaurs the player owns there; open neighbours show theirs too.
+        const groups = [
+          ...(realm === 'home' ? [] : [{ dinos: owned, spots: ISLANDS[realm].spots, dx: 0 }]),
+          ...sides
+            .filter((n) => n.id !== 'home' && !n.locked)
+            .map((n) => ({
+              dinos: save.dinos.filter((d) => d.element === n.id),
+              spots: ISLANDS[n.id as RealmId].spots,
+              dx: n.x - islandFrame(n.id).x,
+            })),
+        ];
+        for (const { dinos, spots, dx } of groups)
+          dinos.forEach((x, i) => {
+            const anchor = spots[i % spots.length];
+            const phase = reducedMotion ? 0 : ((time + i * 1700) % 10000) / 1000;
+            const walking = (phase >= 3 && phase < 5) || phase >= 8;
+            const returning = phase >= 8;
+            const travel = phase < 3 ? 0 : phase < 5 ? (phase - 3) / 2 : phase < 8 ? 1 : 1 - (phase - 8) / 2;
+            const art = animatedArt.current.get(`${x.species}_${x.element}_${x.stage}`);
+            const facing = 'se';
+            const clip = art?.manifest.clips[facing]?.[walking ? 'walk' : 'idle'];
+            const sheet = clip && art?.images.get(clip.sheet);
+            const p = { x: anchor.x + dx + (sheet ? travel * 64 : 0), y: anchor.y };
+            if (clip && sheet && art) {
+              const size = x.stage === 'baby' ? 128 : x.stage === 'juvenile' ? 176 : 224;
+              const m = art.manifest;
+              const factor = size / m.sourceSize.height;
+              ctx.save();
+              ctx.translate(Math.round(p.x), Math.round(p.y));
+              if (returning) ctx.scale(-1, 1);
+              const clipTime = walking ? (phase - (returning ? 8 : 3)) * 1000 : time + i * 137;
+              // Rare, epic and legendary residents glow in their rarity's colour; the glow breathes unless motion is reduced.
+              const glow = RARITY_CANVAS[rarityOf(x)].glow;
+              if (glow) {
+                ctx.shadowColor = glow;
+                ctx.shadowBlur = (rarityOf(x) === 'rare' ? 6 : 12) + (reducedMotion ? 0 : 4 * Math.sin(time / 400 + i));
+              }
+              drawSprite(
+                ctx,
+                sheet,
+                clip,
+                frameAt(clip, reducedMotion ? 0 : clipTime),
+                -m.pivot.x * factor,
+                -m.pivot.y * factor,
+                m.sourceSize.width * factor,
+                size,
+                m,
+              );
+              ctx.restore();
+            }
+            const label = `${x.id === save.champion ? '★ ' : ''}${x.nickname} · ${x.level}`;
+            ctx.font = "600 13px 'Pixelify Sans', sans-serif";
+            ctx.textAlign = 'center';
+            const width = ctx.measureText(label).width + 16;
+            const tone = RARITY_CANVAS[rarityOf(x)];
+            ctx.fillStyle = tone.bg;
+            ctx.fillRect(p.x - width / 2, p.y + 4, width, 22);
+            if (tone.glow) {
+              ctx.strokeStyle = tone.glow;
+              ctx.lineWidth = 2;
+              ctx.strokeRect(p.x - width / 2 + 1, p.y + 5, width - 2, 20);
+            }
+            ctx.fillStyle = tone.text;
+            ctx.fillText(label, p.x, p.y + 19);
+          });
+        if (cell && showGhost) {
+          const p = project(cell.x, cell.y),
+            valid = canBuild(save, cell.x, cell.y, ghostId ?? undefined),
+            ghostKind = ghostId ? (save.buildings.find((b) => b.id === ghostId)?.kind ?? placementKind) : placementKind;
+          ctx.globalAlpha = 0.65;
+          drawBuilding(ctx, { id: 'ghost', kind: ghostKind, ...cell }, ...artFor(ghostKind as UtilityKind));
+          ctx.globalAlpha = 1;
+          // The footprint marker goes on top: newer building art covers its whole 3x3 plate and would hide it.
+          const footprint = [
+            [p.x, p.y],
+            [p.x + GRID.w * 3, p.y + GRID.h * 3],
+            [p.x, p.y + GRID.h * 6],
+            [p.x - GRID.w * 3, p.y + GRID.h * 3],
+          ];
+          polygon(ctx, footprint, valid ? '#74e99e59' : '#f06c6966');
+          ctx.save();
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = '#00000066';
+          ctx.stroke();
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = valid ? '#c1ffbf' : '#ffb6a7';
+          ctx.stroke();
           ctx.restore();
         }
-        const label = `${x.id === save.champion ? '★ ' : ''}${x.nickname} · ${x.level}`;
-        ctx.font = "600 13px 'Pixelify Sans', sans-serif";
-        ctx.textAlign = 'center';
-        const width = ctx.measureText(label).width + 16;
-        const tone = RARITY_CANVAS[rarityOf(x)];
-        ctx.fillStyle = tone.bg;
-        ctx.fillRect(p.x - width / 2, p.y + 4, width, 22);
-        if (tone.glow) {
-          ctx.strokeStyle = tone.glow;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(p.x - width / 2 + 1, p.y + 5, width - 2, 20);
+        if (!showGhost) drawRealmAtmosphere(ctx, realm, reducedMotion ? 0 : time);
+        const unit = 1 / (displayScale.current * zoom);
+        for (const n of sides)
+          pill(
+            ctx,
+            n.side < 0 ? `← ${placeName(n.id)}` : `${placeName(n.id)} →`,
+            n.x + n.w / 2,
+            n.y + n.h * 0.12,
+            15 * unit,
+            false,
+          );
+        ctx.restore();
+        // While pulled past the edge, the next island's name waits at that edge of the screen.
+        const pull = swipe.current,
+          target = pull.offset ? sides.find((n) => n.side === (pull.offset > 0 ? -1 : 1)) : undefined;
+        if (target) {
+          const vw = Math.min(1536, view.current.width),
+            s = 1 / displayScale.current,
+            name = pull.ready ? `${lang ? 'Go to' : 'Mergi la'} ${placeName(target.id)}` : placeName(target.id);
+          ctx.globalAlpha = Math.min(1, Math.abs(pull.offset) / pull.trigger);
+          pill(
+            ctx,
+            target.side < 0 ? `← ${name}` : `${name} →`,
+            768 + target.side * (vw / 2 - 16 * s),
+            512,
+            16 * s,
+            pull.ready,
+            target.side,
+          );
+          ctx.globalAlpha = 1;
         }
-        ctx.fillStyle = tone.text;
-        ctx.fillText(label, p.x, p.y + 19);
-      });
-    if (cell && showGhost) {
-      const p = project(cell.x, cell.y),
-        valid = canPlace(save, cell.x, cell.y, ghostId ?? undefined),
-        ghostKind = ghostId ? (save.buildings.find((b) => b.id === ghostId)?.kind ?? placementKind) : placementKind;
-      ctx.globalAlpha = 0.65;
-      drawBuilding(ctx, { id: 'ghost', kind: ghostKind, ...cell }, ...artFor(ghostKind as UtilityKind));
-      ctx.globalAlpha = 1;
-      // The footprint marker goes on top: newer building art covers its whole 3x3 plate and would hide it.
-      const footprint = [
-        [p.x, p.y],
-        [p.x + GRID.w * 3, p.y + GRID.h * 3],
-        [p.x, p.y + GRID.h * 6],
-        [p.x - GRID.w * 3, p.y + GRID.h * 3],
-      ];
-      polygon(ctx, footprint, valid ? '#74e99e59' : '#f06c6966');
-      ctx.save();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#00000066';
-      ctx.stroke();
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = valid ? '#c1ffbf' : '#ffb6a7';
-      ctx.stroke();
-      ctx.restore();
-    }
-    if (!showGhost) drawRealmAtmosphere(ctx, realm, reducedMotion ? 0 : time);
-    ctx.restore();
-    }
-    if (!reducedMotion && !covered) raf = requestAnimationFrame(paint);
+      }
+      if (!reducedMotion && !covered) raf = requestAnimationFrame(paint);
     };
     drawNow.current = paint;
     paint(performance.now());
-    const resume = () => { if (!document.hidden) { cancelAnimationFrame(raf); lastPaint = -Infinity; paint(performance.now()); } };
+    const resume = () => {
+      if (!document.hidden) {
+        cancelAnimationFrame(raf);
+        lastPaint = -Infinity;
+        paint(performance.now());
+      }
+    };
     document.addEventListener('visibilitychange', resume);
-    return () => { cancelAnimationFrame(raf); if (drawNow.current === paint) drawNow.current = null; document.removeEventListener('visibilitychange', resume); };
+    return () => {
+      cancelAnimationFrame(raf);
+      if (drawNow.current === paint) drawNow.current = null;
+      document.removeEventListener('visibilitychange', resume);
+    };
   }, [
     save.buildings,
     save.dinos,
@@ -931,6 +1265,9 @@ export default function World({
     realm,
     reducedMotion,
     covered,
+    order.join(),
+    neighbors?.locked.join(),
+    lang,
   ]);
   const here = realm === 'home' ? [] : save.dinos.filter((x) => x.element === realm);
   const availableGold = Math.floor(advance(save, now).storedGold);
@@ -970,7 +1307,12 @@ export default function World({
       data-realm={realm}
       data-residents={here.length}
       data-preview-residents={0}
-      data-dinosaur-art-ready={realm === 'home' || save.dinos.filter(d => d.element === realm).every(d => animatedArt.current.has(`${d.species}_${d.element}_${d.stage}`))}
+      data-dinosaur-art-ready={
+        realm === 'home' ||
+        save.dinos
+          .filter((d) => d.element === realm)
+          .every((d) => animatedArt.current.has(`${d.species}_${d.element}_${d.stage}`))
+      }
       data-environment-ready={realm === 'home' ? !!image.current : !!worlds.current[realm]}
       data-camera-x={cameraPan.x}
       data-camera-y={cameraPan.y}
@@ -1023,7 +1365,10 @@ export default function World({
             return;
           }
           if (pinched.current) return;
-          drag.current = { x: e.clientX, y: e.clientY, px: livePan.current.x, py: livePan.current.y, moved: false };
+          if (spring.current !== null) cancelAnimationFrame(spring.current);
+          const from = springTo.current ?? livePan.current;
+          spring.current = springTo.current = null;
+          drag.current = { x: e.clientX, y: e.clientY, px: from.x, py: from.y, moved: false, over: 0 };
           const p = coords(e);
           if (placing) setCell(unproject(p.x, p.y));
           cancelHold();
@@ -1084,13 +1429,33 @@ export default function World({
             }
             if (d.moved) {
               const r = e.currentTarget.getBoundingClientRect();
-              const next = boundPan({ x: d.px + (dx * 1536) / r.width, y: d.py + (dy * 1024) / r.height }, zoom, viewport);
+              const sx = (dx * 1536) / r.width;
+              // A pull past the edge is spent first when the drag turns back.
+              let x = d.px + sx,
+                over = d.over;
+              if (over) {
+                const sum = over + sx;
+                if (Math.sign(sum) === Math.sign(over)) {
+                  over = sum;
+                  x = d.px;
+                } else {
+                  over = 0;
+                  x = d.px + sum;
+                }
+              }
+              const next = boundPan({ x, y: d.py + (dy * 1024) / r.height }, zoom, viewport);
+              over += x - next.x;
+              if (!(over > 0 ? prev : next)) over = 0;
               // Re-anchor even at a limit: reversing must not replay overshoot before the island moves.
               d.x = e.clientX;
               d.y = e.clientY;
               d.px = next.x;
               d.py = next.y;
-              queuePan(next);
+              d.over = over;
+              const trigger = Math.min(150, viewport.width * 0.15),
+                shown = Math.sign(over) * Math.min(trigger * 1.6, Math.abs(over) * 0.45);
+              swipe.current = { offset: shown, trigger, ready: Math.abs(shown) >= trigger };
+              queuePan({ x: next.x + shown, y: next.y });
             }
           }
         }}
@@ -1101,11 +1466,19 @@ export default function World({
             if (fingers.current.size === 0) pinched.current = false;
             return;
           }
-          const d = drag.current;
-          commitPan();
+          const d = drag.current,
+            pull = swipe.current;
+          swipe.current = { ...pull, offset: 0, ready: false };
+          const travel = pull.ready ? (pull.offset > 0 ? prev : next) : undefined;
+          if (d && pull.offset && !travel) springBack({ x: d.px, y: d.py });
+          else {
+            if (d && pull.offset) queuePan({ x: d.px, y: d.py });
+            commitPan();
+          }
           drag.current = null;
           setPanning(false);
           cancelHold();
+          if (travel) return onNavigate?.(travel);
           if (held) {
             const c = heldCell(coords(e), held),
               b = save.buildings.find((b) => b.id === held.id);
@@ -1118,6 +1491,8 @@ export default function World({
           const p = coords(e),
             c = unproject(p.x, p.y);
           if (placing) return onPlace(c.x, c.y);
+          const beside = sides.find((n) => p.x >= n.x && p.x <= n.x + n.w && p.y >= n.y && p.y <= n.y + n.h);
+          if (beside && onNavigate) return onNavigate(beside.id);
           const picked = here.find((x, i) => {
             const dp = OWNED_SPOTS[i % OWNED_SPOTS.length];
             return Math.abs(p.x - dp.x) < 60 && p.y > dp.y - STAGE_HEIGHT[x.stage] && p.y < dp.y + 25;
@@ -1129,6 +1504,8 @@ export default function World({
         }}
         onPointerLeave={() => setHovering(false)}
         onPointerCancel={(e) => {
+          if (drag.current && swipe.current.offset) queuePan({ x: drag.current.px, y: drag.current.py });
+          swipe.current = { ...swipe.current, offset: 0, ready: false };
           commitPan();
           fingers.current.delete(e.pointerId);
           if (fingers.current.size < 2) pinch.current = null;
@@ -1142,6 +1519,28 @@ export default function World({
       />
       {!showGhost && (
         <div ref={overlay} className="realm-object-overlay">
+          {realm === 'home' &&
+            treasures &&
+            treasureReady(save, now) &&
+            (() => {
+              const spot = treasureSpot(save, now);
+              if (!spot) return null;
+              const p = project(spot.x + 0.5, spot.y + 0.5);
+              return (
+                <button
+                  className="realm-treasure"
+                  aria-label={lang ? 'Lost treasure: pick it up' : 'Comoară pierdută: ia-o'}
+                  title={lang ? 'Lost treasure!' : 'Comoară pierdută!'}
+                  style={{
+                    left: `${((768 + (p.x - 768) * zoom + cameraPan.x) / 1536) * 100}%`,
+                    top: `${((512 + (p.y - 512) * zoom + cameraPan.y) / 1024) * 100}%`,
+                  }}
+                  onClick={() => onSelect('treasure')}
+                >
+                  <Icon name="chest" scale={2} />
+                </button>
+              );
+            })()}
           {realm === 'home' ? (
             save.buildings.map((b) => {
               const p = project(b.x + 1.5, b.y + 1.5),
@@ -1159,7 +1558,10 @@ export default function World({
                       : null;
               const ready = kind === 'workshop' ? save.crafting.some((j) => j.endsAt <= now) : at !== null && now >= at;
               // A building being upgraded shows the builder's countdown instead of its production.
-              const building = save.construction && save.construction.target === kind && save.construction.endsAt > now ? save.construction : null;
+              const building =
+                save.construction && save.construction.target === kind && save.construction.endsAt > now
+                  ? save.construction
+                  : null;
               if (building)
                 return (
                   <button
@@ -1207,33 +1609,37 @@ export default function World({
             })
           ) : save.habitats[realm] ? (
             <>
-            {save.construction && save.construction.target === `habitat:${realm}` && save.construction.endsAt > now && (
+              {save.construction &&
+                save.construction.target === `habitat:${realm}` &&
+                save.construction.endsAt > now && (
+                  <button
+                    className="production-bubble constructing habitat-building"
+                    aria-label={lang ? 'Habitat being upgraded' : 'Habitat în construcție'}
+                    style={{
+                      left: `${((768 + (960 - 768) * zoom + cameraPan.x) / 1536) * 100}%`,
+                      top: `${((512 + (170 - 512) * zoom + cameraPan.y) / 1024) * 100}%`,
+                    }}
+                    onClick={() => onSelect('habitat')}
+                  >
+                    <Icon name="build" scale={1} /> {clock(save.construction.endsAt - now)}
+                    <i className="building-level">
+                      → {lang ? 'Lv' : 'Nv'} {save.construction.level}
+                    </i>
+                  </button>
+                )}
               <button
-                className="production-bubble constructing habitat-building"
-                aria-label={lang ? 'Habitat being upgraded' : 'Habitat în construcție'}
+                className="production-bubble habitat-gold"
+                aria-label={lang ? `Collect ${availableGold} gold` : `Colectează ${availableGold} aur`}
                 style={{
-                  left: `${((768 + (1180 - 768) * zoom + cameraPan.x) / 1536) * 100}%`,
+                  // Above the platform, right of centre: still inside a portrait phone's view.
+                  left: `${((768 + (960 - 768) * zoom + cameraPan.x) / 1536) * 100}%`,
                   top: `${((512 + (250 - 512) * zoom + cameraPan.y) / 1024) * 100}%`,
                 }}
-                onClick={() => onSelect('habitat')}
+                onClick={() => onSelect('income')}
               >
-                <Icon name="build" scale={1} /> {clock(save.construction.endsAt - now)}
-                <i className="building-level">→ {lang ? 'Lv' : 'Nv'} {save.construction.level}</i>
+                <Icon name="gold" scale={1} />
+                <strong>{availableGold.toLocaleString(lang ? 'en-US' : 'ro-RO')}</strong>
               </button>
-            )}
-            <button
-              className="production-bubble habitat-gold"
-              aria-label={lang ? `Collect ${availableGold} gold` : `Colectează ${availableGold} aur`}
-              style={{
-                // Top-right of the platform, clear of the dinosaurs' spots.
-                left: `${((768 + (1180 - 768) * zoom + cameraPan.x) / 1536) * 100}%`,
-                top: `${((512 + (330 - 512) * zoom + cameraPan.y) / 1024) * 100}%`,
-              }}
-              onClick={() => onSelect('income')}
-            >
-              <Icon name="gold" scale={1} />
-              <strong>{availableGold.toLocaleString(lang ? 'en-US' : 'ro-RO')}</strong>
-            </button>
             </>
           ) : null}
         </div>
@@ -1284,10 +1690,18 @@ export default function World({
             </button>
           </div>
         )}
-        <button onClick={() => zoomAt(Math.round((zoom + BUTTON_ZOOM_STEP) * 1000) / 1000)} disabled={zoom >= MAX_ZOOM} aria-label="Zoom in">
+        <button
+          onClick={() => zoomAt(Math.round((zoom + BUTTON_ZOOM_STEP) * 1000) / 1000)}
+          disabled={zoom >= MAX_ZOOM}
+          aria-label="Zoom in"
+        >
           +
         </button>
-        <button onClick={() => zoomAt(Math.round((zoom - BUTTON_ZOOM_STEP) * 1000) / 1000)} disabled={zoom <= minZoom + 0.001} aria-label="Zoom out">
+        <button
+          onClick={() => zoomAt(Math.round((zoom - BUTTON_ZOOM_STEP) * 1000) / 1000)}
+          disabled={zoom <= minZoom + 0.001}
+          aria-label="Zoom out"
+        >
           −
         </button>
         <button

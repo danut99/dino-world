@@ -6,6 +6,8 @@ export type TabItem<Id extends string = string> = {
   label: ReactNode;
   /** Număr sau text scurt afișat ca insignă (ex. joburi gata). `0`/gol nu se afișează. */
   badge?: ReactNode;
+  /** `busy`: ceva e în lucru acolo (tab portocaliu cu clepsidră); `ready`: ceva e gata de colectat (verde). */
+  state?: 'busy' | 'ready';
   disabled?: boolean;
 };
 
@@ -37,13 +39,25 @@ export function Tabs<Id extends string>({ tabs, active, onChange, label, idBase,
     if (!enabled.length) return;
     const current = tabs[from];
     const at = Math.max(0, enabled.indexOf(current));
-    const next = step === Infinity ? enabled[enabled.length - 1] : step === -Infinity ? enabled[0] : enabled[(at + step + enabled.length) % enabled.length];
+    const next =
+      step === Infinity
+        ? enabled[enabled.length - 1]
+        : step === -Infinity
+          ? enabled[0]
+          : enabled[(at + step + enabled.length) % enabled.length];
     onChange(next.id);
     listRef.current?.querySelector<HTMLButtonElement>(`#${CSS.escape(tabButtonId(base, next.id))}`)?.focus();
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const steps: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1, Home: -Infinity, End: Infinity };
+    const steps: Record<string, number> = {
+      ArrowRight: 1,
+      ArrowDown: 1,
+      ArrowLeft: -1,
+      ArrowUp: -1,
+      Home: -Infinity,
+      End: Infinity,
+    };
     const step = steps[event.key];
     if (step === undefined) return;
     event.preventDefault();
@@ -54,7 +68,8 @@ export function Tabs<Id extends string>({ tabs, active, onChange, label, idBase,
     <div ref={listRef} role="tablist" aria-label={label} className={`ui-tabs ${className}`}>
       {tabs.map((tab, index) => {
         const selected = tab.id === active;
-        const showBadge = tab.badge !== undefined && tab.badge !== null && tab.badge !== false && tab.badge !== 0 && tab.badge !== '';
+        const showBadge =
+          tab.badge !== undefined && tab.badge !== null && tab.badge !== false && tab.badge !== 0 && tab.badge !== '';
         return (
           <button
             key={tab.id}
@@ -66,9 +81,15 @@ export function Tabs<Id extends string>({ tabs, active, onChange, label, idBase,
             tabIndex={selected ? 0 : -1}
             disabled={tab.disabled}
             className="ui-tab"
+            data-state={tab.state}
             onClick={() => onChange(tab.id)}
             onKeyDown={(event) => onKeyDown(event, index)}
           >
+            {tab.state === 'busy' && (
+              <span className="ui-tab-hourglass" aria-hidden="true">
+                ⏳
+              </span>
+            )}
             <span className="ui-tab-label">{tab.label}</span>
             {showBadge && <span className="ui-tab-badge">{tab.badge}</span>}
           </button>
@@ -79,9 +100,24 @@ export function Tabs<Id extends string>({ tabs, active, onChange, label, idBase,
 }
 
 /** Panoul unui tab; folosește același `idBase` ca `<Tabs>`. */
-export function TabPanel({ idBase, id, children, className = '' }: { idBase: string; id: string; children: ReactNode; className?: string }) {
+export function TabPanel({
+  idBase,
+  id,
+  children,
+  className = '',
+}: {
+  idBase: string;
+  id: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <div role="tabpanel" id={tabPanelId(idBase, id)} aria-labelledby={tabButtonId(idBase, id)} className={`ui-tabpanel ${className}`}>
+    <div
+      role="tabpanel"
+      id={tabPanelId(idBase, id)}
+      aria-labelledby={tabButtonId(idBase, id)}
+      className={`ui-tabpanel ${className}`}
+    >
       {children}
     </div>
   );

@@ -7,13 +7,20 @@ import { PATROL } from './expeditionRules';
  * A daily reward: gold, food and materials; diamonds (never scaled); `tickets` arena tickets of a world drawn at
  * random among the open leagues (the reducer draws it).
  */
-export type DailyReward = { gold?: number; food?: number; materials?: Partial<Record<ItemId, number>>; gems?: number; tickets?: number };
+export type DailyReward = {
+  gold?: number;
+  food?: number;
+  materials?: Partial<Record<ItemId, number>>;
+  gems?: number;
+  tickets?: number;
+};
 /**
  * The pool of daily missions; each day draws DAILY_COUNT of them among those the player can do (see dailyQuests).
  * `to` is where the mission is played (null: the island itself), `icon` its picture in the daily panel, `available`
  * whether the player can do it yet (the building it needs, a dinosaur old enough, an open patrol).
  */
-export type DailyQuestId = 'feed' | 'harvest' | 'plant' | 'collect' | 'startCraft' | 'craft' | 'battle' | 'win' | 'expedition' | 'patrol';
+export type DailyQuestId =
+  'feed' | 'harvest' | 'plant' | 'collect' | 'startCraft' | 'craft' | 'battle' | 'win' | 'expedition' | 'patrol';
 type QuestSave = Pick<Save, 'dinos' | 'eggs' | 'buildings' | 'portalLevel' | 'expeditionProgress'>;
 const built = (s: QuestSave, kind: string) => s.buildings.some((b) => b.kind === kind);
 const fighter = (s: QuestSave) => s.dinos.some((d) => d.stage !== 'baby');
@@ -28,22 +35,88 @@ export const DAILY_QUESTS: Record<
     available: (s: QuestSave) => boolean;
   }
 > = {
-  feed: { title: ['Hrănește dinozaurii de 3 ori', 'Feed dinosaurs 3 times'], target: 3, to: 'dino', reward: { food: 60, gold: 40 }, icon: 'dino', available: (s) => s.dinos.length > 0 || s.eggs.length > 0 },
-  harvest: { title: ['Recoltează 2 straturi', 'Harvest 2 plots'], target: 2, to: 'farm', reward: { gold: 80, materials: { fiber: 5 } }, icon: 'food', available: (s) => built(s, 'farm') },
-  plant: { title: ['Plantează 3 culturi', 'Plant 3 crops'], target: 3, to: 'farm', reward: { gold: 60, materials: { fiber: 3 } }, icon: 'fiber', available: (s) => built(s, 'farm') },
-  collect: { title: ['Colectează aurul de 2 ori', 'Collect gold twice'], target: 2, to: null, reward: { food: 50, materials: { stone: 5 } }, icon: 'gold', available: (s) => s.dinos.length > 0 || s.eggs.length > 0 },
-  startCraft: { title: ['Pornește 2 fabricări în atelier', 'Start 2 crafts in the workshop'], target: 2, to: 'workshop', reward: { gold: 70, materials: { wood: 5 } }, icon: 'workshop', available: (s) => built(s, 'workshop') },
-  craft: { title: ['Colectează un obiect fabricat', 'Collect one crafted item'], target: 1, to: 'workshop', reward: { gold: 60, materials: { wood: 5, stone: 5 } }, icon: 'chest', available: (s) => built(s, 'workshop') },
-  battle: { title: ['Termină o luptă', 'Finish one battle'], target: 1, to: 'arena', reward: { food: 80, gold: 80 }, icon: 'arena', available: (s) => built(s, 'arena') && fighter(s) },
-  win: { title: ['Câștigă 2 lupte', 'Win 2 battles'], target: 2, to: 'arena', reward: { gold: 120, food: 60 }, icon: 'trophy', available: (s) => built(s, 'arena') && fighter(s) },
-  expedition: { title: ['Colectează recompensa unei expediții', 'Collect an expedition reward'], target: 1, to: 'expedition', reward: { gold: 100, materials: { provisions: 1 } }, icon: 'expedition', available: (s) => s.portalLevel > 0 && fighter(s) },
+  feed: {
+    title: ['Hrănește dinozaurii de 3 ori', 'Feed dinosaurs 3 times'],
+    target: 3,
+    to: 'dino',
+    reward: { food: 60, gold: 40 },
+    icon: 'dino',
+    available: (s) => s.dinos.length > 0 || s.eggs.length > 0,
+  },
+  harvest: {
+    title: ['Recoltează 2 straturi', 'Harvest 2 plots'],
+    target: 2,
+    to: 'farm',
+    reward: { gold: 80, materials: { fiber: 5 } },
+    icon: 'food',
+    available: (s) => built(s, 'farm'),
+  },
+  plant: {
+    title: ['Plantează 3 culturi', 'Plant 3 crops'],
+    target: 3,
+    to: 'farm',
+    reward: { gold: 60, materials: { fiber: 3 } },
+    icon: 'fiber',
+    available: (s) => built(s, 'farm'),
+  },
+  collect: {
+    title: ['Colectează aurul de 2 ori', 'Collect gold twice'],
+    target: 2,
+    to: null,
+    reward: { food: 50, materials: { stone: 5 } },
+    icon: 'gold',
+    available: (s) => s.dinos.length > 0 || s.eggs.length > 0,
+  },
+  startCraft: {
+    title: ['Pornește 2 fabricări în atelier', 'Start 2 crafts in the workshop'],
+    target: 2,
+    to: 'workshop',
+    reward: { gold: 70, materials: { wood: 5 } },
+    icon: 'workshop',
+    available: (s) => built(s, 'workshop'),
+  },
+  craft: {
+    title: ['Colectează un obiect fabricat', 'Collect one crafted item'],
+    target: 1,
+    to: 'workshop',
+    reward: { gold: 60, materials: { wood: 5, stone: 5 } },
+    icon: 'chest',
+    available: (s) => built(s, 'workshop'),
+  },
+  battle: {
+    title: ['Termină o luptă', 'Finish one battle'],
+    target: 1,
+    to: 'arena',
+    reward: { food: 80, gold: 80 },
+    icon: 'arena',
+    available: (s) => built(s, 'arena') && fighter(s),
+  },
+  win: {
+    title: ['Câștigă 2 lupte', 'Win 2 battles'],
+    target: 2,
+    to: 'arena',
+    reward: { gold: 120, food: 60 },
+    icon: 'trophy',
+    available: (s) => built(s, 'arena') && fighter(s),
+  },
+  expedition: {
+    title: ['Colectează recompensa unei expediții', 'Collect an expedition reward'],
+    target: 1,
+    to: 'expedition',
+    reward: { gold: 100, materials: { provisions: 1 } },
+    icon: 'expedition',
+    available: (s) => s.portalLevel > 0 && fighter(s),
+  },
   patrol: {
     title: ['Încheie o patrulă', 'Finish a patrol'],
     target: 1,
     to: 'expedition',
     reward: { gold: 120, food: 40, materials: { provisions: 1 } },
     icon: 'target',
-    available: (s) => s.portalLevel > 0 && fighter(s) && Object.values(s.expeditionProgress).some((n) => (n ?? 0) >= PATROL.unlockStage),
+    available: (s) =>
+      s.portalLevel > 0 &&
+      fighter(s) &&
+      Object.values(s.expeditionProgress).some((n) => (n ?? 0) >= PATROL.unlockStage),
   },
 };
 const QUEST_IDS = Object.keys(DAILY_QUESTS) as DailyQuestId[];
@@ -67,7 +140,9 @@ export function scaleDailyReward(reward: DailyReward, chapter: number): DailyRew
     ...reward,
     ...(reward.gold ? { gold: up(reward.gold) } : {}),
     ...(reward.food ? { food: up(reward.food) } : {}),
-    ...(reward.materials ? { materials: Object.fromEntries(Object.entries(reward.materials).map(([id, n]) => [id, up(n)])) } : {}),
+    ...(reward.materials
+      ? { materials: Object.fromEntries(Object.entries(reward.materials).map(([id, n]) => [id, up(n)])) }
+      : {}),
   };
 }
 /**
@@ -84,6 +159,11 @@ export type DailyState = {
   spins: number;
   rerolls: number;
   patrols: number;
+  /** Petting, training and treasures found today; `treasureAt` is when the last treasure was found. */
+  pets: number;
+  trainings: number;
+  treasures: number;
+  treasureAt: number;
 };
 /** The chest for all three missions of the day (scaled with the chapter, its diamond as it is). */
 export const DAILY_BONUS: DailyReward = { gold: 200, food: 100, materials: { crystal: 5 }, gems: 1 };
@@ -97,17 +177,53 @@ export const WHEEL_PRIZES: { label: string[]; reward: DailyReward; weight: numbe
   { label: ['100 hrană', '100 food'], reward: { food: 100 }, weight: 22, icon: '❧', art: 'food' },
   { label: ['20 lemn', '20 wood'], reward: { materials: { wood: 20 } }, weight: 13, icon: '▰', art: 'wood' },
   { label: ['20 piatră', '20 stone'], reward: { materials: { stone: 20 } }, weight: 13, icon: '◆', art: 'stone' },
-  { label: ['2 provizii', '2 supply packs'], reward: { materials: { provisions: 2 } }, weight: 10, icon: '◈', art: 'chest' },
+  {
+    label: ['2 provizii', '2 supply packs'],
+    reward: { materials: { provisions: 2 } },
+    weight: 10,
+    icon: '◈',
+    art: 'chest',
+  },
   { label: ['2 bilete de arenă', '2 arena tickets'], reward: { tickets: 2 }, weight: 6, icon: '⚔', art: 'arena' },
   { label: ['6 cristale', '6 crystals'], reward: { materials: { crystal: 6 } }, weight: 6, icon: '♦', art: 'crystal' },
-  { label: ['1 cristal de evoluție', '1 evolution crystal'], reward: { materials: { evolutionCrystal: 1 } }, weight: 3, icon: '✧', art: 'evolutionCrystal' },
-  { label: ['1 kit habitat', '1 habitat kit'], reward: { materials: { habitatKit: 1 } }, weight: 2, icon: '⌂', art: 'habitatKit' },
+  {
+    label: ['1 cristal de evoluție', '1 evolution crystal'],
+    reward: { materials: { evolutionCrystal: 1 } },
+    weight: 3,
+    icon: '✧',
+    art: 'evolutionCrystal',
+  },
+  {
+    label: ['1 kit habitat', '1 habitat kit'],
+    reward: { materials: { habitatKit: 1 } },
+    weight: 2,
+    icon: '⌂',
+    art: 'habitatKit',
+  },
   { label: ['3 diamante', '3 diamonds'], reward: { gems: 3 }, weight: 3, icon: '💎', art: 'star' },
 ];
+/** Before the arena is built, the ticket slice pays gold and food instead (same slice, same odds). */
+const NO_ARENA_PRIZE: (typeof WHEEL_PRIZES)[number] = {
+  label: ['200 aur + 100 hrană', '200 gold + 100 food'],
+  reward: { gold: 200, food: 100 },
+  weight: 6,
+  icon: '●',
+  art: 'gold',
+};
+export const wheelPrizes = (s: Pick<Save, 'buildings'>) =>
+  s.buildings.some((b) => b.kind === 'arena')
+    ? WHEEL_PRIZES
+    : WHEEL_PRIZES.map((p) => (p.reward.tickets ? NO_ARENA_PRIZE : p));
 /** Days (and weeks) follow the clock in Romania, where the players are: a new day starts at midnight in Bucharest. */
-const bucharest = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bucharest', year: 'numeric', month: '2-digit', day: '2-digit' });
+const bucharest = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Bucharest',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
 export const dailyDay = (now: number) => bucharest.format(now);
-const shiftDay = (day: string, days: number) => new Date(Date.parse(`${day}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
+const shiftDay = (day: string, days: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
 /** The Monday (as YYYY-MM-DD) of the Bucharest week `now` falls in. */
 export function weekId(now: number) {
   const day = dailyDay(now);
@@ -116,12 +232,30 @@ export function weekId(now: number) {
 /** When the day `day` ends: the next midnight in Bucharest (UTC+2 in winter, UTC+3 in summer). */
 export function dailyReset(day: string) {
   const next = shiftDay(day, 1);
-  return [3, 2].map((h) => Date.parse(`${next}T00:00:00Z`) - h * 3600000).find((t) => dailyDay(t) === next && dailyDay(t - 1) === day) ?? Date.parse(`${next}T00:00:00Z`);
+  return (
+    [3, 2]
+      .map((h) => Date.parse(`${next}T00:00:00Z`) - h * 3600000)
+      .find((t) => dailyDay(t) === next && dailyDay(t - 1) === day) ?? Date.parse(`${next}T00:00:00Z`)
+  );
 }
 /** A fresh day: its missions are drawn among those `save` can do (any mission without a save). */
 export function newDaily(now: number, save?: QuestSave): DailyState {
   const day = dailyDay(now);
-  return { day, quests: dailyQuests(day, save && ((id) => DAILY_QUESTS[id].available(save))), progress: Object.fromEntries(QUEST_IDS.map((id) => [id, 0])) as DailyState['progress'], claimed: [], bonus: false, spin: null, spins: 0, rerolls: 0, patrols: 0 };
+  return {
+    day,
+    quests: dailyQuests(day, save && ((id) => DAILY_QUESTS[id].available(save))),
+    progress: Object.fromEntries(QUEST_IDS.map((id) => [id, 0])) as DailyState['progress'],
+    claimed: [],
+    bonus: false,
+    spin: null,
+    spins: 0,
+    rerolls: 0,
+    patrols: 0,
+    pets: 0,
+    trainings: 0,
+    treasures: 0,
+    treasureAt: 0,
+  };
 }
 export function dailyState(save: Pick<Save, 'daily' | 'updatedAt'> & QuestSave, now: number) {
   const effective = Math.max(now, save.updatedAt);
@@ -148,36 +282,89 @@ export function dailyQuests(day: string, available: (id: DailyQuestId) => boolea
  * for missions not drawn that day are dropped (their reward was already paid).
  */
 export function normalizeDaily(value: DailyState) {
-  if (!value || typeof value !== 'object' || !value.progress || typeof value.progress !== 'object' || !Array.isArray(value.claimed)) return value;
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !value.progress ||
+    typeof value.progress !== 'object' ||
+    !Array.isArray(value.claimed)
+  )
+    return value;
   const progress = Object.fromEntries(QUEST_IDS.map((id) => [id, value.progress[id] ?? 0])) as DailyState['progress'];
-  const counters = { spins: value.spins ?? (value.spin === null ? 0 : 1), rerolls: value.rerolls ?? 0, patrols: value.patrols ?? 0 };
-  if (typeof value.day !== 'string' || !Number.isFinite(Date.parse(value.day))) return { ...value, ...counters, progress };
+  const counters = {
+    spins: value.spins ?? (value.spin === null ? 0 : 1),
+    rerolls: value.rerolls ?? 0,
+    patrols: value.patrols ?? 0,
+    pets: value.pets ?? 0,
+    trainings: value.trainings ?? 0,
+    treasures: value.treasures ?? 0,
+    treasureAt: value.treasureAt ?? 0,
+  };
+  if (typeof value.day !== 'string' || !Number.isFinite(Date.parse(value.day)))
+    return { ...value, ...counters, progress };
   const quests = Array.isArray(value.quests) ? value.quests : dailyQuests(value.day);
   const claimed = value.claimed.filter((id) => quests.includes(id) && progress[id] >= DAILY_QUESTS[id].target);
-  return { ...value, ...counters, quests, progress, claimed, bonus: value.bonus && quests.every((id) => claimed.includes(id)) };
+  return {
+    ...value,
+    ...counters,
+    quests,
+    progress,
+    claimed,
+    bonus: value.bonus && quests.every((id) => claimed.includes(id)),
+  };
 }
 export function addDailyProgress(save: Save, id: DailyQuestId, amount = 1) {
   save.daily.progress[id] = Math.min(DAILY_QUESTS[id].target, save.daily.progress[id] + amount);
 }
 export function grantDailyReward(save: Save, reward: DailyReward) {
-  save.gold += reward.gold ?? 0; save.food += reward.food ?? 0;
+  save.gold += reward.gold ?? 0;
+  save.food += reward.food ?? 0;
   for (const [id, amount] of Object.entries(reward.materials ?? {})) save.inventory[id as ItemId] += amount!;
 }
 export function wheelPrize(random: number) {
   let draw = Math.min(0.999999, Math.max(0, random)) * 100;
-  for (let i = 0; i < WHEEL_PRIZES.length; i++) { draw -= WHEEL_PRIZES[i].weight; if (draw < 0) return i; }
+  for (let i = 0; i < WHEEL_PRIZES.length; i++) {
+    draw -= WHEEL_PRIZES[i].weight;
+    if (draw < 0) return i;
+  }
   return WHEEL_PRIZES.length - 1;
 }
 export function validDaily(value: DailyState) {
   const count = (n: unknown) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 1000;
-  if (!value || typeof value.day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.day) || !Number.isFinite(Date.parse(value.day)) ||
-    new Date(value.day).toISOString().slice(0, 10) !== value.day || !value.progress || typeof value.progress !== 'object' ||
-    !Array.isArray(value.quests) || value.quests.length !== DAILY_COUNT || new Set(value.quests).size !== DAILY_COUNT ||
-    value.quests.some((id) => !QUEST_IDS.includes(id)) || !count(value.spins) || !count(value.rerolls) || !count(value.patrols) ||
-    !Array.isArray(value.claimed) || new Set(value.claimed).size !== value.claimed.length || typeof value.bonus !== 'boolean' ||
-    !(value.spin === null || Number.isInteger(value.spin) && value.spin >= 0 && value.spin < WHEEL_PRIZES.length) ||
-    (value.spin === null) !== (value.spins === 0)) return false;
-  if (QUEST_IDS.some(id => !Number.isInteger(value.progress[id]) || value.progress[id] < 0 || value.progress[id] > DAILY_QUESTS[id].target)) return false;
-  if (value.claimed.some(id => !value.quests.includes(id) || value.progress[id] !== DAILY_QUESTS[id].target)) return false;
-  return !value.bonus || value.quests.every(id => value.claimed.includes(id));
+  if (
+    !value ||
+    typeof value.day !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value.day) ||
+    !Number.isFinite(Date.parse(value.day)) ||
+    new Date(value.day).toISOString().slice(0, 10) !== value.day ||
+    !value.progress ||
+    typeof value.progress !== 'object' ||
+    !Array.isArray(value.quests) ||
+    value.quests.length !== DAILY_COUNT ||
+    new Set(value.quests).size !== DAILY_COUNT ||
+    value.quests.some((id) => !QUEST_IDS.includes(id)) ||
+    !count(value.spins) ||
+    !count(value.rerolls) ||
+    !count(value.patrols) ||
+    !count(value.pets) ||
+    !count(value.trainings) ||
+    !count(value.treasures) ||
+    !(typeof value.treasureAt === 'number' && Number.isFinite(value.treasureAt) && value.treasureAt >= 0) ||
+    !Array.isArray(value.claimed) ||
+    new Set(value.claimed).size !== value.claimed.length ||
+    typeof value.bonus !== 'boolean' ||
+    !(value.spin === null || (Number.isInteger(value.spin) && value.spin >= 0 && value.spin < WHEEL_PRIZES.length)) ||
+    (value.spin === null) !== (value.spins === 0)
+  )
+    return false;
+  if (
+    QUEST_IDS.some(
+      (id) =>
+        !Number.isInteger(value.progress[id]) || value.progress[id] < 0 || value.progress[id] > DAILY_QUESTS[id].target,
+    )
+  )
+    return false;
+  if (value.claimed.some((id) => !value.quests.includes(id) || value.progress[id] !== DAILY_QUESTS[id].target))
+    return false;
+  return !value.bonus || value.quests.every((id) => value.claimed.includes(id));
 }

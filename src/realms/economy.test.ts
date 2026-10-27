@@ -25,8 +25,10 @@ import {
 } from './game';
 
 /** Each value is at least the previous one (strictly more with `strict`). */
-const rising = (values: number[], strict = true) => values.every((v, i) => i === 0 || (strict ? v > values[i - 1] : v >= values[i - 1]));
-const total = (from: number, to: number) => Array.from({ length: to - from }, (_, i) => feedCost(from + i)).reduce((a, b) => a + b, 0);
+const rising = (values: number[], strict = true) =>
+  values.every((v, i) => i === 0 || (strict ? v > values[i - 1] : v >= values[i - 1]));
+const total = (from: number, to: number) =>
+  Array.from({ length: to - from }, (_, i) => feedCost(from + i)).reduce((a, b) => a + b, 0);
 
 describe('economy tables', () => {
   it('make every level of every building better and dearer than the last', () => {
@@ -34,24 +36,43 @@ describe('economy tables', () => {
     expect(rising(FARM_LEVELS.map((l) => l.plots))).toBe(true);
     expect(rising(FARM_LEVELS.map((l) => l.yield))).toBe(true);
     expect(HABITAT_LEVELS).toHaveLength(5);
-    for (const key of ['capacity', 'cap', 'income'] as const) expect(rising(HABITAT_LEVELS.map((l) => l[key])), key).toBe(true);
-    expect(rising(HABITAT_LEVELS.map((l) => l.kits), false)).toBe(true);
+    for (const key of ['capacity', 'cap', 'income'] as const)
+      expect(rising(HABITAT_LEVELS.map((l) => l[key])), key).toBe(true);
+    expect(
+      rising(
+        HABITAT_LEVELS.map((l) => l.kits),
+        false,
+      ),
+    ).toBe(true);
     expect(HATCHERY_LEVELS.map((l) => l.slots)).toEqual([1, 2, 3, 4]);
-    expect(WORKSHOP_LEVELS.map((l) => [l.slots, l.lanes, l.speed])).toEqual([[3, 1, 1], [5, 2, 0.8], [7, 3, 0.6]]);
+    expect(WORKSHOP_LEVELS.map((l) => [l.slots, l.lanes, l.speed])).toEqual([
+      [3, 1, 1],
+      [5, 2, 0.8],
+      [7, 3, 0.6],
+    ]);
     expect(PORTAL_LEVELS.map((l) => l.slots)).toEqual([1, 2, 3]);
     for (const table of [FARM_LEVELS, HABITAT_LEVELS, HATCHERY_LEVELS, WORKSHOP_LEVELS, PORTAL_LEVELS, ARENA_LEVELS]) {
       expect(rising(table.map((l) => l.gold))).toBe(true);
       expect(rising(table.map((l) => l.minutes))).toBe(true);
     }
-    expect([UTILITY_BUILDINGS.farm, UTILITY_BUILDINGS.workshop, UTILITY_BUILDINGS.portal, UTILITY_BUILDINGS.arena, UTILITY_BUILDINGS.market].map((b) => b.cost)).toEqual([100, 300, 500, 800, 300]);
+    expect(
+      [
+        UTILITY_BUILDINGS.farm,
+        UTILITY_BUILDINGS.workshop,
+        UTILITY_BUILDINGS.portal,
+        UTILITY_BUILDINGS.arena,
+        UTILITY_BUILDINGS.market,
+      ].map((b) => b.cost),
+    ).toEqual([100, 300, 500, 800, 300]);
   });
   it('opens worlds at rising prices, about 100,000 gold in all', () => {
-    expect(ELEMENTS.map((e) => WORLD_UNLOCK[e.id].gold)).toEqual([0, 600, 1500, 3000, 5000, 8000, 12000, 17000, 23000, 30000]);
+    expect(ELEMENTS.map((e) => WORLD_UNLOCK[e.id].gold)).toEqual([
+      0, 600, 1500, 3000, 5000, 8000, 12000, 17000, 23000, 30000,
+    ]);
     expect(Object.values(WORLD_UNLOCK).reduce((n, w) => n + w.gold, 0)).toBe(100_100);
   });
-  it('grows crops that cost more and take longer for more food, every one by farm level 5', () => {
-    expect(CROPS.map((c) => c.level)).toEqual([1, 1, 2, 3, 4, 5]);
-    expect(Math.max(...CROPS.map((c) => c.level))).toBeLessThanOrEqual(FARM_LEVELS.length);
+  it('grows three crops, all open from the start: longer ones cost more and give more food', () => {
+    expect(CROPS.map((c) => c.level)).toEqual([1, 1, 1]);
     for (const key of ['seconds', 'food', 'cost'] as const) expect(rising(CROPS.map((c) => c[key])), key).toBe(true);
   });
   it('charges more food per level as dinosaurs grow', () => {
@@ -74,9 +95,15 @@ describe('economy tables', () => {
 
 describe('selling and releasing', () => {
   it('sells a market egg back for less than it costs, and won eggs by rarity', () => {
-    expect(MARKET_ELEMENTS.map(eggPrice)).toEqual([300, 600, 1000]);
-    for (const element of MARKET_ELEMENTS) expect(eggSellPrice({ element })).toBe(Math.round(eggPrice(element) * 0.3));
-    expect((['common', 'rare', 'epic'] as const).map((rarity) => eggSellPrice({ element: 'nature', rarity }))).toEqual([250, 400, 600]);
+    expect(MARKET_ELEMENTS.map(eggPrice)).toEqual([300, 600, 1000, 1500, 2200, 3000, 4000, 5200, 6500, 8000]);
+    expect(MARKET_ELEMENTS).toEqual(ELEMENTS.map((e) => e.id));
+    for (const element of ['fire', 'water', 'earth'] as const)
+      expect(eggSellPrice({ element })).toBe(Math.round(eggPrice(element) * 0.3));
+    // Elements the leagues drop sell by rarity, whatever the market price.
+    expect(eggSellPrice({ element: 'arcane' })).toBe(WON_EGG_PRICE.common);
+    expect((['common', 'rare', 'epic'] as const).map((rarity) => eggSellPrice({ element: 'nature', rarity }))).toEqual([
+      250, 400, 600,
+    ]);
     expect(WON_EGG_PRICE.common).toBeLessThan(Math.min(...MARKET_ELEMENTS.map(eggPrice)));
   });
   it('pays less for releasing a dinosaur than it cost to buy and raise', () => {
@@ -102,7 +129,11 @@ describe('the first steps of a new game', () => {
     let s: Save = newSave(t0),
       now = t0;
     const go = (c: Parameters<typeof command>[1]) => (s = command(s, c, now));
-    const claim = () => go({ type: 'claimQuestEgg', questId: STORY_CHAPTERS.flatMap((c) => c.steps).find((q) => !s.questEggs.includes(q.id))!.id });
+    const claim = () =>
+      go({
+        type: 'claimQuestEgg',
+        questId: STORY_CHAPTERS.flatMap((c) => c.steps).find((q) => !s.questEggs.includes(q.id))!.id,
+      });
     expect(s).toMatchObject({ gold: 1000, food: 400 });
     go({ type: 'incubate' });
     now += 30_000;

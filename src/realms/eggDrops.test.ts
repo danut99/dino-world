@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE, command, EGG_DROP, EGG_SECONDS, WON_EGG_PRICE, newSave, parseSave, type Command, type Save } from './game';
+import {
+  BALANCE,
+  command,
+  EGG_DROP,
+  EGG_SECONDS,
+  WON_EGG_PRICE,
+  newSave,
+  parseSave,
+  type Command,
+  type Save,
+} from './game';
 
 const now = 1_800_000_000_000;
 const run = (s: Save, ...cs: Command[]) => cs.reduce((x, c) => command(x, c, now), s);
@@ -44,11 +54,17 @@ describe('egg drops and selling', () => {
     expect(egg).toMatchObject({ species: 'boss', seconds: EGG_SECONDS.boss });
     expect(s.bossEggsClaimed).toEqual(['fire']);
     expect(() => run(s, { type: 'sellEgg', eggId: egg.id })).toThrow('egg');
-    expect(() => run(s, { type: 'buyEgg', species: 'boss', element: 'fire' })).toThrow('egg');
+    expect(() => run(s, { type: 'buyEgg', species: 'boss', element: 'fire' })).toThrow('fightEgg');
     s = run(s, { type: 'incubate', eggId: egg.id });
     s = command(s, { type: 'hatch', eggId: egg.id }, now + egg.seconds * 1000);
-    const boss = s.dinos.find(d => d.species === 'boss')!;
-    expect(boss).toMatchObject({ element: 'fire', stage: 'juvenile', level: 10, nickname: 'Ignaroth', rarity: 'legendary' });
+    const boss = s.dinos.find((d) => d.species === 'boss')!;
+    expect(boss).toMatchObject({
+      element: 'fire',
+      stage: 'juvenile',
+      level: 10,
+      nickname: 'Ignaroth',
+      rarity: 'legendary',
+    });
     expect(s.discovered).toContain('boss_fire');
     roundTrip(s);
     s = command(s, { type: 'setChampion', dinoId: boss.id }, now + egg.seconds * 1000);
@@ -72,7 +88,15 @@ describe('egg drops and selling', () => {
   it('accepts a juvenile or adult boss and rejects a baby boss', () => {
     const s = arena();
     const raw = JSON.parse(JSON.stringify(s));
-    raw.dinos.push({ id: 'boss', species: 'boss', element: 'nature', level: 12, stage: 'juvenile', nickname: 'Boss', rarity: 'legendary' });
+    raw.dinos.push({
+      id: 'boss',
+      species: 'boss',
+      element: 'nature',
+      level: 12,
+      stage: 'juvenile',
+      nickname: 'Boss',
+      rarity: 'legendary',
+    });
     expect(() => parseSave(JSON.stringify(raw))).not.toThrow();
     raw.dinos.at(-1).stage = 'adult';
     raw.dinos.at(-1).level = 30;
@@ -98,9 +122,14 @@ describe('egg drops and selling', () => {
     // The notice belongs to that one command.
     expect(run(s, { type: 'collectAvailable' }).notice).toBeUndefined();
   });
-  it('sells only fire, water and earth eggs at the market', () => {
+  it("sells every unlocked world's regular eggs at the market, never boss eggs", () => {
     const s = arena();
-    expect(() => run(s, { type: 'buyEgg', species: 'triceratops', element: 'nature' })).toThrow('fightEgg');
+    expect(() => run(s, { type: 'buyEgg', species: 'cryptoraptor', element: 'arcane' })).toThrow('habitat');
+    const bought = run(s, { type: 'buyEgg', species: 'triceratops', element: 'nature' });
+    expect(bought.gold).toBe(s.gold - 1500);
+    expect(bought.eggs.at(-1)).toMatchObject({ element: 'nature', seconds: EGG_SECONDS.market });
+    expect(bought.eggs.at(-1)!.rarity).toBeUndefined();
+    expect(() => run(s, { type: 'buyEgg', species: 'boss', element: 'nature' })).toThrow('fightEgg');
     expect(run(s, { type: 'buyEgg', species: 'trex', element: 'fire' }).eggs.at(-1)?.element).toBe('fire');
   });
 

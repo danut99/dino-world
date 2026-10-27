@@ -2,6 +2,10 @@
 .realms-app .realm-atlas {
   --fit-rows: auto minmax(0, 1fr);
 }
+.realms-app .atlas-home > b {
+  font-size: 18px;
+  line-height: 1;
+}
 .realms-app .atlas-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
@@ -39,7 +43,44 @@
   filter: brightness(1.1);
 }
 .realms-app .atlas-elements button:not(.is-open):not(.is-next) {
-  filter: saturate(0.35) brightness(0.8);
+  filter: grayscale(1) brightness(0.45);
+}
+/* Worlds you own glow in their element's colour; locked ones are dimmed with a lock. */
+.realms-app .atlas-elements button {
+  position: relative;
+}
+.realms-app .atlas-elements button.is-open {
+  color: var(--px-bone-0);
+  background: radial-gradient(
+    circle at 50% 45%,
+    color-mix(in srgb, var(--tab-color) 40%, transparent),
+    transparent 75%
+  );
+  box-shadow:
+    inset 3px 0 0 var(--tab-color),
+    0 0 0 2px var(--tab-color),
+    0 0 12px color-mix(in srgb, var(--tab-color) 70%, transparent);
+}
+.realms-app .atlas-elements button.is-open > .px-icon {
+  filter: drop-shadow(0 0 4px var(--tab-color));
+}
+.realms-app .atlas-elements button.is-open::after,
+.realms-app .atlas-elements button:not(.is-open):not(.is-next)::after {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: 10px;
+  line-height: 1;
+}
+.realms-app .atlas-elements button.is-open::after {
+  content: '✓';
+  padding: 1px 3px;
+  color: #10240c;
+  background: #9be38f;
+  border: 1px solid #10240c;
+}
+.realms-app .atlas-elements button:not(.is-open):not(.is-next)::after {
+  content: '🔒';
 }
 .realms-app .atlas-elements button[aria-pressed='true'] {
   border-image: var(--frame-card-active);
@@ -128,9 +169,6 @@
   border-top: 2px solid var(--px-stone-4);
 }
 @media (max-height: 500px) {
-  .realms-app .realm-atlas .pk-head-text > small {
-    display: none;
-  }
   .realms-app .atlas-body .habitat-buttons {
     flex-wrap: nowrap;
   }

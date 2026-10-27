@@ -5,7 +5,9 @@ import { isFreshSave, planSync } from './cloud';
 const fresh = () => newSave(0);
 const played = (): Save => ({
   ...newSave(0),
-  dinos: [{ id: 'ignis', species: 'trex', element: 'fire', level: 10, stage: 'juvenile', nickname: 'Ignis' }] as Save['dinos'],
+  dinos: [
+    { id: 'ignis', species: 'trex', element: 'fire', level: 10, stage: 'juvenile', nickname: 'Ignis' },
+  ] as Save['dinos'],
   champion: 'ignis',
   team: ['ignis'],
 });
@@ -30,7 +32,8 @@ describe('cloud sync plan', () => {
     expect(planSync(played(), remote(fresh()))).toBe('upload');
   });
   it('keeps the progress an account already has over progress played here without an account', () => {
-    const older = { ...played(), updatedAt: 1000 }, newer = { ...played(), updatedAt: 2000 };
+    const older = { ...played(), updatedAt: 1000 },
+      newer = { ...played(), updatedAt: 2000 };
     expect(planSync(newer, remote(older))).toBe('download');
     expect(planSync(older, remote(newer))).toBe('download');
   });
@@ -51,16 +54,26 @@ describe('player names', () => {
   it('accepts 3–20 letters, digits and simple separators, Romanian letters included', async () => {
     const { validName } = await import('./cloud');
     for (const ok of ['Ion', 'Dino_Rex 7', 'Ștefan-Țepeș', 'a.b.c']) expect(validName(ok), ok).toBe(true);
-    for (const bad of ['Io', 'x'.repeat(21), ' Ion', '-Rex', 'Ion<3', 'a@b.ro']) expect(validName(bad), bad).toBe(false);
+    for (const bad of ['Io', 'x'.repeat(21), ' Ion', '-Rex', 'Ion<3', 'a@b.ro'])
+      expect(validName(bad), bad).toBe(false);
   });
 });
 
 describe('same account in two places', () => {
-  it('the save whose last action came later wins', async () => {
+  it('on equal progress, the save whose last action came later wins', async () => {
     const { newerSave } = await import('./useCloudSync');
     const at = (updatedAt: number) => ({ ...played(), updatedAt });
     expect(newerSave(at(2000), remote(at(1000)))).toBe('local');
     expect(newerSave(at(1000), remote(at(2000)))).toBe('cloud');
+  });
+  it('more actions win over a device clock running ahead, and a stale tab never overwrites', async () => {
+    const { newerSave } = await import('./useCloudSync');
+    const save = (revision: number, updatedAt: number) => ({ ...played(), revision, updatedAt });
+    // A fast clock with fewer actions loses.
+    expect(newerSave(save(5, 9_000_000), remote(save(40, 1000)))).toBe('cloud');
+    expect(newerSave(save(40, 1000), remote(save(5, 9_000_000)))).toBe('local');
+    expect(planSync(save(5, 9_000_000), remote(save(40, 1000)), true)).toBe('download');
+    expect(planSync(save(41, 1000), remote(save(40, 9_000_000)), true)).toBe('upload');
   });
 });
 
@@ -97,6 +110,34 @@ describe('saves from before the v6 reset', () => {
       expect(await fetchCloudSave('user')).toEqual({ save: played(), updatedAt: row.updated_at });
       row.data = { ...played(), gold: -1 };
       await expect(fetchCloudSave('user')).rejects.toThrow('Invalid save');
+    } finally {
+      vi.doUnmock('@supabase/supabase-js');
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+});
+
+describe('a save the server guard refuses', () => {
+  it('is reported as refused rather than as a conflict to retry', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_KEY', 'sb_publishable_test');
+    let error: { code: string; message: string } | null = { code: '23514', message: 'gems rose too fast' };
+    const query = {
+      update: () => query,
+      insert: () => query,
+      eq: () => query,
+      select: async () => ({ data: error ? null : [{ updated_at: 'now' }], error }),
+    };
+    vi.doMock('@supabase/supabase-js', () => ({ createClient: () => ({ from: () => query }) }));
+    vi.resetModules();
+    try {
+      const { pushCloudSave, SaveRejected } = await import('./cloud');
+      await expect(pushCloudSave('user', played(), 'before')).rejects.toBeInstanceOf(SaveRejected);
+      error = { code: '23505', message: 'duplicate' };
+      expect(await pushCloudSave('user', played(), null)).toBeNull();
+      error = null;
+      expect(await pushCloudSave('user', played(), 'before')).toBe('now');
     } finally {
       vi.doUnmock('@supabase/supabase-js');
       vi.unstubAllEnvs();

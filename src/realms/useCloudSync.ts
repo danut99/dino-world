@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Save } from './game';
-import { fetchCloudSave, pushCloudSave, type CloudSave } from './cloud';
+import { compareProgress, fetchCloudSave, pushCloudSave, SaveRejected, type CloudSave } from './cloud';
 
 export type SyncStatus = 'local' | 'signedOut' | 'syncing' | 'synced' | 'offline';
 
@@ -8,11 +8,12 @@ export type SyncStatus = 'local' | 'signedOut' | 'syncing' | 'synced' | 'offline
 const PUSH_DELAY_MS = 2500;
 
 /**
- * One account, two saves: the one whose last action is more recent wins (`updatedAt` is stamped by every action).
- * A cloud row from an older schema never wins: it is only there to be replaced.
+ * One account, two saves: the one with more progress wins. `revision` counts every action, so a stale tab or a
+ * device whose clock runs ahead never replaces a save with more actions; only on equal revisions does the later
+ * `updatedAt` (a device clock) decide. A cloud row from an older schema never wins: it is only there to be replaced.
  */
 export const newerSave = (local: Save, remote: CloudSave) =>
-  remote.outdated || local.updatedAt >= remote.save.updatedAt ? 'local' : 'cloud';
+  remote.outdated || compareProgress(local, remote.save) >= 0 ? 'local' : 'cloud';
 
 /**
  * Writes the signed-in player's save to the cloud, which is the only place it is kept. `marker` is the cloud time
@@ -78,7 +79,23 @@ export function useCloudSync(
           markerRef.current = remote?.updatedAt ?? null;
         }
         throw new Error('cloud kept changing');
-      } catch {
+      } catch (error) {
+        if (error instanceof SaveRejected) {
+          // The server refused this save; retrying it would loop, so the cloud copy is taken back instead.
+          console.error('The cloud refused the save', error);
+          try {
+            const remote = await fetchCloudSave(userId);
+            if (remote) {
+              adopt(remote);
+              setStatus('synced');
+              return;
+            }
+          } catch {
+            /* Offline now: stay on this device's save without retrying the refused one. */
+          }
+          setStatus('offline');
+          return;
+        }
         dirty.current = true;
         setStatus('offline');
       }
@@ -90,7 +107,8 @@ export function useCloudSync(
       if (!userId || dirty.current) return;
       try {
         const remote = await fetchCloudSave(userId);
-        if (remote && remote.updatedAt !== markerRef.current && newerSave(saveRef.current, remote) === 'cloud') adopt(remote);
+        if (remote && remote.updatedAt !== markerRef.current && newerSave(saveRef.current, remote) === 'cloud')
+          adopt(remote);
         else if (remote) markerRef.current = remote.updatedAt;
       } catch {
         /* Offline: the next save retries. */

@@ -1,15 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { autoAction, autoPlay, movesMemory, nextMove, predictFight } from './autoBattle';
+import { autoAction, autoPlay, availableMoves, movesMemory, nextMove, predictFight } from './autoBattle';
 import { ENCOUNTERS } from './content';
 import { arenaFoes, foeHasUltimate } from './arenaTeams';
-import { ARENA_LEVELS, ELEMENTS, command, newSave, strikeAgainst, type Dino, type RoundReport, type Save, type Stage } from './game';
+import {
+  ARENA_LEVELS,
+  ELEMENTS,
+  command,
+  newSave,
+  strikeAgainst,
+  type Dino,
+  type RoundReport,
+  type Save,
+  type Stage,
+} from './game';
 import type { BattleAction } from './battleChoreography';
 
 /** A save that may enter every encounter, with a team of the given age and level (one to three T-Rexes). */
 function ready(stage: Stage, level: number, size = 1): Save {
   const s = newSave(0);
   s.arenaTickets = Object.fromEntries(ELEMENTS.map((e) => [e.id, 100]));
-  s.dinos = Array.from({ length: size }, (_, i): Dino => ({ id: `d${i}`, species: 'trex', element: 'fire', level, stage, nickname: `T${i}` }));
+  s.dinos = Array.from({ length: size }, (_, i): Dino => ({
+    id: `d${i}`,
+    species: 'trex',
+    element: 'fire',
+    level,
+    stage,
+    nickname: `T${i}`,
+  }));
   s.team = s.dinos.map((d) => d.id);
   s.champion = 'd0';
   s.habitats = Object.fromEntries(ELEMENTS.map((e) => [e.id, 1]));
@@ -34,6 +51,44 @@ function fight(s: Save, encounterId: string) {
 }
 const arena = ENCOUNTERS.filter((e) => e.mode === 'arena');
 
+describe('manual moves', () => {
+  it('offers the ultimate exactly when the reducer accepts it', () => {
+    for (const [stage, level] of [
+      ['adult', 30],
+      ['juvenile', 14],
+    ] as [Stage, number][]) {
+      let save = command(ready(stage, level, 3), { type: 'battle', encounterId: 'arena-fire-2' }, 0);
+      const memory = movesMemory();
+      let offered = 0;
+      for (let move = nextMove(save, memory); move; move = nextMove(save, memory)) {
+        const b = save.battle!,
+          d = save.dinos.find((x) => x.id === b.dinoId)!;
+        const moves = availableMoves(b, d);
+        expect(moves.basic && moves.defend).toBe(true);
+        let accepted = true;
+        try {
+          command(save, { type: 'action', action: 'ultimate' }, 0);
+        } catch {
+          accepted = false;
+        }
+        expect(moves.ultimate, `${stage} round ${b.round}`).toBe(accepted);
+        if (moves.ultimate) offered++;
+        save = command(save, { type: 'action', action: move }, 0);
+      }
+      if (stage === 'juvenile') expect(offered).toBe(0);
+      else expect(offered).toBeGreaterThan(0);
+    }
+  });
+  it('defend lowers the blow taken against an attacking foe', () => {
+    const save = command(ready('adult', 30), { type: 'battle', encounterId: 'arena-fire-2' }, 0);
+    const basic = command(save, { type: 'action', action: 'basic' }, 0).battle!.report!,
+      defend = command(save, { type: 'action', action: 'defend' }, 0).battle!.report!;
+    expect(basic.foe).toBe('attack');
+    expect(defend.taken).toBeLessThan(basic.taken || Infinity);
+    expect(defend.reflected).toBeGreaterThan(0);
+  });
+});
+
 describe('automatic fights', () => {
   it('shows attack, guard and ultimate for every adult fighter that lasts a few rounds', () => {
     for (const encounter of arena) {
@@ -57,7 +112,9 @@ describe('automatic fights', () => {
     expect(battle.result).toBe('victory');
     const swaps = rounds.filter((r) => r.report.swap);
     expect(swaps.length).toBeGreaterThanOrEqual(2);
-    expect(swaps.every((r) => r.report.swap === 'enemy' || r.report.swap === 'both' || r.report.swap === 'ally')).toBe(true);
+    expect(swaps.every((r) => r.report.swap === 'enemy' || r.report.swap === 'both' || r.report.swap === 'ally')).toBe(
+      true,
+    );
     // Every foe in turn: each one fought until it fell.
     expect([...new Set(rounds.map((r) => r.foe))]).toEqual([0, 1, 2]);
     let s = command(ready('adult', 30, 3), { type: 'battle', encounterId: 'arena-fire-2' }, 0);
@@ -74,7 +131,8 @@ describe('automatic fights', () => {
       if (first.length < 4) continue;
       expect(first, encounter.id).toContain('attack');
       expect(first, encounter.id).toContain('defend');
-      if (first.length >= 5) expect(first.includes('ultimate'), encounter.id).toBe(foeHasUltimate(arenaFoes(encounter.id)[0]));
+      if (first.length >= 5)
+        expect(first.includes('ultimate'), encounter.id).toBe(foeHasUltimate(arenaFoes(encounter.id)[0]));
     }
   });
   it('spends the ultimate every few rounds, not only as a finisher', () => {
@@ -105,7 +163,9 @@ describe('automatic fights', () => {
     const board = { foes, foeIndex: 0, energy: 40, hp: 500, round: 1, enemyEnergy: 0, enemy: 0 };
     board.enemy = strikeAgainst(board, d, 'basic');
     expect(autoAction(board, d, new Set(['basic', 'defend']))).toBe('ultimate');
-    expect(autoAction({ ...board, enemy: 900, round: 3, energy: 50, enemyEnergy: 100 }, d, new Set(['basic', 'defend']))).toBe('defend');
+    expect(
+      autoAction({ ...board, enemy: 900, round: 3, energy: 50, enemyEnergy: 100 }, d, new Set(['basic', 'defend'])),
+    ).toBe('defend');
     expect(autoAction({ ...board, enemy: 1, hp: 1, energy: 0 }, d, new Set(['basic']))).toBe('ultimate');
   });
   it('plays the whole relay in the forecast, for the current team, without paying', () => {
@@ -115,7 +175,10 @@ describe('automatic fights', () => {
     expect(trio.win || trio.fallen === 3).toBe(true);
     expect(solo.fallen).toBeLessThanOrEqual(1);
     // The forecast and the real fight agree.
-    const real = autoPlay(command(ready('juvenile', 14, 3), { type: 'battle', encounterId: 'arena-fire-3' }, 0), 0).battle!;
+    const real = autoPlay(
+      command(ready('juvenile', 14, 3), { type: 'battle', encounterId: 'arena-fire-3' }, 0),
+      0,
+    ).battle!;
     expect(real.result === 'victory').toBe(trio.win);
     expect(real.stars ?? 0).toBe(trio.stars);
   });

@@ -36,7 +36,8 @@ describe('diamonds', () => {
     expect(gemsToFinish(5 * 60_000)).toBe(3);
     expect(gemsToFinish(3_600_000)).toBe(10);
     expect(gemsToFinish(8 * 3_600_000)).toBe(27);
-    for (const minutes of [1, 2, 7, 30, 90, 240, 600]) expect(gemsToFinish(minutes * 60_000)).toBe(Math.ceil(1.2 * Math.sqrt(minutes)));
+    for (const minutes of [1, 2, 7, 30, 90, 240, 600])
+      expect(gemsToFinish(minutes * 60_000)).toBe(Math.ceil(1.2 * Math.sqrt(minutes)));
     // Longer waits cost more in all, but less per minute.
     const prices = [5, 15, 60, 240, 480].map((m) => gemsToFinish(m * 60_000));
     expect(prices.every((p, i) => i === 0 || p > prices[i - 1])).toBe(true);
@@ -61,13 +62,22 @@ describe('diamonds', () => {
   });
 
   it('double habitat gold while a boost runs, and stack a second boost on the first', () => {
-    const base = advance({ ...rich(), dinos: [{ id: 'd', species: 'trex', element: 'fire', level: 10, stage: 'juvenile', nickname: 'Ignis' }], champion: 'd' } as Save, now);
+    const base = advance(
+      {
+        ...rich(),
+        dinos: [{ id: 'd', species: 'trex', element: 'fire', level: 10, stage: 'juvenile', nickname: 'Ignis' }],
+        champion: 'd',
+      } as Save,
+      now,
+    );
     const plain = advance(base, now + 3_600_000).storedGold;
     let boosted = command(base, { type: 'gemBoost', hours: 1 }, now);
     expect(boosted.gems).toBe(500 - 15);
     expect(advance(boosted, now + 3_600_000).storedGold).toBeCloseTo(plain * 2);
     // Half the next two hours are boosted: 1.5 times the plain rate.
-    expect(advance(boosted, now + 2 * 3_600_000).storedGold).toBeCloseTo(advance(base, now + 2 * 3_600_000).storedGold * 1.5);
+    expect(advance(boosted, now + 2 * 3_600_000).storedGold).toBeCloseTo(
+      advance(base, now + 2 * 3_600_000).storedGold * 1.5,
+    );
     boosted = command(boosted, { type: 'gemBoost', hours: 4 }, now);
     expect(boosted.gems).toBe(500 - 15 - 45);
     expect(boosted.boostUntil).toBe(now + 5 * 3_600_000);
@@ -78,7 +88,11 @@ describe('diamonds', () => {
     let s = rich();
     for (const offer of ['gold', 'food'])
       expect(() => command(s, { type: 'gemTrade', offer } as unknown as Command, now)).toThrow('command');
-    s = { ...s, dinos: [{ id: 'd', species: 'trex', element: 'fire', level: 10, stage: 'juvenile', nickname: 'Ignis' }], champion: 'd' };
+    s = {
+      ...s,
+      dinos: [{ id: 'd', species: 'trex', element: 'fire', level: 10, stage: 'juvenile', nickname: 'Ignis' }],
+      champion: 'd',
+    };
     expect(() => command(s, { type: 'gemRest' }, now)).toThrow('rested');
     s.tired = { d: now + 60_000 };
     s = command(s, { type: 'gemRest' }, now);
@@ -93,8 +107,8 @@ describe('diamonds', () => {
     expect(() => command(s, { type: 'harvest', plot }, now)).toThrow('timer');
     const gems = s.gems;
     s = command(s, { type: 'gemFinish', target: 'plot', plot }, now);
-    // Ferns take two minutes: ceil(1.2 × √2) = 2.
-    expect(s.gems).toBe(gems - 2);
+    // Ferns take five minutes: ceil(1.2 × √5) = 3.
+    expect(s.gems).toBe(gems - 3);
     const food = s.food;
     s = command(s, { type: 'harvest', plot }, now);
     expect(s.food).toBeGreaterThan(food);
@@ -126,7 +140,12 @@ describe('diamonds', () => {
     expect(s.crafting[1].endsAt - s.crafting[1].startedAt).toBe(second.endsAt - second.startedAt);
     expect(s.crafting[1].startedAt).toBeLessThan(second.startedAt);
     roundTrip(s);
-    s = { ...s, dinos: [{ id: 'd', species: 'trex', element: 'fire', level: 12, stage: 'juvenile', nickname: 'Ignis' }], champion: 'd', team: ['d'] };
+    s = {
+      ...s,
+      dinos: [{ id: 'd', species: 'trex', element: 'fire', level: 12, stage: 'juvenile', nickname: 'Ignis' }],
+      champion: 'd',
+      team: ['d'],
+    };
     s = command(s, { type: 'build', kind: 'portal', x: 8, y: 5 }, now);
     s = command(s, { type: 'expedition', regionId: 'training', team: ['d'] }, now);
     s = command(s, { type: 'gemFinish', target: 'expedition', id: s.expeditions[0].id }, now + 1000);
@@ -170,7 +189,14 @@ describe('earning diamonds', () => {
   });
 
   it('pays every collection milestone once, as the collection reaches it', () => {
-    expect(COLLECTION_MILESTONES.map((m) => [m.count, m.gems])).toEqual([[5, 3], [10, 3], [15, 4], [20, 5], [25, 5], [30, 10]]);
+    expect(COLLECTION_MILESTONES.map((m) => [m.count, m.gems])).toEqual([
+      [5, 3],
+      [10, 3],
+      [15, 4],
+      [20, 5],
+      [25, 5],
+      [30, 10],
+    ]);
     expect(COLLECTION_MILESTONES.at(-1)!.count).toBe(COLLECTION.length);
     let s = newSave(now);
     s.discovered = COLLECTION.slice(0, 4);

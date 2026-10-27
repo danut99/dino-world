@@ -11,8 +11,7 @@
 }
 .realms-app .realm-window.fit > header {
   flex: none;
-  padding-top: 2px;
-  padding-bottom: 10px;
+  padding: 2px 6px 10px;
 }
 .realms-app .realm-window.fit > header .realm-eyebrow {
   display: none;
@@ -86,8 +85,9 @@
 /* ---------- head strip ---------- */
 .realms-app .pk-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 6px 12px;
   min-width: 0;
   padding: 6px 10px;
   background: var(--px-ui-5);
@@ -120,23 +120,21 @@
 .realms-app .pk-head-text {
   display: grid;
   gap: 1px;
-  flex: 1 1 auto;
+  flex: 1 1 130px;
   min-width: 0;
 }
 .realms-app .pk-head-text > strong {
-  overflow: hidden;
   font-size: 15px;
   font-weight: 700;
+  line-height: 1.2;
   color: var(--px-bone-0);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .realms-app .pk-head-text > small {
-  overflow: hidden;
   font-size: 13px;
+  line-height: 1.25;
   color: var(--px-bone-3);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .realms-app .pk-head-actions {
   display: flex;
@@ -242,6 +240,7 @@
 }
 .realms-app .pk-foot {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -249,9 +248,8 @@
   min-height: 30px;
 }
 .realms-app .pk-foot > .pk-note {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  flex: 1 1 160px;
+  min-width: 0;
 }
 .realms-app .pk-foot > .ui-pager {
   margin-left: auto;
@@ -455,19 +453,14 @@
     border-image-width: 9px;
   }
   .realms-app .realm-window.fit > header {
-    padding: 0 44px 4px 0;
+    padding: 0 2px 4px;
   }
   .realms-app .realm-window.fit h2 {
-    padding: 0 6px;
     font-size: 15px;
-    border-width: 6px;
-    border-image-width: 6px;
   }
   .realms-app .realm-window.fit .realm-close {
-    top: 0;
-    right: 0;
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
   }
   .realms-app .realm-window.fit > .realm-window-body {
     gap: 6px;
@@ -573,13 +566,24 @@
   white-space: nowrap;
 }
 @keyframes pk-hammer {
-  0% { transform: rotate(-12deg); }
-  100% { transform: rotate(12deg); }
+  0% {
+    transform: rotate(-12deg);
+  }
+  100% {
+    transform: rotate(12deg);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .realms-app .pk-construction-icon { animation: none; }
+  .realms-app .pk-construction-icon {
+    animation: none;
+  }
 }
 @media (max-height: 500px) {
-  .realms-app .pk-construction { gap: 6px; padding: 4px 6px; }
-  .realms-app .pk-construction-body > strong { font-size: 13px; }
+  .realms-app .pk-construction {
+    gap: 6px;
+    padding: 4px 6px;
+  }
+  .realms-app .pk-construction-body > strong {
+    font-size: 13px;
+  }
 }

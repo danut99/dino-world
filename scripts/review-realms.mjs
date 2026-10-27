@@ -8,9 +8,7 @@ let chromium;
 try {
   ({ chromium } = require('playwright'));
 } catch {
-  ({ chromium } = require(
-    process.env.PLAYWRIGHT_MODULE ?? 'playwright',
-  ));
+  ({ chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright'));
 }
 const server = await createServer({
   configLoader: 'runner',
@@ -33,15 +31,13 @@ try {
   await page.locator('.realm-world canvas').waitFor();
   await page.evaluate(async () => {
     await Promise.all(
-      [
-        '/realms/home-island-wide-v1.webp',
-        '/realms/building-concepts.webp',
-        '/realms/worlds/fire-wide-v1.webp',
-      ].map((src) => {
-        const i = new Image();
-        i.src = src;
-        return i.decode();
-      }),
+      ['/realms/home-island-wide-v1.webp', '/realms/building-concepts.webp', '/realms/worlds/fire-wide-v1.webp'].map(
+        (src) => {
+          const i = new Image();
+          i.src = src;
+          return i.decode();
+        },
+      ),
     );
   });
   await page.screenshot({ path: 'output/realms/home.png' });
@@ -124,7 +120,7 @@ try {
       throw Error(`Resident leaked into ${id}`);
     await page.screenshot({ path: `output/realms/world-${id}.png` });
   }
-  await page.getByRole('button', { name: /Insula principală$/ }).click();
+  await page.locator('.realm-return').click();
   await page.getByRole('button', { name: 'Setări', exact: true }).click();
   await page.locator('.realm-settings select').selectOption('1');
   await page.getByRole('button', { name: 'Close', exact: true }).click();

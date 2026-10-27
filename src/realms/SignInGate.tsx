@@ -5,6 +5,7 @@ import {
   clearLegacySave,
   clearPendingPassword,
   cloud,
+  compareProgress,
   fetchCloudSave,
   fetchPlayerName,
   guestName,
@@ -12,6 +13,7 @@ import {
   planSync,
   pushCloudSave,
   readLegacySave,
+  readBackup,
   startAnonymous,
 } from './cloud';
 import { newSave, type Save } from './game';
@@ -43,7 +45,15 @@ type Start =
   /** The account has no player name yet: it picks one before entering. */
   | { phase: 'name' }
   /** `owner`: the account this save belongs to, so a different account never starts from it. */
-  | { phase: 'ready'; owner: string; anonymous: boolean; name: string; save: Save; marker: string | null; unsaved: boolean };
+  | {
+      phase: 'ready';
+      owner: string;
+      anonymous: boolean;
+      name: string;
+      save: Save;
+      marker: string | null;
+      unsaved: boolean;
+    };
 
 /**
  * A newcomer plays straight away as a guest, with the save on this device, and is invited to create an account
@@ -94,11 +104,40 @@ export default function SignInGate() {
       if (!name) return { phase: 'name' } as const;
       const remote = await fetchCloudSave(userId);
       const legacy = readLegacySave();
+      // An upload that never reached the cloud (offline, tab closed) is still in this device's backup.
+      const backup = readBackup(userId)?.save;
+      if (!legacy && backup && (!remote || remote.outdated || compareProgress(backup, remote.save) > 0))
+        return {
+          phase: 'ready',
+          owner: userId,
+          anonymous,
+          name,
+          save: backup,
+          marker: remote?.updatedAt ?? null,
+          unsaved: true,
+        } as const;
       // A cloud row from an older schema starts a new game, uploaded at once so the row moves to the new schema.
-      if (!legacy) return { phase: 'ready', owner: userId, anonymous, name, save: remote?.save ?? newSave(Date.now()), marker: remote?.updatedAt ?? null, unsaved: !remote || !!remote.outdated } as const;
+      if (!legacy)
+        return {
+          phase: 'ready',
+          owner: userId,
+          anonymous,
+          name,
+          save: remote?.save ?? newSave(Date.now()),
+          marker: remote?.updatedAt ?? null,
+          unsaved: !remote || !!remote.outdated,
+        } as const;
       if (planSync(legacy, remote, guestOwner.current === userId) === 'download' && remote && !remote.outdated) {
         clearLegacySave();
-        return { phase: 'ready', owner: userId, anonymous, name, save: remote.save, marker: remote.updatedAt, unsaved: false } as const;
+        return {
+          phase: 'ready',
+          owner: userId,
+          anonymous,
+          name,
+          save: remote.save,
+          marker: remote.updatedAt,
+          unsaved: false,
+        } as const;
       }
       // The device's progress moves into the account; only once it is safely there does it leave the device.
       const at = await pushCloudSave(userId, legacy, remote?.updatedAt ?? null);
@@ -109,7 +148,8 @@ export default function SignInGate() {
       (next) => active && setStart(next),
       (error: unknown) => {
         console.error('Loading the cloud save failed', error);
-        if (active) setStart({ phase: 'error', detail: error instanceof Error ? error.message : JSON.stringify(error) });
+        if (active)
+          setStart({ phase: 'error', detail: error instanceof Error ? error.message : JSON.stringify(error) });
       },
     );
     return () => {
@@ -120,7 +160,14 @@ export default function SignInGate() {
   if (!cloud) return <RealmsApp />;
   // Linking an email keeps the user id but remounts the game. Wait for the new bootstrap instead of
   // mounting with the guest's original startup snapshot, which could upload a reset over its latest save.
-  const ready = auth.user && !auth.recovering && start.phase === 'ready' && start.owner === auth.user.id && start.anonymous === anonymous ? start : null;
+  const ready =
+    auth.user &&
+    !auth.recovering &&
+    start.phase === 'ready' &&
+    start.owner === auth.user.id &&
+    start.anonymous === anonymous
+      ? start
+      : null;
   // After an anonymous account linked its e-mail and confirmed it, it chooses its password.
   const choosePassword = !!auth.user && !anonymous && pendingPassword();
   if (ready && auth.user && !choosePassword)
@@ -129,11 +176,19 @@ export default function SignInGate() {
         key={`${auth.user.id}-${anonymous ? 'guest' : 'player'}`}
         guest={anonymous}
         initialSave={ready.save}
-        account={{ user: auth.user, name: ready.name, marker: ready.marker, unsaved: ready.unsaved, recovering: false, endRecovery: auth.endRecovery }}
+        account={{
+          user: auth.user,
+          name: ready.name,
+          marker: ready.marker,
+          unsaved: ready.unsaved,
+          recovering: false,
+          endRecovery: auth.endRecovery,
+        }}
       />
     );
   // Checking the session or loading the save: the boot screen from index.html stays up meanwhile.
-  if (!auth.checked || (auth.user && !auth.recovering && (start.phase === 'loading' || start.phase === 'ready'))) return null;
+  if (!auth.checked || (auth.user && !auth.recovering && (start.phase === 'loading' || start.phase === 'ready')))
+    return null;
   if (!auth.user && !auth.recovering && !signIn) return anonymousFailed ? <RealmsApp key="guest" guest /> : null;
 
   dropBootLoader();
@@ -165,21 +220,55 @@ export default function SignInGate() {
       tr('Cum te cheamă?', 'What is your name?'),
       <NameForm lang={lang} userId={auth.user.id} suggested={guestName()} onDone={() => setAttempt((n) => n + 1)} />,
     );
-  if (auth.user && start.phase === 'error')
+  if (auth.user && start.phase === 'error') {
+    const user = auth.user;
+    const backup = readBackup(user.id);
     return screen(
       tr('Nu ne-am putut conecta', 'We could not connect'),
       <div className="realm-auth">
-        <p>{tr('Progresul tău e în cloud și nu l-am putut încărca. Verifică internetul și încearcă din nou.', 'Your progress is in the cloud and could not be loaded. Check your connection and try again.')}</p>
+        <p>
+          {tr(
+            'Progresul tău e în cloud și nu l-am putut încărca. Verifică internetul și încearcă din nou.',
+            'Your progress is in the cloud and could not be loaded. Check your connection and try again.',
+          )}
+        </p>
         <small className="realm-gate-detail">{start.detail}</small>
         <button className="realm-button" onClick={() => setAttempt((n) => n + 1)}>
           {tr('Încearcă din nou', 'Try again')}
         </button>
+        {backup && (
+          <button
+            className="realm-link realm-gate-guest"
+            onClick={() =>
+              setStart({
+                phase: 'ready',
+                owner: user.id,
+                anonymous,
+                name: backup.name || guestName(),
+                save: backup.save,
+                marker: null,
+                unsaved: true,
+              })
+            }
+          >
+            {tr('Joacă offline cu copia de pe acest dispozitiv', 'Play offline with the copy on this device')} →
+          </button>
+        )}
       </div>,
     );
+  }
   return screen(
     auth.recovering ? tr('Parolă nouă', 'New password') : tr('Bine ai venit în Dino Realms', 'Welcome to Dino Realms'),
     <>
-      <AccountPanel lang={lang} sync={{ user: null, status: 'signedOut', recovering: auth.recovering && !!auth.user, endRecovery: auth.endRecovery }} />
+      <AccountPanel
+        lang={lang}
+        sync={{
+          user: null,
+          status: 'signedOut',
+          recovering: auth.recovering && !!auth.user,
+          endRecovery: auth.endRecovery,
+        }}
+      />
       {!auth.recovering && (
         <button className="realm-link realm-gate-guest" onClick={() => setSignIn(false)}>
           {tr('Joacă fără cont', 'Play without an account')} →

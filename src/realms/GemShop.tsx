@@ -1,7 +1,18 @@
 import { DEV_TOOLS } from './devTools';
 import { useState } from 'react';
 import { CROPS, RECIPES, REGIONS } from './content';
-import { champion, constructionLeft, GEMS, gemsToFinish, isTired, SPECIES_NAMES, targetName, type Command, type Save } from './game';
+import {
+  BOOST_CAP,
+  champion,
+  constructionLeft,
+  GEMS,
+  gemsToFinish,
+  isTired,
+  SPECIES_NAMES,
+  targetName,
+  type Command,
+  type Save,
+} from './game';
 import { EggArt } from './DinoPanels';
 import { Tabs, TabPanel } from './ui/Tabs';
 import { Pager } from './ui/Pager';
@@ -31,7 +42,17 @@ type Running = { key: string; art: React.ReactNode; title: string; left: number;
  * The diamond shop: the balance, then three tabs — finish what is running now (the upgrade being built included),
  * boosts (double habitat gold, wake the champion), and the packs that real money will buy later ("coming soon").
  */
-export function GemShop({ save, now, lang, run }: { save: Save; now: number; lang: number; run: (c: Command) => boolean }) {
+export function GemShop({
+  save,
+  now,
+  lang,
+  run,
+}: {
+  save: Save;
+  now: number;
+  lang: number;
+  run: (c: Command) => boolean;
+}) {
   const tr = (ro: string, en: string) => T(lang, ro, en);
   const hero = champion(save);
   const tired = !!hero && isTired(save, hero.id, now);
@@ -110,7 +131,12 @@ export function GemShop({ save, now, lang, run }: { save: Save; now: number; lan
           <strong className="pk-num">
             {save.gems.toLocaleString(lang ? 'en' : 'ro')} {tr('diamante', 'diamonds')}
           </strong>
-          <small>{tr('Diamantele cumpără timp, nu putere: termini mai repede, produci mai mult.', 'Diamonds buy time, never power: finish sooner, produce more.')}</small>
+          <small>
+            {tr(
+              'Diamantele cumpără timp, nu putere: termini mai repede, produci mai mult.',
+              'Diamonds buy time, never power: finish sooner, produce more.',
+            )}
+          </small>
         </div>
         {DEV_TOOLS && (
           <div className="pk-head-actions">
@@ -126,8 +152,13 @@ export function GemShop({ save, now, lang, run }: { save: Save; now: number; lan
         active={tab}
         onChange={setTab}
         tabs={[
-          { id: 'finish', label: tr('Accelerări', 'Speed-ups'), badge: running.length },
-          { id: 'boost', label: 'Boost' },
+          {
+            id: 'finish',
+            label: tr('Accelerări', 'Speed-ups'),
+            badge: running.length,
+            state: running.length ? 'busy' : undefined,
+          },
+          { id: 'boost', label: lang ? 'Boosts' : 'Bonusuri' },
           { id: 'packs', label: tr('Pachete', 'Packs') },
         ]}
       />
@@ -155,11 +186,21 @@ export function GemShop({ save, now, lang, run }: { save: Save; now: number; lan
           ) : (
             <div className="pk-empty">
               <Icon name="clock" scale={3} />
-              <p className="pk-note">{tr('Nimic nu așteaptă acum. Construcțiile, ouăle din incubator, culturile, fabricările și expedițiile apar aici.', 'Nothing is waiting right now. Upgrades being built, incubating eggs, crops, crafts and expeditions show up here.')}</p>
+              <p className="pk-note">
+                {tr(
+                  'Nimic nu așteaptă acum. Construcțiile, ouăle din incubator, culturile, fabricările și expedițiile apar aici.',
+                  'Nothing is waiting right now. Upgrades being built, incubating eggs, crops, crafts and expeditions show up here.',
+                )}
+              </p>
             </div>
           )}
           <div className="pk-foot">
-            <p className="pk-note">{tr(`Prețul scade pe măsură ce timpul trece: 5 min = ${gemsToFinish(300_000)} 💎, 1 h = ${gemsToFinish(3_600_000)} 💎.`, `The price drops as time passes: 5 min = ${gemsToFinish(300_000)} 💎, 1 h = ${gemsToFinish(3_600_000)} 💎.`)}</p>
+            <p className="pk-note">
+              {tr(
+                `Prețul scade pe măsură ce timpul trece: 5 min = ${gemsToFinish(300_000)} 💎, 1 h = ${gemsToFinish(3_600_000)} 💎.`,
+                `The price drops as time passes: 5 min = ${gemsToFinish(300_000)} 💎, 1 h = ${gemsToFinish(3_600_000)} 💎.`,
+              )}
+            </p>
             <Pager page={pager.page} pages={pager.pages} onPrev={pager.prev} onNext={pager.next} lang={lang} />
           </div>
         </TabPanel>
@@ -170,11 +211,26 @@ export function GemShop({ save, now, lang, run }: { save: Save; now: number; lan
             <span className="gem-offer-icon">×2</span>
             <div>
               <strong>{tr('Aur dublu din habitate', 'Double habitat gold')}</strong>
-              <small>{boostLeft ? tr(`Activ încă ${minutes(boostLeft)}`, `Active for ${minutes(boostLeft)}`) : tr('Habitatele produc de două ori mai repede.', 'Habitats produce twice as fast.')}</small>
+              <small>
+                {boostLeft
+                  ? tr(`Activ încă ${minutes(boostLeft)}`, `Active for ${minutes(boostLeft)}`)
+                  : tr('Habitatele produc de două ori mai repede.', 'Habitats produce twice as fast.')}
+              </small>
+              <small>
+                {tr(
+                  `Spațiul de aur din habitate e ×${BOOST_CAP} cât timp e activ.`,
+                  `Habitat gold storage is ×${BOOST_CAP} while it runs.`,
+                )}
+              </small>
             </div>
             <div className="gem-offer-buttons">
               {([1, 4] as const).map((h) => (
-                <button key={h} className="realm-button" disabled={!afford(GEMS.boost[h])} onClick={() => run({ type: 'gemBoost', hours: h })}>
+                <button
+                  key={h}
+                  className="realm-button"
+                  disabled={!afford(GEMS.boost[h])}
+                  onClick={() => run({ type: 'gemBoost', hours: h })}
+                >
                   {h}h · {GEMS.boost[h]} 💎
                 </button>
               ))}
@@ -184,10 +240,18 @@ export function GemShop({ save, now, lang, run }: { save: Save; now: number; lan
             <span className="gem-offer-icon">☀</span>
             <div>
               <strong>{tr('Trezește campionul', 'Wake your champion')}</strong>
-              <small>{tired ? tr(`${hero!.nickname} se odihnește după o luptă.`, `${hero!.nickname} is resting after a fight.`) : tr('Campionul e odihnit și gata de luptă.', 'Your champion is rested and ready.')}</small>
+              <small>
+                {tired
+                  ? tr(`${hero!.nickname} se odihnește după o luptă.`, `${hero!.nickname} is resting after a fight.`)
+                  : tr('Campionul e odihnit și gata de luptă.', 'Your champion is rested and ready.')}
+              </small>
             </div>
             <div className="gem-offer-buttons">
-              <button className="realm-button" disabled={!tired || !afford(GEMS.rest)} onClick={() => run({ type: 'gemRest' })}>
+              <button
+                className="realm-button"
+                disabled={!tired || !afford(GEMS.rest)}
+                onClick={() => run({ type: 'gemRest' })}
+              >
                 {GEMS.rest} 💎
               </button>
             </div>
@@ -210,7 +274,12 @@ export function GemShop({ save, now, lang, run }: { save: Save; now: number; lan
               </div>
             ))}
           </div>
-          <p className="pk-note">{tr('Plățile nu sunt încă active. Deocamdată diamantele se câștigă din joc: capitole, regiuni, stele, colecție, cufărul zilnic, roata și sezonul arenei.', 'Payments are not open yet. For now diamonds are earned in the game: chapters, regions, stars, the collection, the daily chest, the wheel and the arena season.')}</p>
+          <p className="pk-note">
+            {tr(
+              'Plățile nu sunt încă active. Deocamdată diamantele se câștigă din joc: capitole, regiuni, stele, colecție, cufărul zilnic, roata și sezonul arenei.',
+              'Payments are not open yet. For now diamonds are earned in the game: chapters, regions, stars, the collection, the daily chest, the wheel and the arena season.',
+            )}
+          </p>
         </TabPanel>
       )}
     </div>

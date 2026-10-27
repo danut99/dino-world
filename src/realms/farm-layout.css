@@ -33,7 +33,9 @@
   color: var(--px-bone-1);
   background: #4a2e22;
   border: 2px solid var(--px-outline);
-  box-shadow: inset 0 0 0 2px #6e4430, inset 0 -6px 0 #3a2219;
+  box-shadow:
+    inset 0 0 0 2px #6e4430,
+    inset 0 -6px 0 #3a2219;
 }
 .realms-app .farm-plot > span {
   font-size: 26px;
@@ -67,7 +69,9 @@
 .realms-app .farm-plot.ready {
   cursor: pointer;
   background: #3f5a2a;
-  box-shadow: inset 0 0 0 2px var(--px-moss-2), 0 0 12px #a6d85a55;
+  box-shadow:
+    inset 0 0 0 2px var(--px-moss-2),
+    0 0 12px #a6d85a55;
 }
 .realms-app .farm-plot.locked {
   color: var(--px-stone-1);
@@ -81,7 +85,7 @@
 }
 .realms-app .farm-crops {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
 .realms-app .farm-crop {
@@ -135,6 +139,15 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--px-bone-3);
+}
+.realms-app .farm-crop-body small.farm-crop-food {
+  font-weight: 700;
+  color: var(--px-moss-1, #b6d79a);
+}
+.realms-app .farm-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--px-bone-2);
 }
 .realms-app .farm-plant {
   display: flex;
@@ -241,5 +254,61 @@
   }
   .realms-app .farm-arrow {
     display: none;
+  }
+}
+/* Upright phones: plots as a 3×2 bed of tiles, crops two per row with their full names, a full-width plant bar. */
+@media (max-width: 760px) and (orientation: portrait) {
+  .realms-app .farm-field {
+    grid-template-rows: auto auto auto;
+    align-content: start;
+    overflow-y: auto;
+  }
+  .realms-app .farm-plots {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: minmax(76px, auto);
+    gap: 6px;
+    max-height: none;
+    padding: 6px;
+  }
+  .realms-app .farm-plot {
+    gap: 2px;
+    padding: 4px;
+  }
+  .realms-app .farm-plot > span {
+    font-size: 22px;
+  }
+  .realms-app .farm-plot.locked .px-icon {
+    scale: 0.75;
+  }
+  .realms-app .farm-plot small {
+    font-size: 12px;
+  }
+  .realms-app .farm-crops {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .realms-app .farm-crop {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    text-align: center;
+  }
+  .realms-app .farm-crop-body small {
+    white-space: normal;
+  }
+  .realms-app .farm-crop {
+    min-height: 54px;
+    padding: 2px 6px;
+  }
+  .realms-app .farm-crop-body strong {
+    font-size: 13px;
+    -webkit-line-clamp: 2;
+  }
+  .realms-app .farm-plant {
+    display: grid;
+    gap: 6px;
+  }
+  .realms-app .farm-plant > .realm-button {
+    width: 100%;
+    margin: 0;
   }
 }

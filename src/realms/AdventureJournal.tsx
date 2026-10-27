@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { ELEMENTS, GEM_SOURCES, SPECIES_NAMES, STORY_CHAPTERS, storyChapter, type Command, type Save } from './game';
+import {
+  ELEMENTS,
+  GEM_SOURCES,
+  LEGEND_TRIAL,
+  legendTrialsLeft,
+  SPECIES_NAMES,
+  STORY_CHAPTERS,
+  storyChapter,
+  type Command,
+  type Save,
+} from './game';
 import { collectionTargets, goalPurpose, nextStoryStep, type JourneyRoute } from './journey';
 import { DinosaurArt } from './DinosaurArt';
 import { Tabs, TabPanel } from './ui/Tabs';
@@ -66,11 +76,13 @@ export function CollectionGoals({
 
 export function AdventureJournal({
   save,
+  now,
   lang,
   run,
   navigate,
 }: {
   save: Save;
+  now: number;
   lang: number;
   run: (c: Command) => boolean;
   navigate: (route: JourneyRoute) => void;
@@ -111,6 +123,34 @@ export function AdventureJournal({
             ))}
           </nav>
           <div className="journey-scroll" data-scroll>
+            {!current && (
+              <div className="journey-prize">
+                <Icon name="egg" scale={1} />
+                <span>
+                  {tr('Proba legendei', 'Legend trial')}:{' '}
+                  <b>
+                    {legendTrialsLeft(save, now)}/{LEGEND_TRIAL.perWeek}
+                  </b>{' '}
+                  {tr('săptămâna asta', 'left this week')}
+                  <small>
+                    {tr(
+                      `${LEGEND_TRIAL.gold} aur + ${LEGEND_TRIAL.food} hrană → ${LEGEND_TRIAL.gems} 💎 și un ou, adesea rar sau epic.`,
+                      `${LEGEND_TRIAL.gold} gold + ${LEGEND_TRIAL.food} food → ${LEGEND_TRIAL.gems} 💎 and an egg, often rare or epic.`,
+                    )}
+                  </small>
+                </span>
+                <button
+                  type="button"
+                  className="realm-button"
+                  disabled={
+                    !legendTrialsLeft(save, now) || save.gold < LEGEND_TRIAL.gold || save.food < LEGEND_TRIAL.food
+                  }
+                  onClick={() => run({ type: 'legendTrial' })}
+                >
+                  {tr('Începe proba', 'Start trial')}
+                </button>
+              </div>
+            )}
             <header className="journey-heading">
               <span>
                 {tr('CAPITOLUL', 'CHAPTER')} {chapter.number} · {complete}/{chapter.steps.length}

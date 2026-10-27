@@ -17,6 +17,17 @@
 .utility-sprite {
   image-rendering: pixelated;
 }
+.expedition-tab-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #cdbfa8;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .expedition-tab-hint {
+    display: none;
+  }
+}
 .realm-toast {
   z-index: 70;
 }
@@ -596,6 +607,35 @@
   background: #f6d77a;
   color: #4a2e22;
 }
+/* A lost treasure on the lawn: it bobs and sparkles until it is picked up. */
+.realm-treasure {
+  pointer-events: auto;
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  transform: translate(-50%, -80%);
+  cursor: pointer;
+  background: radial-gradient(circle, #f6d77a66, transparent 70%);
+  border: 0;
+  filter: drop-shadow(0 0 6px #f6d77a);
+  animation: realm-treasure-bob 1.4s ease-in-out infinite alternate;
+}
+.realm-treasure:hover {
+  filter: drop-shadow(0 0 10px #fff1b8) brightness(1.15);
+}
+@keyframes realm-treasure-bob {
+  to {
+    translate: 0 -6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .realm-treasure {
+    animation: none;
+  }
+}
 .production-bubble::after {
   content: '';
   position: absolute;
@@ -614,36 +654,40 @@
   left: 50%;
   bottom: 148px;
   transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  max-width: calc(100% - 40px);
-  padding: 14px 18px;
+  display: grid;
+  gap: 8px;
+  width: min(340px, calc(100% - 40px));
+  padding: 8px 10px 10px;
   border: 1px solid #f6d77a;
   background: #3a2e27f2;
   box-shadow: 0 5px 25px #3a2e2766;
 }
-.realm-offline-strip strong {
-  font-size: 12px;
-  display: block;
+.realm-offline-strip .offline-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.realm-offline-strip small {
+.realm-offline-strip .offline-head strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.2;
+}
+.realm-offline-strip .offline-head small {
+  flex: none;
   color: #cdbfa8;
-  font-size: 9px;
-  display: block;
-  margin-top: 4px;
+  font-size: 12px;
 }
-.realm-offline-strip > span {
-  color: #fff1a8;
-  font-size: 15px;
-  white-space: nowrap;
+.realm-offline-strip .offline-head .realm-close {
+  position: static;
+  width: 32px;
+  height: 32px;
 }
-.realm-offline-strip > button:last-child:not(.realm-button) {
-  border: 0;
-  color: #e2d3b2;
-  background: transparent;
-  font-size: 20px;
-  padding: 5px;
+.realm-offline-strip .offline-loot {
+  justify-content: center;
+}
+.realm-offline-strip > .realm-button {
+  width: 100%;
 }
 @media (max-width: 1100px) {
   .gameplay-header {
@@ -660,21 +704,7 @@
   .destination-cover {
     height: 120px;
   }
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
   .gameplay-header nav button {
     padding: 8px 12px;
   }
@@ -709,8 +739,7 @@
   .gameplay-rewards {
     margin-bottom: 13px;
   }
-  
-  
+
   .map-caption {
     bottom: 16px;
     left: 18px;
@@ -728,14 +757,7 @@
     margin-top: 8px;
     padding: 5px;
   }
-  
-  
-  
-  
-  
-  
-  
-  
+
   .battle-command-bar {
     gap: 10px;
     padding: 8px 15px 3px;
@@ -805,15 +827,9 @@
     margin: 8px 0;
     font-size: 17px;
   }
-  
-  
+
   .realm-offline-strip {
     bottom: 112px;
-    padding: 9px 12px;
-    gap: 12px;
-  }
-  .realm-offline-strip small {
-    display: none;
   }
   .production-bubble {
     font-size: 8px !important;
@@ -866,31 +882,12 @@
   .destination-cover {
     height: 150px;
   }
-  
-  
+
   .arena-lobby-scene {
     height: 420px;
     border: 0;
   }
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
   .battle-unit {
     width: 45%;
     height: 62%;
@@ -978,23 +975,7 @@
     margin: 0 0 0 auto;
   }
   .realm-offline-strip {
-    width: calc(100% - 24px);
-    gap: 8px;
-    flex-wrap: wrap;
     bottom: 140px;
-  }
-  .realm-offline-strip > span {
-    font-size: 12px;
-  }
-  .realm-offline-strip strong {
-    font-size: 11px;
-  }
-  .realm-offline-strip small {
-    display: none;
-  }
-  .realm-offline-strip .realm-button {
-    min-height: 35px;
-    padding: 7px 10px;
   }
   .production-bubble {
     font-size: 8px !important;
@@ -1022,21 +1003,65 @@
     display: none;
   }
 }
-.battle-unit.enemy > .dinosaur-opponent { transform: scaleX(-1); }
-.gameplay-screen .dinosaur-art { image-rendering: pixelated; overflow: hidden; }
+.battle-unit.enemy > .dinosaur-opponent {
+  transform: scaleX(-1);
+}
+.gameplay-screen .dinosaur-art {
+  image-rendering: pixelated;
+  overflow: hidden;
+}
 
 /* Arena leagues: ice is the starter league; each unlocked world opens its own league */
 
-.gameplay-screen .arena-boss-art { object-fit: contain; image-rendering: pixelated; }
-.arena-boss-name { display: block; color: #fff1a8; font-size: 16px; letter-spacing: 1px; margin-top: 8px; }
-.arena-boss-tag { font-style: normal; color: #ffb070; letter-spacing: 1px; }
+.gameplay-screen .arena-boss-art {
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.arena-boss-name {
+  display: block;
+  color: #fff1a8;
+  font-size: 16px;
+  letter-spacing: 1px;
+  margin-top: 8px;
+}
+.arena-boss-tag {
+  font-style: normal;
+  color: #ffb070;
+  letter-spacing: 1px;
+}
 
 /* Egg drops: chance on the rewards list, the egg on the victory screen */
-.reward-egg > b { color: #f6d77a; }
-.result-egg { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: -8px auto 16px; padding: 8px 14px; width: fit-content; color: #fff1a8; background: #e0a96a22; border: 1px solid #e0a96a99; animation: result-egg-in 0.5s ease-out; }
-.result-egg small { color: #e2d3b2; font-size: 11px; }
-@keyframes result-egg-in { from { opacity: 0; transform: scale(0.8); } }
-@media (prefers-reduced-motion: reduce) { .result-egg { animation: none; } }
+.reward-egg > b {
+  color: #f6d77a;
+}
+.result-egg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: -8px auto 16px;
+  padding: 8px 14px;
+  width: fit-content;
+  color: #fff1a8;
+  background: #e0a96a22;
+  border: 1px solid #e0a96a99;
+  animation: result-egg-in 0.5s ease-out;
+}
+.result-egg small {
+  color: #e2d3b2;
+  font-size: 11px;
+}
+@keyframes result-egg-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-egg {
+    animation: none;
+  }
+}
 
 /* Battle choreography: the unit carries the clip it plays; CSS adds the body motion the sprite cannot. */
 .battle-unit {
@@ -1074,47 +1099,87 @@
 .battle-unit[data-motion='death'] > svg {
   filter: grayscale(1) brightness(0.55);
   opacity: 0.7;
-  transition: filter 0.6s, opacity 0.6s;
+  transition:
+    filter 0.6s,
+    opacity 0.6s;
 }
 .battle-playing .battle-command-bar {
   pointer-events: none;
 }
 @keyframes battle-enter-left {
-  from { transform: translateX(-70%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(-70%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 @keyframes battle-enter-right {
-  from { transform: translateX(70%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(70%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 @keyframes battle-lunge-right {
-  0% { transform: translateX(0); }
-  35% { transform: translateX(28%); }
-  70% { transform: translateX(28%); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+  35% {
+    transform: translateX(28%);
+  }
+  70% {
+    transform: translateX(28%);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 @keyframes battle-lunge-left {
-  0% { transform: translateX(0); }
-  35% { transform: translateX(-28%); }
-  70% { transform: translateX(-28%); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+  35% {
+    transform: translateX(-28%);
+  }
+  70% {
+    transform: translateX(-28%);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 @keyframes battle-shake {
-  0% { transform: translateX(0); }
-  20% { transform: translateX(-4%) rotate(-1.5deg); }
-  45% { transform: translateX(3%) rotate(1deg); }
-  70% { transform: translateX(-2%); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4%) rotate(-1.5deg);
+  }
+  45% {
+    transform: translateX(3%) rotate(1deg);
+  }
+  70% {
+    transform: translateX(-2%);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .battle-unit[data-motion] { animation: none; }
+  .battle-unit[data-motion] {
+    animation: none;
+  }
 }
 
 /* Automatic fights: the command bar becomes a strip of the moves already shown in this fight. */
 .battle-auto .battle-command {
   cursor: default;
   opacity: 0.55;
-  transition: opacity 0.3s, border-color 0.3s;
+  transition:
+    opacity 0.3s,
+    border-color 0.3s;
 }
 .battle-auto .battle-command.played {
   opacity: 1;
@@ -1134,58 +1199,139 @@
   translate: -50% -50%;
   pointer-events: none;
   white-space: nowrap;
-  font: 700 clamp(30px, 6vw, 58px) / 1 'Realms Pixel', 'Pixelify Sans', sans-serif;
+  font:
+    700 clamp(30px, 6vw, 58px) / 1 'Realms Pixel',
+    'Pixelify Sans',
+    sans-serif;
   letter-spacing: 2px;
   color: #fff1b8;
   -webkit-text-stroke: 2px #2f2520;
   paint-order: stroke fill;
-  text-shadow: 0 4px 0 #2f2520, 0 0 22px #f2733a99;
+  text-shadow:
+    0 4px 0 #2f2520,
+    0 0 22px #f2733a99;
   animation: battle-callout-pop 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
 /* The ally's hits land on the opponent; blows the ally takes read in red. */
-.battle-callout.on-enemy.kind-damage { color: #fff1a8; }
-.battle-callout.on-ally.kind-damage { color: #ff8a7a; text-shadow: 0 4px 0 #2f2520, 0 0 22px #e0403a99; }
+.battle-callout.on-enemy.kind-damage {
+  color: #fff1a8;
+}
+.battle-callout.on-ally.kind-damage {
+  color: #ff8a7a;
+  text-shadow:
+    0 4px 0 #2f2520,
+    0 0 22px #e0403a99;
+}
 .battle-callout.kind-guard,
-.battle-callout.kind-blocked { color: #bfe9ff; text-shadow: 0 4px 0 #2f2520, 0 0 22px #4ab8ff99; }
-.battle-callout.kind-dodge { color: #b8ffcf; text-shadow: 0 4px 0 #2f2520, 0 0 22px #3fdc8a99; }
-.battle-callout.kind-reflect { color: #e2c8ff; text-shadow: 0 4px 0 #2f2520, 0 0 22px #a46bff99; }
+.battle-callout.kind-blocked {
+  color: #bfe9ff;
+  text-shadow:
+    0 4px 0 #2f2520,
+    0 0 22px #4ab8ff99;
+}
+.battle-callout.kind-dodge {
+  color: #b8ffcf;
+  text-shadow:
+    0 4px 0 #2f2520,
+    0 0 22px #3fdc8a99;
+}
+.battle-callout.kind-reflect {
+  color: #e2c8ff;
+  text-shadow:
+    0 4px 0 #2f2520,
+    0 0 22px #a46bff99;
+}
 .battle-callout.kind-ultimate {
   font-size: clamp(40px, 9vw, 86px);
   color: #ffd36b;
-  text-shadow: 0 5px 0 #2f2520, 0 0 36px #ff7a1fcc;
+  text-shadow:
+    0 5px 0 #2f2520,
+    0 0 36px #ff7a1fcc;
   animation-name: battle-callout-ultimate;
   animation-duration: 1.2s;
 }
-.battle-callout.kind-ko { font-size: clamp(44px, 10vw, 96px); color: #ff5e4d; text-shadow: 0 5px 0 #2f2520, 0 0 30px #ff2a1acc; }
+.battle-callout.kind-ko {
+  font-size: clamp(44px, 10vw, 96px);
+  color: #ff5e4d;
+  text-shadow:
+    0 5px 0 #2f2520,
+    0 0 30px #ff2a1acc;
+}
 @keyframes battle-callout-pop {
-  0% { opacity: 0; scale: 0.3; }
-  25% { opacity: 1; scale: 1.15; }
-  40% { scale: 1; }
-  80% { opacity: 1; translate: -50% -50%; }
-  100% { opacity: 0; translate: -50% -90%; }
+  0% {
+    opacity: 0;
+    scale: 0.3;
+  }
+  25% {
+    opacity: 1;
+    scale: 1.15;
+  }
+  40% {
+    scale: 1;
+  }
+  80% {
+    opacity: 1;
+    translate: -50% -50%;
+  }
+  100% {
+    opacity: 0;
+    translate: -50% -90%;
+  }
 }
 @keyframes battle-callout-ultimate {
-  0% { opacity: 0; scale: 2.2; rotate: -6deg; }
-  20% { opacity: 1; scale: 1; rotate: 0deg; }
-  30% { scale: 1.08; }
-  40% { scale: 1; }
-  85% { opacity: 1; }
-  100% { opacity: 0; scale: 1.1; }
+  0% {
+    opacity: 0;
+    scale: 2.2;
+    rotate: -6deg;
+  }
+  20% {
+    opacity: 1;
+    scale: 1;
+    rotate: 0deg;
+  }
+  30% {
+    scale: 1.08;
+  }
+  40% {
+    scale: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.1;
+  }
 }
 /* A dodge: the ally leaps back and comes down where it stood. */
 .battle-unit[data-dodge] {
   animation: battle-dodge var(--motion-ms) ease-out both;
 }
 @keyframes battle-dodge {
-  0% { transform: translate(0, 0); }
-  35% { transform: translate(-22%, -12%); }
-  70% { transform: translate(-22%, 0); }
-  100% { transform: translate(0, 0); }
+  0% {
+    transform: translate(0, 0);
+  }
+  35% {
+    transform: translate(-22%, -12%);
+  }
+  70% {
+    transform: translate(-22%, 0);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
 }
-.battle-impact.kind-reflect { color: #e2c8ff; text-shadow: 0 0 25px #a46bff; }
+.battle-impact.kind-reflect {
+  color: #e2c8ff;
+  text-shadow: 0 0 25px #a46bff;
+}
 @media (prefers-reduced-motion: reduce) {
-  .battle-callout { animation: none; }
-  .battle-unit[data-dodge] { animation: none; }
+  .battle-callout {
+    animation: none;
+  }
+  .battle-unit[data-dodge] {
+    animation: none;
+  }
 }
 
 /* A dinosaur away on a timed expedition: who, where, and how long until it is back. */
@@ -1198,10 +1344,21 @@
   background: #2f2520e8;
   border: 1px solid #e0a96a99;
 }
-.expedition-trip strong { color: #fff1b8; font-size: 13px; }
-.expedition-trip small { color: #cdbfa8; font-size: 11px; }
-.expedition-trip .realm-meter > i { background: #d7a94c; transition: width 1s linear; }
-.expedition-trip .adventure-start { margin-top: 4px; }
+.expedition-trip strong {
+  color: #fff1b8;
+  font-size: 13px;
+}
+.expedition-trip small {
+  color: #cdbfa8;
+  font-size: 11px;
+}
+.expedition-trip .realm-meter > i {
+  background: #d7a94c;
+  transition: width 1s linear;
+}
+.expedition-trip .adventure-start {
+  margin-top: 4px;
+}
 .expedition-guide {
   display: grid;
   gap: 14px;
@@ -1212,26 +1369,86 @@
   font-size: 13px;
   line-height: 1.6;
 }
-.expedition-guide p { margin: 0; }
-.expedition-guide .expedition-guide-title { margin: 0; font-size: 18px; line-height: 1.4; }
-.expedition-guide small { color: #cdbfa8; line-height: 1.6; }
-.expedition-guide .gameplay-section-label { margin: 0; }
+.expedition-guide p {
+  margin: 0;
+}
+.expedition-guide .expedition-guide-title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.4;
+}
+.expedition-guide small {
+  color: #cdbfa8;
+  line-height: 1.6;
+}
+.expedition-guide .gameplay-section-label {
+  margin: 0;
+}
 .expedition-stages,
-.expedition-checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.expedition-stages li { padding: 7px 10px; background: #3d332d; color: #a39380; border-left: 3px solid #574a40; }
-.expedition-stages .current { color: #fff1b8; border-color: #eda233; }
-.expedition-stages .done { color: #c3d893; border-color: #8faa58; }
-.expedition-checklist li { display: flex; gap: 9px; align-items: baseline; }
-.expedition-checklist span { flex: 0 0 14px; }
-.expedition-checklist .done { color: #c3d893; }
-.expedition-checklist .missing { color: #e2d3b2; }
+.expedition-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.expedition-stages li {
+  padding: 7px 10px;
+  background: #3d332d;
+  color: #a39380;
+  border-left: 3px solid #574a40;
+}
+.expedition-stages .current {
+  color: #fff1b8;
+  border-color: #eda233;
+}
+.expedition-stages .done {
+  color: #c3d893;
+  border-color: #8faa58;
+}
+.expedition-checklist li {
+  display: flex;
+  gap: 9px;
+  align-items: baseline;
+}
+.expedition-checklist span {
+  flex: 0 0 14px;
+}
+.expedition-checklist .done {
+  color: #c3d893;
+}
+.expedition-checklist .missing {
+  color: #e2d3b2;
+}
 .expedition-next-step,
-.expedition-travel { display: grid; gap: 12px; padding: 12px; background: #3d332d; border: 1px solid #7a6a5a; }
-.expedition-next-step > strong { color: #eda233; }
-.expedition-guide .realm-button { width: 100%; min-height: 44px; margin: 0; padding: 6px 8px; font-size: 13px !important; }
-.expedition-guide .realm-meter > i { background: #eda233; }
-.expedition-preparation-links { display: flex; flex-wrap: wrap; gap: 8px; }
-.expedition-preparation-links button { min-height: 44px; }
+.expedition-travel {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  background: #3d332d;
+  border: 1px solid #7a6a5a;
+}
+.expedition-next-step > strong {
+  color: #eda233;
+}
+.expedition-guide .realm-button {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 13px !important;
+}
+.expedition-guide .realm-meter > i {
+  background: #eda233;
+}
+.expedition-preparation-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.expedition-preparation-links button {
+  min-height: 44px;
+}
 
 /* Keep the complete floating arena and its fighters in one shared coordinate space. */
 .battle-environment {
@@ -1266,21 +1483,46 @@
   bottom: calc(var(--floor) - 0.16 * var(--unit));
   translate: -50% 0;
 }
-.battle-stage .battle-unit.ally { left: var(--ally-x); }
-.battle-stage .battle-unit.enemy { left: var(--enemy-x); right: auto; }
+.battle-stage .battle-unit.ally {
+  left: var(--ally-x);
+}
+.battle-stage .battle-unit.enemy {
+  left: var(--enemy-x);
+  right: auto;
+}
 /* An attack is a short step in towards the opponent: in, hold through the blow, back. */
-.battle-stage .battle-unit { --lunge: max(0px, min(calc(var(--gap) - var(--unit) * 0.5), calc(var(--unit) * 0.18))); }
-.battle-stage .battle-unit.ally:is([data-motion='attack'], [data-motion='ultimate']) { animation-name: stage-lunge-right; }
-.battle-stage .battle-unit.enemy:is([data-motion='attack'], [data-motion='ultimate']) { animation-name: stage-lunge-left; }
+.battle-stage .battle-unit {
+  --lunge: max(0px, min(calc(var(--gap) - var(--unit) * 0.5), calc(var(--unit) * 0.18)));
+}
+.battle-stage .battle-unit.ally:is([data-motion='attack'], [data-motion='ultimate']) {
+  animation-name: stage-lunge-right;
+}
+.battle-stage .battle-unit.enemy:is([data-motion='attack'], [data-motion='ultimate']) {
+  animation-name: stage-lunge-left;
+}
 @keyframes stage-lunge-right {
-  0% { transform: translateX(0); }
-  40%, 70% { transform: translateX(var(--lunge)); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+  40%,
+  70% {
+    transform: translateX(var(--lunge));
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 @keyframes stage-lunge-left {
-  0% { transform: translateX(0); }
-  40%, 70% { transform: translateX(calc(var(--lunge) * -1)); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+  40%,
+  70% {
+    transform: translateX(calc(var(--lunge) * -1));
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 .battle-stage .battle-unit::before {
   content: '';
@@ -1292,7 +1534,9 @@
   border-radius: 50%;
   background: radial-gradient(closest-side, #000000a0, transparent);
 }
-.battle-stage .battle-unit[data-motion='death']::before { opacity: 0.4; }
+.battle-stage .battle-unit[data-motion='death']::before {
+  opacity: 0.4;
+}
 .battle-stage .battle-unit > .dinosaur-art,
 .battle-stage .battle-unit > .dinosaur-opponent {
   position: relative;
@@ -1310,7 +1554,9 @@
   opacity: 0;
   transition: opacity 0.25s;
 }
-.battle-ultimate .battle-stage::before { opacity: 1; }
+.battle-ultimate .battle-stage::before {
+  opacity: 1;
+}
 
 /* Corner HUDs: diamond portrait, slanted health bar with a draining damage trail, energy underneath. */
 .battle-stage .battle-hud {
@@ -1327,9 +1573,17 @@
   border: 0;
   filter: drop-shadow(0 3px 0 #1b1411) drop-shadow(0 4px 10px #00000080);
 }
-.realms-app .battle-stage .battle-hud { background-color: transparent; }
-.battle-stage .battle-hud.ally { left: 12px; }
-.battle-stage .battle-hud.enemy { right: 12px; flex-direction: row-reverse; text-align: right; }
+.realms-app .battle-stage .battle-hud {
+  background-color: transparent;
+}
+.battle-stage .battle-hud.ally {
+  left: 12px;
+}
+.battle-stage .battle-hud.enemy {
+  right: 12px;
+  flex-direction: row-reverse;
+  text-align: right;
+}
 .battle-hud-portrait {
   flex: 0 0 auto;
   position: relative;
@@ -1370,14 +1624,19 @@
   display: block;
   overflow: hidden;
   margin: 0 0 5px;
-  font: 700 clamp(13px, 1.6vw, 20px) / 1.1 'Realms Pixel', 'Pixelify Sans', sans-serif;
+  font:
+    700 clamp(13px, 1.6vw, 20px) / 1.1 'Realms Pixel',
+    'Pixelify Sans',
+    sans-serif;
   color: #fff6dc;
   white-space: nowrap;
   text-overflow: ellipsis;
   -webkit-text-stroke: 1px #1b1411;
   paint-order: stroke fill;
 }
-.battle-stage .battle-hud strong .arena-boss-tag { color: #ffb070; }
+.battle-stage .battle-hud strong .arena-boss-tag {
+  color: #ffb070;
+}
 .battle-hud-bar {
   position: relative;
   height: 18px;
@@ -1386,7 +1645,9 @@
   box-shadow: inset 0 0 0 1px #6b5a48;
   clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
 }
-.battle-hud.enemy .battle-hud-bar { clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%); }
+.battle-hud.enemy .battle-hud-bar {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%);
+}
 .battle-hud-bar > i {
   position: absolute;
   top: 0;
@@ -1395,7 +1656,10 @@
   background: linear-gradient(#ff8a6a, #e2412f 45%, #a3221a);
   transition: width 0.15s ease-out;
 }
-.battle-hud.enemy .battle-hud-bar > i { left: auto; right: 0; }
+.battle-hud.enemy .battle-hud-bar > i {
+  left: auto;
+  right: 0;
+}
 .battle-hud-bar > i.trail {
   background: linear-gradient(#ffe48a, #f2b33a);
   transition: width 0.6s ease-in 0.45s;
@@ -1405,17 +1669,28 @@
   width: 78%;
   margin-top: 3px;
 }
-.battle-hud.enemy .battle-hud-bar.energy { margin-left: auto; }
-.battle-hud-bar.energy > i { background: linear-gradient(#9ee4ff, #3d9be0 55%, #2563a8); }
+.battle-hud.enemy .battle-hud-bar.energy {
+  margin-left: auto;
+}
+.battle-hud-bar.energy > i {
+  background: linear-gradient(#9ee4ff, #3d9be0 55%, #2563a8);
+}
 .battle-stage .battle-hud small {
   display: block;
   margin-top: 4px;
   font-size: 11px;
   color: #f6eed9;
-  text-shadow: 0 1px 0 #1b1411, 0 0 4px #000;
+  text-shadow:
+    0 1px 0 #1b1411,
+    0 0 4px #000;
 }
-.battle-stage .battle-hud small b { color: var(--hud-color); }
-.battle-stage .battle-hud .edge-badge { margin-top: 5px; background: #1b1411cc; }
+.battle-stage .battle-hud small b {
+  color: var(--hud-color);
+}
+.battle-stage .battle-hud .edge-badge {
+  margin-top: 5px;
+  background: #1b1411cc;
+}
 
 /* Round badge between the two corners. */
 .battle-stage .battle-round-badge {
@@ -1439,12 +1714,19 @@
   clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
 }
 .battle-round-badge strong {
-  font: 700 22px / 1 'Realms Pixel', 'Pixelify Sans', sans-serif;
+  font:
+    700 22px / 1 'Realms Pixel',
+    'Pixelify Sans',
+    sans-serif;
   color: #ffd36b;
   -webkit-text-stroke: 1px #1b1411;
   paint-order: stroke fill;
 }
-.battle-stage .battle-round-badge span { font-size: 9px; letter-spacing: 1px; padding-bottom: 6px; }
+.battle-stage .battle-round-badge span {
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding-bottom: 6px;
+}
 
 /* During an arena fight the details sidebar steps aside and the arena takes the whole screen. */
 .realms-app .adventure-layout.battle-focus {
@@ -1452,32 +1734,80 @@
   grid-template-columns: minmax(0, 1fr);
   overflow: hidden;
 }
-.battle-focus > .adventure-detail { display: none; }
+.battle-focus > .adventure-detail {
+  display: none;
+}
 /* Fills the screen below the header, on phones too (the phone lobby otherwise scrolls a 540px-tall battle). */
-.realms-app .battle-focus > .arena-lobby-scene:has(.arena-embedded-battle) { height: auto; min-height: 0; border: 0; }
+.realms-app .battle-focus > .arena-lobby-scene:has(.arena-embedded-battle) {
+  height: auto;
+  min-height: 0;
+  border: 0;
+}
 
 @media (max-width: 760px) {
-  .battle-stage { --unit: min(52cqh, 58cqw); --floor: 16cqh; --ally-x: 30%; --enemy-x: 70%; --gap: 40cqw; }
+  .battle-stage {
+    --unit: min(52cqh, 58cqw);
+    --floor: 16cqh;
+    --ally-x: 30%;
+    --enemy-x: 70%;
+    --gap: 40cqw;
+  }
 }
 /* Phones held upright or sideways: compact corners so the fighters keep the floor. */
 @media (max-width: 760px), (max-height: 500px) and (orientation: landscape) {
-  .battle-stage .battle-hud { top: 8px; width: calc(50% - 40px); gap: 2px; }
-  .battle-stage .battle-hud.ally { left: 6px; }
-  .battle-stage .battle-hud.enemy { right: 6px; }
-  .battle-hud-portrait { width: 44px; height: 44px; }
-  .battle-hud-portrait > span { inset: 3px; }
-  .battle-hud-body { padding-top: 2px; }
-  .battle-hud-bar { height: 12px; }
-  .battle-hud-bar.energy { height: 6px; }
-  .battle-stage .battle-hud small { font-size: 9px; }
-  .battle-stage .battle-round-badge { top: 8px; padding: 4px 8px 10px; }
-  .battle-round-badge strong { font-size: 15px; }
-  .battle-stage .battle-round-badge span { font-size: 7px; letter-spacing: 0; }
+  .battle-stage .battle-hud {
+    top: 8px;
+    width: calc(50% - 40px);
+    gap: 2px;
+  }
+  .battle-stage .battle-hud.ally {
+    left: 6px;
+  }
+  .battle-stage .battle-hud.enemy {
+    right: 6px;
+  }
+  .battle-hud-portrait {
+    width: 44px;
+    height: 44px;
+  }
+  .battle-hud-portrait > span {
+    inset: 3px;
+  }
+  .battle-hud-body {
+    padding-top: 2px;
+  }
+  .battle-hud-bar {
+    height: 12px;
+  }
+  .battle-hud-bar.energy {
+    height: 6px;
+  }
+  .battle-stage .battle-hud small {
+    font-size: 9px;
+  }
+  .battle-stage .battle-round-badge {
+    top: 8px;
+    padding: 4px 8px 10px;
+  }
+  .battle-round-badge strong {
+    font-size: 15px;
+  }
+  .battle-stage .battle-round-badge span {
+    font-size: 7px;
+    letter-spacing: 0;
+  }
 }
 @media (max-height: 500px) and (orientation: landscape) {
-  .battle-stage { --unit: min(68cqh, 40cqw); --floor: 8cqh; }
-  .battle-stage .battle-hud { width: min(34%, 300px); }
-  .battle-stage .battle-hud .edge-badge { display: none; }
+  .battle-stage {
+    --unit: min(68cqh, 40cqw);
+    --floor: 8cqh;
+  }
+  .battle-stage .battle-hud {
+    width: min(34%, 300px);
+  }
+  .battle-stage .battle-hud .edge-badge {
+    display: none;
+  }
 }
 .arena-lobby-scene {
   container-type: size;
@@ -1513,7 +1843,10 @@
 .battle-controls button {
   min-height: 40px;
   padding: 6px 14px;
-  font: 700 14px 'Realms Pixel', 'Pixelify Sans', sans-serif;
+  font:
+    700 14px 'Realms Pixel',
+    'Pixelify Sans',
+    sans-serif;
   color: #fff1b8;
   background: #3a2e27e8;
   border: 2px solid #c9b48e99;
@@ -1524,44 +1857,218 @@
   color: #2f2520;
   border-color: #fff1b8;
 }
-.battle-controls button:disabled { opacity: 0.45; cursor: not-allowed; }
+.battle-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* Manual moves, bottom left; above the controls on narrow screens. */
+.battle-moves {
+  position: absolute;
+  z-index: 5;
+  bottom: 14px;
+  left: 14px;
+  display: flex;
+  gap: 8px;
+}
+.battle-moves .battle-move {
+  min-height: 44px;
+  padding: 6px 14px;
+  font:
+    700 14px 'Realms Pixel',
+    'Pixelify Sans',
+    sans-serif;
+  color: #fff1b8;
+  background: #3a2e27e8;
+  border: 2px solid #c9b48e99;
+  box-shadow: 0 3px 0 #1d1611;
+  cursor: pointer;
+}
+.battle-moves .battle-move kbd {
+  font: inherit;
+  font-size: 11px;
+  padding: 0 4px;
+  color: #2f2520;
+  background: #c9b48e;
+}
+.battle-moves .move-defend {
+  border-color: #7fb0d8;
+}
+.battle-moves .move-ultimate:not(:disabled) {
+  background: #e0a96a;
+  color: #2f2520;
+  border-color: #fff1b8;
+}
+.battle-moves .battle-move:not(:disabled):hover {
+  filter: brightness(1.15);
+}
+.battle-moves .battle-move:not(:disabled):active {
+  translate: 0 2px;
+  box-shadow: 0 1px 0 #1d1611;
+}
+.battle-moves .battle-move:focus-visible,
+.battle-controls button:focus-visible {
+  outline: 2px solid #fff1b8;
+  outline-offset: 2px;
+}
+.battle-moves .battle-move:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+@media (max-width: 720px) {
+  .battle-moves {
+    left: 8px;
+    right: 8px;
+    bottom: 64px;
+  }
+  .battle-moves .battle-move {
+    flex: 1;
+    padding: 6px 8px;
+  }
+  .battle-controls button {
+    min-height: 44px;
+  }
+}
 /* At ×2 the one-off effects run twice as fast too. */
-.battle-environment .battle-callout { animation-duration: calc(0.9s / var(--battle-speed, 1)); }
-.battle-environment .battle-callout.kind-ultimate { animation-duration: calc(1.2s / var(--battle-speed, 1)); }
-.battle-environment .battle-impact { animation-duration: calc(0.45s / var(--battle-speed, 1)); }
-.battle-environment .battle-impact.kind-ultimate { animation-duration: calc(0.7s / var(--battle-speed, 1)); }
+.battle-environment .battle-callout {
+  animation-duration: calc(0.9s / var(--battle-speed, 1));
+}
+.battle-environment .battle-callout.kind-ultimate {
+  animation-duration: calc(1.2s / var(--battle-speed, 1));
+}
+.battle-environment .battle-impact {
+  animation-duration: calc(0.45s / var(--battle-speed, 1));
+}
+.battle-environment .battle-impact.kind-ultimate {
+  animation-duration: calc(0.7s / var(--battle-speed, 1));
+}
 
 /* Arena progression: element edge, forecast, stars. */
-.edge-badge { display: inline-block; padding: 2px 8px; font: 700 11px 'Realms Pixel', 'Pixelify Sans', sans-serif; letter-spacing: 1px; border: 1px solid; }
-.edge-badge.edge-up { color: #9be38f; border-color: #9be38f88; background: #1f3a1f99; }
-.edge-badge.edge-down { color: #ff8a7a; border-color: #ff8a7a88; background: #3a1f1f99; }
-.edge-badge.edge-even { color: #cdbfa8; border-color: #cdbfa855; }
-.battle-vitals .edge-badge { margin-top: 6px; }
+.edge-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font:
+    700 11px 'Realms Pixel',
+    'Pixelify Sans',
+    sans-serif;
+  letter-spacing: 1px;
+  border: 1px solid;
+}
+.edge-badge.edge-up {
+  color: #9be38f;
+  border-color: #9be38f88;
+  background: #1f3a1f99;
+}
+.edge-badge.edge-down {
+  color: #ff8a7a;
+  border-color: #ff8a7a88;
+  background: #3a1f1f99;
+}
+.edge-badge.edge-even {
+  color: #cdbfa8;
+  border-color: #cdbfa855;
+}
+.battle-vitals .edge-badge {
+  margin-top: 6px;
+}
 
-.arena-forecast { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 6px 10px; border-left: 4px solid; }
-.arena-forecast strong { font-size: 13px; }
-.arena-forecast small { color: #f6d77a; letter-spacing: 2px; }
-.forecast-easy { border-color: #9be38f; color: #c9f5bf; }
-.forecast-even { border-color: #f6d77a; color: #fff1b8; }
-.forecast-tough { border-color: #f0a35a; color: #ffd0a0; }
-.forecast-hard { border-color: #ff6a5a; color: #ffb3a8; }
+.arena-forecast {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  border-left: 4px solid;
+}
+.arena-forecast strong {
+  font-size: 13px;
+}
+.arena-forecast small {
+  color: #f6d77a;
+  letter-spacing: 2px;
+}
+.forecast-easy {
+  border-color: #9be38f;
+  color: #c9f5bf;
+}
+.forecast-even {
+  border-color: #f6d77a;
+  color: #fff1b8;
+}
+.forecast-tough {
+  border-color: #f0a35a;
+  color: #ffd0a0;
+}
+.forecast-hard {
+  border-color: #ff6a5a;
+  color: #ffb3a8;
+}
 
-.arena-tier-stars { color: #f6d77a; letter-spacing: 1px; }
-.result-stars { font-size: 44px; color: #f6d77a; letter-spacing: 6px; text-shadow: 0 3px 0 #2f2520, 0 0 18px #f2a33a99; margin: -6px 0 10px; animation: result-egg-in 0.5s ease-out; }
-.result-rest { font-size: 13px !important; color: #ffb3a8 !important; max-width: 340px; margin: 0 auto 16px; }
-.result-milestone { font-size: 14px !important; color: #f6d77a !important; margin: 0 0 8px; }
-.workshop-levels { display: grid; gap: 8px; margin-bottom: 16px; }
-.workshop-level { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid #786044; background: #251e18; }
-.workshop-level.current { border-color: #e9ba62; background: #3b2c1b; }
-.workshop-level > canvas.utility-sprite { width: 80px; height: 80px; flex: 0 0 80px; }
-.workshop-level strong, .workshop-level small { display: block; }
-.workshop-level small { font-size: 11px; margin-top: 5px; color: #d5c3a2; }
+.arena-tier-stars {
+  color: #f6d77a;
+  letter-spacing: 1px;
+}
+.result-stars {
+  font-size: 44px;
+  color: #f6d77a;
+  letter-spacing: 6px;
+  text-shadow:
+    0 3px 0 #2f2520,
+    0 0 18px #f2a33a99;
+  margin: -6px 0 10px;
+  animation: result-egg-in 0.5s ease-out;
+}
+.result-rest {
+  font-size: 13px !important;
+  color: #ffb3a8 !important;
+  max-width: 340px;
+  margin: 0 auto 16px;
+}
+.result-milestone {
+  font-size: 14px !important;
+  color: #f6d77a !important;
+  margin: 0 0 8px;
+}
+.workshop-levels {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.workshop-level {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #786044;
+  background: #251e18;
+}
+.workshop-level.current {
+  border-color: #e9ba62;
+  background: #3b2c1b;
+}
+.workshop-level > canvas.utility-sprite {
+  width: 80px;
+  height: 80px;
+  flex: 0 0 80px;
+}
+.workshop-level strong,
+.workshop-level small {
+  display: block;
+}
+.workshop-level small {
+  font-size: 11px;
+  margin-top: 5px;
+  color: #d5c3a2;
+}
 
 /*
  * Expedition card: a short cover, the stage and its cost, rewards, the champion and what is still missing, with the
  * departure button always in reach. On phones the card comes first and the destinations follow.
  */
-.realms-app .expedition-detail .destination-cover { height: 96px; display: flex; align-items: flex-end; }
+.realms-app .expedition-detail .destination-cover {
+  height: 96px;
+  display: flex;
+  align-items: flex-end;
+}
 .realms-app .expedition-detail .destination-cover span {
   position: static;
   flex: 1;
@@ -1583,53 +2090,231 @@
   background: #1b1411cc;
   border: 1px solid #e0a96a;
 }
-.realms-app .expedition-detail .adventure-detail-body { padding: 12px 0 0; }
-.realms-app .expedition-detail .expedition-guide { gap: 12px; margin: 0; padding: 0; background: none; border: 0; }
-.expedition-stage-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.expedition-stage-row strong { font-size: 14px; color: #fff1b8; }
-.expedition-pips { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.expedition-pips li { width: 22px; height: 8px; background: #3d332d; border: 1px solid #574a40; }
-.expedition-pips li.done { background: #6fa046; border-color: #9be38f; }
-.expedition-pips li.current { background: #e0a96a; border-color: #fff1b8; box-shadow: 0 0 6px #e0a96a88; }
-.expedition-facts { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.expedition-facts li { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; font-size: 11px; color: #e2d3b2; background: #1b1411; border: 1px solid #3d332d; }
-.realms-app .expedition-detail .gameplay-rewards { gap: 4px; margin: 8px 0 0; }
-.realms-app .expedition-detail .gameplay-rewards > span { min-width: 40px; padding: 4px 2px; font-size: 13px; }
-.realms-app .expedition-detail .gameplay-rewards b { font-size: 20px; }
-.realms-app .expedition-detail .gameplay-rewards small { margin-top: 2px; }
-.expedition-hero { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 10px; background: #1b1411; border: 1px solid #3d332d; }
-.expedition-hero-art { display: grid; place-items: center; width: 44px; height: 44px; overflow: hidden; border-radius: 50%; border: 2px solid #574a40; background: radial-gradient(circle, #574a40, #1b1411); }
-.expedition-hero-art .dinosaur-art { width: 150%; height: 150%; max-width: none; margin-top: 20%; }
-.expedition-hero strong { display: block; font-size: 13px; color: #fff1b8; }
-.expedition-hero small { font-size: 10px; color: #cdbfa8; }
-.expedition-hero > b { font-size: 16px; }
-.expedition-hero.ok > b { color: #9be38f; }
-.expedition-hero.low { border-color: #f0a35a; }
-.expedition-hero.low > b { color: #f0a35a; }
-.expedition-ready { margin: 0; padding: 8px 10px; font-size: 12px; font-weight: 700; color: #9be38f; background: #1f3a1f66; border: 1px solid #6fa04688; }
-.expedition-missing { display: grid; gap: 8px; padding: 10px; background: #3a1f1f44; border: 1px solid #f0a35a88; }
-.expedition-missing ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: #ffd0a0; }
-.expedition-missing p { margin: 0; font-size: 11px; line-height: 1.5; color: #cdbfa8; }
-.realms-app .expedition-detail .adventure-start { position: sticky; bottom: 0; z-index: 1; width: 100%; margin-top: 4px; box-shadow: inset 0 0 0 3px #fff1b8, 0 3px #5f4318, 0 -14px 14px #2f2520; }
+.realms-app .expedition-detail .adventure-detail-body {
+  padding: 12px 0 0;
+}
+.realms-app .expedition-detail .expedition-guide {
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+.expedition-stage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.expedition-stage-row strong {
+  font-size: 14px;
+  color: #fff1b8;
+}
+.expedition-pips {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.expedition-pips li {
+  width: 22px;
+  height: 8px;
+  background: #3d332d;
+  border: 1px solid #574a40;
+}
+.expedition-pips li.done {
+  background: #6fa046;
+  border-color: #9be38f;
+}
+.expedition-pips li.current {
+  background: #e0a96a;
+  border-color: #fff1b8;
+  box-shadow: 0 0 6px #e0a96a88;
+}
+.expedition-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.expedition-facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #e2d3b2;
+  background: #1b1411;
+  border: 1px solid #3d332d;
+}
+.realms-app .expedition-detail .gameplay-rewards {
+  gap: 4px;
+  margin: 8px 0 0;
+}
+.realms-app .expedition-detail .gameplay-rewards > span {
+  min-width: 40px;
+  padding: 4px 2px;
+  font-size: 13px;
+}
+.realms-app .expedition-detail .gameplay-rewards b {
+  font-size: 20px;
+}
+.realms-app .expedition-detail .gameplay-rewards small {
+  margin-top: 2px;
+}
+.expedition-hero {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: #1b1411;
+  border: 1px solid #3d332d;
+}
+.expedition-hero-art {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 2px solid #574a40;
+  background: radial-gradient(circle, #574a40, #1b1411);
+}
+.expedition-hero-art .dinosaur-art {
+  width: 150%;
+  height: 150%;
+  max-width: none;
+  margin-top: 20%;
+}
+.expedition-hero strong {
+  display: block;
+  font-size: 13px;
+  color: #fff1b8;
+}
+.expedition-hero small {
+  font-size: 10px;
+  color: #cdbfa8;
+}
+.expedition-hero > b {
+  font-size: 16px;
+}
+.expedition-hero.ok > b {
+  color: #9be38f;
+}
+.expedition-hero.low {
+  border-color: #f0a35a;
+}
+.expedition-hero.low > b {
+  color: #f0a35a;
+}
+.expedition-ready {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9be38f;
+  background: #1f3a1f66;
+  border: 1px solid #6fa04688;
+}
+.expedition-missing {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  background: #3a1f1f44;
+  border: 1px solid #f0a35a88;
+}
+.expedition-missing ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: #ffd0a0;
+}
+.expedition-missing p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #cdbfa8;
+}
+.realms-app .expedition-detail .adventure-start {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  width: 100%;
+  margin-top: 4px;
+  box-shadow:
+    inset 0 0 0 3px #fff1b8,
+    0 3px #5f4318,
+    0 -14px 14px #2f2520;
+}
 @media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
-  .realms-app .adventure-layout:has(> .expedition-detail) { display: flex; flex-direction: column; }
-  .realms-app .adventure-layout > .expedition-detail { order: -1; flex: none; border-top: 0; border-bottom: 2px solid #786044; }
-  .realms-app .adventure-layout:has(> .expedition-detail) > .adventure-map { flex: none; }
-  .realms-app .adventure-layout:has(> .expedition-detail) .adventure-node { min-height: 56px; padding: 6px 8px; }
-  .realms-app .expedition-detail .adventure-start { position: static; box-shadow: inset 0 0 0 3px #fff1b8, 0 3px #5f4318; }
-  .realms-app .expedition-detail .mobile-destination-picker { margin: 12px 0 0; }
+  .realms-app .adventure-layout:has(> .expedition-detail) {
+    display: flex;
+    flex-direction: column;
+  }
+  .realms-app .adventure-layout > .expedition-detail {
+    order: -1;
+    flex: none;
+    border-top: 0;
+    border-bottom: 2px solid #786044;
+  }
+  .realms-app .adventure-layout:has(> .expedition-detail) > .adventure-map {
+    flex: none;
+  }
+  .realms-app .adventure-layout:has(> .expedition-detail) .adventure-node {
+    min-height: 56px;
+    padding: 6px 8px;
+  }
+  .realms-app .expedition-detail .adventure-start {
+    position: static;
+    box-shadow:
+      inset 0 0 0 3px #fff1b8,
+      0 3px #5f4318;
+  }
+  .realms-app .expedition-detail .mobile-destination-picker {
+    margin: 12px 0 0;
+  }
 }
 
 /*
  * Expeditions (teams, slots, patrols): the sidebar is a fixed-height column of three tabs; inside a tab only the
  * team roster grows or shrinks, and it pages instead of scrolling. The map draws the route between the regions.
  */
-.adventure-route path.done { stroke: #f6d77a; stroke-width: 0.9; stroke-dasharray: none; }
-.adventure-node > strong em { font-style: normal; color: #f6d77a; }
-.adventure-node.away > span { box-shadow: 0 4px 0 #5f4318, 0 0 0 4px #4aa3ff88, 0 6px 18px #1d36577a; }
-.realms-app .gameplay-expedition .expedition-detail { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; padding: 10px; }
-.realms-app .gameplay-expedition .expedition-detail .destination-cover { height: 78px; }
-.realms-app .gameplay-expedition .expedition-detail .adventure-detail-body { display: grid; min-height: 0; padding: 8px 0 0; }
+.adventure-route path.done {
+  stroke: #f6d77a;
+  stroke-width: 0.9;
+  stroke-dasharray: none;
+}
+.adventure-node > strong em {
+  font-style: normal;
+  color: #f6d77a;
+}
+.adventure-node.away > span {
+  box-shadow:
+    0 4px 0 #5f4318,
+    0 0 0 4px #4aa3ff88,
+    0 6px 18px #1d36577a;
+}
+.realms-app .gameplay-expedition .expedition-detail {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  padding: 10px;
+}
+.realms-app .gameplay-expedition .expedition-detail .destination-cover {
+  height: 78px;
+}
+.realms-app .gameplay-expedition .expedition-detail .adventure-detail-body {
+  display: grid;
+  min-height: 0;
+  padding: 8px 0 0;
+}
 .realms-app .gameplay-expedition .expedition-detail .expedition-guide {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -1637,115 +2322,525 @@
   min-height: 0;
   font-family: var(--font-body);
 }
-.realms-app .expedition-guide .ui-tab { flex: 1 1 0; justify-content: center; padding-inline: 6px; }
-.realms-app .expedition-tab { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: hidden; }
-.realms-app .expedition-tab > * { flex: none; }
-.realms-app .expedition-tab > .adventure-start { position: static; margin-top: auto; min-height: 42px; box-shadow: inset 0 0 0 3px #fff1b8, 0 3px #5f4318; }
-.expedition-stage-row strong { font-family: var(--font-display); }
-.expedition-facts li.expedition-recommended { color: #c9f5bf; border-color: #4f6b3c; }
-.expedition-facts li b { font-weight: 700; color: #9be38f; }
-.realms-app .expedition-detail .expedition-rewards { margin: 0; flex-wrap: nowrap; }
-.realms-app .expedition-detail .expedition-rewards > span { flex: 1 1 0; min-width: 0; gap: 2px; padding: 4px 2px; font-family: var(--font-display); font-size: 13px; }
-.realms-app .expedition-detail .expedition-rewards small { font-family: var(--font-body); font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.expedition-gem { font-size: 14px !important; line-height: 16px !important; }
-.expedition-notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; padding: 6px 8px; font-size: 12px; line-height: 1.35; color: #ffd0a0; background: #3a1f1f44; border: 1px solid #f0a35a88; }
-.expedition-notice > span { flex: 1 1 150px; }
-.realms-app .expedition-notice .realm-button { width: auto; min-height: 32px; margin: 0; padding: 2px 10px 4px; font-size: 12px !important; }
-.expedition-hours { display: flex; align-items: center; gap: 6px; }
-.expedition-hours button { min-width: 52px; min-height: 32px; padding: 2px 10px; font: 600 15px var(--font-display); color: #e2d3b2; background: #1b1411; border: 2px solid #574a40; cursor: pointer; }
-.expedition-hours button.active { color: #2f2520; background: #e0a96a; border-color: #fff1b8; }
-.expedition-daily { margin-left: auto; font-size: 11px; color: #f6d77a; white-space: nowrap; }
+.realms-app .expedition-guide .ui-tab {
+  flex: 1 1 0;
+  justify-content: center;
+  padding-inline: 6px;
+}
+.realms-app .expedition-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow: hidden;
+}
+.realms-app .expedition-tab > * {
+  flex: none;
+}
+.realms-app .expedition-tab > .adventure-start {
+  position: static;
+  margin-top: auto;
+  min-height: 42px;
+  box-shadow:
+    inset 0 0 0 3px #fff1b8,
+    0 3px #5f4318;
+}
+.expedition-stage-row strong {
+  font-family: var(--font-display);
+}
+.expedition-facts li.expedition-recommended {
+  color: #c9f5bf;
+  border-color: #4f6b3c;
+}
+.expedition-facts li b {
+  font-weight: 700;
+  color: #9be38f;
+}
+.realms-app .expedition-detail .expedition-rewards {
+  margin: 0;
+  flex-wrap: nowrap;
+}
+.realms-app .expedition-detail .expedition-rewards > span {
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 2px;
+  padding: 4px 2px;
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+.realms-app .expedition-detail .expedition-rewards small {
+  font-family: var(--font-body);
+  font-size: 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.expedition-gem {
+  font-size: 14px !important;
+  line-height: 16px !important;
+}
+.expedition-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #ffd0a0;
+  background: #3a1f1f44;
+  border: 1px solid #f0a35a88;
+}
+.expedition-notice > span {
+  flex: 1 1 150px;
+}
+.realms-app .expedition-notice .realm-button {
+  width: auto;
+  min-height: 32px;
+  margin: 0;
+  padding: 2px 10px 4px;
+  font-size: 12px !important;
+}
+.expedition-hours {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.expedition-hours button {
+  min-width: 52px;
+  min-height: 32px;
+  padding: 2px 10px;
+  font: 600 15px var(--font-display);
+  color: #e2d3b2;
+  background: #1b1411;
+  border: 2px solid #574a40;
+  cursor: pointer;
+}
+.expedition-hours button.active {
+  color: #2f2520;
+  background: #e0a96a;
+  border-color: #fff1b8;
+}
+.expedition-daily {
+  margin-left: auto;
+  font-size: 11px;
+  color: #f6d77a;
+  white-space: nowrap;
+}
 
 /* Team picker: a header with the count and pager, then a grid of portraits that pages to fit. */
-.team-picker { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 6px; flex: 1 1 auto !important; min-height: 88px; }
-.team-picker-head { display: flex; align-items: center; justify-content: space-between; min-height: 30px; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: #f6d77a; text-transform: uppercase; }
-.team-picker-head b { font-family: var(--font-display); color: #fff1b8; }
-.team-picker-empty { margin: 0; font-size: 12px; color: #cdbfa8; }
-.realms-app .team-picker-roster { --paged-min: 58px; --paged-row: 70px; gap: 6px; }
-.team-pick { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center; min-width: 0; padding: 2px 2px 3px; color: #e2d3b2; background: #1b1411; border: 2px solid #3d332d; cursor: pointer; }
-.team-pick:hover:not(:disabled) { border-color: #a3815a; }
-.team-pick-art { display: grid; place-items: center; width: 100%; height: 100%; min-height: 0; overflow: hidden; }
-.team-pick-art .dinosaur-art { width: 150%; height: 150%; max-width: none; margin-top: 15%; }
-.team-pick-level { display: inline-flex; align-items: center; gap: 3px; font: 600 12px/1 var(--font-display); color: #fff1b8; }
-.team-pick.picked { border-color: #f6d77a; background: #3b2c1b; box-shadow: 0 0 0 1px #f6d77a, 0 0 10px #e0a96a55; }
-.team-pick.recommended::after { content: '\25B2'; position: absolute; top: 1px; left: 3px; font-size: 9px; color: #9be38f; }
-.team-pick.unable { cursor: not-allowed; }
-.team-pick.unable .team-pick-art { opacity: 0.4; filter: grayscale(0.8); }
-.team-pick-place { position: absolute; top: 1px; right: 2px; min-width: 16px; padding: 1px 3px; font: 700 11px/1.1 var(--font-display); color: #2f2520; background: #f6d77a; border: 1px solid #1b1411; }
-.team-pick-reason { position: absolute; left: 2px; right: 2px; top: 38%; padding: 1px 0; font-size: 10px; font-weight: 700; text-align: center; color: #ffd0a0; background: #1b1411dd; }
+.team-picker {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 6px;
+  flex: 1 1 auto !important;
+  min-height: 88px;
+}
+.team-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 30px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #f6d77a;
+  text-transform: uppercase;
+}
+.team-picker-head b {
+  font-family: var(--font-display);
+  color: #fff1b8;
+}
+.team-picker-empty {
+  margin: 0;
+  font-size: 12px;
+  color: #cdbfa8;
+}
+.realms-app .team-picker-roster {
+  --paged-min: 58px;
+  --paged-row: 70px;
+  gap: 6px;
+}
+.team-pick {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  min-width: 0;
+  padding: 2px 2px 3px;
+  color: #e2d3b2;
+  background: #1b1411;
+  border: 2px solid #3d332d;
+  cursor: pointer;
+}
+.team-pick:hover:not(:disabled) {
+  border-color: #a3815a;
+}
+.team-pick-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.team-pick-art .dinosaur-art {
+  width: 150%;
+  height: 150%;
+  max-width: none;
+  margin-top: 15%;
+}
+.team-pick-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font: 600 12px/1 var(--font-display);
+  color: #fff1b8;
+}
+.team-pick.picked {
+  border-color: #f6d77a;
+  background: #3b2c1b;
+  box-shadow:
+    0 0 0 1px #f6d77a,
+    0 0 10px #e0a96a55;
+}
+.team-pick.recommended::after {
+  content: '\25B2';
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 9px;
+  color: #9be38f;
+}
+.team-pick.unable {
+  cursor: not-allowed;
+}
+.team-pick.unable .team-pick-art {
+  opacity: 0.4;
+  filter: grayscale(0.8);
+}
+.team-pick-place {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  min-width: 16px;
+  padding: 1px 3px;
+  font: 700 11px/1.1 var(--font-display);
+  color: #2f2520;
+  background: #f6d77a;
+  border: 1px solid #1b1411;
+}
+.team-pick-reason {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 38%;
+  padding: 1px 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  color: #ffd0a0;
+  background: #1b1411dd;
+}
 
 /* Active runs: one card per portal slot. */
-.expedition-runs { display: grid; align-content: start; gap: 6px; min-height: 0; overflow: hidden; }
-.realms-app .expedition-runs .ui-card-subtitle { display: flex; flex-direction: column; gap: 3px; -webkit-line-clamp: unset; }
-.realms-app .expedition-runs .realm-meter { display: block; height: 4px; margin: 0; }
-.realms-app .expedition-runs .realm-meter > i { background: #eda233; }
-.realms-app .expedition-run-title { white-space: normal !important; overflow-wrap: anywhere; padding: 0; font: inherit; color: inherit; text-align: left; background: none; border: 0; cursor: pointer; }
-.expedition-faces { display: flex; gap: 3px; }
-.expedition-faces > span { display: grid; place-items: center; width: 24px; height: 24px; overflow: hidden; background: #241c18; border: 1px solid #574a40; }
-.expedition-faces .dinosaur-art { width: 160%; height: 160%; max-width: none; margin-top: 25%; }
-.realms-app .expedition-runs .ui-card-side .realm-button { width: auto; min-height: 32px; margin: 0; }
-.realms-app .expedition-runs .ui-card-title { white-space: normal; line-height: 1.15; }
+.expedition-runs {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
+}
+.realms-app .expedition-runs .ui-card-subtitle {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  -webkit-line-clamp: unset;
+}
+.realms-app .expedition-runs .realm-meter {
+  display: block;
+  height: 4px;
+  margin: 0;
+}
+.realms-app .expedition-runs .realm-meter > i {
+  background: #eda233;
+}
+.realms-app .expedition-run-title {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.expedition-faces {
+  display: flex;
+  gap: 3px;
+}
+.expedition-faces > span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+  background: #241c18;
+  border: 1px solid #574a40;
+}
+.expedition-faces .dinosaur-art {
+  width: 160%;
+  height: 160%;
+  max-width: none;
+  margin-top: 25%;
+}
+.realms-app .expedition-runs .ui-card-side .realm-button {
+  width: auto;
+  min-height: 32px;
+  margin: 0;
+}
+.realms-app .expedition-runs .ui-card-title {
+  white-space: normal;
+  line-height: 1.15;
+}
 /* The display font joins "fi" into one odd glyph: keep letters apart in region names. */
-.realms-app :is(.map-caption, .destination-cover, .adventure-node, .expedition-guide) { font-variant-ligatures: none; }
+.realms-app :is(.map-caption, .destination-cover, .adventure-node, .expedition-guide) {
+  font-variant-ligatures: none;
+}
 
 @media (max-height: 600px) and (orientation: landscape) {
-  .realms-app .gameplay-expedition .expedition-detail .destination-cover { height: 40px; }
-  .realms-app .gameplay-expedition .expedition-detail .destination-cover span { padding: 4px 8px; font-size: 13px; }
-  .realms-app .gameplay-expedition .expedition-detail .destination-cover em { top: 4px; right: 4px; left: auto; font-size: 9px; padding: 1px 5px; }
+  .realms-app .gameplay-expedition .expedition-detail .destination-cover {
+    height: 40px;
+  }
+  .realms-app .gameplay-expedition .expedition-detail .destination-cover span {
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+  .realms-app .gameplay-expedition .expedition-detail .destination-cover em {
+    top: 4px;
+    right: 4px;
+    left: auto;
+    font-size: 9px;
+    padding: 1px 5px;
+  }
 }
 /*
  * Phones held sideways (844 x 390): the map and the sidebar stay side by side and the screen does not scroll; the
  * header shrinks to one row. This undoes the stacked phone layout from pixel-theme.css for expeditions only.
  */
 @media (max-height: 500px) and (orientation: landscape) {
-  .realms-app .gameplay-screen.gameplay-expedition .gameplay-header { display: flex; height: 46px; padding: 4px 10px; gap: 10px; }
-  .realms-app .gameplay-screen.gameplay-expedition .gameplay-header .realm-eyebrow { display: none; }
-  .realms-app .gameplay-screen.gameplay-expedition .gameplay-header h1 { font-size: 17px; margin: 0; }
-  .realms-app .gameplay-screen.gameplay-expedition .gameplay-header nav { display: flex; margin-left: auto; gap: 6px; }
-  .realms-app .gameplay-screen.gameplay-expedition .gameplay-header button { min-height: 36px; padding: 4px 10px; }
-  .realms-app .gameplay-screen.gameplay-expedition .gameplay-header .gameplay-close { width: 36px; padding: 0; }
-  .realms-app .gameplay-screen.gameplay-expedition .mobile-destination-picker { display: none; }
-  .realms-app .gameplay-screen.gameplay-expedition .adventure-layout { display: grid; grid-template-columns: minmax(0, 1fr) 296px; overflow: hidden; padding-bottom: 0; }
-  .realms-app .gameplay-screen.gameplay-expedition .adventure-detail { display: grid; order: 0; overflow: hidden; padding: 4px; border-top: 0; }
-  .realms-app .gameplay-screen.gameplay-expedition .adventure-detail button { min-height: 0; white-space: nowrap; }
-  .realms-app .gameplay-screen.gameplay-expedition .adventure-map { display: block; height: auto; padding: 0; border: 0; border-right: 2px solid #9c8763; touch-action: none; }
-  .realms-app .gameplay-screen.gameplay-expedition .adventure-map-plane { position: absolute; inset: 0; display: block; background: url('/realms/gameplay/all-worlds-map-px.png') center / 100% 100%; }
-  .realms-app .gameplay-screen.gameplay-expedition .adventure-map .adventure-route { display: block; }
-  .realms-app .gameplay-screen.gameplay-expedition .adventure-map .map-caption { display: block; position: absolute; top: 6px; left: 6px; bottom: auto; margin: 0; padding: 4px 8px; border: 1px solid #f6d77a88; border-left: 3px solid #e0b565; background: #3a2e27e6; }
-  .realms-app .gameplay-screen.gameplay-expedition .map-caption .realm-eyebrow { font-size: 8px; }
-  .realms-app .gameplay-screen.gameplay-expedition .map-caption h2 { margin: 2px 0 0; font-size: 12px; }
-  .realms-app .gameplay-screen.gameplay-expedition .adventure-node { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: 0; min-height: 0; padding: 0; border: 0; background: none; box-shadow: none; }
-  .realms-app .gameplay-screen.gameplay-expedition .adventure-node > span { width: 30px; height: 30px; flex: none; font-size: 16px; border-width: 2px; }
-  .realms-app .gameplay-screen.gameplay-expedition .adventure-node.selected > span { outline: 2px solid #fff1b8; outline-offset: 3px; }
-  .realms-app .gameplay-screen.gameplay-expedition .adventure-node > strong { margin-top: 3px; padding: 2px 5px; font-size: 8px; white-space: nowrap; background: #3a2e27ed; border: 1px solid #e0a96a88; }
-  .realms-app .gameplay-screen.gameplay-expedition .adventure-node > strong small { display: none; }
-  .realms-app .gameplay-expedition .expedition-detail .expedition-guide { gap: 4px; }
-  .realms-app .gameplay-expedition .expedition-detail .adventure-detail-body { padding-top: 4px; }
-  .realms-app .expedition-tab { gap: 5px; }
-  .realms-app .expedition-tab > .adventure-start { min-height: 34px; padding: 2px 8px 4px; }
-  .expedition-facts li { padding: 2px 6px; }
-  .realms-app .expedition-detail .expedition-rewards > span { padding: 2px; font-size: 12px; }
-  .realms-app .expedition-detail .expedition-rewards small { display: none; }
-  .team-picker { min-height: 70px; gap: 3px; }
-  .team-picker-head { min-height: 26px; }
-  .realms-app .team-picker-roster { --paged-min: 52px; --paged-row: 60px; gap: 4px; }
-  .realms-app .gameplay-expedition .ui-pager-step { width: 26px; height: 26px; font-size: 17px; }
-  .realms-app .gameplay-screen.gameplay-expedition .expedition-detail { border-width: 12px; }
-  .realms-app .gameplay-expedition .expedition-detail .destination-cover { height: 24px; }
-  .realms-app .gameplay-expedition .expedition-detail .destination-cover span { padding: 3px 8px; font-size: 12px; }
-  .realms-app .gameplay-expedition .expedition-detail .destination-cover em { display: none; }
-  .expedition-notice { flex-wrap: nowrap; padding: 3px 6px; font-size: 11px; line-height: 1.2; }
-  .expedition-notice > span { flex: 1 1 auto; }
-  .realms-app .expedition-notice .realm-button { min-height: 26px; padding: 0 8px 2px; font-size: 11px !important; }
-  .expedition-hours button { min-height: 26px; }
-  .realms-app .expedition-tab > .adventure-start { min-height: 30px; height: 32px; }
-  .realms-app .expedition-detail .expedition-rewards > span { flex-direction: row; gap: 3px; min-height: 22px; }
+  .realms-app .gameplay-screen.gameplay-expedition .gameplay-header {
+    display: flex;
+    height: 46px;
+    padding: 4px 10px;
+    gap: 10px;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .gameplay-header .realm-eyebrow {
+    display: none;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .gameplay-header h1 {
+    font-size: 17px;
+    margin: 0;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .gameplay-header nav {
+    display: flex;
+    margin-left: auto;
+    gap: 6px;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .gameplay-header button {
+    min-height: 36px;
+    padding: 4px 10px;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .gameplay-header .gameplay-close {
+    width: 36px;
+    padding: 0;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .mobile-destination-picker {
+    display: none;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 296px;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-detail {
+    display: grid;
+    order: 0;
+    overflow: hidden;
+    padding: 4px;
+    border-top: 0;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-detail button {
+    min-height: 0;
+    white-space: nowrap;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-map {
+    display: block;
+    height: auto;
+    padding: 0;
+    border: 0;
+    border-right: 2px solid #9c8763;
+    touch-action: none;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-map-plane {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background: url('/realms/gameplay/all-worlds-map-px.png') center / 100% 100%;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-map .adventure-route {
+    display: block;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-map .map-caption {
+    display: block;
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    bottom: auto;
+    margin: 0;
+    padding: 4px 8px;
+    border: 1px solid #f6d77a88;
+    border-left: 3px solid #e0b565;
+    background: #3a2e27e6;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .map-caption .realm-eyebrow {
+    font-size: 8px;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .map-caption h2 {
+    margin: 2px 0 0;
+    font-size: 12px;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-node > span {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    font-size: 16px;
+    border-width: 2px;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-node.selected > span {
+    outline: 2px solid #fff1b8;
+    outline-offset: 3px;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-node > strong {
+    margin-top: 3px;
+    padding: 2px 5px;
+    font-size: 8px;
+    white-space: nowrap;
+    background: #3a2e27ed;
+    border: 1px solid #e0a96a88;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-node > strong small {
+    display: none;
+  }
+  .realms-app .gameplay-expedition .expedition-detail .expedition-guide {
+    gap: 4px;
+  }
+  .realms-app .gameplay-expedition .expedition-detail .adventure-detail-body {
+    padding-top: 4px;
+  }
+  .realms-app .expedition-tab {
+    gap: 5px;
+  }
+  .realms-app .expedition-tab > .adventure-start {
+    min-height: 34px;
+    padding: 2px 8px 4px;
+  }
+  .expedition-facts li {
+    padding: 2px 6px;
+  }
+  .realms-app .expedition-detail .expedition-rewards > span {
+    padding: 2px;
+    font-size: 12px;
+  }
+  .realms-app .expedition-detail .expedition-rewards small {
+    display: none;
+  }
+  .team-picker {
+    min-height: 70px;
+    gap: 3px;
+  }
+  .team-picker-head {
+    min-height: 26px;
+  }
+  .realms-app .team-picker-roster {
+    --paged-min: 52px;
+    --paged-row: 60px;
+    gap: 4px;
+  }
+  .realms-app .gameplay-expedition .ui-pager-step {
+    width: 26px;
+    height: 26px;
+    font-size: 17px;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .expedition-detail {
+    border-width: 12px;
+  }
+  .realms-app .gameplay-expedition .expedition-detail .destination-cover {
+    height: 24px;
+  }
+  .realms-app .gameplay-expedition .expedition-detail .destination-cover span {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+  .realms-app .gameplay-expedition .expedition-detail .destination-cover em {
+    display: none;
+  }
+  .expedition-notice {
+    flex-wrap: nowrap;
+    padding: 3px 6px;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+  .expedition-notice > span {
+    flex: 1 1 auto;
+  }
+  .realms-app .expedition-notice .realm-button {
+    min-height: 26px;
+    padding: 0 8px 2px;
+    font-size: 11px !important;
+  }
+  .expedition-hours button {
+    min-height: 26px;
+  }
+  .realms-app .expedition-tab > .adventure-start {
+    min-height: 30px;
+    height: 32px;
+  }
+  .realms-app .expedition-detail .expedition-rewards > span {
+    flex-direction: row;
+    gap: 3px;
+    min-height: 22px;
+  }
 }
 /* Upright phones keep the stacked, scrolling layout: give the roster two fixed rows there. */
 @media (max-width: 760px) and (orientation: portrait) {
-  .realms-app .gameplay-expedition .expedition-detail { display: block; overflow: visible; }
-  .realms-app .gameplay-expedition .expedition-detail .expedition-guide { display: grid; grid-template-rows: auto auto; }
-  .realms-app .gameplay-expedition .team-picker-roster { height: 146px; }
+  .realms-app .gameplay-expedition .expedition-detail {
+    display: block;
+    overflow: visible;
+  }
+  .realms-app .gameplay-expedition .expedition-detail .expedition-guide {
+    display: grid;
+    grid-template-rows: auto auto;
+  }
+  .realms-app .gameplay-expedition .team-picker-roster {
+    height: 146px;
+  }
 }
 
 /*
@@ -1771,7 +2866,11 @@
   background: #303452;
   border-right: 2px solid #9c8763;
 }
-.arena-league-chips { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.arena-league-chips {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+}
 .arena-league-chip {
   display: flex;
   align-items: center;
@@ -1787,10 +2886,27 @@
   border-bottom: 3px solid var(--league-color);
   cursor: pointer;
 }
-.arena-league-chip .arena-league-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.arena-league-chip small { flex: none; font: 600 11px var(--font-display); color: #f6d77a; }
-.arena-league-chip[aria-pressed='true'] { color: #fff1b8; background: #4a3a2c; border-color: #f6d77a; border-bottom-color: var(--league-color); }
-.arena-league-chip.locked { opacity: 0.55; filter: grayscale(0.6); }
+.arena-league-chip .arena-league-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.arena-league-chip small {
+  flex: none;
+  font: 600 11px var(--font-display);
+  color: #f6d77a;
+}
+.arena-league-chip[aria-pressed='true'] {
+  color: #fff1b8;
+  background: #4a3a2c;
+  border-color: #f6d77a;
+  border-bottom-color: var(--league-color);
+}
+.arena-league-chip.locked {
+  opacity: 0.55;
+  filter: grayscale(0.6);
+}
 .arena-preview {
   position: relative;
   min-height: 0;
@@ -1800,9 +2916,29 @@
   border: 2px solid #1b1411;
   container-type: size;
 }
-.arena-preview-title { position: absolute; z-index: 2; top: 8px; left: 8px; right: 8px; text-align: center; text-shadow: 0 2px 0 #1b1411, 0 0 10px #1b1411; }
-.arena-preview-title h2 { margin: 2px 0 0; color: #fff1b8; font: 700 clamp(17px, 5cqh, 28px) / 1.15 var(--font-display); }
-.arena-preview-title .arena-boss-name { display: block; margin-top: 2px; font: 700 clamp(12px, 3cqh, 16px) var(--font-display); color: #ffb070; letter-spacing: 1px; }
+.arena-preview-title {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  text-align: center;
+  text-shadow:
+    0 2px 0 #1b1411,
+    0 0 10px #1b1411;
+}
+.arena-preview-title h2 {
+  margin: 2px 0 0;
+  color: #fff1b8;
+  font: 700 clamp(17px, 5cqh, 28px) / 1.15 var(--font-display);
+}
+.arena-preview-title .arena-boss-name {
+  display: block;
+  margin-top: 2px;
+  font: 700 clamp(12px, 3cqh, 16px) var(--font-display);
+  color: #ffb070;
+  letter-spacing: 1px;
+}
 .arena-foe-lineup {
   position: absolute;
   left: 4%;
@@ -1814,10 +2950,22 @@
   justify-content: center;
   gap: 1cqw;
 }
-.arena-foe-figure { flex: 0 1 auto; height: 78%; aspect-ratio: 1; min-width: 0; }
-.arena-foe-figure.boss { height: 100%; }
-.arena-foe-figure > * { width: 100%; height: 100%; }
-.arena-foe-figure .dinosaur-opponent { transform: scaleX(-1); }
+.arena-foe-figure {
+  flex: 0 1 auto;
+  height: 78%;
+  aspect-ratio: 1;
+  min-width: 0;
+}
+.arena-foe-figure.boss {
+  height: 100%;
+}
+.arena-foe-figure > * {
+  width: 100%;
+  height: 100%;
+}
+.arena-foe-figure .dinosaur-opponent {
+  transform: scaleX(-1);
+}
 .arena-season-chip {
   position: absolute;
   z-index: 2;
@@ -1833,9 +2981,20 @@
   background: #2f2520e6;
   border: 1px solid #f6d77a88;
 }
-.arena-season-chip span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.arena-season-chip b { font-family: var(--font-display); color: #fff1b8; }
-.arena-tier-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.arena-season-chip span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.arena-season-chip b {
+  font-family: var(--font-display);
+  color: #fff1b8;
+}
+.arena-tier-chips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
 .arena-tier-chip {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1850,11 +3009,33 @@
   border: 2px solid #574a40;
   cursor: pointer;
 }
-.arena-tier-chip .arena-tier-stars { grid-row: 1 / 3; font: 600 16px var(--font-display); color: #f6d77a; letter-spacing: 1px; }
-.arena-tier-chip strong { min-width: 0; overflow: hidden; font-size: 13px; white-space: nowrap; text-overflow: ellipsis; color: #fff1b8; }
-.arena-tier-chip small { font-size: 11px; color: #cdbfa8; white-space: nowrap; }
-.arena-tier-chip[aria-pressed='true'] { background: #4a3a2c; border-color: #f6d77a; box-shadow: inset 0 0 0 1px #f6d77a; }
-.arena-tier-chip.locked { opacity: 0.6; }
+.arena-tier-chip .arena-tier-stars {
+  grid-row: 1 / 3;
+  font: 600 16px var(--font-display);
+  color: #f6d77a;
+  letter-spacing: 1px;
+}
+.arena-tier-chip strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #fff1b8;
+}
+.arena-tier-chip small {
+  font-size: 11px;
+  color: #cdbfa8;
+  white-space: nowrap;
+}
+.arena-tier-chip[aria-pressed='true'] {
+  background: #4a3a2c;
+  border-color: #f6d77a;
+  box-shadow: inset 0 0 0 1px #f6d77a;
+}
+.arena-tier-chip.locked {
+  opacity: 0.6;
+}
 
 .arena-side {
   display: grid;
@@ -1866,16 +3047,43 @@
   overflow: hidden;
   background: #2f2520;
 }
-.realms-app .arena-tabs .ui-tab { flex: 1 1 0; justify-content: center; padding-inline: 6px; }
-.realms-app .arena-side .arena-tab { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.realms-app .arena-tabs .ui-tab {
+  flex: 1 1 0;
+  justify-content: center;
+  padding-inline: 6px;
+}
+.realms-app .arena-side .arena-tab {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
 .arena-fight,
 .arena-team,
-.arena-gate { display: flex; flex-direction: column; gap: 8px; min-height: 0; height: 100%; }
+.arena-gate {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+}
 .arena-fight > *,
-.arena-gate > * { flex: none; }
-.realms-app .arena-fight .gameplay-section-label { font-size: 12px; gap: 8px; flex-wrap: wrap; }
-.realms-app .arena-fight .gameplay-section-label small { font-size: 11px; }
-.realms-app .arena-rewards { flex-wrap: nowrap; gap: 4px; margin: 0; }
+.arena-gate > * {
+  flex: none;
+}
+.realms-app .arena-fight .gameplay-section-label {
+  font-size: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.realms-app .arena-fight .gameplay-section-label small {
+  font-size: 11px;
+}
+.realms-app .arena-rewards {
+  flex-wrap: nowrap;
+  gap: 4px;
+  margin: 0;
+}
 .realms-app .arena-rewards > span {
   flex: 1 1 0;
   flex-direction: row;
@@ -1886,14 +3094,43 @@
   font: 600 15px var(--font-display);
   white-space: nowrap;
 }
-.realms-app .arena-rewards b { font-size: 16px; line-height: 1; }
-.realms-app .arena-rewards .reward-egg { flex: 1.4 1 0; color: #fff1b8; }
-.realms-app .arena-rewards .reward-egg.boss { color: #ffb070; font-size: 11px; }
-.arena-versus { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; }
-.arena-faces { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
-.arena-faces.foes { justify-content: flex-end; }
-.realms-app .arena-faces .realm-button { width: 100%; min-height: 40px; margin: 0; font-size: 12px !important; }
-.arena-vs { font: 700 18px var(--font-display); color: #ffd36b; }
+.realms-app .arena-rewards b {
+  font-size: 16px;
+  line-height: 1;
+}
+.realms-app .arena-rewards .reward-egg {
+  flex: 1.4 1 0;
+  color: #fff1b8;
+}
+.realms-app .arena-rewards .reward-egg.boss {
+  color: #ffb070;
+  font-size: 11px;
+}
+.arena-versus {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+.arena-faces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.arena-faces.foes {
+  justify-content: flex-end;
+}
+.realms-app .arena-faces .realm-button {
+  width: 100%;
+  min-height: 40px;
+  margin: 0;
+  font-size: 12px !important;
+}
+.arena-vs {
+  font: 700 18px var(--font-display);
+  color: #ffd36b;
+}
 .arena-face {
   position: relative;
   display: grid;
@@ -1905,138 +3142,576 @@
   background: #1b1411;
   border: 2px solid #574a40;
 }
-.arena-face > :first-child { width: 150%; height: 150%; max-width: none; margin-top: 20%; }
-.arena-faces.foes .arena-face > :first-child { transform: scaleX(-1); }
-.arena-face > small { position: absolute; right: 1px; bottom: 0; padding: 1px 3px; font: 600 13px var(--font-display); color: #fff1b8; background: #1b1411e6; }
-.arena-face.edge-up { border-color: #9be38f; }
-.arena-face.edge-down { border-color: #ff8a7a; }
-.arena-face.boss { border-color: #ffb070; }
-.arena-face.boss > small { color: #ffb070; }
-.arena-forecast { margin: 0; }
-.arena-forecast small .edge-up { color: #9be38f; }
-.arena-forecast small .edge-down { color: #ff8a7a; }
-.arena-blocker { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 8px 10px; font-size: 14px; line-height: 1.4; color: #ffd0a0; background: #3a1f1f44; border: 1px solid #f0a35a88; }
-.arena-blocker > span { flex: 1 1 160px; }
-.realms-app .arena-blocker .realm-button { flex: none; width: auto; min-height: 36px; margin: 0; padding: 4px 12px; font-size: 14px !important; }
-.realms-app .arena-side .arena-tab:has(.arena-fight) { overflow-y: auto; }
-.realms-app .arena-fight .adventure-start { margin-top: auto; min-height: 42px; }
-.realms-app .arena-fight .adventure-start.risky { background-color: #a5502f; }
-.realms-app .arena-fight .adventure-start.armed { background-color: #c0392b; box-shadow: inset 0 0 0 3px #ffd0a0, 0 3px #5f1f18; }
+.arena-face > :first-child {
+  width: 150%;
+  height: 150%;
+  max-width: none;
+  margin-top: 20%;
+}
+.arena-faces.foes .arena-face > :first-child {
+  transform: scaleX(-1);
+}
+.arena-face > small {
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  padding: 1px 3px;
+  font: 600 13px var(--font-display);
+  color: #fff1b8;
+  background: #1b1411e6;
+}
+.arena-face.edge-up {
+  border-color: #9be38f;
+}
+.arena-face.edge-down {
+  border-color: #ff8a7a;
+}
+.arena-face.boss {
+  border-color: #ffb070;
+}
+.arena-face.boss > small {
+  color: #ffb070;
+}
+.arena-forecast {
+  margin: 0;
+}
+.arena-forecast small .edge-up {
+  color: #9be38f;
+}
+.arena-forecast small .edge-down {
+  color: #ff8a7a;
+}
+.arena-blocker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #ffd0a0;
+  background: #3a1f1f44;
+  border: 1px solid #f0a35a88;
+}
+.arena-blocker > span {
+  flex: 1 1 160px;
+}
+.realms-app .arena-blocker .realm-button {
+  flex: none;
+  width: auto;
+  min-height: 36px;
+  margin: 0;
+  padding: 4px 12px;
+  font-size: 14px !important;
+}
+.realms-app .arena-side .arena-tab:has(.arena-fight) {
+  overflow-y: auto;
+}
+.realms-app .arena-fight .adventure-start {
+  margin-top: auto;
+  min-height: 42px;
+}
+.realms-app .arena-fight .adventure-start.risky {
+  background-color: #a5502f;
+}
+.realms-app .arena-fight .adventure-start.armed {
+  background-color: #c0392b;
+  box-shadow:
+    inset 0 0 0 3px #ffd0a0,
+    0 3px #5f1f18;
+}
 
-.arena-team .team-picker { flex: 1 1 auto; }
-.arena-team-hint { flex: none; margin: 0; font-size: 11px; line-height: 1.35; color: #cdbfa8; }
-.arena-resting { flex: none; display: grid; gap: 4px; }
-.realms-app .arena-resting .ui-card { min-height: 0; padding: 3px 6px; }
-.realms-app .arena-resting .ui-card-art { width: 30px; height: 30px; overflow: hidden; }
-.realms-app .arena-resting .ui-card-art .dinosaur-art { width: 160%; height: 160%; max-width: none; margin: 20% 0 0 -30%; }
-.realms-app .arena-resting .realm-button { width: auto; min-height: 28px; margin: 0; padding: 2px 10px; font-size: 12px !important; }
-.realms-app .arena-wake-all { width: 100%; min-height: 32px; margin: 0; font-size: 13px !important; }
+.arena-team .team-picker {
+  flex: 1 1 auto;
+}
+.arena-team-hint {
+  flex: none;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #cdbfa8;
+}
+.arena-resting {
+  flex: none;
+  display: grid;
+  gap: 4px;
+}
+.realms-app .arena-resting .ui-card {
+  min-height: 0;
+  padding: 3px 6px;
+}
+.realms-app .arena-resting .ui-card-art {
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+}
+.realms-app .arena-resting .ui-card-art .dinosaur-art {
+  width: 160%;
+  height: 160%;
+  max-width: none;
+  margin: 20% 0 0 -30%;
+}
+.realms-app .arena-resting .realm-button {
+  width: auto;
+  min-height: 28px;
+  margin: 0;
+  padding: 2px 10px;
+  font-size: 12px !important;
+}
+.realms-app .arena-wake-all {
+  width: 100%;
+  min-height: 32px;
+  margin: 0;
+  font-size: 13px !important;
+}
 
-.realms-app .arena-gate { overflow-y: auto; }
-.arena-season { display: grid; gap: 6px; padding: 8px; background: #241c18; border: 1px solid #574a40; }
-.arena-season ol { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.arena-season li { display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 8px; align-items: center; font-size: 12px; color: #e2d3b2; }
-.arena-season li > b { grid-row: 1 / 3; font: 700 15px var(--font-display); color: #f6d77a; text-align: center; }
-.arena-season li .realm-meter { display: block; height: 4px; margin: 2px 0 0; }
-.arena-season li .realm-meter > i { display: block; height: 100%; background: #eda233; }
-.arena-season li.done { color: #9be38f; }
-.arena-season li.done > b { color: #9be38f; }
-.arena-season > small { font-size: 11px; color: #a39380; }
+.realms-app .arena-gate {
+  overflow-y: auto;
+}
+.arena-season {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  background: #241c18;
+  border: 1px solid #574a40;
+}
+.arena-season ol {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.arena-season li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: #e2d3b2;
+}
+.arena-season li > b {
+  grid-row: 1 / 3;
+  font: 700 15px var(--font-display);
+  color: #f6d77a;
+  text-align: center;
+}
+.arena-season li .realm-meter {
+  display: block;
+  height: 4px;
+  margin: 2px 0 0;
+}
+.arena-season li .realm-meter > i {
+  display: block;
+  height: 100%;
+  background: #eda233;
+}
+.arena-season li.done {
+  color: #9be38f;
+}
+.arena-season li.done > b {
+  color: #9be38f;
+}
+.arena-season > small {
+  font-size: 11px;
+  color: #a39380;
+}
 
 /* Battle: one pip per member under each corner HUD, and the relay announcement. */
-.battle-pips { display: flex; gap: 4px; margin-top: 3px; }
-.battle-hud.enemy .battle-pips { justify-content: flex-end; }
-.battle-pips > i { width: 10px; height: 10px; transform: rotate(45deg); background: #574a40; border: 1px solid #1b1411; }
-.battle-pips > i.active { background: var(--hud-color, #f6d77a); box-shadow: 0 0 6px var(--hud-color, #f6d77a); }
-.battle-pips > i.waiting { background: #e2d3b2; }
-.battle-pips > i.fallen { background: #3a2e27; opacity: 0.6; }
-.battle-callout.kind-enter { color: #fff1b8; font-size: clamp(16px, 3vw, 30px); text-shadow: 0 3px 0 #2f2520, 0 0 16px #f6d77a99; }
-.result-team { display: flex; justify-content: center; gap: 8px; margin: 6px 0; }
-.result-team > span { position: relative; display: grid; place-items: center; width: 52px; height: 52px; overflow: hidden; background: #1b1411; border: 2px solid #574a40; }
-.result-team > span > :first-child { width: 150%; height: 150%; max-width: none; margin-top: 20%; }
-.result-team > span > i { position: absolute; left: 0; bottom: 0; height: 4px; background: #6fae45; }
-.result-team > span.fallen { opacity: 0.55; filter: grayscale(0.8); }
-.battle-result .result-rest { font-size: 13px; color: #cdbfa8; }
-.battle-result .result-loot { margin: 6px 0; }
-.battle-result .result-loot small { font-size: 14px; color: #cdbfa8; }
-.battle-result .result-season { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 4px 0 10px; font-size: 13px; color: #f6d77a; }
+.battle-pips {
+  display: flex;
+  gap: 4px;
+  margin-top: 3px;
+}
+.battle-hud.enemy .battle-pips {
+  justify-content: flex-end;
+}
+.battle-pips > i {
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  background: #574a40;
+  border: 1px solid #1b1411;
+}
+.battle-pips > i.active {
+  background: var(--hud-color, #f6d77a);
+  box-shadow: 0 0 6px var(--hud-color, #f6d77a);
+}
+.battle-pips > i.waiting {
+  background: #e2d3b2;
+}
+.battle-pips > i.fallen {
+  background: #3a2e27;
+  opacity: 0.6;
+}
+.battle-callout.kind-enter {
+  color: #fff1b8;
+  font-size: clamp(16px, 3vw, 30px);
+  text-shadow:
+    0 3px 0 #2f2520,
+    0 0 16px #f6d77a99;
+}
+.result-team {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+.result-team > span {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  background: #1b1411;
+  border: 2px solid #574a40;
+}
+.result-team > span > :first-child {
+  width: 150%;
+  height: 150%;
+  max-width: none;
+  margin-top: 20%;
+}
+.result-team > span > i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  background: #6fae45;
+}
+.result-team > span.fallen {
+  opacity: 0.55;
+  filter: grayscale(0.8);
+}
+.battle-result .result-rest {
+  font-size: 13px;
+  color: #cdbfa8;
+}
+.battle-result .result-loot {
+  margin: 6px 0;
+}
+.battle-result .result-loot small {
+  font-size: 14px;
+  color: #cdbfa8;
+}
+.battle-result .result-season {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0 10px;
+  font-size: 13px;
+  color: #f6d77a;
+}
 /* A boss hatched from its egg borrows its adult sprites, a size smaller. */
-.young-boss { scale: 0.8; transform-origin: 50% 84%; }
+.young-boss {
+  scale: 0.8;
+  transform-origin: 50% 84%;
+}
 
+/* Narrower screens: the league's name goes under its icon instead of disappearing. */
 @media (max-width: 1100px) {
-  .arena-league-chip .arena-league-name { display: none; }
+  .arena-league-chip {
+    flex-wrap: wrap;
+    align-content: center;
+    row-gap: 0;
+    min-height: 40px;
+  }
+  .arena-league-chip .arena-league-name {
+    order: 3;
+    flex: 1 0 100%;
+    font-size: 10px;
+    line-height: 1.2;
+    text-align: center;
+  }
 }
 /* Phones held sideways (844 x 390): a one-row header like the expeditions, a narrower sidebar, tighter rows. */
 @media (max-height: 500px) and (orientation: landscape) {
-  .realms-app .gameplay-screen.gameplay-arena .gameplay-header { display: flex; height: 46px; padding: 4px 10px; gap: 10px; }
-  .realms-app .gameplay-screen.gameplay-arena .gameplay-header .realm-eyebrow { display: none; }
-  .realms-app .gameplay-screen.gameplay-arena .gameplay-header h1 { font-size: 17px; margin: 0; }
-  .realms-app .gameplay-screen.gameplay-arena .gameplay-header nav { display: flex; margin-left: auto; gap: 6px; }
-  .realms-app .gameplay-screen.gameplay-arena .gameplay-header button { min-height: 36px; padding: 4px 10px; }
-  .realms-app .gameplay-screen.gameplay-arena .gameplay-header .gameplay-close { width: 36px; padding: 0; }
-  .realms-app .arena-view { grid-template-columns: minmax(0, 1fr) 300px; }
-  .arena-stage-pane { gap: 4px; padding: 4px; }
-  .arena-league-chip { min-height: 26px; }
-  .arena-tier-chip { padding: 2px 6px; }
-  .arena-tier-chip .arena-tier-stars { font-size: 13px; }
-  .arena-tier-chip strong { font-size: 12px; }
-  .arena-tier-chip small { font-size: 10px; }
-  .arena-season-chip { font-size: 11px; padding: 1px 6px; }
-  .arena-side { gap: 4px; padding: 4px 6px; }
-  .realms-app .arena-tabs .ui-tab { min-height: 30px; padding-block: 2px; }
+  .realms-app .gameplay-screen.gameplay-arena .gameplay-header {
+    display: flex;
+    height: 46px;
+    padding: 4px 10px;
+    gap: 10px;
+  }
+  .realms-app .gameplay-screen.gameplay-arena .gameplay-header .realm-eyebrow {
+    display: none;
+  }
+  .realms-app .gameplay-screen.gameplay-arena .gameplay-header h1 {
+    font-size: 17px;
+    margin: 0;
+  }
+  .realms-app .gameplay-screen.gameplay-arena .gameplay-header nav {
+    display: flex;
+    margin-left: auto;
+    gap: 6px;
+  }
+  .realms-app .gameplay-screen.gameplay-arena .gameplay-header button {
+    min-height: 36px;
+    padding: 4px 10px;
+  }
+  .realms-app .gameplay-screen.gameplay-arena .gameplay-header .gameplay-close {
+    width: 36px;
+    padding: 0;
+  }
+  .realms-app .arena-view {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+  .arena-stage-pane {
+    gap: 4px;
+    padding: 4px;
+  }
+  .arena-league-chip {
+    min-height: 26px;
+  }
+  .arena-tier-chip {
+    padding: 2px 6px;
+  }
+  .arena-tier-chip .arena-tier-stars {
+    font-size: 13px;
+  }
+  .arena-tier-chip strong {
+    font-size: 12px;
+  }
+  .arena-tier-chip small {
+    font-size: 10px;
+  }
+  .arena-season-chip {
+    font-size: 11px;
+    padding: 1px 6px;
+  }
+  .arena-side {
+    gap: 4px;
+    padding: 4px 6px;
+  }
+  .realms-app .arena-tabs .ui-tab {
+    min-height: 30px;
+    padding-block: 2px;
+  }
   .arena-fight,
   .arena-team,
-  .arena-gate { gap: 5px; }
-  .realms-app .arena-rewards > span { min-height: 24px; font-size: 12px; }
-  .arena-face { width: 38px; height: 38px; }
-  .arena-forecast { padding: 3px 8px; }
-  .arena-forecast strong { font-size: 12px; }
-  .arena-blocker { padding: 2px 6px; font-size: 11px; }
-  .realms-app .arena-fight .adventure-start { min-height: 34px; height: 34px; padding-block: 2px; }
-  .arena-team-hint { display: none; }
-  .realms-app .arena-team .team-picker-roster { --paged-min: 52px; --paged-row: 60px; gap: 4px; }
-  .battle-pips > i { width: 7px; height: 7px; }
-  .battle-result { padding: 10px 24px; }
-  .battle-result h2 { margin: 2px 0; font-size: 20px; }
-  .result-team > span { width: 40px; height: 40px; }
-  .battle-result .result-rest { margin: 2px 0; font-size: 11px; }
-  .battle-result .result-season { margin: 2px 0 6px; }
+  .arena-gate {
+    gap: 5px;
+  }
+  .realms-app .arena-rewards > span {
+    min-height: 24px;
+    font-size: 12px;
+  }
+  .arena-face {
+    width: 38px;
+    height: 38px;
+  }
+  .arena-forecast {
+    padding: 3px 8px;
+  }
+  .arena-forecast strong {
+    font-size: 12px;
+  }
+  .arena-blocker {
+    padding: 2px 6px;
+    font-size: 11px;
+  }
+  .realms-app .arena-fight .adventure-start {
+    min-height: 34px;
+    height: 34px;
+    padding-block: 2px;
+  }
+  .arena-team-hint {
+    display: none;
+  }
+  .realms-app .arena-team .team-picker-roster {
+    --paged-min: 52px;
+    --paged-row: 60px;
+    gap: 4px;
+  }
+  .battle-pips > i {
+    width: 7px;
+    height: 7px;
+  }
+  .battle-result {
+    padding: 10px 24px;
+  }
+  .battle-result h2 {
+    margin: 2px 0;
+    font-size: 20px;
+  }
+  .result-team > span {
+    width: 40px;
+    height: 40px;
+  }
+  .battle-result .result-rest {
+    margin: 2px 0;
+    font-size: 11px;
+  }
+  .battle-result .result-season {
+    margin: 2px 0 6px;
+  }
 }
 /* Upright phones: the two columns stack and the screen scrolls. */
 @media (max-width: 760px) and (orientation: portrait) {
-  .realms-app .arena-view { display: block; overflow-y: auto; }
-  .arena-stage-pane { grid-template-rows: auto 240px auto; border-right: 0; }
-  .arena-league-chips { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .arena-side { overflow: visible; }
-  .realms-app .arena-team .team-picker-roster { height: 146px; }
+  .realms-app .arena-view {
+    display: block;
+    overflow-y: auto;
+  }
+  .arena-stage-pane {
+    grid-template-rows: auto 240px auto;
+    border-right: 0;
+  }
+  .arena-league-chips {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .arena-side {
+    overflow: visible;
+  }
+  .realms-app .arena-view > .arena-phone-head {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 6px 6px 10px;
+    background: #2f2520;
+    border-bottom: 2px solid #574a40;
+  }
+  .arena-phone-head h2 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: 18px;
+    color: var(--px-bone-0);
+    text-shadow: 2px 2px 0 var(--px-outline);
+  }
+  .realms-app .arena-phone-head > .gameplay-close {
+    position: static;
+    flex: none;
+    width: 38px;
+    height: 38px;
+  }
+  .realms-app .arena-side-toolbar > .gameplay-close {
+    display: none;
+  }
+  .realms-app .arena-team .team-picker-roster {
+    height: 146px;
+  }
 }
-.star-row i { font-style: normal; color: #6b5a48; }
-.star-row i.on { color: #f6d77a; }
-.realms-app .arena-fight .adventure-start.risky:not(.armed) { filter: hue-rotate(-75deg) saturate(1.3); }
-.realms-app .arena-fight .adventure-start.armed { filter: hue-rotate(-110deg) saturate(1.6); }
-.battle-pips > i.fallen { background: transparent; border-color: #c0563f; opacity: 1; box-shadow: inset 0 0 0 1px #1b1411; }
-.realms-app .arena-side .gameplay-section-label small { font-size: 10px; }
-.realms-app .arena-resting .ui-card-art { display: grid; place-items: center; }
-.realms-app .arena-resting .ui-card-art .dinosaur-art { width: 150%; height: 150%; margin: 25% 0 0; }
+.star-row i {
+  font-style: normal;
+  color: #6b5a48;
+}
+.star-row i.on {
+  color: #f6d77a;
+}
+.realms-app .arena-fight .adventure-start.risky:not(.armed) {
+  filter: hue-rotate(-75deg) saturate(1.3);
+}
+.realms-app .arena-fight .adventure-start.armed {
+  filter: hue-rotate(-110deg) saturate(1.6);
+}
+/* A start button that cannot be pressed looks it: grey, whatever its risk colour. */
+.realms-app .gameplay-screen .adventure-start:disabled,
+.realms-app .arena-fight .adventure-start.risky:disabled {
+  filter: grayscale(1) brightness(0.75);
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.battle-pips > i.fallen {
+  background: transparent;
+  border-color: #c0563f;
+  opacity: 1;
+  box-shadow: inset 0 0 0 1px #1b1411;
+}
+.realms-app .arena-side .gameplay-section-label small {
+  font-size: 10px;
+}
+.realms-app .arena-resting .ui-card-art {
+  display: grid;
+  place-items: center;
+}
+.realms-app .arena-resting .ui-card-art .dinosaur-art {
+  width: 150%;
+  height: 150%;
+  margin: 25% 0 0;
+}
 @media (max-height: 500px) and (orientation: landscape) {
   .battle-environment ~ .battle-result,
-  .arena-embedded-battle .battle-result { top: 50%; transform: translate(-50%, -50%); max-height: calc(100% - 8px); }
-  .arena-embedded-battle .result-stars { font-size: 26px; line-height: 1.1; margin: 0; }
-  .arena-embedded-battle .battle-result .realm-button { min-height: 34px; }
+  .arena-embedded-battle .battle-result {
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-height: calc(100% - 8px);
+  }
+  .arena-embedded-battle .result-stars {
+    font-size: 26px;
+    line-height: 1.1;
+    margin: 0;
+  }
+  .arena-embedded-battle .battle-result .realm-button {
+    min-height: 34px;
+  }
 }
 
 /* Arena controls share the side panel instead of taking a full header row. */
-.arena-side-toolbar { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.arena-side-toolbar .arena-tabs { flex: 1; min-width: 0; }
-.realms-app .arena-side-toolbar > .gameplay-close { position: static; flex: none; width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; margin: 0; }
-.realms-app .arena-battle-close { position: absolute; top: 10px; right: 10px; z-index: 5; }
+.arena-phone-head {
+  display: none;
+}
+.arena-side-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.arena-side-toolbar .arena-tabs {
+  flex: 1;
+  min-width: 0;
+}
+.realms-app .arena-side-toolbar > .gameplay-close {
+  position: static;
+  flex: none;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin: 0;
+}
+.realms-app .arena-battle-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+}
 
 /* Close controls stay in the content; gameplay views no longer need a header. */
-.realms-app .gameplay-floating-close { position: absolute; top: 10px; right: 10px; z-index: 5; margin: 0; }
-.realms-app .gameplay-workshop .workshop-panel > .pk-head { padding-right: 58px; }
-.expedition-detail { position: relative; }
-.realms-app .expedition-panel-close { position: absolute; top: 8px; right: 8px; z-index: 5; margin: 0; width: 36px; min-width: 36px; height: 36px; min-height: 36px; padding: 0; }
-.expedition-detail .destination-cover { padding-right: 56px; }
+.realms-app .gameplay-floating-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  margin: 0;
+}
+.realms-app .gameplay-workshop .workshop-panel > .pk-head {
+  padding-right: 58px;
+}
+.expedition-detail {
+  position: relative;
+}
+.realms-app .expedition-panel-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  margin: 0;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+}
+.expedition-detail .destination-cover {
+  padding-right: 56px;
+}
 
 /* Give the world artwork its own space below the close control. */
 .realms-app .gameplay-expedition .expedition-detail {
@@ -2068,8 +3743,13 @@
   overflow-y: auto;
 }
 @media (max-height: 500px) and (orientation: landscape) {
-  .realms-app .gameplay-expedition .expedition-detail .destination-cover { height: 110px; }
-  .realms-app .gameplay-expedition .expedition-detail { display: block; overflow-y: auto; }
+  .realms-app .gameplay-expedition .expedition-detail .destination-cover {
+    height: 110px;
+  }
+  .realms-app .gameplay-expedition .expedition-detail {
+    display: block;
+    overflow-y: auto;
+  }
 }
 
 /* Fight summary: readable rewards, full team rows and actions kept together. */
@@ -2097,12 +3777,16 @@
   min-height: 54px;
   gap: 10px;
   padding: 10px;
-  font: 700 20px/1.2 Arial, sans-serif;
+  font:
+    700 20px/1.2 Arial,
+    sans-serif;
   font-variant-numeric: tabular-nums;
   background: #211a15;
   border: 1px solid #66503b;
 }
-.realms-app .arena-fight .arena-rewards .reward-egg.boss { font-size: 14px; }
+.realms-app .arena-fight .arena-rewards .reward-egg.boss {
+  font-size: 14px;
+}
 .realms-app .arena-fight .arena-versus {
   grid-template-columns: minmax(0, 1fr);
   gap: 10px;
@@ -2128,9 +3812,14 @@
   right: 4px;
   bottom: 4px;
   padding: 3px 5px;
-  font: 700 15px/1.2 Arial, sans-serif;
+  font:
+    700 15px/1.2 Arial,
+    sans-serif;
 }
-.realms-app .arena-fight .arena-vs { text-align: center; font-size: 16px; }
+.realms-app .arena-fight .arena-vs {
+  text-align: center;
+  font-size: 16px;
+}
 .realms-app .arena-fight .arena-forecast {
   padding: 12px;
   font-size: 15px;
@@ -2145,7 +3834,11 @@
   background: #211a15;
   font-size: 14px;
 }
-.realms-app .arena-fight .arena-ticket-line b { font: 700 16px/1.3 Arial, sans-serif; }
+.realms-app .arena-fight .arena-ticket-line b {
+  font:
+    700 16px/1.3 Arial,
+    sans-serif;
+}
 .realms-app .arena-fight .arena-ticket-line .realm-button {
   min-height: 40px;
   padding: 6px 12px;
@@ -2157,31 +3850,58 @@
   font-size: 16px !important;
 }
 @media (max-height: 500px) and (orientation: landscape) {
-  .realms-app .arena-side .arena-fight { gap: 10px; }
-  .realms-app .arena-fight .arena-rewards > span { min-height: 42px; font-size: 17px; }
-  .realms-app .arena-fight .arena-face { width: 64px; height: 68px; }
+  .realms-app .arena-side .arena-fight {
+    gap: 10px;
+  }
+  .realms-app .arena-fight .arena-rewards > span {
+    min-height: 42px;
+    font-size: 17px;
+  }
+  .realms-app .arena-fight .arena-face {
+    width: 64px;
+    height: 68px;
+  }
 }
 
 /* Team and Gate use the same comfortable scale as the fight summary. */
 .realms-app .arena-side .arena-tab:has(.arena-team),
-.realms-app .arena-side .arena-tab:has(.arena-gate) { overflow-y: auto; }
+.realms-app .arena-side .arena-tab:has(.arena-gate) {
+  overflow-y: auto;
+}
 .realms-app .arena-side :is(.arena-team, .arena-gate) {
   height: auto;
   overflow: visible;
   gap: 18px;
   padding: 8px 0 16px;
 }
-.realms-app .arena-team .team-picker { flex: none; }
-.realms-app .arena-team .team-picker-head { min-height: 40px; font-size: 14px; }
+.realms-app .arena-team .team-picker {
+  flex: none;
+}
+.realms-app .arena-team .team-picker-head {
+  min-height: 40px;
+  font-size: 14px;
+}
 .realms-app .arena-team .team-picker-roster {
   --paged-min: 84px;
   --paged-row: 112px;
   height: 242px;
   gap: 10px;
 }
-.realms-app .arena-team .team-pick { padding: 6px; }
-.realms-app .arena-team .team-pick-level { gap: 6px; font: 700 15px/1.3 Arial, sans-serif; }
-.realms-app .arena-team .team-pick-place { padding: 4px 6px; font: 700 14px/1.2 Arial, sans-serif; }
+.realms-app .arena-team .team-pick {
+  padding: 6px;
+}
+.realms-app .arena-team .team-pick-level {
+  gap: 6px;
+  font:
+    700 15px/1.3 Arial,
+    sans-serif;
+}
+.realms-app .arena-team .team-pick-place {
+  padding: 4px 6px;
+  font:
+    700 14px/1.2 Arial,
+    sans-serif;
+}
 .realms-app .arena-team .arena-team-hint {
   padding: 14px;
   font-size: 14px;
@@ -2189,28 +3909,87 @@
   background: #211a15;
   border: 1px solid #574a40;
 }
-.realms-app .arena-team .arena-resting { gap: 10px; }
-.realms-app .arena-team .arena-resting .ui-card { min-height: 76px; padding: 10px; gap: 10px; }
-.realms-app .arena-team .arena-resting .ui-card-art { width: 52px; height: 52px; }
-.realms-app .arena-team .arena-resting .realm-button { min-height: 42px; padding: 8px 12px; font-size: 15px !important; }
-.realms-app .arena-team .arena-wake-all { min-height: 48px; font-size: 15px !important; }
+.realms-app .arena-team .arena-resting {
+  gap: 10px;
+}
+.realms-app .arena-team .arena-resting .ui-card {
+  min-height: 76px;
+  padding: 10px;
+  gap: 10px;
+}
+.realms-app .arena-team .arena-resting .ui-card-art {
+  width: 52px;
+  height: 52px;
+}
+.realms-app .arena-team .arena-resting .realm-button {
+  min-height: 42px;
+  padding: 8px 12px;
+  font-size: 15px !important;
+}
+.realms-app .arena-team .arena-wake-all {
+  min-height: 48px;
+  font-size: 15px !important;
+}
 .realms-app .arena-gate .pk-upgrade-card {
   padding: 18px 14px;
   gap: 16px;
   background: #211a15;
   border: 1px solid #66503b;
 }
-.realms-app .arena-gate .pk-title { flex-wrap: wrap; gap: 10px; font-size: 17px; line-height: 1.5; }
-.realms-app .arena-gate .pk-title small { font: 14px/1.4 Arial, sans-serif; }
-.realms-app .arena-gate .pk-upgrade-card > ul:not(.pk-costs) { gap: 12px; font-size: 15px; line-height: 1.6; }
-.realms-app .arena-gate .pk-costs { flex-wrap: wrap; gap: 8px; }
-.realms-app .arena-gate .pk-cost { padding: 8px; font: 600 15px/1.3 Arial, sans-serif; }
-.realms-app .arena-gate .pk-upgrade-card-actions { flex-wrap: wrap; gap: 12px; margin-top: 4px; }
-.realms-app .arena-gate .pk-upgrade-card-actions .realm-button { min-height: 48px; font-size: 15px !important; }
-.realms-app .arena-gate .arena-season { gap: 18px; padding: 18px 14px; background: #211a15; }
-.realms-app .arena-gate .arena-season .gameplay-section-label { flex-wrap: wrap; gap: 8px; font-size: 14px; line-height: 1.5; }
-.realms-app .arena-gate .arena-season .gameplay-section-label small { font: 13px/1.4 Arial, sans-serif; }
-.realms-app .arena-gate .arena-season ol { gap: 12px; }
+.realms-app .arena-gate .pk-title {
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.realms-app .arena-gate .pk-title small {
+  font:
+    14px/1.4 Arial,
+    sans-serif;
+}
+.realms-app .arena-gate .pk-upgrade-card > ul:not(.pk-costs) {
+  gap: 12px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.realms-app .arena-gate .pk-costs {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.realms-app .arena-gate .pk-cost {
+  padding: 8px;
+  font:
+    600 15px/1.3 Arial,
+    sans-serif;
+}
+.realms-app .arena-gate .pk-upgrade-card-actions {
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+.realms-app .arena-gate .pk-upgrade-card-actions .realm-button {
+  min-height: 48px;
+  font-size: 15px !important;
+}
+.realms-app .arena-gate .arena-season {
+  gap: 18px;
+  padding: 18px 14px;
+  background: #211a15;
+}
+.realms-app .arena-gate .arena-season .gameplay-section-label {
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.realms-app .arena-gate .arena-season .gameplay-section-label small {
+  font:
+    13px/1.4 Arial,
+    sans-serif;
+}
+.realms-app .arena-gate .arena-season ol {
+  gap: 12px;
+}
 .realms-app .arena-gate .arena-season li {
   grid-template-columns: 40px minmax(0, 1fr);
   gap: 8px 12px;
@@ -2221,15 +4000,30 @@
   font-size: 15px;
   line-height: 1.5;
 }
-.realms-app .arena-gate .arena-season li > b { font: 700 23px/1.3 Arial, sans-serif; }
-.realms-app .arena-gate .arena-season li .realm-meter { height: 7px; }
-.realms-app .arena-gate .arena-season > small { font-size: 13px; line-height: 1.5; }
+.realms-app .arena-gate .arena-season li > b {
+  font:
+    700 23px/1.3 Arial,
+    sans-serif;
+}
+.realms-app .arena-gate .arena-season li .realm-meter {
+  height: 7px;
+}
+.realms-app .arena-gate .arena-season > small {
+  font-size: 13px;
+  line-height: 1.5;
+}
 @media (max-height: 500px) and (orientation: landscape) {
-  .realms-app .arena-team .team-picker-roster { --paged-min: 72px; --paged-row: 92px; height: 202px; }
+  .realms-app .arena-team .team-picker-roster {
+    --paged-min: 72px;
+    --paged-row: 92px;
+    height: 202px;
+  }
 }
 
 /* Expedition tabs use the available panel height and paginate the roster. */
-.realms-app .gameplay-expedition .expedition-detail .adventure-detail-body { display: block; }
+.realms-app .gameplay-expedition .expedition-detail .adventure-detail-body {
+  display: block;
+}
 .realms-app .gameplay-expedition .expedition-detail .expedition-guide {
   display: flex;
   flex-direction: column;
@@ -2240,20 +4034,56 @@
   overflow: visible;
   padding-bottom: 16px;
 }
-.realms-app .expedition-guide .ui-tab { min-height: 44px; font-size: 14px; }
+.realms-app .expedition-guide .ui-tab {
+  min-height: 44px;
+  font-size: 14px;
+}
 .realms-app .expedition-guide .expedition-section-title {
   margin: 0;
   color: #f6d77a;
   font: 700 14px/1.5 var(--font-body);
 }
-.realms-app .expedition-guide .expedition-stage-row { flex-wrap: wrap; gap: 12px; padding: 14px 12px; background: #211a15; border: 1px solid #574a40; }
-.realms-app .expedition-guide .expedition-stage-row strong { font-size: 16px; line-height: 1.5; }
-.realms-app .expedition-guide .expedition-pips { gap: 5px; }
-.realms-app .expedition-guide .expedition-pips li { min-width: 20px; height: 9px; }
-.realms-app .expedition-guide .expedition-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
-.realms-app .expedition-guide .expedition-facts li { min-height: 44px; padding: 10px 8px; gap: 8px; font: 600 14px/1.4 Arial, sans-serif; }
-.realms-app .expedition-guide .expedition-loot { display: grid; gap: 10px; }
-.realms-app .expedition-detail .expedition-rewards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.realms-app .expedition-guide .expedition-stage-row {
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 12px;
+  background: #211a15;
+  border: 1px solid #574a40;
+}
+.realms-app .expedition-guide .expedition-stage-row strong {
+  font-size: 16px;
+  line-height: 1.5;
+}
+.realms-app .expedition-guide .expedition-pips {
+  gap: 5px;
+}
+.realms-app .expedition-guide .expedition-pips li {
+  min-width: 20px;
+  height: 9px;
+}
+.realms-app .expedition-guide .expedition-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.realms-app .expedition-guide .expedition-facts li {
+  min-height: 44px;
+  padding: 10px 8px;
+  gap: 8px;
+  font:
+    600 14px/1.4 Arial,
+    sans-serif;
+}
+.realms-app .expedition-guide .expedition-loot {
+  display: grid;
+  gap: 10px;
+}
+.realms-app .expedition-detail .expedition-rewards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
 .realms-app .expedition-detail .expedition-rewards > span {
   display: flex;
   flex-direction: column;
@@ -2261,38 +4091,158 @@
   min-height: 82px;
   padding: 12px 8px;
   gap: 6px;
-  font: 700 20px/1.2 Arial, sans-serif;
+  font:
+    700 20px/1.2 Arial,
+    sans-serif;
   font-variant-numeric: tabular-nums;
   background: #211a15;
   border: 1px solid #66503b;
 }
-.realms-app .expedition-detail .expedition-rewards small { display: block; font: 13px/1.4 var(--font-body); white-space: normal; overflow: visible; text-align: center; }
-.realms-app .expedition-guide .expedition-notice { gap: 12px; padding: 14px 12px; font-size: 14px; line-height: 1.6; flex-wrap: wrap; }
-.realms-app .expedition-guide .expedition-notice .realm-button { min-height: 44px; padding: 8px 12px; font-size: 14px !important; }
-.realms-app .expedition-guide .team-picker { padding: 12px; border: 1px solid #574a40; background: #211a15; }
-.realms-app .expedition-guide .team-picker-head { min-height: 38px; font-size: 14px; }
-.realms-app .gameplay-expedition .expedition-guide .team-picker-roster { --paged-min: 78px; --paged-row: 104px; height: 226px; gap: 8px; }
-.realms-app .expedition-guide .team-pick-level { font: 700 15px/1.3 Arial, sans-serif; }
-.realms-app .expedition-guide .expedition-tab > .adventure-start { margin-top: 0; min-height: 52px; height: auto; padding: 12px 8px; font-size: 15px !important; }
-.realms-app .expedition-guide .expedition-hours { flex-wrap: wrap; gap: 8px; }
-.realms-app .expedition-guide .expedition-hours button { flex: 1; min-width: 60px; min-height: 48px; font: 700 17px/1.3 Arial, sans-serif; }
-.realms-app .expedition-guide .expedition-daily { width: 100%; margin: 0; padding: 10px 12px; font-size: 13px; background: #30251f; white-space: normal; }
-.realms-app .expedition-guide .expedition-runs { overflow: visible; gap: 16px; }
-.realms-app .expedition-guide .expedition-active-summary { padding: 14px 12px; border: 1px solid #574a40; background: #211a15; }
-.realms-app .expedition-guide .expedition-active-summary p { margin: 8px 0 0; font: 14px/1.4 Arial, sans-serif; color: #cdbfa8; }
-.realms-app .expedition-guide .expedition-runs .ui-card { display: flex; flex-wrap: wrap; gap: 12px; padding: 16px 12px; min-height: 116px; }
-.realms-app .expedition-guide .expedition-runs .ui-card-text { flex: 1; min-width: 140px; }
-.realms-app .expedition-guide .expedition-runs .ui-card-title { font-size: 15px; line-height: 1.5; }
-.realms-app .expedition-guide .expedition-runs .ui-card-subtitle { font-size: 13px; line-height: 1.5; gap: 10px; }
-.realms-app .expedition-guide .expedition-runs .ui-card-side { flex-basis: 100%; flex-direction: row; justify-content: space-between; align-items: center; }
-.realms-app .expedition-guide .expedition-runs .realm-meter { height: 7px; }
-.realms-app .expedition-guide .expedition-faces { gap: 8px; }
-.realms-app .expedition-guide .expedition-faces > span { width: 48px; height: 52px; }
-.realms-app .expedition-guide .expedition-runs :is(.realm-button, .realm-gem-finish) { min-height: 44px; padding: 8px 12px; font-size: 14px !important; }
-.realms-app .expedition-guide .expedition-portal-up { display: flex; flex-direction: column; align-items: stretch; gap: 14px; padding: 16px 12px; font-size: 14px; line-height: 1.5; }
-.realms-app .expedition-guide .expedition-portal-up .pk-costs { flex-wrap: wrap; gap: 8px; }
-.realms-app .expedition-guide .expedition-portal-up .pk-cost { padding: 8px; font: 600 14px/1.3 Arial, sans-serif; }
-.realms-app .expedition-guide .expedition-portal-up .realm-button { min-height: 48px; }
+.realms-app .expedition-detail .expedition-rewards small {
+  display: block;
+  font: 13px/1.4 var(--font-body);
+  white-space: normal;
+  overflow: visible;
+  text-align: center;
+}
+.realms-app .expedition-guide .expedition-notice {
+  gap: 12px;
+  padding: 14px 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  flex-wrap: wrap;
+}
+.realms-app .expedition-guide .expedition-notice .realm-button {
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 14px !important;
+}
+.realms-app .expedition-guide .team-picker {
+  padding: 12px;
+  border: 1px solid #574a40;
+  background: #211a15;
+}
+.realms-app .expedition-guide .team-picker-head {
+  min-height: 38px;
+  font-size: 14px;
+}
+.realms-app .gameplay-expedition .expedition-guide .team-picker-roster {
+  --paged-min: 78px;
+  --paged-row: 104px;
+  height: 226px;
+  gap: 8px;
+}
+.realms-app .expedition-guide .team-pick-level {
+  font:
+    700 15px/1.3 Arial,
+    sans-serif;
+}
+.realms-app .expedition-guide .expedition-tab > .adventure-start {
+  margin-top: 0;
+  min-height: 52px;
+  height: auto;
+  padding: 12px 8px;
+  font-size: 15px !important;
+}
+.realms-app .expedition-guide .expedition-hours {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.realms-app .expedition-guide .expedition-hours button {
+  flex: 1;
+  min-width: 60px;
+  min-height: 48px;
+  font:
+    700 17px/1.3 Arial,
+    sans-serif;
+}
+.realms-app .expedition-guide .expedition-daily {
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  background: #30251f;
+  white-space: normal;
+}
+.realms-app .expedition-guide .expedition-runs {
+  overflow: visible;
+  gap: 16px;
+}
+.realms-app .expedition-guide .expedition-active-summary {
+  padding: 14px 12px;
+  border: 1px solid #574a40;
+  background: #211a15;
+}
+.realms-app .expedition-guide .expedition-active-summary p {
+  margin: 8px 0 0;
+  font:
+    14px/1.4 Arial,
+    sans-serif;
+  color: #cdbfa8;
+}
+.realms-app .expedition-guide .expedition-runs .ui-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 12px;
+  min-height: 116px;
+}
+.realms-app .expedition-guide .expedition-runs .ui-card-text {
+  flex: 1;
+  min-width: 140px;
+}
+.realms-app .expedition-guide .expedition-runs .ui-card-title {
+  font-size: 15px;
+  line-height: 1.5;
+}
+.realms-app .expedition-guide .expedition-runs .ui-card-subtitle {
+  font-size: 13px;
+  line-height: 1.5;
+  gap: 10px;
+}
+.realms-app .expedition-guide .expedition-runs .ui-card-side {
+  flex-basis: 100%;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+.realms-app .expedition-guide .expedition-runs .realm-meter {
+  height: 7px;
+}
+.realms-app .expedition-guide .expedition-faces {
+  gap: 8px;
+}
+.realms-app .expedition-guide .expedition-faces > span {
+  width: 48px;
+  height: 52px;
+}
+.realms-app .expedition-guide .expedition-runs :is(.realm-button, .realm-gem-finish) {
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 14px !important;
+}
+.realms-app .expedition-guide .expedition-portal-up {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  padding: 16px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.realms-app .expedition-guide .expedition-portal-up .pk-costs {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.realms-app .expedition-guide .expedition-portal-up .pk-cost {
+  padding: 8px;
+  font:
+    600 14px/1.3 Arial,
+    sans-serif;
+}
+.realms-app .expedition-guide .expedition-portal-up .realm-button {
+  min-height: 48px;
+}
 
 /* Fit the expedition summary to the viewport instead of stacking fixed-height blocks. */
 .realms-app .gameplay-expedition .expedition-detail {
@@ -2301,7 +4251,9 @@
   padding-top: 48px;
   overflow: hidden;
 }
-.realms-app .gameplay-expedition .expedition-detail .destination-cover { height: clamp(90px, 15dvh, 150px); }
+.realms-app .gameplay-expedition .expedition-detail .destination-cover {
+  height: clamp(90px, 15dvh, 150px);
+}
 .realms-app .gameplay-expedition .expedition-detail .adventure-detail-body {
   display: grid;
   min-height: 0;
@@ -2318,18 +4270,65 @@
   min-height: 0;
   gap: 10px;
   padding-bottom: 4px;
-  overflow: hidden;
+  /* the roster pages to fit, but notices (portal, supplies) can still overflow: scroll then, never clip */
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
-.realms-app .expedition-guide .expedition-stage-row { padding: 8px; gap: 8px; }
-.realms-app .expedition-guide .expedition-stage-row strong { font-size: 14px; }
-.realms-app .expedition-guide .expedition-facts { display: flex; flex-wrap: wrap; gap: 6px; }
-.realms-app .expedition-guide .expedition-facts li { min-height: 32px; padding: 6px; font-size: 13px; }
-.realms-app .expedition-guide .expedition-loot { gap: 6px; }
-.realms-app .expedition-detail .expedition-rewards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.realms-app .expedition-detail .expedition-rewards > span { min-height: 58px; padding: 6px 4px; gap: 3px; font-size: 17px; }
-.realms-app .expedition-detail .expedition-rewards small { font-size: 11px; }
-.realms-app .expedition-guide .team-picker { flex: 1 1 auto; min-height: 100px; padding: 8px; }
-.realms-app .expedition-guide .team-picker-head { min-height: 28px; font-size: 13px; }
+/* the three tabs always fit: let the selected tab's lip show instead of clipping it */
+.realms-app .gameplay-expedition .expedition-guide > .ui-tabs {
+  overflow: visible;
+  padding-top: 2px;
+}
+/* with the map beside the panel, "All destinations" has nowhere to scroll to */
+@media (min-width: 761px) {
+  .realms-app .gameplay-expedition .mobile-destination-picker {
+    display: none;
+  }
+}
+.realms-app .expedition-guide .expedition-stage-row {
+  padding: 8px;
+  gap: 8px;
+}
+.realms-app .expedition-guide .expedition-stage-row strong {
+  font-size: 14px;
+}
+.realms-app .expedition-guide .expedition-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.realms-app .expedition-guide .expedition-facts li {
+  min-height: 32px;
+  padding: 6px;
+  font-size: 13px;
+}
+.realms-app .expedition-guide .expedition-loot {
+  gap: 6px;
+}
+.realms-app .expedition-detail .expedition-rewards {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.realms-app .expedition-detail .expedition-rewards > span {
+  min-height: 58px;
+  padding: 6px 4px;
+  gap: 3px;
+  font-size: 17px;
+}
+.realms-app .expedition-detail .expedition-rewards small {
+  font-size: 11px;
+}
+.realms-app .expedition-guide .team-picker {
+  flex: 1 1 auto;
+  min-height: 100px;
+  padding: 8px;
+}
+.realms-app .expedition-guide .team-picker-head {
+  min-height: 28px;
+  font-size: 13px;
+}
 .realms-app .gameplay-expedition .expedition-guide .team-picker-roster {
   --paged-min: 72px;
   --paged-row: 82px;
@@ -2337,43 +4336,103 @@
   min-height: 0;
   gap: 6px;
 }
-.realms-app .expedition-guide .expedition-tab > .adventure-start { min-height: 44px; padding: 8px; }
-.realms-app .expedition-guide .expedition-notice { padding: 8px; gap: 8px; font-size: 13px; line-height: 1.4; }
-.realms-app .expedition-guide .expedition-notice .realm-button { min-height: 36px; padding: 6px 8px; }
-.realms-app .expedition-guide .expedition-hours button { min-height: 36px; }
-.realms-app .expedition-guide .expedition-daily { padding: 4px 0; }
-.realms-app .expedition-guide .expedition-runs { gap: 10px; min-height: 0; }
-.realms-app .expedition-guide .expedition-active-summary { padding: 8px; }
-.realms-app .expedition-guide .expedition-active-summary p { margin-top: 4px; }
-.realms-app .expedition-guide .expedition-runs .ui-card { padding: 10px 8px; min-height: 0; gap: 8px; }
-.realms-app .expedition-guide .expedition-faces > span { width: 34px; height: 38px; }
-.realms-app .expedition-guide .expedition-portal-up { padding: 10px 8px; gap: 8px; }
+.realms-app .expedition-guide .expedition-tab > .adventure-start {
+  min-height: 44px;
+  padding: 8px;
+}
+.realms-app .expedition-guide .expedition-notice {
+  padding: 8px;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.realms-app .expedition-guide .expedition-notice .realm-button {
+  min-height: 36px;
+  padding: 6px 8px;
+}
+.realms-app .expedition-guide .expedition-hours button {
+  min-height: 36px;
+}
+.realms-app .expedition-guide .expedition-daily {
+  padding: 4px 0;
+}
+.realms-app .expedition-guide .expedition-runs {
+  gap: 10px;
+  min-height: 0;
+}
+.realms-app .expedition-guide .expedition-active-summary {
+  padding: 8px;
+}
+.realms-app .expedition-guide .expedition-active-summary p {
+  margin-top: 4px;
+}
+.realms-app .expedition-guide .expedition-runs .ui-card {
+  padding: 10px 8px;
+  min-height: 0;
+  gap: 8px;
+}
+.realms-app .expedition-guide .expedition-faces > span {
+  width: 34px;
+  height: 38px;
+}
+.realms-app .expedition-guide .expedition-portal-up {
+  padding: 10px 8px;
+  gap: 8px;
+}
 @media (max-height: 740px) {
-  .realms-app .gameplay-expedition .expedition-detail .destination-cover { height: 70px; }
+  .realms-app .gameplay-expedition .expedition-detail .destination-cover {
+    height: 70px;
+  }
   .realms-app .gameplay-expedition .expedition-detail .expedition-tab,
-  .realms-app .gameplay-expedition .expedition-detail .expedition-guide { gap: 6px; }
-  .realms-app .expedition-detail .expedition-rewards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .realms-app .expedition-detail .expedition-rewards > span { min-height: 48px; padding: 4px 2px; font-size: 15px; }
-  .realms-app .expedition-guide .team-picker { min-height: 92px; }
-  .realms-app .gameplay-expedition .expedition-guide .team-picker-roster { --paged-row: 62px; }
-  .realms-app .expedition-guide .expedition-facts li { min-height: 26px; padding: 4px; }
-  .realms-app .expedition-guide .ui-tab { min-height: 34px; }
+  .realms-app .gameplay-expedition .expedition-detail .expedition-guide {
+    gap: 6px;
+  }
+  .realms-app .expedition-detail .expedition-rewards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .realms-app .expedition-detail .expedition-rewards > span {
+    min-height: 48px;
+    padding: 4px 2px;
+    font-size: 15px;
+  }
+  .realms-app .expedition-guide .team-picker {
+    min-height: 92px;
+  }
+  .realms-app .gameplay-expedition .expedition-guide .team-picker-roster {
+    --paged-row: 62px;
+  }
+  .realms-app .expedition-guide .expedition-facts li {
+    min-height: 26px;
+    padding: 4px;
+  }
+  .realms-app .expedition-guide .ui-tab {
+    min-height: 34px;
+  }
 }
 
 /* Patrol setup stays compact enough to show requirements, team and departure together. */
-.realms-app .gameplay-expedition .expedition-detail .expedition-patrol-tab { gap: 8px; }
-.realms-app .expedition-guide .expedition-patrol-tab > .expedition-section-title { font-size: 13px; }
+.realms-app .gameplay-expedition .expedition-detail .expedition-patrol-tab {
+  gap: 8px;
+}
+.realms-app .expedition-guide .expedition-patrol-tab > .expedition-section-title {
+  font-size: 13px;
+}
 .realms-app .expedition-guide .expedition-patrol-tab .expedition-hours {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
-.realms-app .expedition-guide .expedition-patrol-tab .expedition-hours button { min-width: 0; min-height: 36px; }
+.realms-app .expedition-guide .expedition-patrol-tab .expedition-hours button {
+  min-width: 0;
+  min-height: 36px;
+}
 .realms-app .expedition-guide .expedition-patrol-tab .expedition-daily {
   grid-column: 1 / -1;
   padding: 2px 0;
   background: none;
-  font: 12px/1.4 Arial, sans-serif;
+  font:
+    12px/1.4 Arial,
+    sans-serif;
 }
 .realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards {
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -2384,14 +4443,18 @@
   padding: 6px 2px;
   font-size: 16px;
 }
-.realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards small { font-size: 10px; }
+.realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards small {
+  font-size: 10px;
+}
 .realms-app .expedition-guide .expedition-patrol-tab .expedition-notice {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   padding: 10px;
   gap: 6px;
 }
-.realms-app .expedition-guide .expedition-patrol-tab .expedition-notice > span { min-width: 0; }
+.realms-app .expedition-guide .expedition-patrol-tab .expedition-notice > span {
+  min-width: 0;
+}
 .realms-app .expedition-guide .expedition-patrol-tab .expedition-notice .realm-button {
   width: 100%;
   min-height: 36px;
@@ -2409,9 +4472,16 @@
   min-height: 46px;
 }
 @media (max-height: 740px) {
-  .realms-app .expedition-guide .expedition-patrol-tab .team-picker { min-height: 100px; }
-  .realms-app .gameplay-expedition .expedition-patrol-tab .team-picker-roster { --paged-row: 64px; }
-  .realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards > span { min-height: 54px; font-size: 14px; }
+  .realms-app .expedition-guide .expedition-patrol-tab .team-picker {
+    min-height: 100px;
+  }
+  .realms-app .gameplay-expedition .expedition-patrol-tab .team-picker-roster {
+    --paged-row: 64px;
+  }
+  .realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards > span {
+    min-height: 54px;
+    font-size: 14px;
+  }
 }
 
 /* Close belongs on the cover, without reserving an empty toolbar above it. */
@@ -2432,4 +4502,125 @@
   max-width: calc(100% - 60px);
   font-size: 10px;
   line-height: 1.4;
+}
+
+/* Upright phones: undo the fixed-height grid above so the panel stacks and the screen scrolls. */
+@media (max-width: 760px) and (orientation: portrait) {
+  .realms-app .gameplay-expedition .expedition-detail,
+  .realms-app .gameplay-expedition .expedition-detail .adventure-detail-body,
+  .realms-app .gameplay-expedition .expedition-detail .expedition-tab {
+    display: block;
+    overflow: visible;
+    min-height: 0;
+  }
+  .realms-app .gameplay-expedition .expedition-detail .expedition-guide {
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: 10px;
+  }
+  .realms-app .gameplay-expedition .expedition-detail .expedition-tab {
+    display: grid;
+    gap: 10px;
+  }
+  .realms-app .gameplay-expedition .mobile-destination-picker {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 44px;
+    margin: 12px 0 0;
+  }
+  .realms-app .gameplay-screen.gameplay-expedition .adventure-layout {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+/* Upright phones: ten map islands don't fit a phone's width, so the destinations become a plain list. */
+.destination-list {
+  display: none;
+}
+@media (max-width: 760px) and (orientation: portrait) {
+  .realms-app .adventure-layout:has(> .expedition-detail) > .adventure-map {
+    display: none;
+  }
+  .realms-app .destination-list {
+    display: grid;
+    gap: 8px;
+    padding: 12px 10px 16px;
+  }
+  .destination-list h3 {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 0;
+    font-size: 15px;
+    color: var(--px-bone-0);
+  }
+  .destination-list h3 small {
+    font-size: 12px;
+    color: var(--px-bone-3);
+  }
+  .destination-list ol {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .destination-list button {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 54px;
+    padding: 6px 10px;
+    font: inherit;
+    text-align: left;
+    color: var(--px-bone-1);
+    cursor: pointer;
+    background: #211a15;
+    border: 2px solid #3d332d;
+    border-left: 4px solid var(--region-color);
+  }
+  .destination-list button.selected {
+    background: #3a2e27;
+    border-color: var(--px-amber-1);
+    border-left-color: var(--region-color);
+  }
+  .destination-list button.locked {
+    opacity: 0.6;
+  }
+  .destination-list-icon {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    background: #1b1411;
+    border: 2px solid var(--region-color);
+    border-radius: 50%;
+  }
+  .destination-list-name {
+    display: grid;
+    min-width: 0;
+  }
+  .destination-list-name strong {
+    overflow: hidden;
+    font-size: 14px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .destination-list-name small {
+    font-size: 12px;
+    color: var(--px-bone-3);
+  }
+  .destination-list-progress {
+    font-size: 14px;
+    font-weight: 700;
+    color: #f6d77a;
+    font-variant-numeric: tabular-nums;
+  }
+  .destination-list button.cleared .destination-list-progress {
+    color: #9be38f;
+  }
 }

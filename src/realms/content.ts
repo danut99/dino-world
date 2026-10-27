@@ -37,10 +37,7 @@ export const UTILITY_BUILDINGS = {
     name: ['Piață', 'Market'],
     cost: 300,
     icon: '⚖',
-    description: [
-      'Cumpără ouă pentru lumile în care ai habitat.',
-      'Buy eggs for the worlds where you have a habitat.',
-    ],
+    description: ['Cumpără ouă pentru lumile în care ai habitat.', 'Buy eggs for the worlds where you have a habitat.'],
   },
 } as const;
 export type UtilityKind = keyof typeof UTILITY_BUILDINGS;
@@ -55,6 +52,19 @@ export const ITEMS = {
   provisions: { name: ['Provizii de expediție', 'Expedition supplies'], icon: '◈', color: '#dfbc78' },
 } as const;
 export type ItemId = keyof typeof ITEMS;
+/** What each crafted item is for, in one plain sentence. */
+export const ITEM_USE: Partial<Record<ItemId, readonly [string, string]>> = {
+  provisions: [
+    'Hrana echipei: unele expediții și patrulele o cer.',
+    'Food for the team: some expeditions and patrols need it.',
+  ],
+  habitatKit: ['Mărește o lume ca să încapă mai mulți dinozauri.', 'Grows a world so more dinosaurs fit in it.'],
+  evolutionCrystal: [
+    'Face un dinozaur tânăr adult sau îi dă +1 nivel.',
+    'Evolves a juvenile into an adult, or gives +1 level.',
+  ],
+  lamp: ['Se pune pe insulă: lumile tale dau mai mult aur.', 'Goes on your island: your worlds give more gold.'],
+};
 export type Inventory = Record<ItemId, number>;
 export const initialInventory = (): Inventory => ({
   wood: 30,
@@ -79,37 +89,56 @@ export const FARM_LEVELS: {
   minutes: number;
 }[] = [
   { plots: 2, yield: 1, gold: 0, materials: {}, minutes: 0 },
-  { plots: 3, yield: 1.15, gold: 400, materials: {}, minutes: 5 },
-  { plots: 4, yield: 1.3, gold: 1500, materials: { wood: 30 }, minutes: 60 },
-  { plots: 5, yield: 1.45, gold: 5000, materials: { wood: 60, stone: 40 }, minutes: 240 },
-  { plots: 6, yield: 1.6, gold: 12000, materials: { wood: 100, stone: 80, crystal: 10 }, minutes: 480 },
+  { plots: 3, yield: 1.25, gold: 400, materials: {}, minutes: 5 },
+  { plots: 4, yield: 1.5, gold: 1500, materials: { wood: 30 }, minutes: 60 },
+  { plots: 5, yield: 2, gold: 5000, materials: { wood: 60, stone: 40 }, minutes: 240 },
+  { plots: 6, yield: 2.5, gold: 12000, materials: { wood: 100, stone: 80, crystal: 10 }, minutes: 480 },
 ];
-/** Crops: more food costs more gold and takes longer. Better crops unlock at higher farm levels. */
+/**
+ * Crops: all three make the same food and are open from the start; they differ only in how long you are away (now,
+ * a break, overnight). Farm levels add plots and multiply every harvest.
+ */
 export const CROPS = [
-  { id: 'ferns', name: ['Ferigi', 'Ferns'], icon: '🌿', cost: 0, seconds: 2 * 60, food: 3, level: 1 },
-  { id: 'cicadas', name: ['Cicade', 'Cicadas'], icon: '🦗', cost: 5, seconds: 15 * 60, food: 15, level: 1 },
-  { id: 'ginkgo', name: ['Ginkgo', 'Ginkgo'], icon: '🍃', cost: 15, seconds: 3600, food: 45, level: 2 },
-  { id: 'meat', name: ['Carne afumată', 'Smoked meat'], icon: '🍖', cost: 30, seconds: 2 * 3600, food: 80, level: 3 },
-  { id: 'amber', name: ['Fructe de chihlimbar', 'Amber fruit'], icon: '🍊', cost: 50, seconds: 4 * 3600, food: 140, level: 4 },
-  { id: 'feast', name: ['Ospăț preistoric', 'Primeval feast'], icon: '🥩', cost: 80, seconds: 8 * 3600, food: 280, level: 5 },
+  { id: 'ferns', name: ['Ferigi', 'Ferns'], icon: '🌿', cost: 0, seconds: 5 * 60, food: 10, level: 1 },
+  { id: 'cicadas', name: ['Cicade', 'Cicadas'], icon: '🦗', cost: 5, seconds: 3600, food: 60, level: 1 },
+  { id: 'feast', name: ['Ospăț', 'Feast'], icon: '🍖', cost: 25, seconds: 8 * 3600, food: 350, level: 1 },
 ] as const;
+/** Crops from older saves, mapped to the current crop closest in length. */
+export const RETIRED_CROPS: Record<string, CropId> = { ginkgo: 'cicadas', meat: 'cicadas', amber: 'feast' };
 export type CropId = (typeof CROPS)[number]['id'];
 export const RECIPES = [
   {
-    id: 'provisions', name: ['Pachet de provizii', 'Supply pack'],
-    cost: { wood: 2, fiber: 1 }, food: 30, seconds: 3 * 60, output: 'provisions', quantity: 1,
+    id: 'provisions',
+    name: ['Pachet de provizii', 'Supply pack'],
+    cost: { wood: 2, fiber: 1 },
+    food: 30,
+    seconds: 3 * 60,
+    output: 'provisions',
+    quantity: 1,
   },
   {
-    id: 'kit', name: ['Kit de habitat', 'Habitat kit'],
-    cost: { wood: 20, stone: 20, fiber: 6 }, seconds: 20 * 60, output: 'habitatKit', quantity: 1,
+    id: 'kit',
+    name: ['Kit de habitat', 'Habitat kit'],
+    cost: { wood: 20, stone: 20, fiber: 6 },
+    seconds: 20 * 60,
+    output: 'habitatKit',
+    quantity: 1,
   },
   {
-    id: 'evolution', name: ['Cristal de evoluție', 'Evolution crystal'],
-    cost: { crystal: 8, fiber: 6 }, seconds: 30 * 60, output: 'evolutionCrystal', quantity: 1,
+    id: 'evolution',
+    name: ['Cristal de evoluție', 'Evolution crystal'],
+    cost: { crystal: 8, fiber: 6 },
+    seconds: 30 * 60,
+    output: 'evolutionCrystal',
+    quantity: 1,
   },
   {
-    id: 'lamp', name: ['Lampă ornamentală', 'Ornamental lamp'],
-    cost: { stone: 20, crystal: 6 }, seconds: 20 * 60, output: 'lamp', quantity: 1,
+    id: 'lamp',
+    name: ['Lampă ornamentală', 'Ornamental lamp'],
+    cost: { stone: 20, crystal: 6 },
+    seconds: 20 * 60,
+    output: 'lamp',
+    quantity: 1,
   },
 ] satisfies {
   id: string;
@@ -155,16 +184,96 @@ export interface Region {
   y: number;
 }
 export const REGIONS: readonly Region[] = [
-  { id: 'training', name: ['Pasul de jar', 'Ember pass'], element: 'fire', materials: ['wood', 'stone'], minutes: [1, 3, 7, 15, 25], x: 78, y: 23 },
-  { id: 'ruins', name: ['Reciful de safir', 'Sapphire reef'], element: 'water', materials: ['wood', 'crystal'], minutes: [30, 45, 60, 90, 120], x: 65, y: 75 },
-  { id: 'canyon', name: ['Ruinele canionului', 'Canyon ruins'], element: 'earth', materials: ['stone', 'crystal'], minutes: [90, 120, 150, 180, 240], x: 37, y: 62 },
-  { id: 'frost', name: ['Poiana ferigilor', 'Fern glade'], element: 'nature', materials: ['wood', 'fiber'], minutes: [120, 150, 180, 240, 300], x: 20, y: 75 },
-  { id: 'lagoon', name: ['Coroana de gheață', 'The frozen crown'], element: 'ice', materials: ['stone', 'crystal'], minutes: [150, 180, 240, 300, 360], x: 20, y: 18 },
-  { id: 'wind', name: ['Turnul furtunii', 'Storm spire'], element: 'lightning', materials: ['crystal', 'fiber'], minutes: [180, 240, 300, 360, 420], x: 86, y: 44 },
-  { id: 'thunder', name: ['Arcurile cerului', 'Sky arches'], element: 'wind', materials: ['fiber', 'wood'], minutes: [240, 300, 360, 420, 480], x: 45, y: 20 },
-  { id: 'twilight', name: ['Pădurea șoaptelor', 'Whispering wood'], element: 'dark', materials: ['crystal', 'stone'], minutes: [270, 330, 390, 450, 510], x: 14, y: 48 },
-  { id: 'dawn', name: ['Templul zorilor', 'Temple of dawn'], element: 'light', materials: ['crystal', 'stone'], minutes: [300, 360, 420, 480, 540], x: 49, y: 85 },
-  { id: 'sigils', name: ['Sanctuarul runelor', 'Rune sanctuary'], element: 'arcane', materials: ['crystal', 'fiber'], minutes: [360, 420, 480, 540, 600], x: 64, y: 45 },
+  {
+    id: 'training',
+    name: ['Pasul de jar', 'Ember pass'],
+    element: 'fire',
+    materials: ['wood', 'stone'],
+    minutes: [1, 3, 7, 15, 25],
+    x: 78,
+    y: 23,
+  },
+  {
+    id: 'ruins',
+    name: ['Reciful de safir', 'Sapphire reef'],
+    element: 'water',
+    materials: ['wood', 'crystal'],
+    minutes: [30, 45, 60, 90, 120],
+    x: 65,
+    y: 75,
+  },
+  {
+    id: 'canyon',
+    name: ['Ruinele canionului', 'Canyon ruins'],
+    element: 'earth',
+    materials: ['stone', 'crystal'],
+    minutes: [90, 120, 150, 180, 240],
+    x: 37,
+    y: 62,
+  },
+  {
+    id: 'frost',
+    name: ['Poiana ferigilor', 'Fern glade'],
+    element: 'nature',
+    materials: ['wood', 'fiber'],
+    minutes: [120, 150, 180, 240, 300],
+    x: 20,
+    y: 75,
+  },
+  {
+    id: 'lagoon',
+    name: ['Coroana de gheață', 'The frozen crown'],
+    element: 'ice',
+    materials: ['stone', 'crystal'],
+    minutes: [150, 180, 240, 300, 360],
+    x: 20,
+    y: 18,
+  },
+  {
+    id: 'wind',
+    name: ['Turnul furtunii', 'Storm spire'],
+    element: 'lightning',
+    materials: ['crystal', 'fiber'],
+    minutes: [180, 240, 300, 360, 420],
+    x: 86,
+    y: 44,
+  },
+  {
+    id: 'thunder',
+    name: ['Arcurile cerului', 'Sky arches'],
+    element: 'wind',
+    materials: ['fiber', 'wood'],
+    minutes: [240, 300, 360, 420, 480],
+    x: 45,
+    y: 20,
+  },
+  {
+    id: 'twilight',
+    name: ['Pădurea șoaptelor', 'Whispering wood'],
+    element: 'dark',
+    materials: ['crystal', 'stone'],
+    minutes: [270, 330, 390, 450, 510],
+    x: 14,
+    y: 48,
+  },
+  {
+    id: 'dawn',
+    name: ['Templul zorilor', 'Temple of dawn'],
+    element: 'light',
+    materials: ['crystal', 'stone'],
+    minutes: [300, 360, 420, 480, 540],
+    x: 49,
+    y: 85,
+  },
+  {
+    id: 'sigils',
+    name: ['Sanctuarul runelor', 'Rune sanctuary'],
+    element: 'arcane',
+    materials: ['crystal', 'fiber'],
+    minutes: [360, 420, 480, 540, 600],
+    x: 64,
+    y: 45,
+  },
 ];
 /** Stages in every region. */
 export const REGION_STAGES = 5;

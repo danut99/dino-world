@@ -14,6 +14,7 @@ import { ConstructionStrip, CostChips, LampCard, UpgradeButton, affordable, unde
 import './dino-sheet.css';
 import { duration } from './FarmPanel';
 import { ITEMS } from './content';
+import { dailyState } from './daily';
 import {
   BALANCE,
   EGG_SECONDS,
@@ -21,8 +22,10 @@ import {
   HABITAT_LEVELS,
   HATCHERY_LEVELS,
   MARKET_ELEMENTS,
+  PET,
   REALM_NAMES,
   SPECIES_NAMES,
+  TRAINING,
   WORLD_UNLOCK,
   busyDinos,
   dinoIncome,
@@ -68,11 +71,53 @@ const stageName = (s: Stage, lang: number) =>
 /** Un ou PixelLab pe tărâm (64 px), comun tuturor speciilor acelui element; eclozarea are animația lui. */
 export const eggSrc = (realm: RealmId) => `/realms/eggs/${realm}.png`;
 export const hatchSrc = (realm: RealmId) => `/realms/eggs/${realm}-hatch.png`;
-export function EggArt({ realm, species, size = 64, hatching = false, rarity }: { species?: Species; realm: RealmId; size?: number; hatching?: boolean; rarity?: Rarity }) {
+export function EggArt({
+  realm,
+  species,
+  size = 64,
+  hatching = false,
+  rarity,
+}: {
+  species?: Species;
+  realm: RealmId;
+  size?: number;
+  hatching?: boolean;
+  rarity?: Rarity;
+}) {
   return (
-    <span className={`realm-egg${hatching ? ' hatching' : ''} ${rarityClass(rarity)}`} style={{ width: size, height: size, '--egg-size': `${size}px`, '--hatch-sheet': `url('${hatchSrc(realm)}')` } as React.CSSProperties}>
-      <img src={eggSrc(realm)} alt={species === 'boss' ? `BOSS ${ARENA_BOSSES[realm].name}` : ''} width={size} height={size} draggable={false} />
-      {species === 'boss' && <span aria-hidden="true" style={{ position: 'absolute', right: 0, top: 0, color: '#ffe098', fontSize: Math.max(12, size / 4), textShadow: '1px 1px #241832' }}>?</span>}
+    <span
+      className={`realm-egg${hatching ? ' hatching' : ''} ${rarityClass(rarity)}`}
+      style={
+        {
+          width: size,
+          height: size,
+          '--egg-size': `${size}px`,
+          '--hatch-sheet': `url('${hatchSrc(realm)}')`,
+        } as React.CSSProperties
+      }
+    >
+      <img
+        src={eggSrc(realm)}
+        alt={species === 'boss' ? `BOSS ${ARENA_BOSSES[realm].name}` : ''}
+        width={size}
+        height={size}
+        draggable={false}
+      />
+      {species === 'boss' && (
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: 0,
+            color: '#ffe098',
+            fontSize: Math.max(12, size / 4),
+            textShadow: '1px 1px #241832',
+          }}
+        >
+          ?
+        </span>
+      )}
     </span>
   );
 }
@@ -116,7 +161,8 @@ export function HatcheryPanel({
   const shelf = usePager(waiting, { max: 6 });
   const owedPager = usePager(owed, { max: 8 });
   const allNests = HATCHERY_LEVELS[HATCHERY_LEVELS.length - 1].slots;
-  const blocked = (egg: { element: RealmId }) => !save.habitats[egg.element] || residents(save, egg.element).length >= habitatCapacity(save, egg.element);
+  const blocked = (egg: { element: RealmId }) =>
+    !save.habitats[egg.element] || residents(save, egg.element).length >= habitatCapacity(save, egg.element);
   const stuck = hatching.find((egg) => egg.hatchAt! <= now && blocked(egg));
   const idBase = 'hatchery';
   return (
@@ -147,7 +193,12 @@ export function HatcheryPanel({
         active={tab}
         onChange={setTab}
         tabs={[
-          { id: 'nests', label: tr(lang, 'Incubator', 'Incubator'), badge: readyCount },
+          {
+            id: 'nests',
+            label: tr(lang, 'Incubator', 'Incubator'),
+            badge: readyCount,
+            state: readyCount ? 'ready' : busy ? 'busy' : undefined,
+          },
           { id: 'shelf', label: tr(lang, 'Raft', 'Shelf'), badge: waiting.length },
           { id: 'owed', label: tr(lang, 'În așteptare', 'Waiting'), badge: owed.length },
         ]}
@@ -160,7 +211,11 @@ export function HatcheryPanel({
               if (i >= slots) {
                 const unlock = HATCHERY_LEVELS.findIndex((l) => l.slots > i) + 1;
                 return (
-                  <div key={i} className="hatch-nest locked" title={`${tr(lang, 'Se deblochează la nivelul', 'Unlocks at level')} ${unlock}`}>
+                  <div
+                    key={i}
+                    className="hatch-nest locked"
+                    title={`${tr(lang, 'Se deblochează la nivelul', 'Unlocks at level')} ${unlock}`}
+                  >
                     <Icon name="lock" scale={2} />
                     <small>
                       {tr(lang, 'Nivel', 'Level')} {unlock}
@@ -171,23 +226,48 @@ export function HatcheryPanel({
               const egg = hatching[i];
               if (!egg)
                 return (
-                  <button key={i} className="hatch-nest free" onClick={() => setTab('shelf')} disabled={!waiting.length}>
+                  <button
+                    key={i}
+                    className="hatch-nest free"
+                    onClick={() => setTab('shelf')}
+                    disabled={!waiting.length}
+                  >
                     <span className="hatch-nest-bed" />
-                    <small>{waiting.length ? tr(lang, 'Liber · alege un ou', 'Free · pick an egg') : tr(lang, 'Liber', 'Free')}</small>
+                    <small>
+                      {waiting.length
+                        ? tr(lang, 'Liber · alege un ou', 'Free · pick an egg')
+                        : tr(lang, 'Liber', 'Free')}
+                    </small>
                   </button>
                 );
               const left = Math.max(0, egg.hatchAt! - now),
                 ready = left === 0,
                 stop = blocked(egg);
               return (
-                <div key={egg.id} className={`hatch-nest ${ready ? 'ready' : 'warming'}`} style={{ '--egg-glow': element(egg.element).color } as CSSProperties}>
-                  <EggArt species={egg.species} realm={egg.element} size={56} hatching={hatchingId === egg.id} rarity={egg.rarity} />
+                <div
+                  key={egg.id}
+                  className={`hatch-nest ${ready ? 'ready' : 'warming'}`}
+                  style={{ '--egg-glow': element(egg.element).color } as CSSProperties}
+                >
+                  <EggArt
+                    species={egg.species}
+                    realm={egg.element}
+                    size={56}
+                    hatching={hatchingId === egg.id}
+                    rarity={egg.rarity}
+                  />
                   <strong>{eggName(egg)}</strong>
                   {ready ? (
                     <button
                       className="realm-button"
                       disabled={!!hatchingId || stop}
-                      title={stop ? (!save.habitats[egg.element] ? tr(lang, 'Deblochează mai întâi lumea lui.', 'Unlock its world first.') : tr(lang, 'Habitatul e plin.', 'The habitat is full.')) : undefined}
+                      title={
+                        stop
+                          ? !save.habitats[egg.element]
+                            ? tr(lang, 'Deblochează mai întâi lumea lui.', 'Unlock its world first.')
+                            : tr(lang, 'Habitatul e plin.', 'The habitat is full.')
+                          : undefined
+                      }
                       onClick={() => {
                         // animația de eclozare rulează întâi; comanda se dă la final (aceeași regulă de joc)
                         setHatchingId(egg.id);
@@ -205,7 +285,12 @@ export function HatcheryPanel({
                         <i style={{ width: `${Math.min(100, (1 - left / (egg.seconds * 1000)) * 100)}%` }} />
                       </div>
                       <small className="pk-num">⏱ {duration(Math.ceil(left / 1000))}</small>
-                      <button className="realm-gem-finish" disabled={save.gems < gemsToFinish(left)} onClick={() => run({ type: 'gemFinish', target: 'egg', id: egg.id })} title={tr(lang, 'Termină acum cu diamante', 'Finish now with diamonds')}>
+                      <button
+                        className="realm-gem-finish"
+                        disabled={save.gems < gemsToFinish(left)}
+                        onClick={() => run({ type: 'gemFinish', target: 'egg', id: egg.id })}
+                        title={tr(lang, 'Termină acum cu diamante', 'Finish now with diamonds')}
+                      >
                         ⚡ {gemsToFinish(left)} 💎
                       </button>
                     </>
@@ -217,7 +302,11 @@ export function HatcheryPanel({
           {stuck && (
             <RequirementLink
               title={tr(lang, 'Un ou nu are unde să eclozeze', 'An egg has nowhere to hatch')}
-              detail={tr(lang, 'Deblochează lumea lui sau fă loc în habitat.', 'Unlock its world or make room in its habitat.')}
+              detail={tr(
+                lang,
+                'Deblochează lumea lui sau fă loc în habitat.',
+                'Unlock its world or make room in its habitat.',
+              )}
               route={{ panel: 'realms', realm: stuck.element }}
             />
           )}
@@ -227,14 +316,19 @@ export function HatcheryPanel({
             ) : next ? (
               <>
                 <span className="pk-upgrade-what">
-                  <b className="pk-num">⬆ {tr(lang, 'Nivel', 'Level')} {save.hatcheryLevel + 1}</b> · <Icon name="egg" scale={1} /> {slots} → <b>{next.slots}</b> {tr(lang, 'cuiburi', 'nests')}
+                  <b className="pk-num">
+                    ⬆ {tr(lang, 'Nivel', 'Level')} {save.hatcheryLevel + 1}
+                  </b>{' '}
+                  · <Icon name="egg" scale={1} /> {slots} → <b>{next.slots}</b> {tr(lang, 'cuiburi', 'nests')}
                 </span>
                 <CostChips save={save} lang={lang} gold={next.gold} materials={next.materials} />
                 <ResourceHelp save={save} lang={lang} gold={next.gold} materials={next.materials} />
                 <UpgradeButton save={save} now={now} lang={lang} run={run} target="hatchery" />
               </>
             ) : (
-              <span className="pk-upgrade-what">★ {tr(lang, 'Incubatorul e la nivelul maxim.', 'The hatchery is at max level.')}</span>
+              <span className="pk-upgrade-what">
+                ★ {tr(lang, 'Incubatorul e la nivelul maxim.', 'The hatchery is at max level.')}
+              </span>
             )}
           </div>
         </TabPanel>
@@ -271,10 +365,19 @@ export function HatcheryPanel({
                           onBlur={() => setSelling((id) => (id === egg.id ? null : id))}
                           title={tr(lang, 'Vinde oul', 'Sell this egg')}
                         >
-                          {selling === egg.id ? `${tr(lang, 'Sigur?', 'Sure?')} +${eggSellPrice(egg)}` : `${tr(lang, 'Vinde', 'Sell')} ${eggSellPrice(egg)}`} ●
+                          {selling === egg.id
+                            ? `${tr(lang, 'Sigur?', 'Sure?')} +${eggSellPrice(egg)}`
+                            : `${tr(lang, 'Vinde', 'Sell')} ${eggSellPrice(egg)}`}{' '}
+                          ●
                         </button>
                       )}
-                      <button className="realm-button" disabled={busy >= slots} onClick={() => { if (run({ type: 'incubate', eggId: egg.id })) setTab('nests'); }}>
+                      <button
+                        className="realm-button"
+                        disabled={busy >= slots}
+                        onClick={() => {
+                          if (run({ type: 'incubate', eggId: egg.id })) setTab('nests');
+                        }}
+                      >
                         {tr(lang, 'Incubează', 'Incubate')}
                       </button>
                     </span>
@@ -285,7 +388,13 @@ export function HatcheryPanel({
           ) : (
             <div className="pk-empty">
               <Icon name="egg" scale={3} />
-              <p className="pk-note">{tr(lang, 'Raftul e gol. Cumpără ouă din Piață sau câștigă-le în arenă și expediții.', 'The shelf is empty. Buy eggs at the Market or win them in the arena and on expeditions.')}</p>
+              <p className="pk-note">
+                {tr(
+                  lang,
+                  'Raftul e gol. Cumpără ouă din Piață sau câștigă-le în arenă și expediții.',
+                  'The shelf is empty. Buy eggs at the Market or win them in the arena and on expeditions.',
+                )}
+              </p>
             </div>
           )}
           <div className="pk-foot">
@@ -327,12 +436,30 @@ export function HatcheryPanel({
           ) : (
             <div className="pk-empty">
               <Icon name="chest" scale={3} />
-              <p className="pk-note">{tr(lang, 'Niciun ou nu așteaptă. Ouăle câștigate cât raftul e plin apar aici.', 'No eggs are waiting. Eggs won while the shelf is full show up here.')}</p>
+              <p className="pk-note">
+                {tr(
+                  lang,
+                  'Niciun ou nu așteaptă. Ouăle câștigate cât raftul e plin apar aici.',
+                  'No eggs are waiting. Eggs won while the shelf is full show up here.',
+                )}
+              </p>
             </div>
           )}
           <div className="pk-foot">
-            <p className="pk-note">{tr(lang, `Intră singure pe raft când se face loc (max. ${BALANCE.maxEggs}).`, `They move to the shelf by themselves when there is room (max ${BALANCE.maxEggs}).`)}</p>
-            <Pager page={owedPager.page} pages={owedPager.pages} onPrev={owedPager.prev} onNext={owedPager.next} lang={lang} />
+            <p className="pk-note">
+              {tr(
+                lang,
+                `Intră singure pe raft când se face loc (max. ${BALANCE.maxEggs}).`,
+                `They move to the shelf by themselves when there is room (max ${BALANCE.maxEggs}).`,
+              )}
+            </p>
+            <Pager
+              page={owedPager.page}
+              pages={owedPager.pages}
+              onPrev={owedPager.prev}
+              onNext={owedPager.next}
+              lang={lang}
+            />
           </div>
         </TabPanel>
       )}
@@ -355,7 +482,9 @@ export function MarketPanel({
   build: () => void;
   openHabitats: () => void;
 }) {
-  const owned = ELEMENTS.filter((e) => save.habitats[e.id] && MARKET_ELEMENTS.includes(e.id));
+  const owned = ELEMENTS.filter(
+    (e) => save.habitats[e.id] && MARKET_ELEMENTS.includes(e.id) && playableSpecies(e.id).length,
+  );
   const [realm, setRealm] = useState<RealmId>(owned[0]?.id ?? 'fire');
   if (!save.buildings.some((b) => b.kind === 'market'))
     return (
@@ -363,7 +492,9 @@ export function MarketPanel({
         <div className="pk-empty">
           <Icon name="market" scale={4} />
           <h3>{tr(lang, 'Piața nu e construită', 'The market is not built yet')}</h3>
-          <p className="pk-note">{tr(lang, 'Construiește Piața ca să cumperi ouă.', 'Build the Market to buy eggs.')}</p>
+          <p className="pk-note">
+            {tr(lang, 'Construiește Piața ca să cumperi ouă.', 'Build the Market to buy eggs.')}
+          </p>
           <button className="realm-button" onClick={build}>
             {tr(lang, 'Construiește', 'Build')}
           </button>
@@ -378,8 +509,14 @@ export function MarketPanel({
           <Icon name="market" scale={2} />
         </span>
         <div className="pk-head-text">
-          <strong>{tr(lang, 'Ouă de foc, apă și pământ', 'Fire, water and earth eggs')}</strong>
-          <small>{tr(lang, `Pentru lumile cu habitat · incubare ${duration(EGG_SECONDS.market)}`, `For worlds with a habitat · ${duration(EGG_SECONDS.market)} to hatch`)}</small>
+          <strong>{tr(lang, 'Ouă pentru lumile tale', 'Eggs for your worlds')}</strong>
+          <small>
+            {tr(
+              lang,
+              `Pentru lumile cu habitat · incubare ${duration(EGG_SECONDS.market)}`,
+              `For worlds with a habitat · ${duration(EGG_SECONDS.market)} to hatch`,
+            )}
+          </small>
         </div>
         <div className="pk-head-actions">
           <span className="pk-cost">
@@ -410,7 +547,11 @@ export function MarketPanel({
             <small>
               {element(realm).symbol} {element(realm).role[lang]}
             </small>
-            <button className="realm-button" disabled={save.gold < eggPrice(realm) || full} onClick={() => run({ type: 'buyEgg', species, element: realm })}>
+            <button
+              className="realm-button"
+              disabled={save.gold < eggPrice(realm) || full}
+              onClick={() => run({ type: 'buyEgg', species, element: realm })}
+            >
               <Icon name="gold" scale={1} /> {eggPrice(realm)}
             </button>
             <ResourceHelp save={save} lang={lang} gold={eggPrice(realm)} />
@@ -418,11 +559,19 @@ export function MarketPanel({
         ))}
       </div>
       {full ? (
-        <RequirementLink title={tr(lang, 'Raftul de ouă e plin', 'The egg shelf is full')} detail={tr(lang, 'Incubează sau vinde ouă din Incubator.', 'Incubate or sell eggs in the Hatchery.')} route={{ panel: 'hatchery' }} />
+        <RequirementLink
+          title={tr(lang, 'Raftul de ouă e plin', 'The egg shelf is full')}
+          detail={tr(lang, 'Incubează sau vinde ouă din Incubator.', 'Incubate or sell eggs in the Hatchery.')}
+          route={{ panel: 'hatchery' }}
+        />
       ) : (
         <p className="pk-note">
           <Icon name="egg" scale={1} />{' '}
-          {tr(lang, 'Ouăle celorlalte elemente se câștigă în arenă și în expediții.', "Other elements' eggs are won in the arena and on expeditions.")}
+          {tr(
+            lang,
+            'Ouăle din Piață sunt comune. Cele rare, epice și de boss se câștigă în arenă și în expediții.',
+            'Market eggs are common. Rare, epic and boss eggs are won in the arena and on expeditions.',
+          )}
         </p>
       )}
     </div>
@@ -446,8 +595,10 @@ export function HabitatsPanel({
   visit: (realm: RealmId) => void;
   openWorkshop: () => void;
 }) {
-  const [selected, select] = useState<RealmId>(() => ELEMENTS.find((e) => !save.habitats[e.id] && !worldLock(save, e.id))?.id ?? 'fire');
-  const cap = goldCap(save);
+  const [selected, select] = useState<RealmId>(
+    () => ELEMENTS.find((e) => !save.habitats[e.id] && !worldLock(save, e.id))?.id ?? 'fire',
+  );
+  const cap = goldCap(save, now);
   const e = element(selected),
     level = save.habitats[selected],
     next = level ? HABITAT_LEVELS[level] : undefined,
@@ -463,10 +614,13 @@ export function HabitatsPanel({
         </span>
         <div className="pk-head-text">
           <strong>
-            {Math.floor(save.storedGold).toLocaleString(lang ? 'en-US' : 'ro-RO')} / {cap.toLocaleString(lang ? 'en-US' : 'ro-RO')} {tr(lang, 'aur strâns', 'gold stored')}
+            {Math.floor(save.storedGold).toLocaleString(lang ? 'en-US' : 'ro-RO')} /{' '}
+            {cap.toLocaleString(lang ? 'en-US' : 'ro-RO')} {tr(lang, 'aur strâns', 'gold stored')}
           </strong>
           <small>
-            {Math.round(goldRate(save))} {tr(lang, 'aur/oră', 'gold/hour')} · {tr(lang, 'max. 8h offline', '8h offline max')} · ☼ {save.lamps}/5 {tr(lang, 'lămpi', 'lamps')} · {ITEMS.habitatKit.icon} {save.inventory.habitatKit} {tr(lang, 'kituri', 'kits')}
+            {Math.round(goldRate(save))} {tr(lang, 'aur/oră', 'gold/hour')} ·{' '}
+            {tr(lang, 'max. 8h offline', '8h offline max')} · ☼ {save.lamps}/5 {tr(lang, 'lămpi', 'lamps')} ·{' '}
+            {ITEMS.habitatKit.icon} {save.inventory.habitatKit} {tr(lang, 'kituri', 'kits')}
           </small>
           <div className="pk-meter">
             <i style={{ width: `${cap ? Math.min(100, (save.storedGold / cap) * 100) : 0}%` }} />
@@ -505,7 +659,11 @@ export function HabitatsPanel({
           );
         })}
       </div>
-      <section className="pk-box habitat-detail" style={{ '--realm-color': e.color } as CSSProperties} aria-label={e.name[lang]}>
+      <section
+        className="pk-box habitat-detail"
+        style={{ '--realm-color': e.color } as CSSProperties}
+        aria-label={e.name[lang]}
+      >
         <div className="habitat-detail-info">
           <h3 className="pk-title">
             <span>
@@ -545,7 +703,13 @@ export function HabitatsPanel({
               </dl>
             </>
           ) : (
-            <p className="pk-note">{tr(lang, 'Deschide lumea ca să eclozezi și să găzduiești dinozaurii acestui element.', 'Open this world to hatch and house dinosaurs of this element.')}</p>
+            <p className="pk-note">
+              {tr(
+                lang,
+                'Deschide lumea ca să eclozezi și să găzduiești dinozaurii acestui element.',
+                'Open this world to hatch and house dinosaurs of this element.',
+              )}
+            </p>
           )}
         </div>
         <div className="habitat-detail-action">
@@ -554,9 +718,13 @@ export function HabitatsPanel({
           ) : level && next ? (
             <>
               <span className="pk-upgrade-what">
-                <b className="pk-num">⬆ {tr(lang, 'Nivel', 'Level')} {level + 1}</b> · {next.capacity} {tr(lang, 'locuri', 'spots')}
+                <b className="pk-num">
+                  ⬆ {tr(lang, 'Nivel', 'Level')} {level + 1}
+                </b>{' '}
+                · {next.capacity} {tr(lang, 'locuri', 'spots')}
                 <span className="pk-upgrade-extra">
-                  {' '}· {tr(lang, 'depozit', 'storage')} {next.cap} · ×{next.income} ●
+                  {' '}
+                  · {tr(lang, 'depozit', 'storage')} {next.cap} · ×{next.income} ●
                 </span>
               </span>
               <CostChips save={save} lang={lang} gold={next.gold} materials={{ habitatKit: next.kits }} />
@@ -580,7 +748,11 @@ export function HabitatsPanel({
               <CostChips save={save} lang={lang} gold={unlock.gold} materials={unlock.materials} />
               {lock && <p className="pk-note warn">🔒 {lock}</p>}
               <div className="habitat-buttons">
-                <button className="realm-button" disabled={!!worldLock(save, selected) || !affordable(save, unlock.gold, unlock.materials)} onClick={() => run({ type: 'unlockHabitat', realm: selected })}>
+                <button
+                  className="realm-button"
+                  disabled={!!worldLock(save, selected) || !affordable(save, unlock.gold, unlock.materials)}
+                  onClick={() => run({ type: 'unlockHabitat', realm: selected })}
+                >
                   {tr(lang, 'Deblochează', 'Unlock')}
                 </button>
                 {!lock && <ResourceHelp save={save} lang={lang} gold={unlock.gold} materials={unlock.materials} />}
@@ -626,7 +798,7 @@ export function DinoPanel({
 }) {
   const roster = realm ? residents(save, realm) : save.dinos;
   const d = roster.find((x) => x.id === selected) ?? roster.find((x) => x.id === save.champion) ?? roster[0];
-  const [tab, setTab] = useState<DinoTab>(() => initialTab ?? (d && d.level < levelCap(d.stage) && save.food >= feedCost(d.level) ? 'grow' : 'stats'));
+  const [tab, setTab] = useState<DinoTab>(() => initialTab ?? 'grow');
   const [releasing, setReleasing] = useState<string | null>(null);
   const pager = usePager(roster, { max: 8, itemSelector: '.dino-roster-item' });
   const index = d ? roster.indexOf(d) : -1;
@@ -635,6 +807,14 @@ export function DinoPanel({
   useEffect(() => {
     if (index >= 0) setPage(Math.floor(index / perPage));
   }, [d?.id, perPage]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The training countdown ticks only while someone trains.
+  const [clock, setClock] = useState(Date.now());
+  useEffect(() => {
+    if (!save.training) return;
+    const id = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [save.training]);
+  const [petted, setPetted] = useState(0);
   const away = busyDinos(save);
   const habitat = realm ? (
     <div className="dino-habitat-strip">
@@ -645,7 +825,10 @@ export function DinoPanel({
         {tr(lang, 'Nivel', 'Level')} <b className="pk-num">{save.habitats[realm] ?? 0}</b>
       </span>
       <span>
-        {tr(lang, 'Locuri', 'Spots')} <b className="pk-num">{residents(save, realm).length}/{habitatCapacity(save, realm)}</b>
+        {tr(lang, 'Locuri', 'Spots')}{' '}
+        <b className="pk-num">
+          {residents(save, realm).length}/{habitatCapacity(save, realm)}
+        </b>
       </span>
       <span>
         <b className="pk-num">{Math.round(residents(save, realm).reduce((n, x) => n + dinoIncome(save, x), 0))}</b> ●/h
@@ -668,14 +851,34 @@ export function DinoPanel({
         {habitat}
       </div>
     ) : null;
+  // With a dinosaur shown, the habitat facts live in its Habitat tab; only the way back stays on top.
+  const sheetToolbar = fromHatchery ? (
+    <div className="dino-toolbar">
+      <button className="realm-button secondary" onClick={openHatchery}>
+        ← {tr(lang, 'Incubator', 'Hatchery')}
+      </button>
+    </div>
+  ) : null;
   if (!d)
     return (
       <div className={`fit-panel ${toolbar ? 'fit-body' : 'fit-single'}`}>
         {toolbar}
         <div className="pk-empty">
           <Icon name="egg" scale={4} />
-          <h3>{realm ? tr(lang, 'Habitatul e gol', 'The habitat is empty') : tr(lang, 'Un erou te așteaptă', 'A hero is waiting')}</h3>
-          {realm && <p className="pk-note">{tr(lang, 'Eclozează un ou de acest element ca să-l populezi.', 'Hatch an egg of this element to fill it.')}</p>}
+          <h3>
+            {realm
+              ? tr(lang, 'Habitatul e gol', 'The habitat is empty')
+              : tr(lang, 'Un erou te așteaptă', 'A hero is waiting')}
+          </h3>
+          {realm && (
+            <p className="pk-note">
+              {tr(
+                lang,
+                'Eclozează un ou de acest element ca să-l populezi.',
+                'Hatch an egg of this element to fill it.',
+              )}
+            </p>
+          )}
           <button className="realm-button" onClick={openHatchery}>
             {tr(lang, 'Deschide incubatorul', 'Open hatchery')}
           </button>
@@ -697,6 +900,10 @@ export function DinoPanel({
     toGate = cap - d.level;
   /** Food for the next `n` levels. */
   const feedFood = (n: number) => Array.from({ length: n }, (_, i) => feedCost(d.level + i)).reduce((a, b) => a + b, 0);
+  const missingFood = (need: number) =>
+    save.food < need
+      ? tr(lang, `Îți mai trebuie ${need - save.food} hrană`, `You need ${need - save.food} more food`)
+      : undefined;
   /** Feed `n` levels, ten at a time (one command feeds at most ten), while the food lasts. */
   const feedLevels = (n: number) => {
     let food = save.food,
@@ -715,7 +922,11 @@ export function DinoPanel({
     d.species === 'boss' || rarityOf(d) === 'legendary'
       ? tr(lang, 'Campionii legendari nu pot fi eliberați.', 'Legendary champions cannot be released.')
       : isTeam
-        ? tr(lang, 'Face parte din echipă. Alege alt campion mai întâi.', 'It is in your team. Choose another champion first.')
+        ? tr(
+            lang,
+            'Face parte din echipă. Alege alt campion mai întâi.',
+            'It is in your team. Choose another champion first.',
+          )
         : away.has(d.id)
           ? tr(lang, 'E plecat în expediție sau în luptă.', 'It is away on an expedition or in a fight.')
           : save.dinos.length <= 1
@@ -723,9 +934,9 @@ export function DinoPanel({
             : null;
   const idBase = 'dino-sheet';
   return (
-    <div className={`fit-panel ${toolbar ? 'fit-body' : 'fit-single'}`}>
-      {toolbar}
-      <div className="dino-sheet">
+    <div className={`fit-panel ${sheetToolbar ? 'fit-body' : 'fit-single'}`}>
+      {sheetToolbar}
+      <div className={`dino-sheet${roster.length <= 1 ? ' solo' : ''}`}>
         <nav className="dino-roster" aria-label={tr(lang, 'Dinozaurii tăi', 'Your dinosaurs')}>
           <div className="pk-foot">
             <span className="pk-title">
@@ -752,7 +963,11 @@ export function DinoPanel({
                 <span className="dino-roster-name">
                   <strong>{x.nickname}</strong>
                   <small>
-                    {element(x.element).symbol} <span className="pk-num">{tr(lang, 'Nv.', 'Lv.')} {x.level}</span> · {stageName(x.stage, lang)}
+                    {element(x.element).symbol}{' '}
+                    <span className="pk-num">
+                      {tr(lang, 'Nv.', 'Lv.')} {x.level}
+                    </span>{' '}
+                    · {stageName(x.stage, lang)}
                     {away.has(x.id) && ` · ${tr(lang, 'plecat', 'away')}`}
                   </small>
                 </span>
@@ -770,7 +985,12 @@ export function DinoPanel({
           {/* Sprites stand at 84% of their height, so the pedestal sits at the figure's 16% line. */}
           <span className="dino-sheet-figure">
             <span className="dino-sheet-pedestal" aria-hidden="true" />
-            <DinosaurArt species={d.species} element={d.element} stage={artStage(d)} className={rarityClass(d.rarity)} />
+            <DinosaurArt
+              species={d.species}
+              element={d.element}
+              stage={artStage(d)}
+              className={rarityClass(d.rarity)}
+            />
           </span>
           <span className="dino-sheet-element">
             {el.symbol} {el.name[lang]}
@@ -793,18 +1013,27 @@ export function DinoPanel({
             </div>
           </header>
           <div className="dino-sheet-growth">
-            <div className="pk-meter">
+            <div
+              className="pk-meter"
+              title={
+                nextStage && !gate
+                  ? tr(lang, `Încă ${to - d.level} niveluri până la evoluție`, `${to - d.level} more levels to evolve`)
+                  : undefined
+              }
+            >
               <i style={{ width: `${Math.min(100, ((d.level - from) / Math.max(1, to - from)) * 100)}%` }} />
             </div>
-            <small>
-              {gate && nextStage
-                ? tr(lang, `Gata de evoluție: ${stageName(nextStage, lang)}!`, `Ready to evolve: ${stageName(nextStage, lang)}!`)
-                : nextStage
-                  ? tr(lang, `Încă ${to - d.level} niveluri până la evoluție`, `${to - d.level} more levels to evolve`)
-                  : maxed
-                    ? tr(lang, 'Nivel maxim atins', 'Max level reached')
-                    : tr(lang, `Nivel ${d.level} din 50`, `Level ${d.level} of 50`)}
-            </small>
+            {(gate && nextStage) || maxed ? (
+              <small>
+                {gate && nextStage
+                  ? tr(
+                      lang,
+                      `Gata de evoluție: ${stageName(nextStage, lang)}!`,
+                      `Ready to evolve: ${stageName(nextStage, lang)}!`,
+                    )
+                  : tr(lang, 'Nivel maxim atins', 'Max level reached')}
+              </small>
+            ) : null}
           </div>
           <Tabs
             idBase={idBase}
@@ -812,15 +1041,21 @@ export function DinoPanel({
             active={tab}
             onChange={setTab}
             tabs={[
-              { id: 'stats', label: tr(lang, 'Statistici', 'Stats') },
               { id: 'grow', label: tr(lang, 'Creștere', 'Grow'), badge: gate && !inBattle ? '!' : undefined },
+              { id: 'stats', label: tr(lang, 'Statistici', 'Stats') },
               { id: 'habitat', label: tr(lang, 'Habitat', 'Habitat') },
             ]}
           />
           {tab === 'stats' && (
             <TabPanel idBase={idBase} id="stats" className="fit-fill dino-tab">
               {d.stage === 'baby' && (
-                <p className="dino-sheet-note">{tr(lang, 'Puii nu luptă încă. La nivelul 10 evoluează și pot intra în arenă.', 'Babies do not fight yet. At level 10 they evolve and can enter the arena.')}</p>
+                <p className="dino-sheet-note">
+                  {tr(
+                    lang,
+                    'Puii nu luptă încă. La nivelul 10 evoluează și pot intra în arenă.',
+                    'Babies do not fight yet. At level 10 they evolve and can enter the arena.',
+                  )}
+                </p>
               )}
               <ul className="dino-sheet-stats">
                 {STAT_ROWS.map(([key, icon, ro, en]) => (
@@ -834,24 +1069,10 @@ export function DinoPanel({
                   </li>
                 ))}
               </ul>
-              <ol className="dino-ages" aria-label={tr(lang, 'Evoluție', 'Evolution')}>
-                {STAGE_ORDER.map((stage, i) => {
-                  const reached = STAGE_ORDER.indexOf(d.stage) >= i;
-                  return (
-                    <li key={stage} className={`${d.stage === stage ? 'current' : ''} ${reached ? 'reached' : 'locked'}`}>
-                      <span className="dino-ages-art">
-                        <DinosaurArt species={d.species} element={d.element} stage={d.species === 'boss' ? 'adult' : stage} paused frame={0} />
-                      </span>
-                      <small>
-                        {stageName(stage, lang)} <span className="pk-num">{STAGE_LEVELS[stage][0]}–{STAGE_LEVELS[stage][1]}</span>
-                      </small>
-                    </li>
-                  );
-                })}
-              </ol>
               <div className="dino-tab-foot">
                 <span className="dino-sheet-income">
-                  <Icon name="gold" scale={1} /> <b className="pk-num">{Math.round(dinoIncome(save, d))}</b> {tr(lang, 'aur/oră', 'gold/hour')}
+                  <Icon name="gold" scale={1} /> <b className="pk-num">{Math.round(dinoIncome(save, d))}</b>{' '}
+                  {tr(lang, 'aur/oră', 'gold/hour')}
                 </span>
                 {previewHero && d.id === save.dinos[0]?.id && d.stage !== 'adult' && (
                   <button className="realm-link" onClick={() => previewHero(d)}>
@@ -859,7 +1080,12 @@ export function DinoPanel({
                   </button>
                 )}
                 {d.id !== save.champion && (
-                  <button className="realm-button secondary" disabled={!!save.battle || d.stage === 'baby'} title={d.stage === 'baby' ? tr(lang, 'Puii nu luptă încă.', 'Babies do not fight yet.') : undefined} onClick={() => run({ type: 'setChampion', dinoId: d.id })}>
+                  <button
+                    className="realm-button secondary"
+                    disabled={!!save.battle || d.stage === 'baby'}
+                    title={d.stage === 'baby' ? tr(lang, 'Puii nu luptă încă.', 'Babies do not fight yet.') : undefined}
+                    onClick={() => run({ type: 'setChampion', dinoId: d.id })}
+                  >
                     ★ {tr(lang, 'Campion', 'Champion')}
                   </button>
                 )}
@@ -868,84 +1094,190 @@ export function DinoPanel({
           )}
           {tab === 'grow' && (
             <TabPanel idBase={idBase} id="grow" className="fit-fill dino-tab">
-              <ol className="dino-path" aria-label={tr(lang, 'Evoluție', 'Evolution')}>
-                {STAGE_ORDER.map((stage, i) => (
-                  <li key={stage} className={`${d.stage === stage ? 'current' : ''} ${STAGE_ORDER.indexOf(d.stage) >= i ? 'reached' : ''}`}>
-                    {stageName(stage, lang)} <small className="pk-num">{STAGE_LEVELS[stage][0]}–{STAGE_LEVELS[stage][1]}</small>
-                  </li>
-                ))}
+              <ol className="dino-evo" aria-label={tr(lang, 'Evoluție', 'Evolution')}>
+                {STAGE_ORDER.map((stage, i) => {
+                  const at = STAGE_ORDER.indexOf(d.stage);
+                  return (
+                    <li
+                      key={stage}
+                      className={i === at ? 'current' : i < at ? 'reached' : 'locked'}
+                      title={`${tr(lang, 'Nivel', 'Level')} ${STAGE_LEVELS[stage][0]}–${STAGE_LEVELS[stage][1]}`}
+                    >
+                      <span className="dino-evo-art">
+                        <DinosaurArt
+                          species={d.species}
+                          element={d.element}
+                          stage={d.species === 'boss' ? 'adult' : stage}
+                          paused
+                          frame={0}
+                        />
+                      </span>
+                      <small>{stageName(stage, lang)}</small>
+                    </li>
+                  );
+                })}
               </ol>
-              <div className="dino-grow-buttons">
-                {gate ? (
-                  <button
-                    className="realm-button dino-sheet-evolve"
-                    disabled={inBattle || hungry || (needsCrystal && crystals < 1)}
-                    onClick={() => run({ type: 'evolve', dinoId: d.id })}
-                  >
-                    {tr(lang, 'Evoluează', 'Evolve')}
-                    <span className="dino-sheet-cost">
-                      <Icon name="food" scale={1} /> {cost}
-                      {needsCrystal && (
-                        <>
-                          {' '}+ <Icon name="evolutionCrystal" scale={1} /> 1
-                        </>
-                      )}
-                    </span>
-                  </button>
-                ) : (
-                  !maxed && (
-                    <>
-                      <button className="realm-button" disabled={inBattle || hungry} onClick={() => run({ type: 'feed', dinoId: d.id })}>
-                        {tr(lang, 'Hrănește', 'Feed')} ×1
-                        <span className="dino-sheet-cost">
-                          <Icon name="food" scale={1} /> {cost}
-                        </span>
-                      </button>
-                      {toGate > 1 && (
-                        <button className="realm-button secondary" disabled={inBattle || hungry} onClick={() => feedLevels(Math.min(5, toGate))}>
-                          ×{Math.min(5, toGate)}
-                          <span className="dino-sheet-cost">
-                            <Icon name="food" scale={1} /> {feedFood(Math.min(5, toGate))}
-                          </span>
-                        </button>
-                      )}
-                      {toGate > 5 && (
-                        <button className="realm-button secondary" disabled={inBattle || hungry} onClick={() => feedLevels(toGate)}>
-                          {d.stage === 'adult' ? tr(lang, `Până la nv. ${cap}`, `To lv. ${cap}`) : tr(lang, 'Până la prag', 'To the gate')}
-                          <span className="dino-sheet-cost">
-                            <Icon name="food" scale={1} /> {feedFood(toGate)}
-                          </span>
-                        </button>
-                      )}
-                    </>
-                  )
-                )}
+              {gate ? (
                 <button
-                  className="realm-button premium"
-                  disabled={inBattle || gate || maxed || crystals < 1}
-                  title={gate ? tr(lang, 'La prag dinozaurul trebuie să evolueze.', 'At the gate the dinosaur must evolve.') : undefined}
-                  onClick={() => run({ type: 'useCrystal', dinoId: d.id })}
+                  className="realm-button dino-feed-main dino-sheet-evolve"
+                  disabled={inBattle || hungry || (needsCrystal && crystals < 1)}
+                  onClick={() => run({ type: 'evolve', dinoId: d.id })}
                 >
-                  {tr(lang, 'Folosește cristal (+1 nivel)', 'Use crystal (+1 level)')}
+                  ✦ {tr(lang, 'Evoluează', 'Evolve')}
                   <span className="dino-sheet-cost">
-                    <Icon name="evolutionCrystal" scale={1} /> {crystals}
+                    <Icon name="food" scale={1} /> {cost}
+                    {needsCrystal && (
+                      <>
+                        {' '}
+                        + <Icon name="evolutionCrystal" scale={1} /> 1
+                      </>
+                    )}
                   </span>
                 </button>
-              </div>
-              <p className={`pk-note${(hungry && !maxed) || (needsCrystal && crystals < 1) ? ' warn' : ''}`}>
-                {inBattle
-                  ? tr(lang, 'E în luptă acum.', 'It is in a fight right now.')
-                  : maxed
-                    ? tr(lang, 'Nivel maxim: 50.', 'Max level: 50.')
-                    : needsCrystal && crystals < 1
-                      ? tr(lang, 'Evoluția la adult cere un cristal de evoluție, făcut în Atelier.', 'Evolving to adult takes an evolution crystal, made in the Workshop.')
-                      : hungry
-                        ? tr(lang, `Îți trebuie ${cost - save.food} hrană în plus. Recoltează la fermă.`, `You need ${cost - save.food} more food. Harvest at the farm.`)
-                        : gate
-                          ? tr(lang, 'A ajuns la prag: evoluează ca să crească mai departe.', 'It reached the gate: evolve it to keep growing.')
-                          : tr(lang, `Ai ${Math.floor(save.food)} hrană. Cristalul sare un nivel, dar nu peste un prag.`, `You have ${Math.floor(save.food)} food. A crystal skips a level, but never past a gate.`)}
-              </p>
-              <ResourceHelp save={save} lang={lang} food={gate || !maxed ? cost : 0} materials={needsCrystal ? { evolutionCrystal: 1 } : {}} />
+              ) : (
+                !maxed && (
+                  <button
+                    className="realm-button dino-feed-main"
+                    disabled={inBattle || hungry}
+                    onClick={() => run({ type: 'feed', dinoId: d.id })}
+                  >
+                    {tr(lang, 'Hrănește', 'Feed')} <small>+1 {tr(lang, 'nivel', 'level')}</small>
+                    <span className="dino-sheet-cost">
+                      <Icon name="food" scale={1} /> {cost}
+                    </span>
+                  </button>
+                )
+              )}
+              {(hungry && !maxed) || (needsCrystal && crystals < 1) || inBattle || maxed ? (
+                <p className={`pk-note${maxed ? '' : ' warn'}`}>
+                  {inBattle
+                    ? tr(lang, 'E în luptă acum.', 'It is in a fight right now.')
+                    : maxed
+                      ? tr(lang, 'Nivel maxim: 50.', 'Max level: 50.')
+                      : needsCrystal && crystals < 1
+                        ? tr(
+                            lang,
+                            'Ca să devină adult îi trebuie un cristal de evoluție din Atelier.',
+                            'Becoming an adult takes an evolution crystal from the Workshop.',
+                          )
+                        : tr(
+                            lang,
+                            `Îți mai trebuie ${cost - Math.floor(save.food)} hrană. Recoltează la fermă.`,
+                            `You need ${cost - Math.floor(save.food)} more food. Harvest at the farm.`,
+                          )}
+                </p>
+              ) : null}
+              {((hungry && !maxed) || (needsCrystal && crystals < 1)) && (
+                <ResourceHelp
+                  save={save}
+                  lang={lang}
+                  food={cost}
+                  materials={needsCrystal ? { evolutionCrystal: 1 } : {}}
+                />
+              )}
+              {(() => {
+                const today = dailyState(save, clock),
+                  petsLeft = PET.perDay - today.pets,
+                  trainsLeft = TRAINING.perDay - today.trainings,
+                  t = save.training,
+                  trainee = t && save.dinos.find((x) => x.id === t.dinoId),
+                  left = t ? Math.max(0, t.endsAt - clock) : 0;
+                return (
+                  <div className="dino-care">
+                    <button
+                      key={petted}
+                      className={`realm-button secondary dino-pet${petted ? ' petted' : ''}`}
+                      disabled={petsLeft <= 0}
+                      title={tr(lang, `Îl mai poți mângâia de ${petsLeft} ori azi.`, `${petsLeft} pets left today.`)}
+                      onClick={() => run({ type: 'pet', dinoId: d.id }) && setPetted((n) => n + 1)}
+                    >
+                      <span>❤ {tr(lang, 'Mângâie', 'Pet')}</span>
+                      <span className="dino-sheet-cost">
+                        +{PET.food} <Icon name="food" scale={1} /> · {petsLeft}/{PET.perDay}
+                      </span>
+                    </button>
+                    {t && left === 0 ? (
+                      <button className="realm-button dino-train" onClick={() => run({ type: 'claimTraining' })}>
+                        ⬆{' '}
+                        {tr(
+                          lang,
+                          `${trainee?.nickname ?? ''} e gata: +1 nivel`,
+                          `${trainee?.nickname ?? ''} is done: +1 level`,
+                        )}
+                      </button>
+                    ) : t ? (
+                      <button className="realm-button secondary dino-train" disabled>
+                        ⏳ {trainee?.nickname} · {duration(Math.ceil(left / 1000))}
+                      </button>
+                    ) : (
+                      <button
+                        className="realm-button secondary dino-train"
+                        disabled={trainsLeft <= 0 || gate || maxed}
+                        title={tr(
+                          lang,
+                          `${TRAINING.minutes} min, gratuit: +1 nivel. Încă ${trainsLeft} azi.`,
+                          `${TRAINING.minutes} min, free: +1 level. ${trainsLeft} left today.`,
+                        )}
+                        onClick={() => run({ type: 'train', dinoId: d.id })}
+                      >
+                        <span>{tr(lang, 'Antrenează', 'Train')}</span>
+                        <span className="dino-sheet-cost">
+                          {gate
+                            ? tr(lang, 'evoluează întâi', 'evolve first')
+                            : `⏱ ${TRAINING.minutes} min · ${trainsLeft}/${TRAINING.perDay}`}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+              {!gate && !maxed && (toGate > 1 || crystals > 0) && (
+                <details className="dino-grow-more">
+                  <summary>{tr(lang, 'Mai mult', 'More')}</summary>
+                  <div className="dino-grow-buttons">
+                    {toGate > 1 && (
+                      <button
+                        className="realm-button secondary"
+                        disabled={inBattle || save.food < feedFood(Math.min(5, toGate))}
+                        title={missingFood(feedFood(Math.min(5, toGate)))}
+                        onClick={() => feedLevels(Math.min(5, toGate))}
+                      >
+                        +{Math.min(5, toGate)} {tr(lang, 'niveluri', 'levels')}
+                        <span className="dino-sheet-cost">
+                          <Icon name="food" scale={1} /> {feedFood(Math.min(5, toGate))}
+                        </span>
+                      </button>
+                    )}
+                    {toGate > 5 && (
+                      <button
+                        className="realm-button secondary"
+                        disabled={inBattle || save.food < feedFood(toGate)}
+                        title={missingFood(feedFood(toGate))}
+                        onClick={() => feedLevels(toGate)}
+                      >
+                        {d.stage === 'adult'
+                          ? tr(lang, `Până la nv. ${cap}`, `To lv. ${cap}`)
+                          : tr(lang, 'Până la evoluție', 'To next evolution')}
+                        <span className="dino-sheet-cost">
+                          <Icon name="food" scale={1} /> {feedFood(toGate)}
+                        </span>
+                      </button>
+                    )}
+                    {crystals > 0 && (
+                      <button
+                        className="realm-button premium"
+                        disabled={inBattle}
+                        onClick={() => run({ type: 'useCrystal', dinoId: d.id })}
+                      >
+                        {tr(lang, 'Cristal: +1 nivel', 'Crystal: +1 level')}
+                        <span className="dino-sheet-cost">
+                          <Icon name="evolutionCrystal" scale={1} /> {crystals}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                </details>
+              )}
             </TabPanel>
           )}
           {tab === 'habitat' && (
@@ -980,9 +1312,14 @@ export function DinoPanel({
                 </button>
               )}
               {releasing === d.id && !releaseBlock ? (
-                <div className="pk-confirm" role="alertdialog" aria-label={tr(lang, 'Confirmă eliberarea', 'Confirm the release')}>
+                <div
+                  className="pk-confirm"
+                  role="alertdialog"
+                  aria-label={tr(lang, 'Confirmă eliberarea', 'Confirm the release')}
+                >
                   <p>
-                    {tr(lang, `Eliberezi pe ${d.nickname}? Primești`, `Release ${d.nickname}? You get`)} <b className="pk-num">+{releaseGold(d)} ●</b>.{' '}
+                    {tr(lang, `Eliberezi pe ${d.nickname}? Primești`, `Release ${d.nickname}? You get`)}{' '}
+                    <b className="pk-num">+{releaseGold(d)} ●</b>.{' '}
                     {tr(lang, 'Familia rămâne în colecție.', 'The family stays in your collection.')}
                   </p>
                   <div>
@@ -1002,7 +1339,11 @@ export function DinoPanel({
                 </div>
               ) : (
                 <div className="dino-release">
-                  <button className="realm-button secondary" disabled={!!releaseBlock} onClick={() => setReleasing(d.id)}>
+                  <button
+                    className="realm-button secondary"
+                    disabled={!!releaseBlock}
+                    onClick={() => setReleasing(d.id)}
+                  >
                     {tr(lang, 'Eliberează', 'Release')}
                     {!releaseBlock && (
                       <span className="dino-sheet-cost">
@@ -1010,7 +1351,14 @@ export function DinoPanel({
                       </span>
                     )}
                   </button>
-                  <p className="pk-note">{releaseBlock ?? tr(lang, 'Face loc în habitat. Nu se poate anula.', 'Makes room in the habitat. It cannot be undone.')}</p>
+                  <p className="pk-note">
+                    {releaseBlock ??
+                      tr(
+                        lang,
+                        'Face loc în habitat. Nu se poate anula.',
+                        'Makes room in the habitat. It cannot be undone.',
+                      )}
+                  </p>
                 </div>
               )}
             </TabPanel>
@@ -1028,7 +1376,11 @@ export function worldLockText(save: Save, realm: RealmId, lang: number) {
   const name = REALM_NAMES[lock.world][lang];
   return lock.reason === 'world'
     ? tr(lang, `Deblochează mai întâi ${name}.`, `Unlock ${name} first.`)
-    : tr(lang, `Ajungi la etapa 3 în ${regionOf(lock.world).name[0]} (${name}).`, `Reach stage 3 of ${regionOf(lock.world).name[1]} (${name}).`);
+    : tr(
+        lang,
+        `Ajungi la etapa 3 în ${regionOf(lock.world).name[0]} (${name}).`,
+        `Reach stage 3 of ${regionOf(lock.world).name[1]} (${name}).`,
+      );
 }
 
 /** Test tools behind the "i" button: finish every timer and add resources. Development builds only. */
@@ -1059,7 +1411,9 @@ export function DevPanel({ lang, run, close }: { lang: number; run: Run; close: 
       <button className="realm-button secondary" onClick={() => run({ type: 'devRarityEggs' })}>
         ✦ {tr(lang, 'Ou rar + ou epic', 'Rare + epic egg')}
       </button>
-      <small>{tr(lang, 'Două ouă de T-Rex de foc, pe raftul incubatorului.', 'Two fire T-Rex eggs, on the hatchery shelf.')}</small>
+      <small>
+        {tr(lang, 'Două ouă de T-Rex de foc, pe raftul incubatorului.', 'Two fire T-Rex eggs, on the hatchery shelf.')}
+      </small>
     </div>
   );
 }

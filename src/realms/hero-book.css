@@ -6,12 +6,12 @@
   margin-top: 3px;
 }
 .realms-app .hero-filter .pk-chip[aria-pressed='true'] {
-  box-shadow: inset 0 -3px 0 var(--tab-color, var(--px-amber-1)), inset 2px 2px 0 var(--px-dusk-1);
+  box-shadow:
+    inset 0 -3px 0 var(--tab-color, var(--px-amber-1)),
+    inset 2px 2px 0 var(--px-dusk-1);
 }
+/* Every element chip carries its name, so no one has to guess what ♨ or ≋ means. */
 .realms-app .hero-filter .hero-filter-name {
-  display: none;
-}
-.realms-app .hero-filter .pk-chip[aria-pressed='true'] .hero-filter-name {
   display: inline;
 }
 .realms-app .hero-cards {

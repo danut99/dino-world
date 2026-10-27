@@ -20,9 +20,12 @@ export function isSecretKey(k: string) {
   }
 }
 const secret = !!key && isSecretKey(key);
-if (secret) console.error('VITE_SUPABASE_KEY is a secret key. Use the publishable (anon) key; accounts stay off until then.');
+if (secret)
+  console.error('VITE_SUPABASE_KEY is a secret key. Use the publishable (anon) key; accounts stay off until then.');
 export const cloud: SupabaseClient | null =
-  url && key && !secret ? createClient(url, key, { auth: { flowType: 'pkce', persistSession: true, detectSessionInUrl: true } }) : null;
+  url && key && !secret
+    ? createClient(url, key, { auth: { flowType: 'pkce', persistSession: true, detectSessionInUrl: true } })
+    : null;
 
 /** Back to the page the player is on, without the one-time `?code=` the sign-in left behind. */
 const returnUrl = () => `${window.location.origin}${window.location.pathname}`;
@@ -92,6 +95,13 @@ export async function fetchCloudSave(userId: string): Promise<CloudSave | null> 
   }
 }
 
+export class SaveRejected extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SaveRejected';
+  }
+}
+
 /**
  * Writes the save. With `expected` (the cloud time this device last saw), the write only lands if no other device
  * wrote since; otherwise it returns null so the caller can ask the player which progress to keep.
@@ -106,6 +116,8 @@ export async function pushCloudSave(userId: string, save: Save, expected: string
   if (error) {
     // Another device created the row first: the same conflict as an outdated update.
     if (error.code === '23505') return null;
+    // The server guard (0004_save_guard.sql) refused the save itself: retrying the same data cannot succeed.
+    if (error.code === '23514' || error.code === 'P0001') throw new SaveRejected(error.message);
     throw error;
   }
   return data?.[0]?.updated_at ?? null;
@@ -131,6 +143,35 @@ export function clearLegacySave() {
   }
 }
 
+/**
+ * A copy of an account's save on this device, so an upload that never made it (offline, tab closed) is not lost
+ * and the game can still open without a connection.
+ */
+const backupKey = (userId: string) => `${SAVE_KEY}-backup-${userId}`;
+export function writeBackup(userId: string, save: Save, name: string) {
+  try {
+    localStorage.setItem(backupKey(userId), JSON.stringify({ name, save }));
+  } catch {
+    /* Optional copy. */
+  }
+}
+export function readBackup(userId: string): { name: string; save: Save } | null {
+  try {
+    const raw = localStorage.getItem(backupKey(userId));
+    if (!raw) return null;
+    const kept = JSON.parse(raw) as { name?: unknown; save?: unknown };
+    return { name: typeof kept.name === 'string' ? kept.name : '', save: parseSave(JSON.stringify(kept.save)) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Which of two saves of one account holds more progress (> 0: `a`). Every command adds one to `revision`, so the
+ * save with more actions wins whatever the devices' clocks say; `updatedAt` (a device's clock) only breaks a tie.
+ */
+export const compareProgress = (a: Save, b: Save) => a.revision - b.revision || a.updatedAt - b.updatedAt;
+
 /** A save with nothing the player could miss: no dinosaur raised, no fight won. */
 export const isFreshSave = (s: Save) => s.dinos.length === 0 && s.cleared.length === 0;
 
@@ -142,7 +183,7 @@ export const isFreshSave = (s: Save) => s.dinos.length === 0 && s.cleared.length
  */
 export function planSync(local: Save, remote: CloudSave | null, sameAccount = false): 'upload' | 'download' {
   if (!remote || remote.outdated) return 'upload';
-  if (sameAccount) return local.updatedAt > remote.save.updatedAt ? 'upload' : 'download';
+  if (sameAccount) return compareProgress(local, remote.save) > 0 ? 'upload' : 'download';
   if (isFreshSave(local)) return 'download';
   return isFreshSave(remote.save) ? 'upload' : 'download';
 }
@@ -198,11 +239,168 @@ export async function listPlayers(search = ''): Promise<PlayerSummary[]> {
   return (data ?? []) as PlayerSummary[];
 }
 
+/** What the leaderboard ranks by: dinosaurs owned, the champion's level, or arena stars. */
+export type RankBy = 'dinos' | 'level' | 'stars';
+export type Leaderboard = { top: PlayerSummary[]; self: PlayerSummary | null; selfRank: number | null };
+/** The best players by `by`, and this player's own place when it falls outside the top. */
+export async function listLeaderboard(by: RankBy, selfId: string, limit = 20): Promise<Leaderboard> {
+  if (!cloud) return { top: [], self: null, selfRank: null };
+  const { data, error } = await cloud
+    .from('players')
+    .select('*')
+    .not('updated_at', 'is', null)
+    .order(by, { ascending: false })
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  const top = (data ?? []) as PlayerSummary[];
+  if (top.some((p) => p.user_id === selfId)) return { top, self: null, selfRank: null };
+  const mine = await cloud.from('players').select('*').eq('user_id', selfId).maybeSingle();
+  const self = (mine.data ?? null) as PlayerSummary | null;
+  if (mine.error || !self || !self.updated_at) return { top, self: null, selfRank: null };
+  const ahead = await cloud
+    .from('players')
+    .select('user_id', { count: 'exact', head: true })
+    .not('updated_at', 'is', null)
+    .gt(by, self[by]);
+  return { top, self, selfRank: ahead.error ? null : (ahead.count ?? 0) + 1 };
+}
+
+/** A friendship seen from this player's side: `incoming` = they asked and wait for an answer from us. */
+export type Friend = {
+  user_id: string;
+  name: string;
+  status: 'pending' | 'accepted';
+  incoming: boolean;
+  acceptHelp: boolean;
+};
+export async function listFriends(selfId: string): Promise<Friend[]> {
+  if (!cloud) return [];
+  const { data, error } = await cloud.from('friendships').select('requester, addressee, status');
+  if (error) throw error;
+  const rows = (data ?? []) as { requester: string; addressee: string; status: Friend['status'] }[];
+  if (!rows.length) return [];
+  const other = (r: (typeof rows)[number]) => (r.requester === selfId ? r.addressee : r.requester);
+  const { data: people, error: e2 } = await cloud
+    .from('profiles')
+    .select('user_id, name, accept_help')
+    .in('user_id', rows.map(other));
+  if (e2) throw e2;
+  const byId = new Map((people ?? []).map((p) => [p.user_id as string, p]));
+  return rows
+    .map((r) => {
+      const p = byId.get(other(r));
+      return {
+        user_id: other(r),
+        name: p?.name ?? '?',
+        status: r.status,
+        incoming: r.addressee === selfId,
+        acceptHelp: !!p?.accept_help,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+export async function requestFriend(selfId: string, otherId: string) {
+  if (!cloud) return;
+  const { error } = await cloud.from('friendships').insert({ requester: selfId, addressee: otherId });
+  // Already asked (by either side): nothing more to do.
+  if (error && error.code !== '23505') throw error;
+}
+export async function acceptFriend(selfId: string, otherId: string) {
+  if (!cloud) return;
+  const { error } = await cloud
+    .from('friendships')
+    .update({ status: 'accepted' })
+    .eq('requester', otherId)
+    .eq('addressee', selfId);
+  if (error) throw error;
+}
+/** Refuses a request, cancels one sent, or ends a friendship. */
+export async function removeFriend(selfId: string, otherId: string) {
+  if (!cloud) return;
+  const { error } = await cloud
+    .from('friendships')
+    .delete()
+    .or(`and(requester.eq.${selfId},addressee.eq.${otherId}),and(requester.eq.${otherId},addressee.eq.${selfId})`);
+  if (error) throw error;
+}
+
+export async function fetchAcceptHelp(userId: string) {
+  if (!cloud) return false;
+  const { data, error } = await cloud.from('profiles').select('accept_help').eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  return !!data?.accept_help;
+}
+export async function saveAcceptHelp(userId: string, on: boolean) {
+  if (!cloud) return;
+  const { error } = await cloud.from('profiles').update({ accept_help: on }).eq('user_id', userId);
+  if (error) throw error;
+}
+
+export type HelpProblem = 'not_friends' | 'help_off' | 'too_soon' | 'network';
+/** Collects a friend's habitat gold for them (applied by their game when it next loads). */
+export async function helpFriend(ownerId: string): Promise<HelpProblem | null> {
+  if (!cloud) return 'network';
+  const { data, error } = await cloud.rpc('help_friend', { target: ownerId });
+  if (error) return 'network';
+  return (data as HelpProblem | null) ?? null;
+}
+
+/** Friends' collects waiting for this player's game: when (ms) and who. */
+export async function fetchFriendHelps(selfId: string) {
+  if (!cloud) return [];
+  const { data, error } = await cloud
+    .from('friend_helps')
+    .select('id, helper_id, created_at')
+    .eq('owner_id', selfId)
+    .order('created_at');
+  if (error) throw error;
+  const rows = (data ?? []) as { id: number; helper_id: string; created_at: string }[];
+  if (!rows.length) return [];
+  const { data: people } = await cloud
+    .from('profiles')
+    .select('user_id, name')
+    .in('user_id', [...new Set(rows.map((r) => r.helper_id))]);
+  const names = new Map((people ?? []).map((p) => [p.user_id as string, p.name as string]));
+  return rows.map((r) => ({ id: r.id, at: new Date(r.created_at).getTime(), name: names.get(r.helper_id) ?? '?' }));
+}
+export async function clearFriendHelps(ids: number[]) {
+  if (!cloud || !ids.length) return;
+  const { error } = await cloud.from('friend_helps').delete().in('id', ids);
+  if (error) throw error;
+}
+
+export type FightResult = 'victory' | 'defeat' | 'draw';
+/** Records a friendly fight this player started against `otherId`. */
+export async function recordFriendBattle(selfId: string, otherId: string, result: FightResult) {
+  if (!cloud) return;
+  const { error } = await cloud.from('friend_battles').insert({ attacker: selfId, defender: otherId, result });
+  if (error) throw error;
+}
+/** Wins, losses and draws against each friend, counting fights started by either side. */
+export type Score = { wins: number; losses: number; draws: number };
+export async function fetchFriendScores(selfId: string): Promise<Map<string, Score>> {
+  const scores = new Map<string, Score>();
+  if (!cloud) return scores;
+  const { data, error } = await cloud.from('friend_battles').select('attacker, defender, result');
+  if (error) throw error;
+  for (const r of (data ?? []) as { attacker: string; defender: string; result: FightResult }[]) {
+    const mine = r.attacker === selfId,
+      other = mine ? r.defender : r.attacker,
+      score = scores.get(other) ?? { wins: 0, losses: 0, draws: 0 };
+    if (r.result === 'draw') score.draws++;
+    else if ((r.result === 'victory') === mine) score.wins++;
+    else score.losses++;
+    scores.set(other, score);
+  }
+  return scores;
+}
+
 const GUEST_NOUNS = ['Raptor', 'Rex', 'Tricera', 'Bronto', 'Stego', 'Ptero', 'Dino', 'Anky'];
 const GUEST_ADJECTIVES = ['Curajos', 'Iute', 'Vesel', 'Isteț', 'Fioros', 'Zglobiu', 'Voinic', 'Sprinten'];
 /** A random guest name such as "Raptor Curajos 482": always a valid player name (see validName). */
 export function randomGuestName(random = Math.random) {
-  const pick = <T,>(list: T[]) => list[Math.floor(random() * list.length)];
+  const pick = <T>(list: T[]) => list[Math.floor(random() * list.length)];
   return `${pick(GUEST_NOUNS)} ${pick(GUEST_ADJECTIVES)} ${100 + Math.floor(random() * 900)}`;
 }
 /** The guest's name on this device, made up on first use. */
@@ -248,7 +446,10 @@ export function clearPendingPassword() {
  * first and the password only once the e-mail is confirmed: `confirm` means the player must open the e-mail link,
  * after which the game asks for the password.
  */
-export async function linkEmail(email: string, password: string): Promise<{ problem: AuthProblem | null; confirm: boolean }> {
+export async function linkEmail(
+  email: string,
+  password: string,
+): Promise<{ problem: AuthProblem | null; confirm: boolean }> {
   if (!cloud) return { problem: 'other', confirm: false };
   const first = await cloud.auth.updateUser({ email }, { emailRedirectTo: returnUrl() });
   if (first.error) return { problem: problem(first.error), confirm: false };

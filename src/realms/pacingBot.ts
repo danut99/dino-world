@@ -8,12 +8,24 @@
  * dinosaurs, fights the arena tiers its best team can win and sends teams out through every portal slot.
  */
 import { autoPlay, predictFight } from './autoBattle';
-import { CROPS, ENCOUNTERS, RECIPES, REGIONS, REGION_STAGES, UTILITY_BUILDINGS, regionNumber, regionTeamSize, stageLevel, type ItemId, type UtilityKind } from './content';
+import {
+  CROPS,
+  ENCOUNTERS,
+  RECIPES,
+  REGIONS,
+  REGION_STAGES,
+  UTILITY_BUILDINGS,
+  regionNumber,
+  regionTeamSize,
+  stageLevel,
+  type ItemId,
+  type UtilityKind,
+} from './content';
 import { expeditionPlan, patrolPlan, PATROL, suggestTeam, type PatrolHours } from './expeditionRules';
 import {
   arenaTicketPrice,
   busyDinos,
-  canPlace,
+  canBuild,
   COLLECTION,
   command,
   eggPrice,
@@ -25,6 +37,7 @@ import {
   habitatCapacity,
   hatcherySlots,
   isTired,
+  LEAGUE_EGG_ELEMENTS,
   levelCap,
   levelEdge,
   MARKET_ELEMENTS,
@@ -161,7 +174,13 @@ export function runBot(options: BotOptions): BotResult {
   const flows: Record<string, { gold: number; food: number; n: number }> = {};
 
   const watch = (x: Save) => {
-    const values = [x.gold, x.food, x.storedGold, ...Object.values(x.inventory), ...Object.values(x.arenaTickets).map((n) => n ?? 0)];
+    const values = [
+      x.gold,
+      x.food,
+      x.storedGold,
+      ...Object.values(x.inventory),
+      ...Object.values(x.arenaTickets).map((n) => n ?? 0),
+    ];
     lowest = Math.min(lowest, ...values);
   };
   /** Runs a command; a refused one changes nothing. */
@@ -205,7 +224,10 @@ export function runBot(options: BotOptions): BotResult {
       size = f ? Math.max(regionTeamSize(regionNumber(f.id)), regionNumber(f.id) >= 3 ? 3 : 1) : 3;
     const byId = (id: string) => s.dinos.find((d) => d.id === id);
     coreIds = coreIds.filter((id) => byId(id));
-    const others = () => s.dinos.filter((d) => !coreIds.includes(d.id)).sort((a, b) => promise(b) - promise(a) || a.id.localeCompare(b.id));
+    const others = () =>
+      s.dinos
+        .filter((d) => !coreIds.includes(d.id))
+        .sort((a, b) => promise(b) - promise(a) || a.id.localeCompare(b.id));
     while (coreIds.length < size && others().length) coreIds.push(others()[0].id);
     const best = others()[0];
     if (best && coreIds.length) {
@@ -219,18 +241,21 @@ export function runBot(options: BotOptions): BotResult {
   function claimAll() {
     if (s.battle) run({ type: 'claim' });
     for (const x of [...s.expeditions]) if (x.endsAt <= now) run({ type: 'claimExpedition', runId: x.id });
-    if (s.storedGold >= 1 || s.plots.some((p) => p && p.readyAt <= now) || s.crafting.some((j) => j.endsAt <= now)) run({ type: 'collectAvailable' });
+    if (s.storedGold >= 1 || s.plots.some((p) => p && p.readyAt <= now) || s.crafting.some((j) => j.endsAt <= now))
+      run({ type: 'collectAvailable' });
     hatchReady();
     claimStory();
     claimDaily();
   }
   function claimStory() {
-    for (let step = storyChapter(s)?.step; step && step.done(s); step = storyChapter(s)?.step) if (!run({ type: 'claimQuestEgg', questId: step.id })) break;
+    for (let step = storyChapter(s)?.step; step && step.done(s); step = storyChapter(s)?.step)
+      if (!run({ type: 'claimQuestEgg', questId: step.id })) break;
   }
   function claimDaily() {
     if (s.daily.spins === 0) run({ type: 'spinDaily' });
     for (const q of s.daily.quests)
-      if (!s.daily.claimed.includes(q) && s.daily.progress[q] >= DAILY_QUESTS[q].target) run({ type: 'claimDailyQuest', quest: q });
+      if (!s.daily.claimed.includes(q) && s.daily.progress[q] >= DAILY_QUESTS[q].target)
+        run({ type: 'claimDailyQuest', quest: q });
     if (!s.daily.bonus && s.daily.quests.every((q) => s.daily.claimed.includes(q))) run({ type: 'claimDailyBonus' });
   }
 
@@ -238,7 +263,9 @@ export function runBot(options: BotOptions): BotResult {
   const isNew = (e: { species: Dino['species']; element: RealmId }) => !s.discovered.includes(familyId(e));
   /** Room for one more dinosaur of `element`, counting the eggs already incubating for it. */
   const room = (element: RealmId) =>
-    habitatCapacity(s, element) - residents(s, element).length - s.eggs.filter((e) => e.hatchAt !== null && e.element === element).length;
+    habitatCapacity(s, element) -
+    residents(s, element).length -
+    s.eggs.filter((e) => e.hatchAt !== null && e.element === element).length;
   /** Makes room in a full habitat by releasing its weakest dinosaur outside the core (never a boss or the team). */
   function release(element: RealmId) {
     const keep = new Set([...core().map((d) => d.id), ...s.team]);
@@ -261,7 +288,9 @@ export function runBot(options: BotOptions): BotResult {
     // New families (bosses included) first, then any egg its world has room for.
     const waiting = s.eggs
       .filter((e) => e.hatchAt === null)
-      .sort((a, b) => Number(isNew(b)) - Number(isNew(a)) || Number(b.species === 'boss') - Number(a.species === 'boss'));
+      .sort(
+        (a, b) => Number(isNew(b)) - Number(isNew(a)) || Number(b.species === 'boss') - Number(a.species === 'boss'),
+      );
     for (const egg of waiting) {
       if (s.eggs.filter((e) => e.hatchAt !== null).length >= hatcherySlots(s)) break;
       if (!s.habitats[egg.element]) continue;
@@ -274,7 +303,8 @@ export function runBot(options: BotOptions): BotResult {
         for (const species of playableSpecies(element)) {
           const kind = { species, element };
           const pending = [...s.eggs, ...s.owedEggs].some((e) => familyId(e) === familyId(kind));
-          if (isNew(kind) && !pending && s.gold >= eggPrice(element) + reserve()) run({ type: 'buyEgg', species, element });
+          if (isNew(kind) && !pending && s.gold >= eggPrice(element) + reserve())
+            run({ type: 'buyEgg', species, element });
         }
   }
 
@@ -298,7 +328,7 @@ export function runBot(options: BotOptions): BotResult {
       if (s.gold < UTILITY_BUILDINGS[kind].cost + (kind === 'farm' || kind === 'portal' ? 0 : reserve())) return;
       let placed = false;
       for (let y = 0; y < 24 && !placed; y++)
-        for (let x = 0; x < 24 && !placed; x++) if (canPlace(s, x, y)) placed = run({ type: 'build', kind, x, y });
+        for (let x = 0; x < 24 && !placed; x++) if (canBuild(s, x, y)) placed = run({ type: 'build', kind, x, y });
       if (!placed) return;
     }
   }
@@ -318,12 +348,21 @@ export function runBot(options: BotOptions): BotResult {
     };
     wanted.push(...(story[goal] ?? []));
     // A habitat with a new family waiting for room.
-    for (const egg of s.eggs) if (isNew(egg) && s.habitats[egg.element] && room(egg.element) <= 0) wanted.push(`habitat:${egg.element}`);
+    for (const egg of s.eggs)
+      if (isNew(egg) && s.habitats[egg.element] && room(egg.element) <= 0) wanted.push(`habitat:${egg.element}`);
     // The Arena Gate's second level waits until the gated leagues are near (the ice world is open).
-    const ok = (t: BuildTarget) => (t === 'arena' ? has('arena') && (s.habitats.ice ?? 0) > 0 : t === 'workshop' ? has('workshop') : t === 'portal' ? s.portalLevel > 0 : true);
+    const ok = (t: BuildTarget) =>
+      t === 'arena'
+        ? has('arena') && (s.habitats.ice ?? 0) > 0
+        : t === 'workshop'
+          ? has('workshop')
+          : t === 'portal'
+            ? s.portalLevel > 0
+            : true;
     wanted.push(...BUILD_ORDER);
     // Then every habitat, level by level.
-    for (let level = 2; level <= ALL_HABITATS_LEVEL; level++) for (const w of openWorlds()) if ((s.habitats[w] ?? 0) < level) wanted.push(`habitat:${w}`);
+    for (let level = 2; level <= ALL_HABITATS_LEVEL; level++)
+      for (const w of openWorlds()) if ((s.habitats[w] ?? 0) < level) wanted.push(`habitat:${w}`);
     return [...new Set(wanted)].filter((t) => ok(t) && nextUpgrade(s, t));
   }
   function upgrade() {
@@ -331,7 +370,9 @@ export function runBot(options: BotOptions): BotResult {
     const spare = s.gold - reserve();
     for (const t of buildQueue()) {
       const step = nextUpgrade(s, t)!;
-      const affordable = spare >= step.gold && (Object.entries(step.materials) as [ItemId, number][]).every(([id, n]) => s.inventory[id] >= n);
+      const affordable =
+        spare >= step.gold &&
+        (Object.entries(step.materials) as [ItemId, number][]).every(([id, n]) => s.inventory[id] >= n);
       if (affordable) {
         run(UPGRADE_COMMAND(t));
         return;
@@ -351,7 +392,9 @@ export function runBot(options: BotOptions): BotResult {
     if (!upgrades) return need;
     const queue = buildQueue().slice(0, 3);
     const sum: Partial<Record<ItemId, number>> = {};
-    for (const t of queue) for (const [id, n] of Object.entries(nextUpgrade(s, t)!.materials) as [ItemId, number][]) sum[id] = (sum[id] ?? 0) + n;
+    for (const t of queue)
+      for (const [id, n] of Object.entries(nextUpgrade(s, t)!.materials) as [ItemId, number][])
+        sum[id] = (sum[id] ?? 0) + n;
     add(sum);
     return need;
   }
@@ -363,14 +406,21 @@ export function runBot(options: BotOptions): BotResult {
       worldNeed = wishes(false);
     const f = frontier();
     const stageSupplies = f && regionNumber(f.id) > 1 ? regionTeamSize(regionNumber(f.id)) : 0;
-    const supplies = stageSupplies + (Object.values(s.expeditionProgress).some((n) => (n ?? 0) >= PATROL.unlockStage) ? 3 : 0);
+    const supplies =
+      stageSupplies + (Object.values(s.expeditionProgress).some((n) => (n ?? 0) >= PATROL.unlockStage) ? 3 : 0);
     const crystalsWanted = core().filter((d) => d.stage === 'juvenile' && d.level >= 20).length;
     const kitsWanted = Math.min(2, buildQueue().filter((t) => t.startsWith('habitat:')).length * 2);
     const plan: [string, () => boolean][] = [
       ['provisions', () => s.inventory.provisions + queued('provisions') < supplies && s.food >= 30 + 50],
       ['evolution', () => s.inventory.evolutionCrystal + queued('evolution') < crystalsWanted],
       ['kit', () => s.inventory.habitatKit + queued('kit') < Math.max(kitsWanted, need.habitatKit ?? 0)],
-      ['lamp', () => s.lamps + s.inventory.lamp + queued('lamp') < 5 && s.inventory.crystal >= 6 + (need.crystal ?? 0) + 16 && s.inventory.stone >= 20 + (need.stone ?? 0)],
+      [
+        'lamp',
+        () =>
+          s.lamps + s.inventory.lamp + queued('lamp') < 5 &&
+          s.inventory.crystal >= 6 + (need.crystal ?? 0) + 16 &&
+          s.inventory.stone >= 20 + (need.stone ?? 0),
+      ],
     ];
     for (let guard = 0; guard < 10 && room(); guard++) {
       const pick = plan.find(([id, want]) => {
@@ -382,7 +432,10 @@ export function runBot(options: BotOptions): BotResult {
         const kept = (item: ItemId) => (id !== 'provisions' && (item === 'wood' || item === 'fiber') ? 12 : 0);
         const reserve = id === 'lamp' ? need : worldNeed;
         return (Object.entries(recipe.cost) as [ItemId, number][]).every(
-          ([item, n]) => s.inventory[item] - n >= (['wood', 'stone', 'fiber', 'crystal'].includes(item) && id !== 'evolution' ? reserve[item] ?? 0 : 0) + kept(item),
+          ([item, n]) =>
+            s.inventory[item] - n >=
+            (['wood', 'stone', 'fiber', 'crystal'].includes(item) && id !== 'evolution' ? (reserve[item] ?? 0) : 0) +
+              kept(item),
         );
       });
       if (!pick || !run({ type: 'craft', recipeId: pick[0] })) break;
@@ -396,7 +449,8 @@ export function runBot(options: BotOptions): BotResult {
     const gap = next - now;
     const crops = CROPS.filter((c) => c.level <= s.farmLevel && c.seconds * 1000 <= gap + 30 * MIN);
     const crop = crops[crops.length - 1] ?? CROPS[0];
-    for (let i = 0; i < s.plots.length; i++) if (!s.plots[i] && s.gold >= crop.cost) run({ type: 'plant', crop: crop.id, plot: i });
+    for (let i = 0; i < s.plots.length; i++)
+      if (!s.plots[i] && s.gold >= crop.cost) run({ type: 'plant', crop: crop.id, plot: i });
   }
 
   // ---- dinosaurs -----------------------------------------------------------------------------------------------
@@ -431,7 +485,12 @@ export function runBot(options: BotOptions): BotResult {
       if (!wish) break;
       const d = wish[0];
       if (s.food < feedCost(d.level) + keep) break;
-      if (!run(d.level === levelCap(d.stage) ? { type: 'evolve', dinoId: d.id } : { type: 'feed', dinoId: d.id, times: 1 })) break;
+      if (
+        !run(
+          d.level === levelCap(d.stage) ? { type: 'evolve', dinoId: d.id } : { type: 'feed', dinoId: d.id, times: 1 },
+        )
+      )
+        break;
     }
   }
 
@@ -469,17 +528,19 @@ export function runBot(options: BotOptions): BotResult {
   }
   function arena() {
     if (!has('arena')) return;
-    const open = (league: string) => s.habitats[league as RealmId] && (!GATE_LEAGUES.includes(league) || s.arenaLevel >= 2);
+    const open = (league: string) =>
+      s.habitats[league as RealmId] && (!GATE_LEAGUES.includes(league) || s.arenaLevel >= 2);
     // Stars first: every tier the team can win with more stars than before, easiest first.
-    const tiers = ENCOUNTERS.filter((e) => open(e.league!) && (s.stars[e.id] ?? 0) < 3 && (!e.requires || (s.stars[e.requires] ?? 0) >= 2)).sort(
-      (a, b) => a.level - b.level,
-    );
+    const tiers = ENCOUNTERS.filter(
+      (e) => open(e.league!) && (s.stars[e.id] ?? 0) < 3 && (!e.requires || (s.stars[e.requires] ?? 0) >= 2),
+    ).sort((a, b) => a.level - b.level);
     for (const e of tiers) if (fight(e.id, (s.stars[e.id] ?? 0) + 1)) return;
     // Then eggs: missing families of a league that drops them, on its hardest tier the team wins.
-    for (const league of openWorlds().filter((w) => !MARKET_ELEMENTS.includes(w) && open(w))) {
+    for (const league of openWorlds().filter((w) => LEAGUE_EGG_ELEMENTS.includes(w) && open(w))) {
       if (!playableSpecies(league).some((species) => isNew({ species, element: league }))) continue;
       if ([...s.eggs, ...s.owedEggs].some((e) => e.element === league && isNew(e))) continue;
-      for (const tier of [3, 2, 1]) if ((s.stars[`arena-${league}-${tier}`] ?? 0) >= 1 && fight(`arena-${league}-${tier}`, 1)) return;
+      for (const tier of [3, 2, 1])
+        if ((s.stars[`arena-${league}-${tier}`] ?? 0) >= 1 && fight(`arena-${league}-${tier}`, 1)) return;
     }
   }
 
@@ -499,7 +560,9 @@ export function runBot(options: BotOptions): BotResult {
     if (!hours) return;
     for (let guard = 0; guard < 3; guard++) {
       // The richest region first, but one that brings the scarcest raw material when stocks run low.
-      const scarce = (['wood', 'stone', 'fiber', 'crystal'] as const).filter((id) => s.inventory[id] < 150).sort((a, b) => s.inventory[a] - s.inventory[b]);
+      const scarce = (['wood', 'stone', 'fiber', 'crystal'] as const)
+        .filter((id) => s.inventory[id] < 150)
+        .sort((a, b) => s.inventory[a] - s.inventory[b]);
       const rank = (r: (typeof REGIONS)[number]) => {
         const i = scarce.findIndex((m) => r.materials.includes(m));
         return i < 0 ? scarce.length : i;
@@ -510,7 +573,11 @@ export function runBot(options: BotOptions): BotResult {
       let sent = false;
       for (const r of regions) {
         const team = suggestTeam(s, r.id, 'patrol');
-        if (team.length && patrolPlan(s, r.id, hours, team).canSend && run({ type: 'patrol', regionId: r.id, hours, team })) {
+        if (
+          team.length &&
+          patrolPlan(s, r.id, hours, team).canSend &&
+          run({ type: 'patrol', regionId: r.id, hours, team })
+        ) {
           sent = true;
           break;
         }
@@ -545,7 +612,8 @@ export function runBot(options: BotOptions): BotResult {
         pass(m + 2 > sessionMinutes);
       }
     }
-    if (regionsDay === null && REGIONS.every((r) => (s.expeditionProgress[r.id] ?? 0) >= REGION_STAGES)) regionsDay = day;
+    if (regionsDay === null && REGIONS.every((r) => (s.expeditionProgress[r.id] ?? 0) >= REGION_STAGES))
+      regionsDay = day;
     records.push(snapshot(day, s, gemsEarned));
     options.onDay?.(day, s);
     if (everythingDone(s)) {
@@ -562,7 +630,20 @@ export function dayTable(records: DayRecord[], days: number[]) {
   return [
     head,
     ...[...new Set(pick)].map((r) =>
-      [r.day, `${r.regions} ${r.stages}`, r.worlds, r.stars, r.collection, r.habitatLevels, r.chapter, r.gold, r.food, r.team.join('/'), r.gemsEarned, r.dinos].join(' | '),
+      [
+        r.day,
+        `${r.regions} ${r.stages}`,
+        r.worlds,
+        r.stars,
+        r.collection,
+        r.habitatLevels,
+        r.chapter,
+        r.gold,
+        r.food,
+        r.team.join('/'),
+        r.gemsEarned,
+        r.dinos,
+      ].join(' | '),
     ),
   ].join('\n');
 }

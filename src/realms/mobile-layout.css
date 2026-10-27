@@ -1,11 +1,11 @@
 /* Phone-only corrections. Desktop layouts stay in their component stylesheets. */
 @media (max-width: 760px) and (orientation: portrait) {
   main.realms-app .realm-window > header {
-    padding: 6px 48px 10px 8px;
+    padding: 4px 6px 8px;
   }
   main.realms-app .realm-window h2 {
     min-height: 0;
-    padding: 8px 10px;
+    padding: 0;
     font-size: 18px;
     line-height: 1.3;
   }
@@ -14,8 +14,12 @@
   }
   main.realms-app .dino-sheet {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 98px minmax(0, 1fr);
+    grid-template-rows: 98px 130px minmax(0, 1fr);
     gap: 10px;
+  }
+  /* Kids look for the dinosaur first: its picture stays, just shorter. */
+  main.realms-app .dino-sheet-stage {
+    display: block;
   }
   main.realms-app .dino-roster-list {
     --paged-min: 116px;
@@ -190,6 +194,32 @@
   }
   main.realms-app .arena-fight .arena-rewards .reward-egg {
     grid-column: span 2;
+  }
+
+  /* Few tabs share the row instead of clipping the last one; many still scroll. */
+  main.realms-app .ui-tab {
+    flex: 1 0 auto;
+    justify-content: center;
+    padding: 5px 8px 6px;
+    font-size: 13px;
+  }
+
+  main.realms-app .hatch-panel .pk-head-text > strong {
+    font-size: 14px;
+  }
+  main.realms-app .hatch-nests {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    max-height: none;
+  }
+  main.realms-app .hatch-nest {
+    gap: 8px;
+  }
+  main.realms-app .hatch-nest.locked {
+    opacity: 0.55;
+  }
+  main.realms-app .hatch-nest.locked small {
+    font-family: var(--font-display);
   }
 }
 @media (max-width: 760px) and (max-height: 680px) and (orientation: portrait) {
@@ -593,7 +623,6 @@
 @media (max-width: 760px) and (max-height: 680px) and (orientation: portrait) {
   main.realms-app .realm-window h2 {
     font-size: 15px;
-    padding: 6px;
   }
   main.realms-app .realm-atlas > .pk-head {
     gap: 6px;
@@ -688,5 +717,597 @@
   main.realms-app .realm-atlas .atlas-body .habitat-buttons .realm-link {
     min-height: 18px;
     line-height: 1.2;
+  }
+}
+
+/* Phones: every main button carries its name, the main actions are larger and gold, and ready things pulse. */
+.realm-mobile-wallet {
+  display: none;
+}
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  main.realms-app .realm-mobile-wallet {
+    position: absolute;
+    z-index: 4;
+    top: calc(max(10px, env(safe-area-inset-top)) + 12px);
+    left: calc(max(10px, env(safe-area-inset-left)) + 64px);
+    display: flex;
+    gap: 4px;
+  }
+  main.realms-app .realm-mobile-wallet > * {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 32px;
+    padding: 0 8px;
+    font: 700 13px var(--font-display, inherit);
+    color: #fff4d6;
+    background: #241c18e6;
+    border: 2px solid #cdbfa855;
+    border-radius: 8px;
+    text-shadow: 1px 1px 0 #1a1412;
+  }
+  main.realms-app .realm-mobile-wallet > button {
+    cursor: pointer;
+    border-color: #7fd8ff99;
+  }
+  main.realms-app .realm-mobile-wallet > button b {
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    font-size: 13px;
+    color: #12303d;
+    background: #7fd8ff;
+    border-radius: 4px;
+    text-shadow: none;
+  }
+  /* The place name moves under the wallet. */
+  main.realms-app .realm-location {
+    top: calc(max(10px, env(safe-area-inset-top)) + 50px);
+  }
+  /* Notes keep clear of the Daily and Center buttons on the right. */
+  main.realms-app :is(.realm-offline-strip, .realm-toast) {
+    left: max(8px, env(safe-area-inset-left));
+    right: calc(max(8px, env(safe-area-inset-right)) + 76px);
+    width: auto;
+    max-width: none;
+    transform: none;
+  }
+}
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  main.realms-app .realm-nav > button > strong {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+    color: #fff4d6;
+    text-shadow: 1px 1px 0 #1a1412;
+    white-space: nowrap;
+    letter-spacing: -0.2px;
+  }
+  main.realms-app .realm-nav > button > span svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  /* Folded: "☰ Meniu", the worlds and Collect, each with words. */
+  main.realms-app .realm-nav.collapsed {
+    width: max-content;
+    max-width: calc(100% - 16px);
+    gap: 4px;
+  }
+  main.realms-app .realm-nav.collapsed > button.realm-nav-toggle,
+  main.realms-app .realm-nav.collapsed > button.realm-nav-hub:not(.realm-nav-toggle),
+  main.realms-app .realm-nav.collapsed > .realm-collect {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    height: 52px;
+    padding: 0 12px;
+    gap: 6px;
+    flex-direction: row;
+    align-items: center;
+  }
+  main.realms-app .realm-nav.collapsed > button.realm-nav-toggle {
+    background: #3a2e27;
+    border: 2px solid #cdbfa8aa;
+  }
+  main.realms-app .realm-nav.collapsed > button.realm-nav-toggle > .realm-nav-toggle-label,
+  main.realms-app .realm-nav.collapsed > button.realm-nav-hub > strong {
+    display: inline;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff4d6;
+  }
+  main.realms-app .realm-nav .realm-nav-arrow {
+    flex: none;
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Open: a grid of large buttons with their names under the icons. */
+  main.realms-app .realm-nav:not(.collapsed) {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: min(420px, calc(100% - 16px));
+    max-width: calc(100% - 16px);
+    gap: 4px;
+  }
+  main.realms-app .realm-nav:not(.collapsed) > button {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    height: 62px;
+    padding: 2px;
+    gap: 3px;
+  }
+  main.realms-app .realm-nav:not(.collapsed) > button.realm-nav-toggle {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+    width: auto;
+    height: 34px;
+    background: #3a2e27;
+  }
+  main.realms-app .realm-nav:not(.collapsed) > button.realm-nav-toggle > .realm-nav-toggle-label,
+  main.realms-app .realm-nav:not(.collapsed) .realm-collect > div {
+    display: block;
+    font-size: 12px;
+  }
+  main.realms-app .realm-nav:not(.collapsed) .realm-collect strong {
+    font-size: 11px;
+  }
+  main.realms-app:has(.realm-nav:not(.collapsed)) .realm-camera {
+    bottom: calc(max(10px, env(safe-area-inset-bottom)) + 214px);
+  }
+  main.realms-app .realm-camera,
+  main.realms-app:has(.realm-nav.collapsed) .realm-camera {
+    bottom: calc(max(10px, env(safe-area-inset-bottom)) + 84px);
+  }
+
+  main.realms-app .realm-nav > button.featured:not(.realm-nav-hub) {
+    border: 2px solid #9be38f;
+    border-image: none;
+    background: #2f4a2c;
+  }
+
+  /* Story: the folded button keeps its name. */
+  main.realms-app .realm-quest.collapsed {
+    width: auto;
+  }
+  main.realms-app .realm-quest.collapsed .realm-quest-top {
+    width: auto;
+    height: 44px;
+    padding: 0 12px;
+    gap: 6px;
+  }
+  main.realms-app .realm-quest.collapsed .realm-quest-label {
+    display: inline;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  main.realms-app .realm-quest-top > span:first-child {
+    font-size: 16px;
+    color: #f6d277;
+  }
+
+  /* Building bubbles: readable, and the ready ones pulse. */
+  main.realms-app .production-bubble {
+    min-height: 34px;
+    padding: 6px 10px;
+    font-size: 12px !important;
+    font-weight: 700;
+  }
+  main.realms-app .realm-camera > button:not(.realm-recenter) {
+    width: 48px;
+    height: 48px;
+  }
+  main.realms-app .realm-camera > .realm-recenter {
+    height: 48px;
+  }
+
+  /* Arena tiers: stars above the name, so the three chips fit side by side. */
+  main.realms-app .arena-tier-chip {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    justify-items: center;
+    padding: 4px;
+    text-align: center;
+  }
+  main.realms-app .arena-tier-chip .arena-tier-stars {
+    grid-row: auto;
+    font-size: 13px;
+  }
+  main.realms-app .arena-tier-chip small {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+  }
+  /* The start button of a fight or expedition never hides below the fold. */
+  main.realms-app .gameplay-screen .adventure-start:not(:disabled) {
+    position: sticky;
+    bottom: 6px;
+    z-index: 2;
+    box-shadow: 0 -6px 14px #1a1412cc;
+  }
+  main.realms-app .arena-side .arena-tab,
+  main.realms-app .arena-side .arena-tab:has(.arena-fight) {
+    overflow: visible;
+  }
+  /* Workshop recipes: the whole name, on two lines if needed. */
+  main.realms-app .craft-recipe > header strong {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+    line-height: 1.15;
+  }
+  /* World picker: each world's name under its icon. */
+  main.realms-app .atlas-elements button {
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    min-height: 44px;
+    padding: 2px;
+  }
+  main.realms-app .atlas-elements button > span:not(.px-icon) {
+    display: block;
+    flex: none;
+    max-width: 100%;
+    font-size: 9px;
+    line-height: 1.1;
+    text-align: center;
+  }
+  main.realms-app .atlas-elements button > span:not(.px-icon) small {
+    display: none;
+  }
+}
+/* Very narrow phones: the longest names ("Construiește") still fit their button. */
+@media (max-width: 360px) {
+  main.realms-app .realm-nav:not(.collapsed) > button > strong,
+  main.realms-app .realm-nav:not(.collapsed) .realm-collect strong {
+    font-size: 9px;
+    letter-spacing: -0.4px;
+  }
+}
+/* Landscape phones are short: the open bar stays a single row. */
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  main.realms-app .realm-nav:not(.collapsed) {
+    grid-template-columns: 44px;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    width: min(900px, calc(100% - 16px));
+  }
+  main.realms-app .realm-nav:not(.collapsed) > button {
+    height: 56px;
+  }
+  main.realms-app .realm-nav:not(.collapsed) > button.realm-nav-toggle {
+    grid-column: auto;
+    height: 56px;
+  }
+  main.realms-app .realm-nav:not(.collapsed) > button.realm-nav-toggle > .realm-nav-toggle-label {
+    display: none;
+  }
+  main.realms-app:has(.realm-nav:not(.collapsed)) .realm-camera {
+    bottom: calc(max(10px, env(safe-area-inset-bottom)) + 84px);
+  }
+}
+/* All screens: the worlds hub and a Collect with gold waiting are the main actions, gold like the coins. */
+main.realms-app .realm-nav > button.realm-nav-hub:not(.realm-nav-toggle),
+main.realms-app .realm-nav > button.realm-nav-hub:not(.realm-nav-toggle):hover,
+main.realms-app .realm-nav > .realm-collect:not(.empty) {
+  border: 2px solid #fff0af;
+  border-image: none;
+  background: linear-gradient(#f6d277, #d9a441);
+  box-shadow:
+    inset 0 -3px 0 #a8742a,
+    0 0 12px #f6d27766;
+  color: #2a1a0c;
+}
+main.realms-app .realm-nav > button.realm-nav-hub > strong,
+main.realms-app .realm-nav.collapsed > button.realm-nav-hub > strong,
+main.realms-app .realm-nav > .realm-collect:not(.empty) :is(strong, small) {
+  color: #2a1a0c;
+  text-shadow: none;
+}
+main.realms-app .realm-nav > .realm-collect.empty {
+  opacity: 0.75;
+}
+/* The button the story points to and anything ready to collect gently pulse. */
+main.realms-app .realm-nav > button.featured,
+main.realms-app .realm-nav > .realm-collect:not(.empty),
+main.realms-app .production-bubble.ready {
+  animation: realm-main-pulse 1.4s ease-in-out infinite alternate;
+}
+/* The next world to open stands out among the locked ones. */
+main.realms-app .atlas-elements button.is-next {
+  filter: none;
+  box-shadow:
+    0 0 0 2px #9be38f,
+    0 0 10px #9be38f88;
+}
+@keyframes realm-main-pulse {
+  from {
+    box-shadow:
+      inset 0 -3px 0 #a8742a,
+      0 0 4px #f6d27755;
+  }
+  to {
+    box-shadow:
+      inset 0 -3px 0 #a8742a,
+      0 0 16px 3px #f6d277cc;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  main.realms-app .realm-nav > button,
+  main.realms-app .production-bubble {
+    animation: none !important;
+  }
+}
+
+/* Phone workshop: one recipe per row (name, then costs, button on the right); the head shows only items you own. */
+@media (max-width: 760px) and (orientation: portrait) {
+  main.realms-app .workshop-stock {
+    flex-wrap: wrap;
+  }
+  main.realms-app .workshop-stock .pk-cost.empty {
+    display: none;
+  }
+  main.realms-app .craft-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    /* Cards keep their full height and the list scrolls, instead of all four being squeezed into view. */
+    grid-auto-rows: max-content;
+    gap: 6px;
+    overflow: auto;
+  }
+  main.realms-app .craft-recipe {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 10px;
+    min-height: 0;
+    padding: 6px 8px;
+    border-width: 6px;
+  }
+  main.realms-app .craft-recipe > header {
+    grid-column: 1 / -1;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  main.realms-app .craft-recipe > header > div {
+    gap: 2px;
+  }
+  main.realms-app .craft-icon {
+    width: 36px;
+    height: 36px;
+  }
+  main.realms-app .craft-recipe > header strong {
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  main.realms-app .craft-recipe > header small {
+    display: block;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  main.realms-app .craft-recipe > header small.craft-use {
+    white-space: normal;
+    line-height: 1.3;
+  }
+  main.realms-app .craft-recipe > .pk-costs {
+    grid-column: 1;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  main.realms-app .craft-recipe .pk-cost {
+    padding: 0 5px 1px;
+    font-size: 12px;
+  }
+  main.realms-app .craft-recipe > footer {
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+  }
+  main.realms-app .craft-recipe > footer .realm-button {
+    min-height: 36px;
+    padding: 2px 10px 4px;
+    font-size: 13px !important;
+  }
+}
+
+/*
+ * Phone expeditions, top to bottom: where (cover), how far (stage), what it takes (facts), what you get (reward
+ * pills), who goes (team), then why you can't go yet right above the start button.
+ */
+@media (max-width: 760px) and (orientation: portrait) {
+  main.realms-app .gameplay-expedition .expedition-detail .destination-cover {
+    height: 96px;
+  }
+  main.realms-app .gameplay-expedition .expedition-detail .expedition-tab {
+    gap: 8px;
+  }
+  main.realms-app .expedition-guide .expedition-stage-row {
+    padding: 6px 8px;
+  }
+  main.realms-app .expedition-guide .expedition-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+  main.realms-app .expedition-guide .expedition-facts li {
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 30px;
+    padding: 2px 4px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  main.realms-app .expedition-guide .expedition-loot {
+    gap: 4px;
+  }
+}
+/* Every size (phone page or desktop sidebar): reward pills, the three tabs fit, the blocker sits above the start. */
+main.realms-app .expedition-guide > .ui-tabs .ui-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 6px;
+}
+main.realms-app .expedition-guide > .ui-tabs .ui-tab-label {
+  white-space: normal;
+  line-height: 1.1;
+  text-align: center;
+}
+main.realms-app .expedition-detail .expedition-rewards,
+main.realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+}
+main.realms-app .expedition-detail .expedition-rewards > span,
+main.realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards > span {
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 30px;
+  padding: 2px 8px;
+  font-size: 14px;
+}
+main.realms-app .expedition-detail .expedition-rewards small,
+main.realms-app .expedition-detail .expedition-patrol-tab .expedition-rewards small {
+  display: inline;
+  margin: 0;
+  font-size: 12px;
+  color: var(--px-bone-3);
+}
+main.realms-app .expedition-guide .expedition-tab > .expedition-notice {
+  order: 2;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+main.realms-app .expedition-guide .expedition-tab > .expedition-notice .realm-button {
+  justify-self: stretch;
+  width: 100%;
+  max-width: none;
+  min-height: 38px;
+  padding: 4px 8px;
+  font-size: 13px !important;
+}
+main.realms-app .expedition-guide .expedition-tab > .adventure-start {
+  order: 3;
+}
+main.realms-app .gameplay-expedition .expedition-detail .expedition-tab {
+  scrollbar-color: var(--px-stone-2) transparent;
+}
+
+/* Phone dinosaur sheet: with a single dinosaur the roster row goes and the picture gets its room. */
+@media (max-width: 760px) and (orientation: portrait) {
+  main.realms-app .realm-atlas > .pk-head {
+    flex-wrap: nowrap;
+  }
+  main.realms-app .realm-atlas .atlas-home {
+    width: 38px;
+    min-width: 38px;
+    padding: 0 0 3px;
+  }
+  main.realms-app .realm-atlas .atlas-home > span {
+    display: none;
+  }
+  /* Ten leagues in one swipeable row instead of two rows of mostly locked chips. */
+  main.realms-app .arena-league-chips {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(58px, max-content);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  /* Collection: the eleven element filters swipe in one row, so more cards fit on a page. */
+  main.realms-app .hero-book .hero-filter {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  main.realms-app .hero-book .hero-filter > .pk-chip {
+    flex: none;
+  }
+  /* Daily missions: the whole title, then the bar and rewards, then the button across the card. */
+  main.realms-app .daily-quest,
+  main.realms-app .daily-bonus {
+    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-areas: 'icon body' 'act act';
+    align-items: start;
+    gap: 6px 10px;
+    max-height: none;
+    padding: 6px 8px;
+  }
+  main.realms-app .daily-quest-icon {
+    grid-area: icon;
+    width: 40px;
+    height: 40px;
+  }
+  main.realms-app .daily-quest-body {
+    grid-area: body;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'title' 'bar' 'chips';
+    gap: 4px;
+  }
+  main.realms-app .daily-quest-title strong {
+    font-size: 14px;
+    line-height: 1.2;
+    white-space: normal;
+  }
+  main.realms-app .daily-chips {
+    flex-wrap: wrap;
+  }
+  main.realms-app :is(.daily-quest, .daily-bonus) > :is(.daily-quest-actions, .realm-button, .daily-stamp) {
+    grid-area: act;
+  }
+  main.realms-app .daily-quest-actions {
+    grid-auto-flow: column;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+  }
+  main.realms-app .daily-quest-actions > .realm-button,
+  main.realms-app .daily-bonus > .realm-button {
+    width: 100%;
+    min-width: 0;
+  }
+  main.realms-app .dino-sheet.solo {
+    grid-template-rows: 150px minmax(0, 1fr);
+  }
+  main.realms-app .dino-evo {
+    gap: 14px;
+  }
+  main.realms-app .dino-evo-art {
+    height: 48px;
+  }
+  main.realms-app .fit-panel .dino-feed-main {
+    min-height: 46px;
+    font-size: 16px !important;
+  }
+}
+@media (max-width: 760px) and (max-height: 680px) and (orientation: portrait) {
+  main.realms-app .dino-sheet.solo {
+    grid-template-rows: 110px minmax(0, 1fr);
+  }
+  main.realms-app .dino-evo-art {
+    height: 36px;
   }
 }

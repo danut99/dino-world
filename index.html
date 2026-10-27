@@ -4,16 +4,51 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#172d3b" />
-    <meta name="description" content="Dino Realms: collect elemental dinosaur heroes, build a floating island, and begin your adventure." />
+    <meta
+      name="description"
+      content="Dino Realms: collect elemental dinosaur heroes, build a floating island, and begin your adventure."
+    />
+    <link rel="canonical" href="https://dino-world-9ezw.onrender.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Dino Realms" />
+    <meta property="og:title" content="Dino Realms – collect elemental dinosaur heroes" />
+    <meta
+      property="og:description"
+      content="Hatch elemental dinosaurs, build a floating island, explore 10 realms and battle in the arena. Free to play in your browser."
+    />
+    <meta property="og:url" content="https://dino-world-9ezw.onrender.com/" />
+    <meta property="og:image" content="https://dino-world-9ezw.onrender.com/realms/home-island-wide-v1.webp" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
+    <link rel="preconnect" href="https://cloud.umami.is" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "Dino Realms",
+        "url": "https://dino-world-9ezw.onrender.com/",
+        "description": "Collect elemental dinosaur heroes, build a floating island and explore 10 realms.",
+        "genre": ["Strategy", "Simulation"],
+        "gamePlatform": "Web browser",
+        "applicationCategory": "Game",
+        "operatingSystem": "Any",
+        "inLanguage": ["en", "ro"],
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+      }
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preload" href="/fonts/cinzel-latin-9.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/barlow-latin-1.woff2" as="font" type="font/woff2" crossorigin />
     <!-- insula principală e cel mai mare element de la pornire (LCP): o cerem înainte să ruleze JS-ul -->
     <link rel="preload" href="/realms/home-island-wide-v1.webp" as="image" type="image/webp" fetchpriority="high" />
     <!-- clădirile cu care începe orice joc (ecranul de încărcare le așteaptă) -->
-    <title>Dino Realms</title>
+    <title>Dino Realms – Dinosaur Island Adventure Game</title>
     <!-- statistici vizitatori (Umami, fără cookie-uri) -->
-    <script defer src="https://cloud.umami.is/script.js" data-website-id="89e36192-68d5-4132-9014-ac55113008a4"></script>
+    <script
+      defer
+      src="https://cloud.umami.is/script.js"
+      data-website-id="89e36192-68d5-4132-9014-ac55113008a4"
+    ></script>
     <!-- Ecranul de încărcare, vizibil din prima clipă (înainte de JS). WorldLoader îl preia identic și îl scoate. -->
     <style>
       #boot-loader {
@@ -40,7 +75,10 @@
       }
       #boot-loader h1 {
         margin: 0;
-        font: 700 clamp(1.8rem, 6vw, 2.4rem) Cinzel, Georgia, serif;
+        font:
+          700 clamp(1.8rem, 6vw, 2.4rem) Cinzel,
+          Georgia,
+          serif;
         letter-spacing: 0.04em;
         color: #ffe6a3;
         text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
@@ -73,7 +111,7 @@
   <body>
     <div id="boot-loader" role="status">
       <div class="card">
-        <h1>Dino World</h1>
+        <h1>Dino Realms</h1>
         <p>Loading the world…</p>
         <div class="bar"></div>
         <small>0%</small>
@@ -83,7 +121,7 @@
     <script type="module" src="/src/main.tsx"></script>
     <script>
       // Ecranul de încărcare doar când fișierele nu sunt în cache: prima vizită sau o versiune nouă (scriptul
-      // principal își schimbă numele la fiecare build). WorldLoader ține minte versiunea după o încărcare completă.
+      // principal își schimbă numele la fiecare build). RealmsApp (bootProgress) ține minte versiunea după o încărcare completă.
       try {
         if (localStorage.getItem('dino-realms-language') !== 'en') {
           document.documentElement.lang = 'ro';
@@ -92,7 +130,8 @@
         var scripts = document.querySelectorAll('script[type="module"][src]');
         // după scriptul principal (în dev e în body; în build, Vite îl mută în head), fără `?t=…` din dev
         var version = scripts.length ? scripts[scripts.length - 1].getAttribute('src').split('?')[0] : '';
-        if (version && localStorage.getItem('dino-world-warm') === version) document.documentElement.classList.add('warm');
+        if (version && localStorage.getItem('dino-world-warm') === version)
+          document.documentElement.classList.add('warm');
       } catch (e) {}
     </script>
   </body>

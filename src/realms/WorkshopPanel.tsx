@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ITEMS, RECIPES, recipeFoodCost, type ItemId } from './content';
+import { ITEM_USE, ITEMS, RECIPES, recipeFoodCost, type ItemId } from './content';
 import { advance, gemsToFinish, WORKSHOP_LEVELS, workshop, type CraftJob, type Command, type Save } from './game';
 import { AnimatedWorkshopSprite } from './AnimatedWorkshopSprite';
 import { WORKSHOP_STATES } from './workshopTiers';
@@ -25,7 +25,15 @@ type QueueItem = { kind: 'done' | 'running' | 'queued'; job: CraftJob } | { kind
  * The workshop: stock on top, then three tabs — the four recipes (2×2), the queue (only running and waiting jobs
  * take a slot; finished ones wait to be collected), and the next level.
  */
-export function WorkshopPanel({ save, now, lang, run, build, recipeId, returnToExpeditions }: {
+export function WorkshopPanel({
+  save,
+  now,
+  lang,
+  run,
+  build,
+  recipeId,
+  returnToExpeditions,
+}: {
   save: Save;
   now: number;
   lang: number;
@@ -70,7 +78,12 @@ export function WorkshopPanel({ save, now, lang, run, build, recipeId, returnToE
         <div className="pk-empty workshop-empty">
           <AnimatedWorkshopSprite art={WORKSHOP_STATES[0].art} />
           <h3>{tr('Încă nu ai atelier pe insulă', 'You have no workshop on the island yet')}</h3>
-          <p className="pk-note">{tr('Atelierul face provizii, kituri de habitat, cristale de evoluție și lămpi.', 'The workshop makes supplies, habitat kits, evolution crystals and lamps.')}</p>
+          <p className="pk-note">
+            {tr(
+              'Atelierul face provizii, kituri de habitat, cristale de evoluție și lămpi.',
+              'The workshop makes supplies, habitat kits, evolution crystals and lamps.',
+            )}
+          </p>
           <button className="realm-button" onClick={build}>
             {tr('Construiește atelierul', 'Build the workshop')}
           </button>
@@ -83,7 +96,7 @@ export function WorkshopPanel({ save, now, lang, run, build, recipeId, returnToE
     ? [
         next.slots > level.slots && (
           <>
-            ⚒ {level.slots} → <b>{next.slots}</b> {tr('locuri în coadă', 'queue slots')}
+            ⚒ {level.slots} → <b>{next.slots}</b> {tr('locuri de lucru', 'work slots')}
           </>
         ),
         next.lanes > level.lanes && (
@@ -101,10 +114,23 @@ export function WorkshopPanel({ save, now, lang, run, build, recipeId, returnToE
 
   const queueCard = (item: QueueItem) => {
     if (item.kind === 'free')
-      return <CompactCard key={item.id} className="craft-free" title={tr('Loc liber', 'Free slot')} subtitle={tr('Alege o rețetă', 'Pick a recipe')} onClick={() => setTab('recipes')} tone="locked" />;
+      return (
+        <CompactCard
+          key={item.id}
+          className="craft-free"
+          title={tr('Loc liber', 'Free slot')}
+          subtitle={tr('Apasă ca să fabrici ceva', 'Tap to craft something')}
+          onClick={() => setTab('recipes')}
+          tone="locked"
+        />
+      );
     const { job } = item;
     const r = RECIPES.find((x) => x.id === job.recipeId)!;
-    const art = <span className="craft-icon" style={{ color: ITEMS[r.output].color }}><Icon name={itemIcon(r.output)} scale={2} /></span>;
+    const art = (
+      <span className="craft-icon" style={{ color: ITEMS[r.output].color }}>
+        <Icon name={itemIcon(r.output)} scale={2} />
+      </span>
+    );
     if (item.kind === 'done')
       return (
         <CompactCard
@@ -150,7 +176,12 @@ export function WorkshopPanel({ save, now, lang, run, build, recipeId, returnToE
           </span>
         }
         action={
-          <button className="realm-gem-finish" disabled={save.gems < gemsToFinish(job.endsAt - now)} onClick={() => run({ type: 'gemFinish', target: 'craft', id: job.id })} title={tr('Termină acum cu diamante', 'Finish now with diamonds')}>
+          <button
+            className="realm-gem-finish"
+            disabled={save.gems < gemsToFinish(job.endsAt - now)}
+            onClick={() => run({ type: 'gemFinish', target: 'craft', id: job.id })}
+            title={tr('Termină acum cu diamante', 'Finish now with diamonds')}
+          >
             ⚡ {gemsToFinish(job.endsAt - now)} 💎
           </button>
         }
@@ -167,7 +198,8 @@ export function WorkshopPanel({ save, now, lang, run, build, recipeId, returnToE
         </span>
         <div className="pk-head-text">
           <strong>
-            {active.length}/{level.slots} {tr('în coadă', 'in the queue')} · {level.lanes} {level.lanes === 1 ? tr('proces deodată', 'job at a time') : tr('procese deodată', 'jobs at once')}
+            {active.length}/{level.slots} {tr('în lucru', 'in progress')} · {level.lanes}{' '}
+            {level.lanes === 1 ? tr('proces deodată', 'job at a time') : tr('procese deodată', 'jobs at once')}
             {level.speed < 1 && ` · −${Math.round((1 - level.speed) * 100)}% ${tr('timp', 'time')}`}
           </strong>
           <ul className="pk-costs workshop-stock" aria-label={tr('Resurse', 'Resources')}>
@@ -196,8 +228,17 @@ export function WorkshopPanel({ save, now, lang, run, build, recipeId, returnToE
         onChange={setTab}
         tabs={[
           { id: 'recipes', label: tr('Rețete', 'Recipes') },
-          { id: 'queue', label: `${tr('Coadă', 'Queue')} ${active.length}/${level.slots}`, badge: done.length },
-          { id: 'upgrade', label: next ? `${tr('Nivel', 'Level')} ${save.workshopLevel + 1}` : tr('Nivel maxim', 'Max level') },
+          {
+            id: 'queue',
+            label: `${tr('În lucru', 'In progress')} ${active.length}/${level.slots}`,
+            badge: done.length,
+            state: done.length ? 'ready' : active.length ? 'busy' : undefined,
+          },
+          {
+            id: 'upgrade',
+            label: next ? `${tr('Nivel', 'Level')} ${save.workshopLevel + 1}` : tr('Nivel maxim', 'Max level'),
+            state: save.construction?.target === 'workshop' ? 'busy' : undefined,
+          },
         ]}
       />
       {tab === 'recipes' && (
@@ -208,7 +249,10 @@ export function WorkshopPanel({ save, now, lang, run, build, recipeId, returnToE
               const costs = Object.entries(r.cost) as [ItemId, number][];
               const canPay = save.food >= food && costs.every(([id, n]) => save.inventory[id] >= n);
               return (
-                <article key={r.id} className={`craft-recipe${r.id === recipeId ? ' focus' : ''}${canPay ? ' ready' : ''}`}>
+                <article
+                  key={r.id}
+                  className={`craft-recipe${r.id === recipeId ? ' focus' : ''}${canPay ? ' ready' : ''}`}
+                >
                   <header>
                     <span className="craft-icon" style={{ color: ITEMS[r.output].color }}>
                       <Icon name={itemIcon(r.output)} scale={2} />
@@ -216,15 +260,22 @@ export function WorkshopPanel({ save, now, lang, run, build, recipeId, returnToE
                     <div>
                       <strong>{r.name[lang]}</strong>
                       <small className="pk-num">
-                        ×{r.quantity} · ⏱ {time(Math.round(r.seconds * 1000 * level.speed))} · {tr('ai', 'have')} {save.inventory[r.output]}
+                        ×{r.quantity} · ⏱ {time(Math.round(r.seconds * 1000 * level.speed))} · {tr('ai', 'have')}{' '}
+                        {save.inventory[r.output]}
                       </small>
+                      {ITEM_USE[r.output] && <small className="craft-use">{ITEM_USE[r.output]![lang]}</small>}
                     </div>
                   </header>
                   <CostChips save={save} lang={lang} food={food} materials={r.cost} />
                   <footer>
                     <span className="craft-spacer" />
                     <ResourceHelp save={save} lang={lang} food={food} materials={r.cost} />
-                    <button className="realm-button" disabled={full || !canPay} title={full ? tr('Coada e plină.', 'The queue is full.') : undefined} onClick={() => run({ type: 'craft', recipeId: r.id })}>
+                    <button
+                      className="realm-button"
+                      disabled={full || !canPay}
+                      title={full ? tr('Atelierul e plin.', 'The workshop is full.') : undefined}
+                      onClick={() => run({ type: 'craft', recipeId: r.id })}
+                    >
                       ⚒ {tr('Fabrică', 'Craft')}
                     </button>
                   </footer>
@@ -232,22 +283,46 @@ export function WorkshopPanel({ save, now, lang, run, build, recipeId, returnToE
               );
             })}
           </div>
-          {phone && <div className="pk-foot"><Pager page={recipes.page} pages={recipes.pages} onPrev={recipes.prev} onNext={recipes.next} lang={lang} /></div>}
+          {phone && (
+            <div className="pk-foot">
+              <Pager
+                page={recipes.page}
+                pages={recipes.pages}
+                onPrev={recipes.prev}
+                onNext={recipes.next}
+                lang={lang}
+              />
+            </div>
+          )}
           {full && (
             <p className="pk-note warn">
-              {tr('Coada e plină: așteaptă să se termine o lucrare sau îmbunătățește atelierul.', 'The queue is full: wait for a job to finish or upgrade the workshop.')}
+              {tr(
+                'Atelierul e plin: așteaptă să se termine o lucrare sau îmbunătățește atelierul.',
+                'The workshop is full: wait for a job to finish or upgrade the workshop.',
+              )}
             </p>
           )}
         </TabPanel>
       )}
       {tab === 'queue' && (
         <TabPanel idBase={idBase} id="queue" className="fit-fill pk-paged-tab">
+          {!active.length && !done.length && (
+            <p className="pk-note">
+              {tr(
+                'Aici vezi ce se fabrică acum, cât mai durează și ce e gata de colectat. Alege o rețetă ca să începi.',
+                'Here you see what is being crafted, how long it takes and what is ready to collect. Pick a recipe to start.',
+              )}
+            </p>
+          )}
           <div ref={pager.ref} className="ui-paged craft-queue-list">
             {pager.pageItems.map(queueCard)}
           </div>
           <div className="pk-foot">
             <p className="pk-note">
-              {tr(`${free} ${free === 1 ? 'loc liber' : 'locuri libere'} din ${level.slots}`, `${free} of ${level.slots} slots free`)}
+              {tr(
+                `${free} ${free === 1 ? 'loc liber' : 'locuri libere'} din ${level.slots}`,
+                `${free} of ${level.slots} slots free`,
+              )}
               {done.length > 0 && ` · ${done.length} ${tr('gata de colectat', 'ready to collect')}`}
             </p>
             <Pager page={pager.page} pages={pager.pages} onPrev={pager.prev} onNext={pager.next} lang={lang} />

@@ -73,6 +73,13 @@
 .realms-app .craft-spacer {
   flex: 1;
 }
+.realms-app .craft-recipe small.craft-use {
+  display: block;
+  margin-top: 2px;
+  white-space: normal;
+  line-height: 1.25;
+  color: var(--px-moss-1, #b6d79a);
+}
 .realms-app .craft-recipe > footer {
   display: flex;
   align-items: center;

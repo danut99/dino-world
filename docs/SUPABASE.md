@@ -3,6 +3,7 @@
 Cu Supabase configurat, jocul se deschide pe ecranul de login (email + parolă sau Google) și pornește doar după autentificare. Progresul se păstrează **doar în cloud**, nu în browser. Fără configurare (de ex. la dezvoltare locală, sau în scripturile de verificare din `scripts/`) jocul merge ca înainte, cu salvarea în browser.
 
 Ce face codul:
+
 - `src/realms/SignInGate.tsx` — ecranul de login dinaintea jocului și încărcarea salvării din cloud.
 - `src/realms/cloud.ts` — conexiunea, login-ul și citirea/scrierea salvării.
 - `src/realms/useCloudSync.ts` — salvarea automată (la ~2,5 secunde după o schimbare și când închizi pagina).
@@ -10,6 +11,9 @@ Ce face codul:
 - `supabase/migrations/0001_cloud_saves.sql` — tabelul `saves` și regulile de securitate.
 - `supabase/migrations/0002_players.sql` — numele de jucător (`profiles`), lista `players` și dreptul de a vedea (nu de a modifica) lumile celorlalți.
 - `supabase/migrations/0003_schema_floor.sql` — refuză coborârea `schema_version` a unei salvări (un client vechi din cache nu poate suprascrie o salvare v6).
+- `supabase/migrations/0004_save_guard.sql` — paza de bază a salvărilor (trigger `saves_guard`): refuză o salvare cu `revision` mai mic decât cel din cloud (un tab vechi), diamante care cresc cu peste 200 + 20/oră sau aur cu peste 200.000 + 50.000/oră față de scrierea anterioară (timpul serverului), și valori negative sau peste 1e9. Un rând fără progres (fără dinozauri și lupte câștigate) sau trecerea la o schemă nouă sunt scutite. La refuz jocul reia salvarea din cloud. Uneltele de dezvoltare (`addGems`, `devResources`) pot fi refuzate pe un proiect cu această regulă.
+- `supabase/migrations/0005_friends.sql` — prieteni (`friendships`: cerere → acceptare), bifa `profiles.accept_help` („prietenii îmi pot colecta aurul”) și `friend_helps`: un prieten acceptat golește depozitul de aur al celuilalt (funcția `help_friend`, cel mult o dată pe oră per jucător). Jocul proprietarului aplică colectarea la următoarea încărcare, la momentul în care a fost apăsat butonul.
+- `supabase/migrations/0006_friend_battles.sql` — lupte amicale între prieteni (`friend_battles`: cine a atacat, pe cine, rezultatul). Fără premii; doar prietenii acceptați, cel mult o luptă pe minut. Lista de prieteni arată scorul.
 - `src/realms/PlayersPanel.tsx` — lista de jucători; un click deschide lumea lor, doar pentru vizionare.
 
 Progresul jucat înainte de conturi, păstrat în browser, se mută în cont la primul login și apoi e șters din browser. Dacă și contul are deja progres, jucătorul alege pe care îl păstrează. La fel, dacă alt dispozitiv a salvat între timp, jocul nu suprascrie nimic singur: arată ambele variante (dinozauri, nivel, stele, aur).
@@ -19,7 +23,7 @@ Rămân în browser doar preferințele (limbă, sunete, ultima lume vizitată) �
 ## 1. Proiectul Supabase (≈ 3 minute)
 
 1. Intră pe [supabase.com](https://supabase.com), creează un cont gratuit și apoi **New project**. Alege o regiune din Europa (de ex. Frankfurt) și o parolă pentru baza de date (păstreaz-o).
-2. Deschide **SQL Editor → New query**, lipește tot conținutul din `supabase/migrations/0001_cloud_saves.sql` și apasă **Run**. Trebuie să apară „Success”. Repetă, într-un query nou, cu `0002_players.sql` (numele de jucător, lista de jucători și vizitarea lumilor). La fel cu `0003_schema_floor.sql` (pragul versiunii de salvare).
+2. Deschide **SQL Editor → New query**, lipește tot conținutul din `supabase/migrations/0001_cloud_saves.sql` și apasă **Run**. Trebuie să apară „Success”. Repetă, într-un query nou, cu `0002_players.sql` (numele de jucător, lista de jucători și vizitarea lumilor). La fel cu `0003_schema_floor.sql` (pragul versiunii de salvare) și `0004_save_guard.sql` (paza salvărilor) și `0005_friends.sql` (prieteni și ajutor la colectare), apoi `0006_friend_battles.sql` (lupte amicale și scor).
 3. **Project Settings → API Keys**: copiază **Project URL** și cheia **Publishable** (sau „anon” la proiectele mai vechi). Nu folosi niciodată cheia **secret / service_role** în joc.
 4. În folderul proiectului, copiază `.env.example` ca `.env.local` și completează:
 
@@ -33,6 +37,7 @@ Rămân în browser doar preferințele (limbă, sunete, ultima lume vizitată) �
 ## 2. Adresele de întoarcere
 
 **Authentication → URL Configuration**:
+
 - **Site URL**: adresa jocului publicat (până atunci `http://127.0.0.1:5173`).
 - **Redirect URLs**: adaugă `http://127.0.0.1:5173/**` și, când publici jocul, `https://domeniul-tau/**`.
 

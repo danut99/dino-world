@@ -9,6 +9,7 @@ import {
   RECIPES,
   REGIONS,
   REGION_STAGES,
+  RETIRED_CROPS,
   UTILITY_BUILDINGS,
   leagueBaseLevel,
   leagueNumber,
@@ -24,7 +25,7 @@ import {
   type Region,
   type UtilityKind,
 } from './content';
-import { buildable } from './grid';
+import { buildable, BUILDABLE_CELLS } from './grid';
 import { DEV_TOOLS } from './devTools';
 import {
   newDaily,
@@ -35,7 +36,7 @@ import {
   DAILY_QUESTS,
   DAILY_BONUS,
   DAILY_REROLLS_FREE,
-  WHEEL_PRIZES,
+  wheelPrizes,
   wheelPrize,
   grantDailyReward,
   addDailyProgress,
@@ -99,7 +100,8 @@ export const GEMS = {
  */
 export const GEM_SOURCES = { welcome: 10, chapter: 5 };
 /** A crafting job's full length, at the slowest workshop level. */
-const craftMs = (recipe: { seconds: number }) => Math.max(...WORKSHOP_LEVELS.map((l) => Math.round(recipe.seconds * 1000 * l.speed)));
+const craftMs = (recipe: { seconds: number }) =>
+  Math.max(...WORKSHOP_LEVELS.map((l) => Math.round(recipe.seconds * 1000 * l.speed)));
 /** An expedition's planned length: its stage's minutes, or the patrol's hours. */
 const tripMs = (x: Pick<ExpeditionRun, 'kind' | 'regionId' | 'stage' | 'hours'>) =>
   x.kind === 'patrol' ? (x.hours ?? 0) * 3_600_000 : stageMs(x.regionId, x.stage ?? -1);
@@ -145,7 +147,22 @@ export const REALM_NAMES: Record<RealmId, readonly [string, string]> = {
   light: ['Sanctuarul zorilor', 'Dawn Sanctuary'],
   arcane: ['Insula sigiliilor', 'Isle of Sigils'],
 };
-export const SPECIES = ['trex', 'raptor', 'triceratops', 'ankylosaurus', 'brachiosaurus', 'ignasaur', 'thalassaur', 'terrasaur', 'therizinosaurus', 'quetzalcoatlus', 'dilophosaurus', 'ankylobiped', 'solarraptor', 'cryptoraptor'] as const;
+export const SPECIES = [
+  'trex',
+  'raptor',
+  'triceratops',
+  'ankylosaurus',
+  'brachiosaurus',
+  'ignasaur',
+  'thalassaur',
+  'terrasaur',
+  'therizinosaurus',
+  'quetzalcoatlus',
+  'dilophosaurus',
+  'ankylobiped',
+  'solarraptor',
+  'cryptoraptor',
+] as const;
 export type Species = (typeof SPECIES)[number] | 'boss';
 export const SPECIES_NAMES: Record<Species, string> = {
   trex: 'T-Rex',
@@ -397,6 +414,10 @@ export interface Save {
   collectionMilestones: number;
   /** Ornamental lamps placed on the island, each adding to habitat gold (see LAMP_BONUS). */
   lamps: number;
+  /** Legend trials done in the Bucharest week `week`, once the story is finished (see LEGEND_TRIAL). */
+  legend: { week: string; trials: number };
+  /** The dinosaur training for a free level, and when it is done (see TRAINING); null when nobody trains. */
+  training: { dinoId: string; endsAt: number } | null;
   /**
    * Something the last command did on its own that the player should hear about: an egg sold for lack of room,
    * diamonds earned, arena tickets won for a world drawn at random.
@@ -431,7 +452,14 @@ export const HATCHERY_LEVELS: { slots: number; gold: number; materials: Material
   { slots: 4, gold: 8000, materials: { wood: 70, stone: 70, crystal: 10 }, minutes: 360 },
 ];
 /** Workshop: `slots` jobs running or waiting, `lanes` of them running at once, `speed` multiplies crafting time. */
-export const WORKSHOP_LEVELS: { slots: number; lanes: number; speed: number; gold: number; materials: Materials; minutes: number }[] = [
+export const WORKSHOP_LEVELS: {
+  slots: number;
+  lanes: number;
+  speed: number;
+  gold: number;
+  materials: Materials;
+  minutes: number;
+}[] = [
   { slots: 3, lanes: 1, speed: 1, gold: 0, materials: {}, minutes: 0 },
   { slots: 5, lanes: 2, speed: 0.8, gold: 1200, materials: { wood: 30, stone: 30 }, minutes: 30 },
   { slots: 7, lanes: 3, speed: 0.6, gold: 4000, materials: { wood: 60, stone: 60, crystal: 10 }, minutes: 180 },
@@ -459,16 +487,37 @@ export const ARENA_TICKET_LIMIT = 9999;
  * The weekly arena season (Bucharest weeks, see `weekId`): wins this week reach these steps, each paid once, with
  * the claim of the win that reaches it. The 15-win step adds three tickets of a world whose league is open.
  */
-export const ARENA_SEASON: { wins: number; gold: number; gems: number; materials: Partial<Inventory>; tickets: number }[] = [
+export const ARENA_SEASON: {
+  wins: number;
+  gold: number;
+  gems: number;
+  materials: Partial<Inventory>;
+  tickets: number;
+}[] = [
   { wins: 5, gold: 500, gems: 3, materials: {}, tickets: 0 },
   { wins: 15, gold: 0, gems: 5, materials: { evolutionCrystal: 1 }, tickets: 3 },
   { wins: 30, gold: 1500, gems: 0, materials: { habitatKit: 1 }, tickets: 0 },
 ];
 /**
+ * The Legend trial, for players who finished the story: a few times a Bucharest week, gold and food buy diamonds
+ * and an egg of a world with a habitat, rarer than a won one more often.
+ */
+export const LEGEND_TRIAL = { perWeek: 3, gold: 10_000, food: 20_000, gems: 5, rarity: { rare: 0.3, epic: 0.15 } };
+/** Legend trials left this week (none before the story is finished). */
+export const legendTrialsLeft = (s: Save, now: number) =>
+  storyChapter(s) ? 0 : LEGEND_TRIAL.perWeek - (s.legend.week === weekId(now) ? s.legend.trials : 0);
+/**
  * Habitat per element world: residents, gold storage (`cap`), income multiplier. Each upgrade costs gold and
  * habitat kits.
  */
-export const HABITAT_LEVELS: { capacity: number; cap: number; income: number; gold: number; kits: number; minutes: number }[] = [
+export const HABITAT_LEVELS: {
+  capacity: number;
+  cap: number;
+  income: number;
+  gold: number;
+  kits: number;
+  minutes: number;
+}[] = [
   { capacity: 2, cap: 500, income: 1, gold: 0, kits: 0, minutes: 0 },
   { capacity: 3, cap: 900, income: 1.15, gold: 900, kits: 1, minutes: 15 },
   { capacity: 4, cap: 1400, income: 1.3, gold: 2500, kits: 1, minutes: 60 },
@@ -476,7 +525,7 @@ export const HABITAT_LEVELS: { capacity: number; cap: number; income: number; go
   { capacity: 6, cap: 2800, income: 1.6, gold: 14000, kits: 2, minutes: 480 },
 ];
 /** Each placed lamp adds this share to habitat gold, up to MAX_LAMPS. */
-export const LAMP_BONUS = 0.03;
+export const LAMP_BONUS = 0.05;
 export const MAX_LAMPS = 5;
 /**
  * Construction: building upgrades take time (each level's `minutes`, from 5 minutes to 8 hours) and there is one
@@ -486,7 +535,10 @@ export const MAX_LAMPS = 5;
  */
 export type UpgradeStep = { gold: number; materials: Materials; minutes: number };
 /** A target's current level (0 when it is not built yet). */
-export function targetLevel(s: Pick<Save, 'farmLevel' | 'hatcheryLevel' | 'workshopLevel' | 'portalLevel' | 'arenaLevel' | 'habitats'>, target: BuildTarget) {
+export function targetLevel(
+  s: Pick<Save, 'farmLevel' | 'hatcheryLevel' | 'workshopLevel' | 'portalLevel' | 'arenaLevel' | 'habitats'>,
+  target: BuildTarget,
+) {
   if (target === 'farm') return s.farmLevel;
   if (target === 'hatchery') return s.hatcheryLevel;
   if (target === 'workshop') return s.workshopLevel;
@@ -507,20 +559,27 @@ export function upgradeStep(target: BuildTarget, level: number): UpgradeStep | u
             ? PORTAL_LEVELS[level - 1]
             : target === 'arena'
               ? ARENA_LEVELS[level - 1]
-              : HABITAT_LEVELS[level - 1] && { ...HABITAT_LEVELS[level - 1], materials: { habitatKit: HABITAT_LEVELS[level - 1].kits } };
+              : HABITAT_LEVELS[level - 1] && {
+                  ...HABITAT_LEVELS[level - 1],
+                  materials: { habitatKit: HABITAT_LEVELS[level - 1].kits },
+                };
   return level >= 2 && row ? { gold: row.gold, materials: row.materials, minutes: row.minutes } : undefined;
 }
 /** The next level of a target, its price and build time; undefined at the last level. */
 export const nextUpgrade = (s: Save, target: BuildTarget) => upgradeStep(target, targetLevel(s, target) + 1);
 /** The upgrade being built and how long it still takes, or null when the builder is free. */
 export function constructionLeft(s: Pick<Save, 'construction'>, now: number) {
-  return s.construction && s.construction.endsAt > now ? { ...s.construction, left: s.construction.endsAt - now } : null;
+  return s.construction && s.construction.endsAt > now
+    ? { ...s.construction, left: s.construction.endsAt - now }
+    : null;
 }
 /** The name of what is being built, for the UI. */
 export function targetName(target: BuildTarget, lang: number) {
   if (target.startsWith('habitat:')) {
     const realm = target.slice(8) as RealmId;
-    return lang ? `${ELEMENTS.find((e) => e.id === realm)?.name[1]} habitat` : `Habitat ${ELEMENTS.find((e) => e.id === realm)?.name[0]}`;
+    return lang
+      ? `${ELEMENTS.find((e) => e.id === realm)?.name[1]} habitat`
+      : `Habitat ${ELEMENTS.find((e) => e.id === realm)?.name[0]}`;
   }
   return UTILITY_BUILDINGS[target as UtilityKind].name[lang];
 }
@@ -555,23 +614,41 @@ export const WORLD_UNLOCK: Record<RealmId, { gold: number; materials: Materials 
   light: { gold: 23000, materials: { crystal: 35, wood: 70, stone: 70 } },
   arcane: { gold: 30000, materials: { crystal: 45, wood: 90, stone: 90 } },
 };
-/** The Market sells only these eggs, at these prices; every other element is won in fights. */
-export const EGG_PRICES: Partial<Record<RealmId, number>> = { fire: 300, water: 600, earth: 1000 };
+/**
+ * The Market sells a common egg of every world's regular families (bosses are fight-only), for the worlds with a
+ * habitat; prices rise with the world's place in the unlock order.
+ */
+export const EGG_PRICES: Partial<Record<RealmId, number>> = {
+  fire: 300,
+  water: 600,
+  earth: 1000,
+  nature: 1500,
+  ice: 2200,
+  lightning: 3000,
+  wind: 4000,
+  dark: 5200,
+  light: 6500,
+  arcane: 8000,
+};
 export const MARKET_ELEMENTS = Object.keys(EGG_PRICES) as RealmId[];
 export const eggPrice = (element: RealmId) => EGG_PRICES[element] ?? Infinity;
+/** Leagues that drop eggs of their element: every world after the first three. */
+export const LEAGUE_EGG_ELEMENTS: RealmId[] = ['nature', 'ice', 'lightning', 'wind', 'dark', 'light', 'arcane'];
 /** What a won (or story) egg sells for, by rarity. */
 export const WON_EGG_PRICE: Record<Rarity, number> = { common: 250, rare: 400, epic: 600, legendary: 0 };
-/** What a waiting egg sells back for: 30% of the market price, or the won-egg price for fight-only elements. */
+/** What a waiting egg sells back for: 30% of the market price, or the won-egg price for elements leagues drop. */
 export const eggSellPrice = (egg: Pick<EggKind, 'element' | 'rarity'>) =>
-  MARKET_ELEMENTS.includes(egg.element) ? Math.round(0.3 * eggPrice(egg.element)) : WON_EGG_PRICE[rarityOf(egg)];
+  LEAGUE_EGG_ELEMENTS.includes(egg.element) ? WON_EGG_PRICE[rarityOf(egg)] : Math.round(0.3 * eggPrice(egg.element));
 /** Gold for releasing a dinosaur: by age, times its rarity. Bosses are never released. */
 export const RELEASE_GOLD: Record<Stage, number> = { baby: 50, juvenile: 200, adult: 600 };
 export const RELEASE_RARITY: Record<Exclude<Rarity, 'legendary'>, number> = { common: 1, rare: 1.5, epic: 2 };
 export const releaseGold = (d: Pick<Dino, 'stage' | 'rarity' | 'species'>) =>
-  d.species === 'boss' || rarityOf(d) === 'legendary' ? 0 : Math.round(RELEASE_GOLD[d.stage] * RELEASE_RARITY[rarityOf(d) as Exclude<Rarity, 'legendary'>]);
+  d.species === 'boss' || rarityOf(d) === 'legendary'
+    ? 0
+    : Math.round(RELEASE_GOLD[d.stage] * RELEASE_RARITY[rarityOf(d) as Exclude<Rarity, 'legendary'>]);
 /**
- * Egg drops. League fights drop their own element, more often on harder tiers (`tiers`), only in the worlds the
- * Market does not sell; a boss gives its own egg the first time it is beaten. After `pity` drop-eligible
+ * Egg drops. League fights drop their own element, more often on harder tiers (`tiers`), only in
+ * LEAGUE_EGG_ELEMENTS; a boss gives its own egg the first time it is beaten. After `pity` drop-eligible
  * wins without an egg, the next one always drops. Within an element, a family not yet discovered comes `fresh` of
  * the time. Expeditions bring their region's egg: always at a region's last stage, sometimes on patrols (see
  * PATROL); those never touch the pity counter.
@@ -590,30 +667,41 @@ export const COLLECTION: string[] = [
 export function eggOdds(encounter: Encounter) {
   const league = encounter.league as RealmId | undefined,
     tier = arenaTier(encounter.id);
-  if (!league || !tier || MARKET_ELEMENTS.includes(league) || !playableSpecies(league).length) return null;
+  if (!league || !tier || !LEAGUE_EGG_ELEMENTS.includes(league) || !playableSpecies(league).length) return null;
   return { chance: EGG_DROP.tiers[tier - 1], elements: [league] };
 }
 /** Share of a first win's gold, food and materials that a repeat win pays. */
 export const REPEAT_SHARE = 0.25;
+/** A repeat of a fight already won with 3★ pays this share of the repeat's gold and food (materials stay). */
+export const MASTERED_SHARE = 0.5;
 /**
  * What winning this arena fight pays a team of `teamSize`: the encounter's first-win reward (a quarter of it once
- * cleared), times the team size bonus and the Arena Gate bonus, and the egg it may bring. The reducer pays exactly
- * this; the arena screen shows it. `eggChance` is the real chance of a regular egg (1 once the pity counter is
- * full), undefined when the fight drops none; `bossEgg` is set while the league boss still owes its own egg.
+ * cleared, and half of that gold and food at 3★), times the team size bonus and the Arena Gate bonus, and the egg
+ * it may bring. The reducer pays exactly this; the arena screen shows it. `eggChance` is the real chance of a
+ * regular egg (1 once the pity counter is full), undefined when the fight drops none; `bossEgg` is set while the
+ * league boss still owes its own egg.
  */
-export function rewardPreview(s: Pick<Save, 'cleared' | 'arenaLevel' | 'bossEggsClaimed' | 'eggLuck'>, encounterId: string, teamSize: number) {
+export function rewardPreview(
+  s: Pick<Save, 'cleared' | 'stars' | 'arenaLevel' | 'bossEggsClaimed' | 'eggLuck'>,
+  encounterId: string,
+  teamSize: number,
+) {
   const e = ENCOUNTERS.find((x) => x.id === encounterId);
   if (!e) return null;
   const repeat = s.cleared.includes(e.id),
+    mastered = repeat && (s.stars[e.id] ?? 0) >= 3,
     scale = (repeat ? REPEAT_SHARE : 1) * teamReward(teamSize) * (1 + ARENA_LEVELS[s.arenaLevel - 1].bonus),
-    pay = (n: number, min = 0) => Math.max(min, Math.round(n * scale));
+    pay = (n: number, min = 0, share = 1) => Math.max(min, Math.round(n * scale * share));
   const bossEgg = !!arenaBoss(e) && !s.bossEggsClaimed.includes(e.league as RealmId),
     odds = bossEgg ? null : eggOdds(e);
   return {
     repeat,
-    gold: pay(e.gold),
-    food: pay(e.food),
-    materials: Object.fromEntries((Object.entries(e.materials) as [ItemId, number][]).map(([id, n]) => [id, pay(n, 1)])) as Partial<Inventory>,
+    mastered,
+    gold: pay(e.gold, 0, mastered ? MASTERED_SHARE : 1),
+    food: pay(e.food, 0, mastered ? MASTERED_SHARE : 1),
+    materials: Object.fromEntries(
+      (Object.entries(e.materials) as [ItemId, number][]).map(([id, n]) => [id, pay(n, 1)]),
+    ) as Partial<Inventory>,
     bossEgg,
     eggChance: odds ? (s.eggLuck >= EGG_DROP.pity ? 1 : odds.chance) : undefined,
   };
@@ -633,13 +721,18 @@ export const regionOf = (world: RealmId): Region => REGIONS.find((r) => r.elemen
  * Why a world cannot be unlocked yet, or null when it can (costs aside): worlds open in ELEMENTS order, each one
  * after the previous world and after the previous world's region is secured to its third stage.
  */
-export function worldLock(s: Pick<Save, 'habitats' | 'expeditionProgress'>, world: RealmId): { reason: 'open' | 'world' | 'region'; world: RealmId } | null {
+export function worldLock(
+  s: Pick<Save, 'habitats' | 'expeditionProgress'>,
+  world: RealmId,
+): { reason: 'open' | 'world' | 'region'; world: RealmId } | null {
   if (s.habitats[world]) return { reason: 'open', world };
   const i = ELEMENTS.findIndex((e) => e.id === world),
     previous = ELEMENTS[i - 1]?.id;
   if (!previous) return null;
   if (!s.habitats[previous]) return { reason: 'world', world: previous };
-  return (s.expeditionProgress[regionOf(previous).id] ?? 0) >= WORLD_UNLOCK_STAGE ? null : { reason: 'region', world: previous };
+  return (s.expeditionProgress[regionOf(previous).id] ?? 0) >= WORLD_UNLOCK_STAGE
+    ? null
+    : { reason: 'region', world: previous };
 }
 /**
  * The story card: ten chapters of short goals, followed one at a time. Chapter I settles the player
@@ -681,7 +774,8 @@ const has = (kind: UtilityKind) => (s: Save) => s.buildings.some((b) => b.kind =
 /** Arena bosses beaten (the Champion tier of a league). */
 export const bossesBeaten = (s: Pick<Save, 'cleared'>) => s.cleared.filter((id) => /^arena-[a-z]+-3$/.test(id)).length;
 /** Playable families ever hatched (bosses left out). */
-export const familiesFound = (s: Pick<Save, 'discovered'>) => s.discovered.filter((id) => !id.startsWith('boss_')).length;
+export const familiesFound = (s: Pick<Save, 'discovered'>) =>
+  s.discovered.filter((id) => !id.startsWith('boss_')).length;
 const thousands = (n: number, lang: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, lang ? ',' : '.');
 /** A build time as "5 min", "1 h" or "1 h 30 min". */
 export const buildTime = (minutes: number) =>
@@ -690,11 +784,14 @@ export const buildTime = (minutes: number) =>
 function priceText(gold: number, materials: Materials, lang: number) {
   return [
     `${thousands(gold, lang)} ${lang ? 'gold' : 'aur'}`,
-    ...(Object.entries(materials) as [ItemId, number][]).filter(([, n]) => n > 0).map(([id, n]) => `${n} ${ITEMS[id].name[lang].toLowerCase()}`),
+    ...(Object.entries(materials) as [ItemId, number][])
+      .filter(([, n]) => n > 0)
+      .map(([id, n]) => `${n} ${ITEMS[id].name[lang].toLowerCase()}`),
   ].join(', ');
 }
 /** "1.500 aur, 30 lemn · 1 h" — the price and build time of an upgrade level. */
-const stepText = (step: UpgradeStep, lang: number) => `${priceText(step.gold, step.materials, lang)} · ${buildTime(step.minutes)}`;
+const stepText = (step: UpgradeStep, lang: number) =>
+  `${priceText(step.gold, step.materials, lang)} · ${buildTime(step.minutes)}`;
 /** A goal of reaching level `level` of a building (one level at a time, by the single builder). */
 function levelGoal(target: BuildTarget, level: number, panel: Goal['panel'], id: string): Goal {
   const step = upgradeStep(target, level)!,
@@ -745,7 +842,10 @@ function regionStep(world: RealmId, intro?: readonly [string, string]): Omit<Goa
   const team: [string, string] =
     size === 1 ? ['un dinozaur', 'one dinosaur'] : [`${size} dinozauri`, `${size} dinosaurs`];
   return {
-    task: [`Traversează ${region.name[0]} (${REGION_STAGES}/${REGION_STAGES})`, `Cross ${region.name[1]} (${REGION_STAGES}/${REGION_STAGES})`],
+    task: [
+      `Traversează ${region.name[0]} (${REGION_STAGES}/${REGION_STAGES})`,
+      `Cross ${region.name[1]} (${REGION_STAGES}/${REGION_STAGES})`,
+    ],
     hint: [
       `${intro ? `${intro[0]} ` : ''}Ultima etapă cere ${team[0]} de nivel ${level}+.`,
       `${intro ? `${intro[1]} ` : ''}The last stage takes ${team[1]} at level ${level}+.`,
@@ -763,7 +863,15 @@ const pay = (chapter: number) => ({ gold: 80 * chapter + 40, food: 50 * chapter 
  * it (by default a first win in the world's league). The last goal gives the world's egg, unless `eggOn` names an
  * earlier one (the last chapter ends on the full collection, so its egg comes with the boss, while it still counts).
  */
-function worldChapter(number: number, world: RealmId, rank: readonly [string, string], egg: Species, before: Goal[], after?: Goal[], eggOn?: string): StoryChapter {
+function worldChapter(
+  number: number,
+  world: RealmId,
+  rank: readonly [string, string],
+  egg: Species,
+  before: Goal[],
+  after?: Goal[],
+  eggOn?: string,
+): StoryChapter {
   const name = REALM_NAMES[world],
     league = leagueOf(world),
     element = ELEMENTS.find((e) => e.id === world)!;
@@ -785,7 +893,10 @@ function worldChapter(number: number, world: RealmId, rank: readonly [string, st
     ...(after ?? [
       {
         id: `w-${world}-league`,
-        task: [`Câștigă o luptă în ${league.name[0].split(' · ')[0]}`, `Win a fight in the ${league.name[1].split(' · ')[0]}`],
+        task: [
+          `Câștigă o luptă în ${league.name[0].split(' · ')[0]}`,
+          `Win a fight in the ${league.name[1].split(' · ')[0]}`,
+        ],
         hint: [
           `Treapta Ucenic: nivel ${league.level}+ pentru fiecare membru și un bilet de ${element.name[0].toLowerCase()}. Un element avantajat ajută mult.`,
           `The Apprentice tier: level ${league.level}+ for every member and a ${element.name[1].toLowerCase()} ticket. A strong element helps a lot.`,
@@ -821,12 +932,21 @@ export const STORY_CHAPTERS: StoryChapter[] = [
         {
           id: 'c1-hatch',
           task: ['Eclozează primul ou', 'Hatch your first egg'],
-          hint: ['Pune oul de foc în incubator și așteaptă să crape.', 'Put the fire egg in the hatchery and wait for it to crack.'],
+          hint: [
+            'Pune oul de foc în incubator și așteaptă să crape.',
+            'Put the fire egg in the hatchery and wait for it to crack.',
+          ],
           done: (s) => s.dinos.length > 0,
           panel: 'hatchery',
         },
-        buildGoal('farm', 'c1-farm', ['Ferma crește hrana cu care îți hrănești dinozaurii.', 'The farm grows the food your dinosaurs eat.']),
-        buildGoal('market', 'w-earth-market', ['Din Piață poți cumpăra ouă cu aur pentru lumile deblocate. Primul ou de Foc costă 300 aur. Cumpărarea unui ou este opțională.', 'Buy eggs with gold at the Market for unlocked worlds. A fire egg costs 300 gold. Buying an egg is optional.']),
+        buildGoal('farm', 'c1-farm', [
+          'Ferma crește hrana cu care îți hrănești dinozaurii.',
+          'The farm grows the food your dinosaurs eat.',
+        ]),
+        buildGoal('market', 'w-earth-market', [
+          `Din Piață cumperi ouă cu aur pentru fiecare lume deblocată. Un ou de Foc costă ${eggPrice('fire')} aur; lumile următoare costă mai mult. Cumpărarea unui ou este opțională.`,
+          `Buy eggs with gold at the Market for every unlocked world. A fire egg costs ${eggPrice('fire')} gold; later worlds cost more. Buying an egg is optional.`,
+        ]),
         {
           id: 'c1-grow',
           task: ['Crește-ți campionul până la juvenil', 'Raise your champion to juvenile'],
@@ -835,17 +955,31 @@ export const STORY_CHAPTERS: StoryChapter[] = [
           progress: (s) => [Math.min(9, Math.max(0, ...s.dinos.map((d) => d.level))), 9],
           panel: 'dino',
         },
-        buildGoal('portal', 'c1-portal', ['Din portal pleacă echipele în expediții.', 'Teams leave on expeditions from the portal.']),
+        buildGoal('portal', 'c1-portal', [
+          'Din portal pleacă echipele în expediții.',
+          'Teams leave on expeditions from the portal.',
+        ]),
         {
           id: 'c1-trip',
           ...regionStep('fire', ['Prima ta aventură, în lumea focului.', 'Your first adventure, in the fire world.']),
         },
       ] satisfies Goal[]
-    ).map((step, i, all) => ({ ...step, chapter: 1, ...pay(1), ...(i === all.length - 1 ? { species: 'ignasaur' as Species, element: 'fire' as RealmId } : {}) })),
+    ).map((step, i, all) => ({
+      ...step,
+      chapter: 1,
+      ...pay(1),
+      ...(i === all.length - 1 ? { species: 'ignasaur' as Species, element: 'fire' as RealmId } : {}),
+    })),
   },
   worldChapter(2, 'water', ['Navigator', 'Navigator'], 'thalassaur', [
-    buildGoal('workshop', 'w-water-workshop', ['De acum expedițiile cer provizii; atelierul le face.', 'From now on expeditions take supplies; the workshop makes them.']),
-    buildGoal('arena', 'w-water-gate', ['Arena e locul unde câștigi stele, materiale și ouă.', 'The arena is where you win stars, materials and eggs.']),
+    buildGoal('workshop', 'w-water-workshop', [
+      'De acum expedițiile cer provizii; atelierul le face.',
+      'From now on expeditions take supplies; the workshop makes them.',
+    ]),
+    buildGoal('arena', 'w-water-gate', [
+      'Arena e locul unde câștigi stele, materiale și ouă.',
+      'The arena is where you win stars, materials and eggs.',
+    ]),
   ]),
   worldChapter(3, 'earth', ['Pionier', 'Pioneer'], 'terrasaur', [
     levelGoal('hatchery', 2, 'hatchery', 'w-earth-hatchery'),
@@ -927,26 +1061,40 @@ export const STORY_CHAPTERS: StoryChapter[] = [
       panel: 'farm',
     },
   ]),
-  worldChapter(10, 'arcane', ['Erou', 'Hero'], 'cryptoraptor', [], [
-    {
-      id: 'w-arcane-boss',
-      task: ['Învinge bossul arcan', 'Beat the arcane boss'],
-      hint: [
-        `Treapta Campion a Ligii sigiliilor: nivel ${bossLevel('arcane')}, după 2★ la Ucenic și Veteran.`,
-        `The Champion tier of the Sigil league: level ${bossLevel('arcane')}, after 2★ on Apprentice and Veteran.`,
-      ],
-      done: (s) => s.cleared.includes('arena-arcane-3'),
-      panel: 'arena',
-    },
-    {
-      id: 'w-arcane-collection',
-      task: [`Completează colecția (${COLLECTION.length}/${COLLECTION.length})`, `Complete the collection (${COLLECTION.length}/${COLLECTION.length})`],
-      hint: ['Toate cele 20 de familii și cei 10 boși, eclozați măcar o dată.', 'All 20 families and the 10 bosses, each hatched at least once.'],
-      done: (s) => s.discovered.length >= COLLECTION.length,
-      progress: (s) => [Math.min(COLLECTION.length, s.discovered.length), COLLECTION.length],
-      panel: 'collection',
-    },
-  ], 'w-arcane-boss'),
+  worldChapter(
+    10,
+    'arcane',
+    ['Erou', 'Hero'],
+    'cryptoraptor',
+    [],
+    [
+      {
+        id: 'w-arcane-boss',
+        task: ['Învinge bossul arcan', 'Beat the arcane boss'],
+        hint: [
+          `Treapta Campion a Ligii sigiliilor: nivel ${bossLevel('arcane')}, după 2★ la Ucenic și Veteran.`,
+          `The Champion tier of the Sigil league: level ${bossLevel('arcane')}, after 2★ on Apprentice and Veteran.`,
+        ],
+        done: (s) => s.cleared.includes('arena-arcane-3'),
+        panel: 'arena',
+      },
+      {
+        id: 'w-arcane-collection',
+        task: [
+          `Completează colecția (${COLLECTION.length}/${COLLECTION.length})`,
+          `Complete the collection (${COLLECTION.length}/${COLLECTION.length})`,
+        ],
+        hint: [
+          'Toate cele 20 de familii și cei 10 boși, eclozați măcar o dată.',
+          'All 20 families and the 10 bosses, each hatched at least once.',
+        ],
+        done: (s) => s.discovered.length >= COLLECTION.length,
+        progress: (s) => [Math.min(COLLECTION.length, s.discovered.length), COLLECTION.length],
+        panel: 'collection',
+      },
+    ],
+    'w-arcane-boss',
+  ),
 ];
 /** The player's level: the story chapter being played (the last one once every chapter is done). */
 export const storyLevel = (s: Save) => storyChapter(s)?.chapter.number ?? STORY_CHAPTERS.length;
@@ -1012,6 +1160,12 @@ export type Command =
   | { type: 'addGems'; amount: number }
   | { type: 'gemFinish'; target: 'egg' | 'craft' | 'expedition' | 'plot' | 'construction'; id?: string; plot?: number }
   | { type: 'gemBoost'; hours: 1 | 4 }
+  /** Once the story is finished: pays LEGEND_TRIAL's gold and food for diamonds and an egg. */
+  | { type: 'legendTrial' }
+  /** Pets a dinosaur (a little food, PET.perDay times a day), or starts its free training (TRAINING). */
+  | { type: 'pet' | 'train'; dinoId: string }
+  /** Ends a finished training (+1 level) or picks up the island's lost treasure. */
+  | { type: 'claimTraining' | 'treasure' }
   /** Wakes a resting dinosaur (the champion when none is given), or with `team` every resting team member. */
   | { type: 'gemRest'; dinoId?: string; team?: boolean }
   | { type: 'gemSpin' };
@@ -1062,6 +1216,8 @@ export function newSave(now: number): Save {
     discovered: [],
     collectionMilestones: 0,
     lamps: 0,
+    legend: { week: weekId(now), trials: 0 },
+    training: null,
   };
   // The first day's missions are drawn among those a newcomer can do.
   s.daily = newDaily(now, s);
@@ -1090,9 +1246,12 @@ export const champion = (s: Save) => s.dinos.find((d) => d.id === s.champion) ??
 export const residents = (s: Save, realm: RealmId) => s.dinos.filter((d) => d.element === realm);
 export const habitatCapacity = (s: Save, realm: RealmId) =>
   s.habitats[realm] ? HABITAT_LEVELS[s.habitats[realm]! - 1].capacity : 0;
-/** Gold storage of all habitats together. */
-export const goldCap = (s: Save) =>
-  (Object.values(s.habitats) as number[]).reduce((n, level) => n + HABITAT_LEVELS[level - 1].cap, 0);
+/** A running gold boost also multiplies the habitats' gold storage by this. */
+export const BOOST_CAP = 2;
+/** Gold storage of all habitats together; with `now`, doubled while a boost runs. */
+export const goldCap = (s: Pick<Save, 'habitats' | 'boostUntil'>, now?: number) =>
+  (Object.values(s.habitats) as number[]).reduce((n, level) => n + HABITAT_LEVELS[level - 1].cap, 0) *
+  (now !== undefined && s.boostUntil > now ? BOOST_CAP : 1);
 /** Gold per hour of one dinosaur: by stage, earth ×1.25, times its habitat's level and the placed lamps. */
 export const STAGE_INCOME: Record<Stage, number> = { baby: 3, juvenile: 8, adult: 15 };
 export const dinoIncome = (s: Pick<Save, 'habitats' | 'lamps'>, d: Dino) =>
@@ -1128,6 +1287,31 @@ export const storyEgg = (q: StoryStep): q is StoryStep & EggKind => !!q.species 
 export const feedCost = (level: number) => Math.round(10 + 3 * level + 0.9 * level * level);
 /** The last level of each age: there a dinosaur must evolve before it can grow again. */
 export const levelCap = (stage: Stage) => (stage === 'baby' ? 9 : stage === 'juvenile' ? 24 : 50);
+/** Things to do while timers run: petting (food), free training (a level), and treasures lost on the island. */
+export const PET = { perDay: 5, food: 10 };
+export const TRAINING = { minutes: 30, perDay: 3 };
+export const TREASURE = { perDay: 4, everyMs: 2 * 3_600_000 };
+/** Whether a treasure waits on the island: up to TREASURE.perDay a day, TREASURE.everyMs apart. */
+export const treasureReady = (s: Save, now: number) => {
+  const day = dailyState(s, now);
+  return s.dinos.length > 0 && day.treasures < TREASURE.perDay && now - day.treasureAt >= TREASURE.everyMs;
+};
+/** The `n`-th treasure of `day`: mostly gold or food, sometimes materials, rarely a diamond. */
+export function treasureReward(day: string, n: number): DailyReward {
+  const r = roll(`${day}:treasure:${n}`);
+  if (r < 0.05) return { gems: 1 };
+  if (r < 0.25) return { materials: { [(['wood', 'stone', 'fiber', 'crystal'] as ItemId[])[n % 4]]: 4 } };
+  if (r < 0.6) return { food: 40 };
+  return { gold: 80 };
+}
+/** Where today's next treasure lies: a free lawn cell, fixed by the day and how many were found. */
+export function treasureSpot(s: Save, now: number) {
+  const day = dailyState(s, now);
+  const free = BUILDABLE_CELLS.filter(
+    (c) => !s.buildings.some((b) => c.x >= b.x && c.x < b.x + 3 && c.y >= b.y && c.y < b.y + 3),
+  );
+  return free.length ? free[Math.floor(roll(`${day.day}:spot:${day.treasures}`) * free.length)] : null;
+}
 export const stats = (level: number, stage: Stage, species: Species = 'trex', rarity: Rarity = 'common') => {
   const factor = (1 + 0.06 * (level - 10)) * (stage === 'adult' ? 1.05 : 1) * RARITY_POWER[rarity],
     m = SPECIES_STATS[species];
@@ -1155,7 +1339,12 @@ function rollEgg(s: Save, encounter: Encounter, now: number): EggKind | undefine
  * The family and rarity of an egg of `element`, fixed by `seed`: a family still missing from the collection comes
  * first, most of the time (EGG_DROP.fresh). Undefined when the element has no playable family.
  */
-function drawEgg(s: Pick<Save, 'discovered'>, element: RealmId, seed: string, chance: { rare: number; epic: number }): EggKind | undefined {
+function drawEgg(
+  s: Pick<Save, 'discovered'>,
+  element: RealmId,
+  seed: string,
+  chance: { rare: number; epic: number },
+): EggKind | undefined {
   const all = playableSpecies(element),
     fresh = all.filter((species) => !s.discovered.includes(familyId({ species, element })));
   if (!all.length) return undefined;
@@ -1173,7 +1362,11 @@ function drawEgg(s: Pick<Save, 'discovered'>, element: RealmId, seed: string, ch
  */
 function receiveEgg(s: Save, egg: EggKind) {
   const regular = egg.species !== 'boss' && !egg.story;
-  if (!regular ? s.owedEggs.length < MAX_OWED_EGGS : s.owedEggs.filter((e) => e.species !== 'boss' && !e.story).length < MAX_OWED_REGULAR)
+  if (
+    !regular
+      ? s.owedEggs.length < MAX_OWED_EGGS
+      : s.owedEggs.filter((e) => e.species !== 'boss' && !e.story).length < MAX_OWED_REGULAR
+  )
     s.owedEggs.push(egg);
   else if (regular) {
     const gold = 2 * eggSellPrice(egg);
@@ -1215,7 +1408,13 @@ export function starsFor(hpLeft: number, maxHp: number, fallen = false) {
 /** Stars needed on a tier to open the next tier of its league. */
 export const STARS_TO_ADVANCE = 2;
 /** Rewards for the total of arena stars (90 at most: ten leagues, three tiers, three stars), diamonds included. */
-export const STAR_MILESTONES: { stars: number; gold: number; food: number; gems: number; materials: Partial<Inventory> }[] = [
+export const STAR_MILESTONES: {
+  stars: number;
+  gold: number;
+  food: number;
+  gems: number;
+  materials: Partial<Inventory>;
+}[] = [
   { stars: 5, gold: 300, food: 150, gems: 2, materials: { crystal: 5 } },
   { stars: 12, gold: 600, food: 250, gems: 3, materials: { evolutionCrystal: 1 } },
   { stars: 20, gold: 1000, food: 400, gems: 3, materials: { crystal: 15, stone: 15 } },
@@ -1305,7 +1504,8 @@ export function elementEdge(attacker: RealmId, defender: RealmId): -1 | 0 | 1 {
 export const EDGE_DEALT = { [1]: 1.3, [0]: 1, [-1]: 0.8 } as const;
 export const EDGE_TAKEN = { [1]: 0.8, [0]: 1, [-1]: 1.3 } as const;
 /** The opponent's element in an encounter: arena leagues fight with their own element. */
-export const encounterElement = (encounterId: string) => ENCOUNTERS.find((e) => e.id === encounterId)?.league as RealmId | undefined;
+export const encounterElement = (encounterId: string) =>
+  ENCOUNTERS.find((e) => e.id === encounterId)?.league as RealmId | undefined;
 /** The dinosaur's edge in this encounter (neutral where the opponent has no element). */
 export function battleEdge(encounterId: string, d: Pick<Dino, 'element'>): -1 | 0 | 1 {
   const foe = encounterElement(encounterId);
@@ -1318,12 +1518,20 @@ type Fighter = Pick<Dino, 'level' | 'stage' | 'species' | 'element' | 'rarity'>;
  * matter in the late leagues, where stats grow slowly.
  */
 export const LEVEL_GAP = { perLevel: 0.04, max: 10 };
-export const levelEdge = (gap: number) => 1 + LEVEL_GAP.perLevel * Math.max(-LEVEL_GAP.max, Math.min(LEVEL_GAP.max, gap));
+export const levelEdge = (gap: number) =>
+  1 + LEVEL_GAP.perLevel * Math.max(-LEVEL_GAP.max, Math.min(LEVEL_GAP.max, gap));
 /** Damage the dinosaur's strike deals to the opponent on stage this round, after its element and guard. */
 export function strikeAgainst(b: Stand, d: Fighter, action: AllyMove) {
   if (action === 'defend') return 0;
   const foe = activeFoe(b),
-    raw = Math.max(1, Math.floor(strikeDamage(d, action, foe.defense) * EDGE_DEALT[elementEdge(d.element, foe.element)] * levelEdge(d.level - foe.level)));
+    raw = Math.max(
+      1,
+      Math.floor(
+        strikeDamage(d, action, foe.defense) *
+          EDGE_DEALT[elementEdge(d.element, foe.element)] *
+          levelEdge(d.level - foe.level),
+      ),
+    );
   return foeMove(b) === 'defend' ? Math.max(1, Math.floor(raw * FOE_GUARD)) : raw;
 }
 /** Damage the opponent on stage deals back with a plain blow, reduced when the dinosaur defends. */
@@ -1332,7 +1540,12 @@ export function incomingDamage(b: Pick<Battle, 'foes' | 'foeIndex'>, d: Fighter,
     st = stats(d.level, d.stage, d.species, rarityOf(d));
   return Math.max(
     1,
-    Math.floor(blow(foe.power, st.defense) * (defending ? GUARD_TAKEN : 1) * EDGE_TAKEN[elementEdge(d.element, foe.element)] * levelEdge(foe.level - d.level)),
+    Math.floor(
+      blow(foe.power, st.defense) *
+        (defending ? GUARD_TAKEN : 1) *
+        EDGE_TAKEN[elementEdge(d.element, foe.element)] *
+        levelEdge(foe.level - d.level),
+    ),
   );
 }
 /** Points the mirrored fields of a fight at the fighters on stage. */
@@ -1348,22 +1561,86 @@ function onStage(b: Battle) {
 /** The arena team's dinosaurs, in order (members no longer owned are left out). */
 export const teamDinos = (s: Pick<Save, 'team' | 'dinos'>) =>
   s.team.map((id) => s.dinos.find((d) => d.id === id)).filter((d): d is Dino => !!d);
+/** Friendly fights against a friend's arena team: `friend:<their user id>`. No tickets, rest or rewards. */
+export const FRIENDLY_PREFIX = 'friend:';
+export const isFriendly = (encounterId: string) => encounterId.startsWith(FRIENDLY_PREFIX);
+/**
+ * A copy of `me` with a friendly fight under way against `rival`'s arena team (babies stay home), each foe with
+ * the stats its dinosaur really has. The copy is only for the fight screen: the real save never holds it.
+ */
+export function friendlyBattle(me: Save, rival: Save, rivalId: string, now: number): Save {
+  const s = advance(me, now);
+  const team = teamDinos(s).filter((d) => d.stage !== 'baby'),
+    foes: Foe[] = teamDinos(rival)
+      .filter((d) => d.stage !== 'baby')
+      .map((d) => {
+        const st = stats(d.level, d.stage, d.species, rarityOf(d));
+        return {
+          species: d.species,
+          element: d.element,
+          stage: d.stage,
+          level: d.level,
+          rarity: rarityOf(d),
+          hp: st.hp,
+          maxHp: st.hp,
+          power: st.power,
+          defense: st.defense,
+          speed: st.speed,
+        };
+      });
+  if (!team.length) throw new Error('juvenile');
+  if (!foes.length) throw new Error('rivalTeam');
+  const b: Battle = {
+    encounterId: `${FRIENDLY_PREFIX}${rivalId}`,
+    team: team.map((d) => {
+      const hp = stats(d.level, d.stage, d.species, rarityOf(d)).hp;
+      return { dinoId: d.id, hp, maxHp: hp };
+    }),
+    active: 0,
+    foes,
+    foeIndex: 0,
+    reward: { gold: 0, food: 0, materials: {} },
+    dinoId: '',
+    hp: 0,
+    maxHp: 0,
+    energy: 0,
+    enemy: 0,
+    enemyMax: 0,
+    enemyEnergy: 0,
+    round: 1,
+    result: null,
+    log: 'start',
+  };
+  onStage(b);
+  s.battle = b;
+  s.rewardPending = false;
+  return s;
+}
 /** The season step a week with `wins` wins has reached (0 to ARENA_SEASON.length). */
 export const seasonStep = (wins: number) => ARENA_SEASON.filter((x) => x.wins <= wins).length;
 /**
  * Habitat gold from `a` to `b`: each dinosaur earns for the time it was home (a team away on an expedition earns
- * nothing until it is back, at `endsAt`, claimed or not); while a diamond boost runs, gold flows twice as fast.
+ * nothing until it is back, at `endsAt`, claimed or not); while a diamond boost runs, gold flows twice as fast and
+ * the storage holds BOOST_CAP times as much.
  */
 function earn(s: Save, a: number, b: number) {
-  const boostEnd = Math.min(b, s.boostUntil ?? 0);
-  let gold = 0;
-  for (const d of s.dinos) {
-    const away = s.expeditions.filter((x) => x.team.includes(d.id));
-    const home = (from: number, to: number) =>
-      to <= from ? 0 : away.reduce((ms, x) => ms - Math.max(0, Math.min(to, x.endsAt) - Math.max(from, x.startedAt)), to - from);
-    gold += (dinoIncome(s, d) * (home(a, b) + home(a, boostEnd))) / 3_600_000;
-  }
-  s.storedGold = Math.max(s.storedGold, Math.min(goldCap(s), s.storedGold + gold));
+  const boostEnd = Math.max(a, Math.min(b, s.boostUntil ?? 0));
+  const gold = (from: number, to: number) => {
+    let n = 0;
+    for (const d of s.dinos) {
+      const away = s.expeditions.filter((x) => x.team.includes(d.id));
+      const home =
+        to <= from
+          ? 0
+          : away.reduce((ms, x) => ms - Math.max(0, Math.min(to, x.endsAt) - Math.max(from, x.startedAt)), to - from);
+      n += (dinoIncome(s, d) * home) / 3_600_000;
+    }
+    return n;
+  };
+  const cap = goldCap(s);
+  if (boostEnd > a)
+    s.storedGold = Math.max(s.storedGold, Math.min(cap * BOOST_CAP, s.storedGold + 2 * gold(a, boostEnd)));
+  s.storedGold = Math.max(s.storedGold, Math.min(cap, s.storedGold + gold(boostEnd, b)));
 }
 export function advance(save: Save, now: number): Save {
   const s = structuredClone(save),
@@ -1380,6 +1657,7 @@ export function advance(save: Save, now: number): Save {
   s.daily = dailyState(s, now);
   const week = weekId(s.updatedAt);
   if (s.arena.week !== week) s.arena = { week, weekWins: 0, weekClaimed: 0 };
+  if (s.legend.week !== week) s.legend = { week, trials: 0 };
   // The team leads and the champion follows it (the players view reads `champion`). A save that only names a
   // champion fights with it alone.
   s.team = s.team.filter((id) => s.dinos.some((d) => d.id === id));
@@ -1389,6 +1667,23 @@ export function advance(save: Save, now: number): Save {
   for (const [id, until] of Object.entries(s.tired)) if (until <= s.updatedAt) delete s.tired[id];
   return s;
 }
+/**
+ * Friends collected the habitat gold at `times`: each collect empties the storage at that moment, so it fills again
+ * after. A collect from before the save's last update simply collects what is stored now.
+ */
+export function friendCollect(save: Save, times: number[], now: number): Save {
+  if (!times.length) return save;
+  let s = save;
+  for (const at of [...times].sort((a, b) => a - b)) {
+    s = advance(s, Math.min(at, now));
+    const gold = Math.floor(s.storedGold);
+    s.gold += gold;
+    s.storedGold -= gold;
+  }
+  s = advance(s, now);
+  s.revision++;
+  return s;
+}
 /** A 3×3 building fits when all nine cells are on the buildable lawn (see grid.ts) and none is taken. */
 export function canPlace(s: Save, x: number, y: number, moving?: string) {
   return (
@@ -1396,6 +1691,21 @@ export function canPlace(s: Save, x: number, y: number, moving?: string) {
     Number.isInteger(y) &&
     [0, 1, 2].every((dx) => [0, 1, 2].every((dy) => buildable(x + dx, y + dy))) &&
     !s.buildings.some((b) => b.id !== moving && x < b.x + 3 && x + 3 > b.x && y < b.y + 3 && y + 3 > b.y)
+  );
+}
+/**
+ * Where a new building (or a moved one) may go: like canPlace, but no side touches another building, so their art
+ * and name labels do not stack. Corners may still meet. Saves with buildings side by side still load (canPlace).
+ */
+export function canBuild(s: Save, x: number, y: number, moving?: string) {
+  return (
+    canPlace(s, x, y, moving) &&
+    !s.buildings.some((b) => {
+      // Free rows between the two footprints along each axis (negative: they overlap on that axis).
+      const gx = Math.abs(b.x - x) - 3,
+        gy = Math.abs(b.y - y) - 3;
+      return b.id !== moving && ((gx < 1 && gy < 0) || (gx < 0 && gy < 1));
+    })
   );
 }
 const nicknameFor = (s: Save, species: Species, element: RealmId) =>
@@ -1408,7 +1718,8 @@ export function command(save: Save, c: Command, now: number): Save {
   const require = (ok: unknown, message: string) => {
     if (!ok) throw new Error(message);
   };
-  if (c.type === 'devSkip' || c.type === 'devResources' || c.type === 'devRarityEggs' || c.type === 'addGems') require(DEV_TOOLS, 'dev');
+  if (c.type === 'devSkip' || c.type === 'devResources' || c.type === 'devRarityEggs' || c.type === 'addGems')
+    require(DEV_TOOLS, 'dev');
   const pay = (gold: number, materials: Partial<Record<ItemId, number>>) => {
     require(s.gold >= gold, 'gold');
     const costs = Object.entries(materials) as [ItemId, number][];
@@ -1448,7 +1759,7 @@ export function command(save: Save, c: Command, now: number): Save {
         prize = wheelPrize(roll(seed));
       s.daily.spin = prize;
       s.daily.spins++;
-      grantReward(s, WHEEL_PRIZES[prize].reward, seed);
+      grantReward(s, wheelPrizes(s)[prize].reward, seed);
       break;
     }
     case 'claimDailyQuest': {
@@ -1468,7 +1779,8 @@ export function command(save: Save, c: Command, now: number): Save {
     case 'rerollDailyQuest': {
       // An unfinished mission makes way for another one the player can do now and does not have yet.
       require(s.daily.quests.includes(c.quest), 'dailyQuest');
-      require(!s.daily.claimed.includes(c.quest) && s.daily.progress[c.quest] < DAILY_QUESTS[c.quest].target, 'dailyReroll');
+      require(!s.daily.claimed.includes(c.quest) &&
+        s.daily.progress[c.quest] < DAILY_QUESTS[c.quest].target, 'dailyReroll');
       const options = availableQuests(s).filter((id) => !s.daily.quests.includes(id));
       require(options.length, 'dailyReroll');
       if (s.daily.rerolls >= DAILY_REROLLS_FREE) {
@@ -1545,14 +1857,24 @@ export function command(save: Save, c: Command, now: number): Save {
       d.level++;
       break;
     }
-    case 'setChampion':
-      require(s.dinos.some((d) => d.id === c.dinoId), 'dino');
-      require(!s.battle, 'unavailable');
+    case 'setChampion': {
+      const d = s.dinos.find((x) => x.id === c.dinoId);
+      require(d, 'dino');
+      require(!s.battle && !s.rewardPending, 'unavailable');
+      require(d!.stage !== 'baby', 'juvenile');
       // A dinosaur away on an expedition cannot lead the arena team.
-      require(!busyDinos(s).has(c.dinoId), 'away');
-      s.team = [c.dinoId, ...s.team.filter((id) => id !== c.dinoId)].slice(0, 3);
+      const busy = busyDinos(s);
+      require(!busy.has(c.dinoId), 'away');
+      require(!isTired(s, c.dinoId, now), 'tired');
+      // The other members stay while they could still be picked for the team; the last one makes room if needed.
+      const others = s.team.filter((id) => {
+        const m = s.dinos.find((x) => x.id === id);
+        return id !== c.dinoId && !!m && m.stage !== 'baby' && !busy.has(id) && !isTired(s, id, now);
+      });
+      s.team = [c.dinoId, ...others.slice(0, 2)];
       s.champion = c.dinoId;
       break;
+    }
     case 'setTeam': {
       const ids = c.dinoIds;
       require(Array.isArray(ids) && ids.length >= 1 && ids.length <= 3 && new Set(ids).size === ids.length, 'team');
@@ -1579,11 +1901,48 @@ export function command(save: Save, c: Command, now: number): Save {
       s.gold += releaseGold(d!);
       s.dinos = s.dinos.filter((x) => x !== d);
       delete s.tired[d!.id];
+      if (s.training?.dinoId === d!.id) s.training = null;
+      break;
+    }
+    case 'pet': {
+      const d = s.dinos.find((x) => x.id === c.dinoId);
+      require(d, 'dino');
+      require(s.daily.pets < PET.perDay, 'petsDone');
+      s.daily.pets++;
+      s.food += PET.food;
+      break;
+    }
+    case 'train': {
+      const d = s.dinos.find((x) => x.id === c.dinoId);
+      require(d, 'dino');
+      require(!s.training, 'training');
+      require(s.daily.trainings < TRAINING.perDay, 'trainingsDone');
+      require(d!.level < levelCap(d!.stage), 'evolve');
+      s.daily.trainings++;
+      s.training = { dinoId: d!.id, endsAt: now + TRAINING.minutes * 60_000 };
+      break;
+    }
+    case 'claimTraining': {
+      const t = s.training;
+      require(t && now >= t.endsAt, 'training');
+      const d = s.dinos.find((x) => x.id === t!.dinoId);
+      // Fed up to the evolution gate meanwhile: the level waits for nothing, it is simply not added.
+      if (d && d.level < levelCap(d.stage)) d.level++;
+      s.training = null;
+      break;
+    }
+    case 'treasure': {
+      require(treasureReady(s, now), 'treasure');
+      const n = s.daily.treasures;
+      grantReward(s, treasureReward(s.daily.day, n), `${s.daily.day}:treasure:${n}`);
+      s.daily.treasures++;
+      s.daily.treasureAt = now;
       break;
     }
     case 'buyEgg': {
       require(s.buildings.some((b) => b.kind === 'market'), 'building');
-      require(c.species !== 'boss' && isPlayableDinosaur(c.species, c.element), 'egg');
+      require(c.species !== 'boss', 'fightEgg');
+      require(isPlayableDinosaur(c.species, c.element), 'egg');
       require(s.habitats[c.element], 'habitat');
       require(MARKET_ELEMENTS.includes(c.element), 'fightEgg');
       require(s.eggs.length < BALANCE.maxEggs, 'eggsFull');
@@ -1614,7 +1973,13 @@ export function command(save: Save, c: Command, now: number): Save {
       // With a full shelf the egg waits with the won ones; the story never stalls on it.
       if (quest.species && quest.element) {
         if (s.eggs.length < BALANCE.maxEggs)
-          s.eggs.push({ id: `egg-${quest.id}`, species: quest.species, element: quest.element, seconds: EGG_SECONDS.story, hatchAt: null });
+          s.eggs.push({
+            id: `egg-${quest.id}`,
+            species: quest.species,
+            element: quest.element,
+            seconds: EGG_SECONDS.story,
+            hatchAt: null,
+          });
         else receiveEgg(s, { species: quest.species, element: quest.element, story: true });
       }
       s.gold += quest.gold;
@@ -1656,7 +2021,7 @@ export function command(save: Save, c: Command, now: number): Save {
         spec = UTILITY_BUILDINGS[kind];
       require(spec && kind !== 'hatchery', 'building');
       require(s.gold >= spec.cost, 'gold');
-      require(canPlace(s, c.x, c.y), 'placement');
+      require(canBuild(s, c.x, c.y), 'placement');
       require(!s.buildings.some((b) => b.kind === kind), 'building');
       s.gold -= spec.cost;
       s.buildings.push({ id: kind, kind, x: c.x, y: c.y });
@@ -1665,7 +2030,7 @@ export function command(save: Save, c: Command, now: number): Save {
     }
     case 'move': {
       const b = s.buildings.find((b) => b.id === c.id);
-      require(b && canPlace(s, c.x, c.y, c.id), 'placement');
+      require(b && canBuild(s, c.x, c.y, c.id), 'placement');
       if (b) {
         b.x = c.x;
         b.y = c.y;
@@ -1794,9 +2159,25 @@ export function command(save: Save, c: Command, now: number): Save {
       s.boostUntil = Math.max(s.boostUntil, now) + c.hours * 3_600_000;
       break;
     }
+    case 'legendTrial': {
+      require(!storyChapter(s), 'legendLocked');
+      require(s.legend.trials < LEGEND_TRIAL.perWeek, 'legendWeek');
+      require(s.food >= LEGEND_TRIAL.food, 'food');
+      pay(LEGEND_TRIAL.gold, {});
+      s.food -= LEGEND_TRIAL.food;
+      s.legend.trials++;
+      earnGems(s, LEGEND_TRIAL.gems);
+      const seed = `${s.revision}:${now}:legend`,
+        worlds = ELEMENTS.map((e) => e.id).filter((e) => s.habitats[e] && playableSpecies(e).length),
+        egg = drawEgg(s, worlds[Math.floor(roll(seed) * worlds.length)], seed, LEGEND_TRIAL.rarity);
+      if (egg) receiveEgg(s, egg);
+      break;
+    }
     case 'gemRest': {
       // One dinosaur, or the whole arena team for at most GEMS.restTeam.
-      const ids = c.team ? s.team.filter((id) => isTired(s, id, now)) : [c.dinoId ?? s.champion ?? ''].filter((id) => isTired(s, id, now));
+      const ids = c.team
+        ? s.team.filter((id) => isTired(s, id, now))
+        : [c.dinoId ?? s.champion ?? ''].filter((id) => isTired(s, id, now));
       require(ids.length, 'rested');
       const cost = c.team ? Math.min(GEMS.restTeam, GEMS.rest * ids.length) : GEMS.rest;
       require(s.gems >= cost, 'gems');
@@ -1860,7 +2241,7 @@ export function command(save: Save, c: Command, now: number): Save {
           j.endsAt = t += length;
         }
       }
-      s.storedGold = Math.max(s.storedGold, goldCap(s));
+      s.storedGold = Math.max(s.storedGold, goldCap(s, now));
       break;
     }
     case 'devRarityEggs':
@@ -1876,7 +2257,7 @@ export function command(save: Save, c: Command, now: number): Save {
       s.inventory.evolutionCrystal += 3;
       break;
     case 'buyArenaTicket': {
-      require(ELEMENTS.some(e => e.id === c.realm), 'ticket');
+      require(ELEMENTS.some((e) => e.id === c.realm), 'ticket');
       require(Number.isInteger(c.quantity) && c.quantity >= 1 && c.quantity <= 99, 'ticket');
       require(s.habitats[c.realm], 'locked');
       require(!GATE_LEAGUES.includes(c.realm) || s.arenaLevel >= 2, 'gate');
@@ -1890,7 +2271,11 @@ export function command(save: Save, c: Command, now: number): Save {
       // The arena team fights as a relay: every member must be juvenile or older, at home, rested and at the
       // tier's level.
       const team = teamDinos(s);
-      require(team.length && team.length === s.team.length && team.every((d) => d.stage !== 'baby') && !s.battle && !s.rewardPending, 'juvenile');
+      require(team.length &&
+        team.length === s.team.length &&
+        team.every((d) => d.stage !== 'baby') &&
+        !s.battle &&
+        !s.rewardPending, 'juvenile');
       require(team.every((d) => !busyDinos(s).has(d.id)), 'away');
       const encounter = ENCOUNTERS.find((e) => e.id === c.encounterId);
       require(encounter, 'encounter');
@@ -1939,7 +2324,15 @@ export function command(save: Save, c: Command, now: number): Save {
       require(!plan.blocker, plan.blocker ? blockerCode(plan.blocker, plan.failing) : '');
       s.inventory.provisions -= plan.supplies;
       // A region's last stage always brings one of its eggs, decided as the team leaves.
-      const egg = plan.stage === REGION_STAGES - 1 ? drawEgg(s, plan.region.element, `${s.revision}:${now}:${c.regionId}:finale`, rarityOdds({ id: c.regionId, mode: 'expedition' })) : undefined;
+      const egg =
+        plan.stage === REGION_STAGES - 1
+          ? drawEgg(
+              s,
+              plan.region.element,
+              `${s.revision}:${now}:${c.regionId}:finale`,
+              rarityOdds({ id: c.regionId, mode: 'expedition' }),
+            )
+          : undefined;
       s.expeditions.push({
         id: `trip-${s.revision + 1}`,
         kind: 'stage',
@@ -1960,7 +2353,10 @@ export function command(save: Save, c: Command, now: number): Save {
       s.inventory.provisions -= plan.supplies;
       // The egg is decided when the team leaves, so waiting never changes what it brings back.
       const seed = `${s.revision}:${now}:${c.regionId}:patrol`;
-      const egg = roll(seed) < plan.eggChance ? drawEgg(s, plan.region.element, seed, rarityOdds({ id: c.regionId, mode: 'expedition' })) : undefined;
+      const egg =
+        roll(seed) < plan.eggChance
+          ? drawEgg(s, plan.region.element, seed, rarityOdds({ id: c.regionId, mode: 'expedition' }))
+          : undefined;
       s.expeditions.push({
         id: `trip-${s.revision + 1}`,
         kind: 'patrol',
@@ -1983,8 +2379,10 @@ export function command(save: Save, c: Command, now: number): Save {
       const extra = x.kind === 'patrol' && s.daily.patrols < PATROL.daily ? patrolDailyExtra(reward) : null;
       s.gold += reward.gold + (extra?.gold ?? 0);
       s.food += reward.food + (extra?.food ?? 0);
-      for (const [id, count] of Object.entries(reward.materials) as [ItemId, number][]) s.inventory[id] += count + (extra?.materials[id] ?? 0);
-      if (reward.tickets) s.arenaTickets[element] = Math.min(ARENA_TICKET_LIMIT, (s.arenaTickets[element] ?? 0) + reward.tickets);
+      for (const [id, count] of Object.entries(reward.materials) as [ItemId, number][])
+        s.inventory[id] += count + (extra?.materials[id] ?? 0);
+      if (reward.tickets)
+        s.arenaTickets[element] = Math.min(ARENA_TICKET_LIMIT, (s.arenaTickets[element] ?? 0) + reward.tickets);
       if (reward.gems) earnGems(s, reward.gems);
       if (x.kind === 'patrol') s.daily.patrols++;
       else s.expeditionProgress[x.regionId] = Math.max(s.expeditionProgress[x.regionId] ?? 0, (x.stage ?? 0) + 1);
@@ -2000,7 +2398,8 @@ export function command(save: Save, c: Command, now: number): Save {
       if (!b || !ally || !d) break;
       require(['basic', 'defend', 'ultimate'].includes(c.action), 'action');
       // A full bar unlocks the ultimate; it may also land as the finishing blow, which kills either way.
-      require(c.action !== 'ultimate' || (d.stage === 'adult' && (b.energy >= 100 || strikeAgainst(b, d, 'basic') >= b.enemy)), 'energy');
+      require(c.action !== 'ultimate' ||
+        (d.stage === 'adult' && (b.energy >= 100 || strikeAgainst(b, d, 'basic') >= b.enemy)), 'energy');
       const foe = activeFoe(b),
         move = foeMove(b);
       const dealt = strikeAgainst(b, d, c.action);
@@ -2026,7 +2425,17 @@ export function command(save: Save, c: Command, now: number): Save {
       }
       if (acts) b.enemyEnergy = move === 'ultimate' ? 0 : Math.min(100, b.enemyEnergy + ENERGY.foe);
       if (taken > 0 && ally.hp > 0) b.energy = Math.min(100, b.energy + ENERGY.hit);
-      b.report = { ally: c.action, foe: acts ? move : 'none', dealt, enemyAfterStrike, taken, dodged, reflected, hpAfter: ally.hp, enemyAfter: foe.hp };
+      b.report = {
+        ally: c.action,
+        foe: acts ? move : 'none',
+        dealt,
+        enemyAfterStrike,
+        taken,
+        dodged,
+        reflected,
+        hpAfter: ally.hp,
+        enemyAfter: foe.hp,
+      };
       b.log = c.action;
       b.round++;
       // The relay: a fallen fighter is replaced by the next of its side, who steps in with an empty bar.
@@ -2046,12 +2455,15 @@ export function command(save: Save, c: Command, now: number): Save {
       if (allyIn || foeIn) b.report.swap = allyIn && foeIn ? 'both' : allyIn ? 'ally' : 'enemy';
       onStage(b);
       b.result = foesDown ? 'victory' : teamDown ? 'defeat' : b.round > roundCap(b.foes.length) ? 'draw' : null;
-      if (!b.result) break;
+      if (!b.result || isFriendly(b.encounterId)) break;
       const encounter = ENCOUNTERS.find((e) => e.id === b.encounterId)!,
         tier = arenaTier(encounter.id);
       // Every member rests: by tier after a win (longer if it fell), twenty minutes after a defeat or a draw.
       for (const a of b.team)
-        s.tired[a.dinoId] = now + 60_000 * (b.result !== 'victory' ? ARENA_REST.defeat : a.hp === 0 ? ARENA_REST.fallen : ARENA_REST.win[tier - 1]);
+        s.tired[a.dinoId] =
+          now +
+          60_000 *
+            (b.result !== 'victory' ? ARENA_REST.defeat : a.hp === 0 ? ARENA_REST.fallen : ARENA_REST.win[tier - 1]);
       // A draw gives the ticket back.
       if (b.result === 'draw') {
         const realm = encounter.league as RealmId;
@@ -2061,7 +2473,11 @@ export function command(save: Save, c: Command, now: number): Save {
         s.rewardPending = true;
         const left = b.team.reduce((n, a) => n + a.hp, 0),
           max = b.team.reduce((n, a) => n + a.maxHp, 0);
-        b.stars = starsFor(left, max, b.team.some((a) => a.hp === 0));
+        b.stars = starsFor(
+          left,
+          max,
+          b.team.some((a) => a.hp === 0),
+        );
         // Milestones the new best reaches are paid with this fight's reward.
         const total = starTotal(s) - (s.stars[encounter.id] ?? 0) + Math.max(s.stars[encounter.id] ?? 0, b.stars);
         const reached = STAR_MILESTONES.slice(s.starMilestones).filter((m) => m.stars <= total);
@@ -2070,7 +2486,8 @@ export function command(save: Save, c: Command, now: number): Save {
           for (const m of reached) {
             b.reward.gold += m.gold;
             b.reward.food += m.food;
-            for (const [id, n] of Object.entries(m.materials) as [ItemId, number][]) b.reward.materials[id] = (b.reward.materials[id] ?? 0) + n;
+            for (const [id, n] of Object.entries(m.materials) as [ItemId, number][])
+              b.reward.materials[id] = (b.reward.materials[id] ?? 0) + n;
           }
         }
         if (arenaBoss(encounter) && !s.bossEggsClaimed.includes(encounter.league as RealmId)) {
@@ -2099,7 +2516,11 @@ export function command(save: Save, c: Command, now: number): Save {
         if (s.battle!.stars) s.stars[id] = Math.max(s.stars[id] ?? 0, s.battle!.stars);
         // Star milestones reached by this win add their diamonds.
         const reached = STAR_MILESTONES.slice(s.starMilestones, s.starMilestones + (s.battle!.reward.milestones ?? 0));
-        if (reached.length) earnGems(s, reached.reduce((n, m) => n + m.gems, 0));
+        if (reached.length)
+          earnGems(
+            s,
+            reached.reduce((n, m) => n + m.gems, 0),
+          );
         s.starMilestones += reached.length;
         // The weekly season pays each step it reaches, once.
         for (const step of ARENA_SEASON.slice(s.arena.weekClaimed, seasonStep(s.arena.weekWins))) {
@@ -2122,23 +2543,32 @@ export function command(save: Save, c: Command, now: number): Save {
       { story: _, ...egg } = owed;
     s.eggs.push({ ...egg, id: `egg-${s.revision + 1}-${s.eggs.length}`, seconds: eggSeconds(owed), hatchAt: null });
   }
-  if (c.type === 'feed') addDailyProgress(s, 'feed', s.dinos.reduce((n, d) => n + d.level - (save.dinos.find((x) => x.id === d.id)?.level ?? d.level), 0));
+  if (c.type === 'feed')
+    addDailyProgress(
+      s,
+      'feed',
+      s.dinos.reduce((n, d) => n + d.level - (save.dinos.find((x) => x.id === d.id)?.level ?? d.level), 0),
+    );
   if (c.type === 'evolve') addDailyProgress(s, 'feed');
   const harvested = save.plots.filter((p, i) => p && !s.plots[i]).length;
   if (harvested) addDailyProgress(s, 'harvest', harvested);
-  const crafted = save.crafting.filter(j => !s.crafting.some(next => next.id === j.id) && j.endsAt <= now).length;
+  const crafted = save.crafting.filter((j) => !s.crafting.some((next) => next.id === j.id) && j.endsAt <= now).length;
   if (crafted && (c.type === 'claimCraft' || c.type === 'collectAvailable')) addDailyProgress(s, 'craft', crafted);
   if (c.type === 'claim' && save.battle?.result) addDailyProgress(s, 'battle');
   if (c.type === 'claimExpedition') {
     addDailyProgress(s, 'expedition');
-    if (save.expeditions.find((x) => x.id === (c.runId ?? save.expeditions[0]?.id))?.kind === 'patrol') addDailyProgress(s, 'patrol');
+    if (save.expeditions.find((x) => x.id === (c.runId ?? save.expeditions[0]?.id))?.kind === 'patrol')
+      addDailyProgress(s, 'patrol');
   }
   if (c.type === 'claim' && save.battle?.result === 'victory') addDailyProgress(s, 'win');
   if (c.type === 'plant') addDailyProgress(s, 'plant');
   if (c.type === 'craft') addDailyProgress(s, 'startCraft');
   if ((c.type === 'collect' || c.type === 'collectAvailable') && s.gold > save.gold) addDailyProgress(s, 'collect');
   // Collection milestones are paid once each, as soon as the collection reaches them.
-  while (s.collectionMilestones < COLLECTION_MILESTONES.length && s.discovered.length >= COLLECTION_MILESTONES[s.collectionMilestones].count) {
+  while (
+    s.collectionMilestones < COLLECTION_MILESTONES.length &&
+    s.discovered.length >= COLLECTION_MILESTONES[s.collectionMilestones].count
+  ) {
     const m = COLLECTION_MILESTONES[s.collectionMilestones++];
     s.gold += m.gold;
     earnGems(s, m.gems);
@@ -2162,11 +2592,56 @@ export function parseSave(text: string): Save {
   if (s.schemaVersion !== 6) throw new OutdatedSave((s as { schemaVersion?: unknown }).schemaVersion);
   // Accept saves made while the discarded story-scene experiment was being tried.
   if (Array.isArray(s.questEggs)) {
-    const experimental = s.questEggs.some(id => id === 'c1-plant' || id === 'c1-harvest');
-    s.questEggs = s.questEggs.filter(id => id !== 'c1-plant' && id !== 'c1-harvest');
-    if (experimental && s.questEggs.includes('c1-grow') && !s.questEggs.includes('w-earth-market')) s.questEggs.push('w-earth-market');
+    const experimental = s.questEggs.some((id) => id === 'c1-plant' || id === 'c1-harvest');
+    s.questEggs = s.questEggs.filter((id) => id !== 'c1-plant' && id !== 'c1-harvest');
+    if (experimental && s.questEggs.includes('c1-grow') && !s.questEggs.includes('w-earth-market'))
+      s.questEggs.push('w-earth-market');
   }
   delete (s as Save & { narrative?: unknown }).narrative;
+  if (Array.isArray(s.plots))
+    for (const p of s.plots)
+      if (p && typeof p.crop === 'string' && p.crop in RETIRED_CROPS) p.crop = RETIRED_CROPS[p.crop];
+  // Fields added after the v6 reset that a save lacks take a new game's values (diamonds start from none); a
+  // field that is present is still validated below.
+  const fresh = newSave(Number.isFinite(s.updatedAt) && s.updatedAt >= 0 && s.updatedAt <= 1e14 ? s.updatedAt : 0),
+    fields = s as unknown as Record<string, unknown>;
+  const defaults: Partial<Save> = {
+    gems: 0,
+    boostUntil: 0,
+    storedGold: 0,
+    team: typeof s.champion === 'string' ? [s.champion] : [],
+    hatcheryLevel: 1,
+    workshopLevel: 1,
+    arenaLevel: 1,
+    portalLevel: Array.isArray(s.buildings) && s.buildings.some((b) => b?.kind === 'portal') ? 1 : 0,
+    arenaTickets: {},
+    arena: fresh.arena,
+    questEggs: [],
+    eggLuck: 0,
+    owedEggs: [],
+    bossEggsClaimed: [],
+    stars: {},
+    starMilestones: 0,
+    tired: {},
+    battle: null,
+    victories: 0,
+    rewardPending: false,
+    inventory: Object.fromEntries(Object.keys(ITEMS).map((id) => [id, 0])) as Inventory,
+    crafting: [],
+    expeditions: [],
+    expeditionProgress: {},
+    daily: fresh.daily,
+    cleared: [],
+    construction: null,
+    discovered: [],
+    collectionMilestones: 0,
+    lamps: 0,
+    legend: fresh.legend,
+    training: null,
+  };
+  for (const [key, value] of Object.entries(defaults)) if (fields[key] === undefined) fields[key] = value;
+  if (s.inventory && typeof s.inventory === 'object')
+    for (const id of Object.keys(ITEMS) as ItemId[]) s.inventory[id] ??= 0;
   // Later additions start empty here (`??=`), so they never need another reset.
   s.daily = normalizeDaily(s.daily);
   // Planks and blocks left the workshop: they fold back into the wood and stone they were cut from (10 for 2), and
@@ -2190,9 +2665,14 @@ export function parseSave(text: string): Save {
     typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= max;
   const integer = (n: unknown, max = 1e9): n is number => finite(n, max) && Number.isInteger(n);
   const element = (id: unknown): id is RealmId => ELEMENTS.some((e) => e.id === id);
-  const species = (id: unknown): id is Species => (id === 'boss' || SPECIES.includes(id as (typeof SPECIES)[number]));
-  if (!s || !s.arenaTickets || typeof s.arenaTickets !== 'object' || Array.isArray(s.arenaTickets) ||
-    Object.entries(s.arenaTickets).some(([id, n]) => !element(id) || !integer(n, ARENA_TICKET_LIMIT)))
+  const species = (id: unknown): id is Species => id === 'boss' || SPECIES.includes(id as (typeof SPECIES)[number]);
+  if (
+    !s ||
+    !s.arenaTickets ||
+    typeof s.arenaTickets !== 'object' ||
+    Array.isArray(s.arenaTickets) ||
+    Object.entries(s.arenaTickets).some(([id, n]) => !element(id) || !integer(n, ARENA_TICKET_LIMIT))
+  )
     throw Error('Invalid arena tickets');
   if (
     s.contentVersion !== 1 ||
@@ -2235,7 +2715,7 @@ export function parseSave(text: string): Save {
     Object.entries(s.habitats).some(
       ([id, level]) => !element(id) || !integer(level, HABITAT_LEVELS.length) || level < 1,
     ) ||
-    !finite(s.storedGold, goldCap(s)) ||
+    !finite(s.storedGold, goldCap(s) * BOOST_CAP) ||
     !integer(s.hatcheryLevel, HATCHERY_LEVELS.length) ||
     s.hatcheryLevel < 1 ||
     !integer(s.workshopLevel, WORKSHOP_LEVELS.length) ||
@@ -2243,13 +2723,18 @@ export function parseSave(text: string): Save {
     !integer(s.arenaLevel, ARENA_LEVELS.length) ||
     s.arenaLevel < 1 ||
     !integer(s.portalLevel, PORTAL_LEVELS.length) ||
-    (s.portalLevel > 0) !== kinds.has('portal') ||
+    s.portalLevel > 0 !== kinds.has('portal') ||
     !s.arena ||
     typeof s.arena !== 'object' ||
     typeof s.arena.week !== 'string' ||
     !/^\d{4}-\d{2}-\d{2}$/.test(s.arena.week) ||
     !integer(s.arena.weekWins, 10_000) ||
     !integer(s.arena.weekClaimed, 10) ||
+    !s.legend ||
+    typeof s.legend !== 'object' ||
+    typeof s.legend.week !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(s.legend.week) ||
+    !integer(s.legend.trials, LEGEND_TRIAL.perWeek) ||
     !Array.isArray(s.questEggs) ||
     new Set(s.questEggs).size !== s.questEggs.length ||
     s.questEggs.some((id) => !QUEST_EGGS.some((q) => q.id === id)) ||
@@ -2259,14 +2744,23 @@ export function parseSave(text: string): Save {
     !Array.isArray(s.bossEggsClaimed) ||
     !s.stars ||
     typeof s.stars !== 'object' ||
-    Object.entries(s.stars).some(([id, n]) => !ENCOUNTERS.some((e) => e.id === id && e.mode === 'arena') || !integer(n, 3) || n < 1) ||
+    Object.entries(s.stars).some(
+      ([id, n]) => !ENCOUNTERS.some((e) => e.id === id && e.mode === 'arena') || !integer(n, 3) || n < 1,
+    ) ||
     !integer(s.starMilestones, STAR_MILESTONES.length) ||
     !s.tired ||
     typeof s.tired !== 'object' ||
     Object.values(s.tired).some((t) => !integer(t, 1e14)) ||
     new Set(s.bossEggsClaimed).size !== s.bossEggsClaimed.length ||
-    s.bossEggsClaimed.some(e => !element(e)) ||
-    s.owedEggs.some((e) => !e || !species(e.species) || !element(e.element) || (e.rarity !== undefined && !RARITIES.includes(e.rarity)) || !(e.story === undefined || e.story === true))
+    s.bossEggsClaimed.some((e) => !element(e)) ||
+    s.owedEggs.some(
+      (e) =>
+        !e ||
+        !species(e.species) ||
+        !element(e.element) ||
+        (e.rarity !== undefined && !RARITIES.includes(e.rarity)) ||
+        !(e.story === undefined || e.story === true),
+    )
   )
     throw Error('Invalid habitats');
   const dinoIds = new Set<string>();
@@ -2319,6 +2813,13 @@ export function parseSave(text: string): Save {
     Object.keys(s.inventory).length !== Object.keys(ITEMS).length ||
     !Object.keys(ITEMS).every((id) => integer(s.inventory[id as ItemId])) ||
     !integer(s.lamps, MAX_LAMPS) ||
+    !(
+      s.training === null ||
+      (!!s.training &&
+        typeof s.training === 'object' &&
+        dinoIds.has(s.training.dinoId) &&
+        finite(s.training.endsAt, 1e14))
+    ) ||
     !Array.isArray(s.discovered) ||
     new Set(s.discovered).size !== s.discovered.length ||
     s.discovered.some((id) => !COLLECTION.includes(id)) ||
@@ -2329,7 +2830,8 @@ export function parseSave(text: string): Save {
         typeof s.notice === 'object' &&
         (s.notice.eggSold === undefined || integer(s.notice.eggSold)) &&
         (s.notice.gems === undefined || integer(s.notice.gems, 1000)) &&
-        (s.notice.tickets === undefined || (!!s.notice.tickets && element(s.notice.tickets.realm) && integer(s.notice.tickets.count, 100))))
+        (s.notice.tickets === undefined ||
+          (!!s.notice.tickets && element(s.notice.tickets.realm) && integer(s.notice.tickets.count, 100))))
     ) ||
     !Array.isArray(s.cleared) ||
     new Set(s.cleared).size !== s.cleared.length ||
@@ -2364,8 +2866,12 @@ export function parseSave(text: string): Save {
     if (jobs.some((j, i) => i > 0 && j.startedAt < jobs[i - 1].endsAt)) throw Error('Overlapping crafting jobs');
   }
   if (!validDaily(s.daily)) throw Error('Invalid daily rewards');
-  if (!s.expeditionProgress || typeof s.expeditionProgress !== 'object' || Array.isArray(s.expeditionProgress) ||
-    Object.entries(s.expeditionProgress).some(([id, progress]) => !regionById(id) || !integer(progress, REGION_STAGES)))
+  if (
+    !s.expeditionProgress ||
+    typeof s.expeditionProgress !== 'object' ||
+    Array.isArray(s.expeditionProgress) ||
+    Object.entries(s.expeditionProgress).some(([id, progress]) => !regionById(id) || !integer(progress, REGION_STAGES))
+  )
     throw Error('Invalid expedition progress');
   const away = new Set<string>(),
     runs = new Set<string>(),
@@ -2373,7 +2879,7 @@ export function parseSave(text: string): Save {
   if (!Array.isArray(s.expeditions) || s.expeditions.length > portalSlots(s)) throw Error('Invalid expedition');
   for (const x of s.expeditions) {
     const region = x && regionById(x.regionId);
-    const progress = region ? s.expeditionProgress[region.id] ?? 0 : 0;
+    const progress = region ? (s.expeditionProgress[region.id] ?? 0) : 0;
     // A trip lasts exactly its stage's (or patrol's) time, unless diamonds brought it back early.
     const length = x && region ? tripMs(x) : 0;
     const reward = x?.reward;
@@ -2400,7 +2906,9 @@ export function parseSave(text: string): Save {
           x.stage !== progress ||
           stageRuns.has(region.id) ||
           x.team.length !== regionTeamSize(regionNumber(region.id))
-        : x.stage !== undefined || !(PATROL.hours as readonly number[]).includes(x.hours!) || progress < PATROL.unlockStage) ||
+        : x.stage !== undefined ||
+          !(PATROL.hours as readonly number[]).includes(x.hours!) ||
+          progress < PATROL.unlockStage) ||
       !reward ||
       !integer(reward.gold, 1_000_000) ||
       !integer(reward.food, 1_000_000) ||
@@ -2408,8 +2916,12 @@ export function parseSave(text: string): Save {
       typeof reward.materials !== 'object' ||
       Object.entries(reward.materials).some(([id, n]) => !Object.hasOwn(ITEMS, id) || !integer(n, 100_000)) ||
       !(reward.tickets === undefined || integer(reward.tickets, 2)) ||
-      !(reward.gems === undefined || (x.kind === 'stage' && x.stage === REGION_STAGES - 1 && integer(reward.gems, 3))) ||
-      (reward.egg !== undefined && (!isPlayableDinosaur(reward.egg.species, reward.egg.element) || reward.egg.element !== region.element))
+      !(
+        reward.gems === undefined ||
+        (x.kind === 'stage' && x.stage === REGION_STAGES - 1 && integer(reward.gems, 3))
+      ) ||
+      (reward.egg !== undefined &&
+        (!isPlayableDinosaur(reward.egg.species, reward.egg.element) || reward.egg.element !== region.element))
     )
       throw Error('Invalid expedition');
     runs.add(x.id);
@@ -2422,11 +2934,16 @@ export function parseSave(text: string): Save {
     target = build?.target,
     targetOk =
       typeof target === 'string' &&
-      (['farm', 'hatchery', 'workshop', 'portal', 'arena'].includes(target) || (target.startsWith('habitat:') && element(target.slice(8)))),
+      (['farm', 'hatchery', 'workshop', 'portal', 'arena'].includes(target) ||
+        (target.startsWith('habitat:') && element(target.slice(8)))),
     step = build && targetOk ? upgradeStep(build.target, build.level) : undefined,
     standing =
       !!target &&
-      (target === 'portal' ? s.portalLevel > 0 : target.startsWith('habitat:') ? !!s.habitats[target.slice(8) as RealmId] : kinds.has(target));
+      (target === 'portal'
+        ? s.portalLevel > 0
+        : target.startsWith('habitat:')
+          ? !!s.habitats[target.slice(8) as RealmId]
+          : kinds.has(target));
   if (
     build !== null &&
     (!build ||
@@ -2439,7 +2956,9 @@ export function parseSave(text: string): Save {
       !integer(build.endsAt, 1e14) ||
       build.endsAt < build.startedAt ||
       !(build.rushed === undefined || build.rushed === true) ||
-      (build.rushed ? build.endsAt - build.startedAt > step.minutes * 60_000 : build.endsAt - build.startedAt !== step.minutes * 60_000))
+      (build.rushed
+        ? build.endsAt - build.startedAt > step.minutes * 60_000
+        : build.endsAt - build.startedAt !== step.minutes * 60_000))
   )
     throw Error('Invalid construction');
   if (s.battle !== null) {
@@ -2447,8 +2966,18 @@ export function parseSave(text: string): Save {
     const expected = b && typeof b.encounterId === 'string' ? arenaFoes(b.encounterId) : [];
     const allies = Array.isArray(b?.team) ? b.team.map((a) => a && s.dinos.find((d) => d.id === a.dinoId)) : [];
     const sameFoe = (f: Foe, e: Foe) =>
-      !!f && f.species === e.species && f.element === e.element && f.stage === e.stage && f.level === e.level && f.rarity === e.rarity &&
-      f.maxHp === e.maxHp && f.power === e.power && f.defense === e.defense && f.speed === e.speed && f.boss === e.boss && integer(f.hp, f.maxHp);
+      !!f &&
+      f.species === e.species &&
+      f.element === e.element &&
+      f.stage === e.stage &&
+      f.level === e.level &&
+      f.rarity === e.rarity &&
+      f.maxHp === e.maxHp &&
+      f.power === e.power &&
+      f.defense === e.defense &&
+      f.speed === e.speed &&
+      f.boss === e.boss &&
+      integer(f.hp, f.maxHp);
     const report = b?.report;
     if (
       !b ||
@@ -2464,7 +2993,16 @@ export function parseSave(text: string): Save {
       b.team.length < 1 ||
       b.team.length > 3 ||
       new Set(b.team.map((a) => a?.dinoId)).size !== b.team.length ||
-      b.team.some((a, i) => !a || !allies[i] || allies[i]!.stage === 'baby' || away.has(a.dinoId) || !integer(a.maxHp, 100_000) || a.maxHp < 1 || !integer(a.hp, a.maxHp)) ||
+      b.team.some(
+        (a, i) =>
+          !a ||
+          !allies[i] ||
+          allies[i]!.stage === 'baby' ||
+          away.has(a.dinoId) ||
+          !integer(a.maxHp, 100_000) ||
+          a.maxHp < 1 ||
+          !integer(a.hp, a.maxHp),
+      ) ||
       !integer(b.active, b.team.length - 1) ||
       b.team.some((a, i) => i < b.active && a.hp !== 0) ||
       !Array.isArray(b.foes) ||
@@ -2504,11 +3042,11 @@ export function parseSave(text: string): Save {
       throw Error('Invalid battle');
   } else if (s.rewardPending) throw Error('Invalid reward');
   // Remove retired static-only families without resetting resources or progress.
-  s.dinos = s.dinos.filter(d => isPlayableDinosaur(d.species, d.element));
-  s.eggs = s.eggs.filter(e => isPlayableDinosaur(e.species, e.element));
-  s.owedEggs = s.owedEggs.filter(e => isPlayableDinosaur(e.species, e.element));
+  s.dinos = s.dinos.filter((d) => isPlayableDinosaur(d.species, d.element));
+  s.eggs = s.eggs.filter((e) => isPlayableDinosaur(e.species, e.element));
+  s.owedEggs = s.owedEggs.filter((e) => isPlayableDinosaur(e.species, e.element));
   s.team = s.team.filter((id) => s.dinos.some((d) => d.id === id));
-  if (!s.dinos.some(d => d.id === s.champion)) s.champion = s.dinos[0]?.id ?? null;
+  if (!s.dinos.some((d) => d.id === s.champion)) s.champion = s.dinos[0]?.id ?? null;
   if (!s.team.length && s.champion) s.team = [s.champion];
   s.champion = s.team[0] ?? null;
   s.expeditions = s.expeditions.filter((x) => x.team.every((id) => s.dinos.some((d) => d.id === id)));
