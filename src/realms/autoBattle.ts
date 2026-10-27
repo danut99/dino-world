@@ -11,7 +11,8 @@ import {
 } from './game';
 import type { BattleAction } from './battleChoreography';
 
-type Board = Pick<Battle, 'energy' | 'enemy' | 'hp' | 'round' | 'enemyEnergy' | 'foes' | 'foeIndex'>;
+type Board = Pick<Battle, 'energy' | 'enemy' | 'hp' | 'round' | 'enemyEnergy' | 'foes' | 'foeIndex'> &
+  Partial<Pick<Battle, 'maxHp' | 'team' | 'active'>>;
 
 /**
  * Fights play themselves. The planner picks each round's move for the dinosaur on stage (`d`, the team's active

@@ -9,8 +9,9 @@ import './build-panel.css';
 
 const icons: Record<UtilityKind, IconName> = { hatchery: 'egg', farm: 'food', workshop: 'workshop', market: 'market', portal: 'expedition', arena: 'arena' };
 /** The build menu: every utility building on the left, the chosen one on the right, and the island lamps below. */
-export function BuildPanel({ save, lang, open, place, run, initialKind = 'farm' }: {
+export function BuildPanel({ save, lang, open, place, placeLamp, run, initialKind = 'farm' }: {
   save: Save; lang: number; open: (kind: UtilityKind) => void; place: (id: string | null, kind: UtilityKind) => void;
+  placeLamp?: () => void;
   run: (c: Command) => boolean;
   initialKind?: UtilityKind;
 }) {
@@ -37,6 +38,6 @@ export function BuildPanel({ save, lang, open, place, run, initialKind = 'farm' 
         </div>
       </section>
     </div>
-    <LampCard save={save} lang={lang} run={run} openWorkshop={save.buildings.some(b => b.kind === 'workshop') ? () => open('workshop') : undefined} />
+    <LampCard save={save} lang={lang} run={run} place={placeLamp} openWorkshop={save.buildings.some(b => b.kind === 'workshop') ? () => open('workshop') : undefined} />
   </div>;
 }

@@ -42,6 +42,10 @@ import {
   levelCap,
   releaseGold,
   stats,
+  dinoStats,
+  freePoints,
+  spentPoints,
+  RESET_COST,
   worldLock,
   type Command,
   type Dino,
@@ -51,7 +55,7 @@ import {
   type Species,
   type Stage,
 } from './game';
-import { rarityOf, gemsToFinish, type Rarity } from './game';
+import { rarityOf, gemsToFinish, ROLE_ICONS, ROLE_INFO, ROLE_NAMES, SPECIES_ROLE, type Rarity } from './game';
 
 type Run = (c: Command) => boolean;
 const tr = (lang: number, ro: string, en: string) => (lang ? en : ro);
@@ -59,12 +63,11 @@ const element = (id: RealmId) => ELEMENTS.find((e) => e.id === id)!;
 /** First and last level of each age; evolving happens at the last level of baby and juvenile. */
 const STAGE_LEVELS: Record<Stage, [number, number]> = { baby: [1, 9], juvenile: [10, 24], adult: [25, 50] };
 const STAGE_ORDER: Stage[] = ['baby', 'juvenile', 'adult'];
-/** The four battle stats, with their icon and name. */
+/** The battle stats points can raise, with their icon and name (speed is a species trait). */
 const STAT_ROWS = [
   ['hp', 'heart', 'Viață', 'Health'],
   ['power', 'sword', 'Putere', 'Power'],
   ['defense', 'shield', 'Apărare', 'Defense'],
-  ['speed', 'energy', 'Viteză', 'Speed'],
 ] as const;
 const stageName = (s: Stage, lang: number) =>
   ({ baby: ['Pui', 'Baby'], juvenile: ['Juvenil', 'Juvenile'], adult: ['Adult', 'Adult'] })[s][lang];
@@ -587,6 +590,7 @@ export function HabitatsPanel({
   run,
   visit,
   openWorkshop,
+  placeLamp,
 }: {
   save: Save;
   now: number;
@@ -594,6 +598,7 @@ export function HabitatsPanel({
   run: Run;
   visit: (realm: RealmId) => void;
   openWorkshop: () => void;
+  placeLamp?: () => void;
 }) {
   const [selected, select] = useState<RealmId>(
     () => ELEMENTS.find((e) => !save.habitats[e.id] && !worldLock(save, e.id))?.id ?? 'fire',
@@ -761,7 +766,7 @@ export function HabitatsPanel({
           )}
         </div>
       </section>
-      <LampCard save={save} lang={lang} run={run} openWorkshop={openWorkshop} />
+      <LampCard save={save} lang={lang} run={run} place={placeLamp} openWorkshop={openWorkshop} />
     </div>
   );
 }
@@ -915,8 +920,10 @@ export function DinoPanel({
       for (let i = 0; i < times && food >= feedCost(level); i++) food -= feedCost(level++);
     }
   };
-  const now = stats(d.level, d.stage, d.species, rarityOf(d)),
-    best = stats(50, 'adult', d.species, rarityOf(d));
+  const now = dinoStats(d),
+    best = stats(50, 'adult', d.species, rarityOf(d)),
+    free = freePoints(d),
+    resetCost = RESET_COST(d);
   const isTeam = d.id === save.champion || save.team.includes(d.id);
   const releaseBlock =
     d.species === 'boss' || rarityOf(d) === 'legendary'
@@ -1042,7 +1049,7 @@ export function DinoPanel({
             onChange={setTab}
             tabs={[
               { id: 'grow', label: tr(lang, 'Creștere', 'Grow'), badge: gate && !inBattle ? '!' : undefined },
-              { id: 'stats', label: tr(lang, 'Statistici', 'Stats') },
+              { id: 'stats', label: tr(lang, 'Statistici', 'Stats'), badge: free > 0 && !inBattle ? '!' : undefined },
               { id: 'habitat', label: tr(lang, 'Habitat', 'Habitat') },
             ]}
           />
@@ -1057,6 +1064,22 @@ export function DinoPanel({
                   )}
                 </p>
               )}
+              <p className="dino-sheet-role">
+                <span aria-hidden="true">{ROLE_ICONS[SPECIES_ROLE[d.species]]}</span>{' '}
+                <b>{ROLE_NAMES[SPECIES_ROLE[d.species]][lang]}</b> · {ROLE_INFO[SPECIES_ROLE[d.species]][lang]}
+              </p>
+              <p className="dino-sheet-points">
+                <span>
+                  {tr(lang, 'Puncte libere', 'Free points')}: <b className="pk-num">{free}</b>
+                </span>
+                <button
+                  className="realm-link"
+                  disabled={inBattle || spentPoints(d) === 0 || save.gold < resetCost}
+                  onClick={() => run({ type: 'resetPoints', dinoId: d.id })}
+                >
+                  {tr(lang, `Resetează (${resetCost} aur)`, `Reset (${resetCost} gold)`)}
+                </button>
+              </p>
               <ul className="dino-sheet-stats">
                 {STAT_ROWS.map(([key, icon, ro, en]) => (
                   <li key={key}>
@@ -1066,6 +1089,17 @@ export function DinoPanel({
                       <i style={{ width: `${Math.min(100, (now[key] / best[key]) * 100)}%` }} />
                     </div>
                     <b className="pk-num">{now[key]}</b>
+                    <small className="pk-num" title={tr(lang, 'Puncte', 'Points')}>
+                      {d.points?.[key] ?? 0}
+                    </small>
+                    <button
+                      className="dino-point-add"
+                      disabled={free < 1 || inBattle}
+                      aria-label={tr(lang, `+1 punct la ${ro}`, `+1 point to ${en}`)}
+                      onClick={() => run({ type: 'allocate', dinoId: d.id, stat: key })}
+                    >
+                      +
+                    </button>
                   </li>
                 ))}
               </ul>

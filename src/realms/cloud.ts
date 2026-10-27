@@ -377,6 +377,53 @@ export async function recordFriendBattle(selfId: string, otherId: string, result
   const { error } = await cloud.from('friend_battles').insert({ attacker: selfId, defender: otherId, result });
   if (error) throw error;
 }
+/** Friend requests waiting for this player's answer, and friendly fights friends started against them after `since`. */
+export async function fetchFriendNews(selfId: string, since: string) {
+  if (!cloud) return { requests: [], battles: [] as Defense[] };
+  const [asked, battles] = await Promise.all([
+    cloud.from('friendships').select('requester').eq('addressee', selfId).eq('status', 'pending'),
+    fetchDefenses(selfId, since),
+  ]);
+  if (asked.error) throw asked.error;
+  const requests = (asked.data ?? []) as { requester: string }[];
+  const ids = [...new Set(requests.map((r) => r.requester))];
+  const { data: people } = ids.length
+    ? await cloud.from('profiles').select('user_id, name').in('user_id', ids)
+    : { data: [] };
+  const names = new Map((people ?? []).map((p) => [p.user_id as string, p.name as string]));
+  return { requests: requests.map((r) => ({ id: r.requester, name: names.get(r.requester) ?? '?' })), battles };
+}
+/** A friendly fight a friend started against this player; `result` is the attacker's. */
+export type Defense = { attackerName: string; result: FightResult; at: string };
+/** Friendly fights against this player after `since` (ISO time), oldest first. */
+export async function fetchDefenses(selfId: string, since: string): Promise<Defense[]> {
+  if (!cloud) return [];
+  const { data, error } = await cloud
+    .from('friend_battles')
+    .select('attacker, result, created_at')
+    .eq('defender', selfId)
+    .gt('created_at', since)
+    .order('created_at');
+  if (error) throw error;
+  const rows = (data ?? []) as { attacker: string; result: FightResult; created_at: string }[];
+  if (!rows.length) return [];
+  const { data: people } = await cloud
+    .from('profiles')
+    .select('user_id, name')
+    .in('user_id', [...new Set(rows.map((r) => r.attacker))]);
+  const names = new Map((people ?? []).map((p) => [p.user_id as string, p.name as string]));
+  return rows.map((r) => ({ attackerName: names.get(r.attacker) ?? '?', result: r.result, at: r.created_at }));
+}
+/** Friendly-fight wins since `since` for this player and their accepted friends, best first. */
+export type RankRow = { userId: string; name: string; wins: number };
+export async function fetchWeeklyRanking(since: Date): Promise<RankRow[]> {
+  if (!cloud) return [];
+  const { data, error } = await cloud.rpc('weekly_ranking', { since: since.toISOString() });
+  if (error) throw error;
+  return ((data ?? []) as { user_id: string; name: string; wins: number }[])
+    .map((r) => ({ userId: r.user_id, name: r.name, wins: Number(r.wins) }))
+    .sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name));
+}
 /** Wins, losses and draws against each friend, counting fights started by either side. */
 export type Score = { wins: number; losses: number; draws: number };
 export async function fetchFriendScores(selfId: string): Promise<Map<string, Score>> {

@@ -270,7 +270,15 @@ export default function SignInGate() {
         }}
       />
       {!auth.recovering && (
-        <button className="realm-link realm-gate-guest" onClick={() => setSignIn(false)}>
+        <button
+          className="realm-link realm-gate-guest"
+          onClick={() => {
+            // A guest started earlier in this tab may since have signed in and out: start a new one.
+            anonymousStarted.current = false;
+            setAnonymousFailed(false);
+            setSignIn(false);
+          }}
+        >
           {tr('Joacă fără cont', 'Play without an account')} →
         </button>
       )}

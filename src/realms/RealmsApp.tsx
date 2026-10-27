@@ -27,6 +27,7 @@ import {
   advance,
   friendCollect,
   friendlyBattle,
+  isTower,
   champion,
   command,
   currentTrip,
@@ -58,6 +59,7 @@ import {
   clearFriendHelps,
   fetchCloudSave,
   fetchFriendHelps,
+  fetchFriendNews,
   guestName,
   helpFriend,
   recordFriendBattle,
@@ -289,6 +291,8 @@ export function Window({
     </div>
   );
 }
+/** Arena and tower fights play inside the arena panel. */
+const arenaFight = (id: string) => id.startsWith('arena') || isTower(id);
 
 /**
  * The game. With accounts (`account`), it starts from the save the sign-in gate loaded from the cloud and keeps it
@@ -311,7 +315,7 @@ export default function RealmsApp({
   const [visitView, setVisitView] = useState<'home' | RealmId>('home');
   const [save, setSave] = useState(() => (initialSave ? advance(initialSave, Date.now()) : load())),
     [now, setNow] = useState(Date.now()),
-    [panel, setPanel] = useState<Panel>(() => (save.battle?.encounterId.startsWith('arena') ? 'arena' : null));
+    [panel, setPanel] = useState<Panel>(() => (save.battle && arenaFight(save.battle.encounterId) ? 'arena' : null));
   useEffect(() => {
     if (panel !== 'dino') setTrainAfterVision(false);
   }, [panel]);
@@ -341,6 +345,7 @@ export default function RealmsApp({
     return () => document.removeEventListener('click', click, true);
   }, []);
   const [placing, setPlacing] = useState(false),
+    [placingLamp, setPlacingLamp] = useState(false),
     [moving, setMoving] = useState<string | null>(null),
     [message, setMessage] = useState(() =>
       saveRecovered
@@ -845,6 +850,8 @@ export default function RealmsApp({
             boss: tr('Campionii legendari nu pot fi eliberați.', 'Legendary champions cannot be released.'),
             team: tr('Scoate-l mai întâi din echipă.', 'Take it out of the team first.'),
             lastDino: tr('Nu-ți poți elibera ultimul dinozaur.', 'You cannot release your last dinosaur.'),
+            points: tr('Nu ai puncte de statistică pentru asta.', 'Not enough stat points for that.'),
+            stat: tr('Statistică necunoscută.', 'Unknown stat.'),
             petsDone: tr('L-ai mângâiat destul azi. Revino mâine!', 'Enough petting for today. Come back tomorrow!'),
             trainingsDone: tr('Gata cu antrenamentele pe azi.', 'No more training today.'),
             training: tr('Un dinozaur se antrenează deja.', 'A dinosaur is already training.'),
@@ -872,6 +879,9 @@ export default function RealmsApp({
               'Ai făcut toate probele legendei săptămâna asta. Revino luni.',
               'You did every Legend trial this week. Come back on Monday.',
             ),
+            towerDone: tr('Ai urcat tot turnul săptămâna asta.', 'You climbed the whole tower this week.'),
+            towerFloor: tr('Urcă mai sus în turn ca să deschizi cufărul.', 'Climb higher in the tower to open this chest.'),
+            towerClaimed: tr('Cufărul turnului e deja deschis.', 'This tower chest is already open.'),
           } as Record<string, string>
         )[code] ?? tr('Acțiunea nu este disponibilă acum.', 'That action is not available yet.'),
       );
@@ -969,10 +979,15 @@ export default function RealmsApp({
   };
   const startPlacement = (id: string | null = null, kind: UtilityKind = 'farm') => {
     setPlacementKind(kind);
+    setPlacingLamp(false);
     setRealm('home');
     setPanel(null);
     setMoving(id);
     setPlacing(true);
+  };
+  const startLampPlacement = () => {
+    startPlacement();
+    setPlacingLamp(true);
   };
   // Tell the player once when a dinosaur is back from its expedition, wherever they are in the game.
   const announcedTrip = useRef<number | null>(null);
@@ -1106,7 +1121,90 @@ export default function RealmsApp({
     };
     void check();
     window.addEventListener('focus', check);
-    return () => window.removeEventListener('focus', check);
+    const timer = window.setInterval(check, 60_000);
+    return () => {
+      window.removeEventListener('focus', check);
+      window.clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account?.user.id]);
+
+  // Friend requests waiting for an answer (a badge until answered) and friendly fights against us (told once).
+  const [friendRequests, setFriendRequests] = useState(0);
+  const checkNewsRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (!account) return;
+    const uid = account.user.id;
+    const seenKey = `dino-realms-friend-news-${uid}`;
+    const read = () => {
+      try {
+        return JSON.parse(localStorage.getItem(seenKey) ?? 'null') as { requests: string[]; since: string } | null;
+      } catch {
+        return null;
+      }
+    };
+    let busy = false;
+    const check = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const seen = read() ?? { requests: [], since: new Date(0).toISOString() };
+        const news = await fetchFriendNews(uid, seen.since);
+        setFriendRequests(news.requests.length);
+        const fresh = news.requests.filter((r) => !seen.requests.includes(r.id));
+        // One line for the latest attack on our defense team, the others only counted.
+        const last = news.battles.at(-1),
+          more = news.battles.length - 1;
+        const lines = [
+          ...fresh.map((r) => tr(`${r.name} vrea să fiți prieteni.`, `${r.name} wants to be friends.`)),
+          ...(last
+            ? [
+                (last.result === 'draw'
+                  ? tr(`${last.attackerName} te-a atacat: egalitate.`, `${last.attackerName} attacked you: a draw.`)
+                  : last.result === 'victory'
+                    ? tr(`${last.attackerName} te-a atacat și a câștigat.`, `${last.attackerName} attacked you and won.`)
+                    : tr(
+                        `${last.attackerName} te-a atacat și a pierdut!`,
+                        `${last.attackerName} attacked you and lost!`,
+                      )) +
+                  (more > 0
+                    ? tr(
+                        ` (+${more} ${more === 1 ? 'altă luptă' : 'alte lupte'})`,
+                        ` (+${more} more ${more === 1 ? 'fight' : 'fights'})`,
+                      )
+                    : ''),
+              ]
+            : []),
+        ];
+        try {
+          localStorage.setItem(
+            seenKey,
+            JSON.stringify({
+              requests: news.requests.map((r) => r.id),
+              since: news.battles.at(-1)?.at ?? seen.since,
+            }),
+          );
+        } catch {
+          /* Without storage the same news shows again next time. */
+        }
+        if (lines.length) {
+          playSound('pop');
+          setMessage(lines.join(' '));
+        }
+      } catch {
+        /* Offline: checked again later. */
+      } finally {
+        busy = false;
+      }
+    };
+    checkNewsRef.current = () => void check();
+    void check();
+    window.addEventListener('focus', check);
+    const timer = window.setInterval(check, 60_000);
+    return () => {
+      window.removeEventListener('focus', check);
+      window.clearInterval(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account?.user.id]);
 
@@ -1141,6 +1239,11 @@ export default function RealmsApp({
             title={tr('Progresul nu e salvat în cont', 'Progress is not saved to an account')}
           >
             !
+          </b>
+        )}
+        {friendRequests > 0 && (
+          <b className="realm-friend-alert" title={tr('Cereri de prietenie', 'Friend requests')}>
+            {friendRequests}
           </b>
         )}
       </button>
@@ -1193,6 +1296,7 @@ export default function RealmsApp({
                       {tr('Jucători', 'Players')}
                       <small>{tr('Vizitează lumile altora', "Visit other players' worlds")}</small>
                     </span>
+                    {friendRequests > 0 && <b className="realm-menu-count">{friendRequests}</b>}
                     <em aria-hidden="true">›</em>
                   </button>
                 )}
@@ -1280,7 +1384,12 @@ export default function RealmsApp({
                 >
                   {tr('Dinozauri', 'Dinosaurs')}
                 </button>
-                {account && <button onClick={closeThen(() => setPanel('players'))}>{tr('Jucători', 'Players')}</button>}
+                {account && (
+                  <button onClick={closeThen(() => setPanel('players'))}>
+                    {tr('Jucători', 'Players')}
+                    {friendRequests > 0 && <b className="realm-menu-count">{friendRequests}</b>}
+                  </button>
+                )}
                 <button onClick={closeThen(() => setPanel('account'))}>
                   {guest ? tr('Creează cont', 'Create account') : tr('Cont', 'Account')}
                 </button>
@@ -1388,9 +1497,18 @@ export default function RealmsApp({
           placing={placing}
           moving={moving}
           placementKind={placementKind}
+          lampMode={placing && placingLamp}
           now={now}
           covered={!!panel}
           onPlace={(x, y) => {
+            if (placingLamp) {
+              if (run({ type: 'placeLamp', x, y })) {
+                setPlacing(false);
+                setPlacingLamp(false);
+                setMessage(tr('Lampă aprinsă!', 'Lamp lit!'));
+              }
+              return;
+            }
             if (run(moving ? { type: 'move', id: moving, x, y } : { type: 'build', x, y, kind: placementKind })) {
               setPlacing(false);
               setMoving(null);
@@ -1398,6 +1516,11 @@ export default function RealmsApp({
             }
           }}
           onMove={(id, x, y) => {
+            if (id.startsWith('lamp:')) {
+              if (run({ type: 'moveLamp', index: Number(id.slice(5)), x, y }))
+                setMessage(tr('Lampă mutată!', 'Lamp moved!'));
+              return;
+            }
             if (run({ type: 'move', id, x, y })) setMessage(tr('Clădire mutată!', 'Building moved!'));
           }}
           onSelect={openBuilding}
@@ -1649,9 +1772,11 @@ export default function RealmsApp({
           <div className="realm-placement">
             <div>
               <strong>
-                {moving
-                  ? tr('Mută clădirea', 'Move building')
-                  : `${tr('Amplasează', 'Place')}: ${UTILITY_BUILDINGS[placementKind].name[lang]}`}
+                {placingLamp
+                  ? tr('Pune lampa', 'Place the lamp')
+                  : moving
+                    ? tr('Mută clădirea', 'Move building')
+                    : `${tr('Amplasează', 'Place')}: ${UTILITY_BUILDINGS[placementKind].name[lang]}`}
               </strong>
               <small>
                 {tr(
@@ -1989,6 +2114,7 @@ export default function RealmsApp({
                 run={run}
                 visit={visitRealm}
                 openWorkshop={() => setPanel('workshop')}
+                placeLamp={startLampPlacement}
               />
             )}
             {panel === 'farm' && (
@@ -2008,6 +2134,7 @@ export default function RealmsApp({
                 lang={lang}
                 run={run}
                 place={startPlacement}
+                placeLamp={startLampPlacement}
                 open={(kind) => setPanel(kind === 'portal' ? 'expedition' : kind)}
               />
             )}
@@ -2043,8 +2170,11 @@ export default function RealmsApp({
               <PlayersPanel
                 lang={lang}
                 selfId={account.user.id}
+                save={save}
+                run={run}
                 onVisit={(p, canHelp) => void openVisit(p, canHelp)}
                 onChallenge={(p) => void challenge(p)}
+                onFriendsChange={() => checkNewsRef.current()}
               />
             )}
             {panel === 'settings' && (
@@ -2135,12 +2265,12 @@ export default function RealmsApp({
             }
           />
         )}
-        {save.battle && !panel && !save.battle.encounterId.startsWith('arena') && (
+        {save.battle && !panel && !arenaFight(save.battle.encounterId) && (
           <BattleScreen
             save={save}
             lang={lang}
             run={run}
-            close={() => setPanel(save.battle?.encounterId.startsWith('arena') ? 'arena' : 'expedition')}
+            close={() => setPanel(save.battle && arenaFight(save.battle.encounterId) ? 'arena' : 'expedition')}
           />
         )}
         {offline &&

@@ -16,26 +16,43 @@ import {
   command,
   currentTrip,
   elementEdge,
+  ELEMENT_BEATS,
   ELEMENTS,
   GATE_LEAGUES,
   GEMS,
   isTired,
+  parseTowerId,
   rarityOf,
   REALM_NAMES,
   MASTERED_SHARE,
   rewardPreview,
+  ROLE_ICONS,
+  ROLE_NAMES,
+  SPECIES_ROLE,
   seasonStep,
   SPECIES_NAMES,
   STARS_TO_ADVANCE,
   storyChapter,
   battleEdge,
   teamDinos,
+  ticketWorlds,
+  TOWER_FLOORS,
+  TOWER_REWARDS,
+  towerBase,
+  towerBossLeague,
+  towerFoes,
+  towerRule,
+  towerRuleElement,
   type Command,
   type Dino,
   type RealmId,
   type RoundReport,
   type Save,
+  type Species,
+  type TowerRewardFloor,
+  type TowerRule,
 } from './game';
+import { weekId, weekStart } from './daily';
 import { arenaFoes, arenaTier, foeHasUltimate, roundCap, teamReward } from './arenaTeams';
 import { DinosaurArt } from './DinosaurArt';
 import { loadAnimation, loadBossAnimation, loadSpriteImage, type Clip } from './animation';
@@ -514,7 +531,7 @@ function arenaBlocker(save: Save, e: Encounter, now: number): Blocker | null {
   return null;
 }
 type ArenaProps = Pick<Props, 'save' | 'now' | 'lang' | 'run' | 'close' | 'navigate' | 'build'>;
-type ArenaTab = 'fight' | 'team' | 'gate';
+type ArenaTab = 'fight' | 'team' | 'tower' | 'gate';
 
 /**
  * The arena: league and tier chips over the opposing team on the left; on the right three tabs — Fight (rewards,
@@ -684,6 +701,11 @@ function ArenaView({ save, now, lang, run, close, navigate, build }: ArenaProps)
                 label: tr('Echipă', 'Team'),
                 badge: save.team.filter((id) => isTired(save, id, now)).length ? '💤' : undefined,
               },
+              {
+                id: 'tower',
+                label: tr('Turn', 'Tower'),
+                state: TOWER_CHESTS.some((n) => towerChestReady(towerNow(save, now), n)) ? 'ready' : undefined,
+              },
               { id: 'gate', label: tr('Poartă', 'Gate') },
             ]}
           />
@@ -717,12 +739,170 @@ function ArenaView({ save, now, lang, run, close, navigate, build }: ArenaProps)
             <ArenaTeam save={save} now={now} lang={lang} run={run} league={league} />
           </TabPanel>
         )}
+        {tab === 'tower' && (
+          <TabPanel idBase={idBase} id="tower" className="arena-tab">
+            <ArenaTower save={save} now={now} lang={lang} run={run} openTeam={() => setTab('team')} />
+          </TabPanel>
+        )}
         {tab === 'gate' && (
           <TabPanel idBase={idBase} id="gate" className="arena-tab">
             <ArenaGate save={save} now={now} lang={lang} run={run} build={build} />
           </TabPanel>
         )}
       </aside>
+    </div>
+  );
+}
+const TOWER_CHESTS: TowerRewardFloor[] = [3, 6, 10];
+/** The tower as of `now`: a save not yet advanced into a new week shows the fresh tower. */
+const towerNow = (save: Save, now: number) => {
+  const week = weekId(now);
+  return save.tower.week === week ? save.tower : { week, floor: 0, claimed: [] as number[] };
+};
+const towerChestReady = (t: Save['tower'], n: TowerRewardFloor) => t.floor >= n && !t.claimed.includes(n);
+/** A floor's rule in a few words, and the element that beats an element floor. */
+function towerRuleText(rule: TowerRule, lang: number) {
+  const fixed = towerRuleElement(rule);
+  if (fixed) {
+    const name = ELEMENTS.find((e) => e.id === fixed)!.name[lang],
+      beaters = ELEMENTS.filter((e) => ELEMENT_BEATS[e.id].includes(fixed)).map((e) => e.name[lang]);
+    return {
+      short: name,
+      long: T(
+        lang,
+        `Toți adversarii sunt ${name}. ${beaters.join(', ')} îi bate.`,
+        `Every foe is ${name}. ${beaters.join(', ')} beats them.`,
+      ),
+    };
+  }
+  return rule === 'noHeal'
+    ? { short: T(lang, 'Fără vindecări', 'No heals'), long: T(lang, 'Suporturile nu vindecă pe acest etaj.', 'Supports cannot heal on this floor.') }
+    : rule === 'swift'
+      ? { short: T(lang, 'Agili', 'Swift'), long: T(lang, 'Adversarii se feresc mai des de lovituri.', 'Foes dodge strikes more often.') }
+      : { short: T(lang, 'Uriaș', 'Giant'), long: T(lang, 'Un adversar are +50% viață.', 'One foe has +50% health.') };
+}
+function towerPrize(n: TowerRewardFloor, lang: number) {
+  const r = TOWER_REWARDS[n];
+  return [
+    r.gems && `${r.gems}💎`,
+    r.gold && `${r.gold}●`,
+    r.food && `${r.food}❧`,
+    ...(Object.entries(r.materials ?? {}) as [ItemId, number][]).map(([id, k]) => `${k} ${ITEMS[id].name[lang].toLowerCase()}`),
+    r.tickets && `${r.tickets} ${lang ? 'tickets' : 'bilete'}`,
+    r.egg && T(lang, 'un ou rar', 'a rare egg'),
+  ]
+    .filter(Boolean)
+    .join(' + ');
+}
+/** The weekly tower: ten floors climbed with the arena team, chests at 3, 6 and 10, reset every Monday. */
+function ArenaTower({
+  save,
+  now,
+  lang,
+  run,
+  openTeam,
+}: Pick<ArenaProps, 'save' | 'now' | 'lang' | 'run'> & { openTeam: () => void }) {
+  const tr = (ro: string, en: string) => T(lang, ro, en);
+  const tower = towerNow(save, now),
+    team = teamDinos(save),
+    next = tower.floor + 1,
+    done = tower.floor >= TOWER_FLOORS;
+  const foes = done
+    ? []
+    : towerFoes(tower.week, next, towerBase(team), towerBossLeague(tower.week, ticketWorlds(save)));
+  const blocker = !save.buildings.some((b) => b.kind === 'arena')
+    ? tr('Construiește arena mai întâi.', 'Build the arena first.')
+    : !team.length
+      ? tr('Alege o echipă de arenă.', 'Pick an arena team.')
+      : team.some((d) => d.stage === 'baby')
+        ? tr('Puii nu pot lupta: echipa trebuie să fie juvenilă sau adultă.', 'Babies cannot fight: the team must be juvenile or adult.')
+        : team.some((d) => busyDinos(save).has(d.id))
+          ? tr('Un membru al echipei e plecat în expediție.', 'A team member is away on an expedition.')
+          : team.some((d) => isTired(save, d.id, now))
+            ? tr('Echipa se odihnește.', 'The team is resting.')
+            : null;
+  const days = Math.max(1, Math.ceil((weekStart(now) + 7 * 86_400_000 - now) / 86_400_000));
+  return (
+    <div className="arena-tower">
+      <p className="arena-tower-reset">
+        {tr(
+          `Turnul se resetează luni (în ${days} ${days === 1 ? 'zi' : 'zile'}). Fără bilete, fără odihnă.`,
+          `The tower resets on Monday (in ${days} ${days === 1 ? 'day' : 'days'}). No tickets, no rest.`,
+        )}
+      </p>
+      <ol className="arena-tower-ladder" aria-label={tr('Etajele turnului', 'Tower floors')}>
+        {/* Two rows read bottom-up: floors 6–10 above 1–5. */}
+        {[6, 7, 8, 9, 10, 1, 2, 3, 4, 5].map((n) => {
+          const state = n <= tower.floor ? 'cleared' : n === next ? 'next' : 'locked',
+            rule = towerRuleText(towerRule(tower.week, n), lang),
+            chest = TOWER_CHESTS.includes(n as TowerRewardFloor);
+          return (
+            <li
+              key={n}
+              className={`arena-tower-floor ${state}${chest ? ' chest' : ''}`}
+              aria-current={state === 'next' ? 'step' : undefined}
+              title={state === 'locked' ? undefined : rule.short}
+            >
+              <span className="arena-tower-num">{n}</span>
+              <span className="arena-tower-mark" aria-hidden="true">
+                {state === 'cleared' ? '✓' : state === 'next' ? '▶' : chest ? '🎁' : '🔒'}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      {!done ? (
+        <div className="arena-tower-next">
+          <strong>
+            {tr('Etajul', 'Floor')} {next} · {tr('Nv.', 'Lv.')} {foes[0]?.level} · {towerRuleText(towerRule(tower.week, next), lang).short}
+          </strong>
+          <p>{towerRuleText(towerRule(tower.week, next), lang).long}</p>
+          <div className="arena-tower-foes">
+            {foes.map((f, i) => (
+              <Face key={i} className={f.boss ? 'boss' : ''}>
+                <ArenaOpponent foe={f} paused />
+              </Face>
+            ))}
+          </div>
+          {blocker && (
+            <p className="arena-tower-blocker">
+              {blocker}{' '}
+              {team.length === 0 && (
+                <button type="button" className="realm-link" onClick={openTeam}>
+                  {tr('Echipă', 'Team')}
+                </button>
+              )}
+            </p>
+          )}
+          <button type="button" className="realm-button" disabled={!!blocker} onClick={() => run({ type: 'towerFight' })}>
+            {tr(`Luptă etajul ${next}`, `Fight floor ${next}`)}
+          </button>
+        </div>
+      ) : (
+        <p className="arena-tower-next">{tr('Ai cucerit tot turnul! Revino luni.', 'You conquered the whole tower! Come back on Monday.')}</p>
+      )}
+      <div className="arena-tower-chests">
+        {TOWER_CHESTS.map((n) => {
+          const claimed = tower.claimed.includes(n),
+            ready = towerChestReady(tower, n);
+          return (
+            <div key={n} className={`arena-tower-reward${ready ? ' ready' : ''}${claimed ? ' claimed' : ''}`}>
+              <span className="arena-tower-reward-name">
+                🎁 {tr('Etajul', 'Floor')} {n}
+              </span>
+              <small>{towerPrize(n, lang)}</small>
+              <button
+                type="button"
+                className="realm-button"
+                disabled={!ready}
+                onClick={() => run({ type: 'claimTower', floor: n })}
+              >
+                {claimed ? '✓' : tr('Deschide', 'Open')}
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -1123,17 +1303,30 @@ function ArenaGate({ save, now, lang, run, build }: Pick<ArenaProps, 'save' | 'n
   );
 }
 
-/** One pip per member of a side: the fighter on stage is lit, the fallen are crossed out. */
-function Pips({ states, side }: { states: ('active' | 'waiting' | 'fallen')[]; side: Unit }) {
+/** One role icon per member of a side: the fighter on stage is lit, the fallen are greyed out. */
+function Pips({
+  states,
+  side,
+  lang,
+}: {
+  states: { state: 'active' | 'waiting' | 'fallen'; species: Species }[];
+  side: Unit;
+  lang: number;
+}) {
   if (states.length < 2) return null;
   return (
     <span
-      className={`battle-pips ${side}`}
-      aria-label={`${states.filter((s) => s !== 'fallen').length} / ${states.length}`}
+      className={`battle-pips roles ${side}`}
+      aria-label={`${states.filter((s) => s.state !== 'fallen').length} / ${states.length}`}
     >
-      {states.map((s, i) => (
-        <i key={i} className={s} />
-      ))}
+      {states.map((s, i) => {
+        const role = SPECIES_ROLE[s.species];
+        return (
+          <i key={i} className={s.state} title={`${SPECIES_NAMES[s.species]} · ${ROLE_NAMES[role][lang]}`}>
+            {ROLE_ICONS[role]}
+          </i>
+        );
+      })}
     </span>
   );
 }
@@ -1147,7 +1340,8 @@ export function BattleScreen({
   friendly,
 }: Pick<Props, 'save' | 'lang' | 'run' | 'close'> & { embedded?: boolean; friendly?: string }) {
   const battle = save.battle!,
-    encounter = ENCOUNTERS.find((e) => e.id === battle.encounterId);
+    encounter = ENCOUNTERS.find((e) => e.id === battle.encounterId),
+    tower = parseTowerId(battle.encounterId);
   const tr = (ro: string, en: string) => T(lang, ro, en);
   // The pair on stage. It follows the fight's active pair, but only once a fallen fighter's round has been told.
   const [view, setView] = useState({ ally: battle.active, foe: battle.foeIndex });
@@ -1346,7 +1540,14 @@ export function BattleScreen({
     if (!manualReady || !moves[move]) return;
     // The planner remembers the player's moves too, so Auto or Skip pick up the repertoire from here.
     memory.current(battle.dinoId).add(move);
-    run({ type: 'action', action: move });
+    run({ type: 'action', action: move, ...(move === 'ultimate' ? { tapped: true } : {}) });
+  };
+  // Auto on: a full bar lights up the ultimate; tapping it before the planner moves lands a PERFECT hit.
+  const tapReady = auto && told && !battle.result && battle.energy >= 100 && moves.ultimate;
+  const tap = () => {
+    if (!tapReady) return;
+    memory.current(battle.dinoId).add('ultimate');
+    run({ type: 'action', action: 'ultimate', tapped: true });
   };
   useEffect(() => {
     if (!manualReady) return;
@@ -1391,16 +1592,16 @@ export function BattleScreen({
   };
   const pips = (side: Unit) =>
     side === 'ally'
-      ? battle.team.map(
-          (a, i) =>
-            ((i === view.ally ? shown.hp : a.hp) === 0 ? 'fallen' : i === view.ally ? 'active' : 'waiting') as
-              'active' | 'waiting' | 'fallen',
-        )
-      : battle.foes.map(
-          (f, i) =>
-            ((i === view.foe ? shown.enemy : f.hp) === 0 ? 'fallen' : i === view.foe ? 'active' : 'waiting') as
-              'active' | 'waiting' | 'fallen',
-        );
+      ? battle.team.map((a, i) => ({
+          state: ((i === view.ally ? shown.hp : a.hp) === 0 ? 'fallen' : i === view.ally ? 'active' : 'waiting') as
+            'active' | 'waiting' | 'fallen',
+          species: a.species ?? save.dinos.find((x) => x.id === a.dinoId)?.species ?? 'trex',
+        }))
+      : battle.foes.map((f, i) => ({
+          state: ((i === view.foe ? shown.enemy : f.hp) === 0 ? 'fallen' : i === view.foe ? 'active' : 'waiting') as
+            'active' | 'waiting' | 'fallen',
+          species: f.species,
+        }));
   const cap = roundCap(battle.foes.length);
   const tier = arenaTier(battle.encounterId);
   const restMinutes = battle.result === 'victory' ? ARENA_REST.win[tier - 1] : ARENA_REST.defeat;
@@ -1485,6 +1686,11 @@ export function BattleScreen({
             ))}
           </div>
         )}
+        {tapReady && (
+          <button key={battle.round} type="button" className="battle-tap-ultimate" onClick={tap}>
+            ✦ ULTIMATE!
+          </button>
+        )}
         <div className="battle-stage" ref={stageRef}>
           <BattleHud
             side="ally"
@@ -1495,7 +1701,7 @@ export function BattleScreen({
             hp={shown.hp}
             maxHp={allyState.maxHp}
             energy={view.ally === battle.active ? battle.energy : 0}
-            pips={<Pips side="ally" states={pips('ally')} />}
+            pips={<Pips side="ally" states={pips('ally')} lang={lang} />}
             portrait={<DinosaurArt species={d.species} element={d.element} stage={d.stage} paused frame={0} />}
           >
             <EdgeBadge edge={elementEdge(d.element, foe.element)} lang={lang} />
@@ -1515,7 +1721,7 @@ export function BattleScreen({
             hp={shown.enemy}
             maxHp={foe.maxHp}
             energy={foeHasUltimate(foe) ? (view.foe === battle.foeIndex ? battle.enemyEnergy : 0) : undefined}
-            pips={<Pips side="enemy" states={pips('enemy')} />}
+            pips={<Pips side="enemy" states={pips('enemy')} lang={lang} />}
             portrait={<ArenaOpponent foe={foe} paused />}
           />
           <div
@@ -1533,7 +1739,12 @@ export function BattleScreen({
               className={rarityClass(d.rarity)}
             />
           </div>
-          <div className="battle-unit enemy" data-motion={enemy.clip} style={enemy.style}>
+          <div
+            className="battle-unit enemy"
+            data-motion={enemy.clip}
+            data-dodge={step?.dodge === 'enemy' || undefined}
+            style={enemy.style}
+          >
             <ArenaOpponent foe={foe} className="dinosaur-opponent" animation={enemy.clip} speed={speed} />
           </div>
           {step?.say?.map((c, i) => (
@@ -1585,12 +1796,37 @@ export function BattleScreen({
               );
             })}
           </div>
+          {(() => {
+            const name = (id: string) => save.dinos.find((x) => x.id === id)?.nickname ?? '?';
+            const mvp = Object.entries(battle.damage ?? {}).sort((a, b) => b[1] - a[1])[0];
+            return (
+              <p className="result-recap">
+                {battle.bestHit && (
+                  <span>
+                    {tr('Cea mai mare lovitură', 'Biggest hit')}: {battle.bestHit.amount} ({name(battle.bestHit.dinoId)})
+                  </span>
+                )}
+                {mvp && (
+                  <span>
+                    MVP: {name(mvp[0])} — {mvp[1]} {tr('daune', 'damage')}
+                  </span>
+                )}
+                <span>
+                  {tr('Runde', 'Rounds')}: {battle.round - 1}
+                </span>
+              </p>
+            );
+          })()}
           <p className="result-rest">
             {friendly
               ? tr(
                   `Luptă amicală cu ${friendly}: fără premii și fără odihnă, doar pentru scor.`,
                   `Friendly fight with ${friendly}: no rewards and no rest, just for the score.`,
                 )
+              : tower
+                ? battle.result === 'victory'
+                  ? tr(`Etajul ${tower.floor} cucerit! Fără odihnă: urcă mai departe.`, `Floor ${tower.floor} conquered! No rest: climb on.`)
+                  : tr('În turn echipa nu obosește: încearcă din nou.', 'The team does not tire in the tower: try again.')
               : battle.result === 'victory'
                 ? tr(
                     `Odihnă: ${restMinutes} min${battle.team.some((a) => a.hp === 0) ? `, căzuții ${ARENA_REST.fallen} min` : ''}.`,
@@ -1652,7 +1888,9 @@ export function BattleScreen({
               ? tr('Înapoi', 'Back')
               : save.rewardPending
                 ? tr('Colectează recompensa', 'Claim reward')
-                : tr('Înapoi în arenă', 'Back to the arena')}
+                : tower
+                  ? tr('Înapoi la turn', 'Back to the tower')
+                  : tr('Înapoi în arenă', 'Back to the arena')}
           </button>
         </div>
       ) : null}
@@ -1662,7 +1900,13 @@ export function BattleScreen({
     <div className="arena-embedded-battle">{content}</div>
   ) : (
     <Frame
-      title={friendly ? tr(`Luptă amicală · ${friendly}`, `Friendly fight · ${friendly}`) : encounter!.name[lang]}
+      title={
+        friendly
+          ? tr(`Luptă amicală · ${friendly}`, `Friendly fight · ${friendly}`)
+          : tower
+            ? tr(`Turnul · Etajul ${tower.floor}`, `Tower · Floor ${tower.floor}`)
+            : encounter!.name[lang]
+      }
       view="battle"
       close={close}
       lang={lang}

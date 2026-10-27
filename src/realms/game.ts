@@ -1,5 +1,5 @@
 import { arenaBoss, ARENA_BOSSES } from './arenaBosses';
-import { arenaFoes, arenaTier, foeHasUltimate, roundCap, teamReward, type Foe } from './arenaTeams';
+import { arenaFoes, arenaTier, BOSS_STATS, foeHasUltimate, roundCap, teamReward, type Foe } from './arenaTeams';
 import { isPlayableDinosaur, playableSpecies, PLAYABLE_DINOSAURS } from './playableDinosaurs';
 import {
   CROPS,
@@ -199,6 +199,65 @@ const SPECIES_STATS: Record<Species, { hp: number; power: number; defense: numbe
   cryptoraptor: { hp: 1, power: 1.1, defense: 0.95, speed: 1.05 },
   boss: { hp: 1.15, power: 1.1, defense: 1.1, speed: 0.9 },
 };
+/** Arena roles: each species brings one ability to the relay (see ROLE_EFFECTS). */
+export type Role = 'tank' | 'attacker' | 'fast' | 'support';
+export const ROLES: readonly Role[] = ['tank', 'attacker', 'fast', 'support'];
+export const SPECIES_ROLE: Record<Species, Role> = {
+  ankylosaurus: 'tank',
+  terrasaur: 'tank',
+  triceratops: 'tank',
+  ankylobiped: 'tank',
+  trex: 'attacker',
+  therizinosaurus: 'attacker',
+  ignasaur: 'attacker',
+  cryptoraptor: 'attacker',
+  boss: 'attacker',
+  raptor: 'fast',
+  dilophosaurus: 'fast',
+  quetzalcoatlus: 'fast',
+  brachiosaurus: 'support',
+  thalassaur: 'support',
+  solarraptor: 'support',
+};
+export const ROLE_NAMES: Record<Role, readonly [string, string]> = {
+  tank: ['Tanc', 'Tank'],
+  attacker: ['Atacator', 'Attacker'],
+  fast: ['Rapid', 'Fast'],
+  support: ['Suport', 'Support'],
+};
+export const ROLE_ICONS: Record<Role, string> = { tank: '🛡', attacker: '⚔', fast: '💨', support: '💚' };
+export const ROLE_INFO: Record<Role, readonly [string, string]> = {
+  tank: ['Prima lovitură primită pe arenă îi face doar jumătate.', 'The first blow it takes on stage deals half damage.'],
+  attacker: ['Sub 50% viață, loviturile lui fac +20%.', 'Below 50% health, its strikes deal +20%.'],
+  fast: ['Se eschivează mai des.', 'Dodges more often.'],
+  support: [
+    'Din rezervă, apără cu 10% luptătorul de pe arenă; pe arenă se vindecă o dată cu 15%.',
+    'From the bench, the fighter on stage takes 10% less; on stage it heals 15% once.',
+  ],
+};
+/**
+ * Role abilities, tuned by `arenaBalance.test.ts`: tank `shield` (share of the first blow taken), attacker `rage`
+ * (strike multiplier below `rageBelow` health), fast `swiftAlly`/`swiftFoe` (extra dodge chance), support `aura`
+ * (share of damage the side's fighter takes while it waits on the bench) and `heal` (share of max health, once,
+ * as soon as that much is missing). Opponents rage and shelter behind a bench support more mildly (`foeRage`,
+ * `foeAura`): at full strength the level-50 arcane boss could not be beaten without a fall.
+ */
+export const ROLE_EFFECTS = {
+  shield: 0.5,
+  rage: 1.2,
+  rageBelow: 0.5,
+  swiftAlly: 0.04,
+  swiftFoe: 0.06,
+  aura: 0.9,
+  heal: 0.15,
+  foeRage: 1.1,
+  foeAura: 0.95,
+};
+export const roleOf = (x: { species: Species }) => SPECIES_ROLE[x.species];
+export type AbilityKind = 'shield' | 'rage' | 'aura' | 'heal' | 'swift';
+export const ABILITY_KINDS: readonly AbilityKind[] = ['shield', 'rage', 'aura', 'heal', 'swift'];
+/** A role ability that fired in a round, on the side it helped; `amount` is the health a heal gave back. */
+export type Ability = { on: 'ally' | 'enemy'; kind: AbilityKind; amount?: number };
 export type Stage = 'baby' | 'juvenile' | 'adult';
 export type BuildingKind = UtilityKind | 'habitat';
 export interface Building {
@@ -220,7 +279,12 @@ export interface Dino {
   nickname: string;
   /** Missing in older saves: common. */
   rarity?: Rarity;
+  /** Stat points spent by the player; missing means none (free points count as spread evenly). */
+  points?: StatPoints;
 }
+export const POINT_STATS = ['hp', 'power', 'defense'] as const;
+export type PointStat = (typeof POINT_STATS)[number];
+export type StatPoints = Record<PointStat, number>;
 /** An egg knows its species and element before incubation. `hatchAt` is null while it waits in the inventory. */
 export interface Egg {
   id: string;
@@ -264,6 +328,12 @@ export interface BattleAlly {
   dinoId: string;
   hp: number;
   maxHp: number;
+  /** Missing in fights started before roles. */
+  species?: Species;
+  /** A tank's half-damage first blow is spent. */
+  shieldUsed?: true;
+  /** A support's one heal is spent. */
+  healed?: true;
 }
 /**
  * An arena fight between the player's team (1 to 3 dinosaurs) and the tier's opponents, fought as a relay: one
@@ -296,6 +366,9 @@ export interface Battle {
   log: 'start' | AllyMove;
   /** What happened in the last round, for the replay and the on-screen callouts. */
   report?: RoundReport;
+  /** Fight recap (missing in older fights): the biggest single strike and the damage each ally dealt. */
+  bestHit?: { amount: number; dinoId: string };
+  damage?: Record<string, number>;
 }
 export type AllyMove = 'basic' | 'defend' | 'ultimate';
 export type FoeMove = 'attack' | 'defend' | 'ultimate';
@@ -345,6 +418,10 @@ export interface RoundReport {
   enemyAfter?: number;
   /** Who fell and was replaced by the next member of its side at the end of the round. */
   swap?: 'ally' | 'enemy' | 'both';
+  /** Role abilities that fired this round; heals come last, already counted in `hpAfter`/`enemyAfter`. */
+  abilities?: Ability[];
+  /** The ultimate was tapped in time and hit harder (see TAP_BONUS). */
+  tapped?: true;
 }
 export interface Save {
   /** 6: the reset of the ~30-day economy. Any other version is refused on load (see OutdatedSave). */
@@ -366,6 +443,8 @@ export interface Save {
   champion: string | null;
   /** The arena team, champion first (1 to 3 dinosaurs). */
   team: string[];
+  /** Who friends fight when they challenge this player (0 to 3 dinosaurs); empty = the arena team. */
+  defense: string[];
   eggs: Egg[];
   hatcheryLevel: number;
   /** Workshop and Arena Gate levels (see WORKSHOP_LEVELS, ARENA_LEVELS). */
@@ -414,8 +493,12 @@ export interface Save {
   collectionMilestones: number;
   /** Ornamental lamps placed on the island, each adding to habitat gold (see LAMP_BONUS). */
   lamps: number;
+  /** Where each lamp stands on the home grid (one cell each), as many as `lamps`. */
+  lampSpots: { x: number; y: number }[];
   /** Legend trials done in the Bucharest week `week`, once the story is finished (see LEGEND_TRIAL). */
   legend: { week: string; trials: number };
+  /** The weekly tower: highest floor cleared this week (0 to TOWER_FLOORS) and reward floors already claimed. */
+  tower: { week: string; floor: number; claimed: number[] };
   /** The dinosaur training for a free level, and when it is done (see TRAINING); null when nobody trains. */
   training: { dinoId: string; endsAt: number } | null;
   /**
@@ -1119,12 +1202,13 @@ export type Command =
   | { type: 'feed'; dinoId?: string; times?: number }
   | { type: 'evolve' | 'useCrystal'; dinoId?: string }
   | { type: 'releaseDino'; dinoId: string }
+  | { type: 'allocate'; dinoId: string; stat: PointStat; amount?: number }
+  | { type: 'resetPoints'; dinoId: string }
   | {
       type:
         | 'collect'
         | 'claim'
         | 'collectAvailable'
-        | 'placeLamp'
         | 'upgradeFarm'
         | 'upgradeHatchery'
         | 'upgradeWorkshop'
@@ -1138,6 +1222,8 @@ export type Command =
   | { type: 'setChampion'; dinoId: string }
   /** The arena team: one to three different dinosaurs, juvenile or older, at home and rested; the first leads. */
   | { type: 'setTeam'; dinoIds: string[] }
+  /** The team friends fight against: zero to three different juvenile or older dinosaurs. */
+  | { type: 'setDefense'; dinoIds: string[] }
   | { type: 'buyEgg'; species: Species; element: RealmId }
   | { type: 'sellEgg'; eggId: string }
   | { type: 'claimQuestEgg'; questId: string }
@@ -1155,13 +1241,19 @@ export type Command =
   | { type: 'craft'; recipeId: string }
   | { type: 'claimCraft' | 'cancelCraft'; jobId: string }
   | { type: 'move'; id: string; x: number; y: number }
-  | { type: 'action'; action: AllyMove }
+  /** Lights a lamp from the inventory on cell (x, y), or on the first free cell when none is given. */
+  | { type: 'placeLamp'; x?: number; y?: number }
+  | { type: 'moveLamp'; index: number; x: number; y: number }
+  | { type: 'action'; action: AllyMove; tapped?: boolean }
   /** Adds diamonds: the test button now, real purchases later. */
   | { type: 'addGems'; amount: number }
   | { type: 'gemFinish'; target: 'egg' | 'craft' | 'expedition' | 'plot' | 'construction'; id?: string; plot?: number }
   | { type: 'gemBoost'; hours: 1 | 4 }
   /** Once the story is finished: pays LEGEND_TRIAL's gold and food for diamonds and an egg. */
   | { type: 'legendTrial' }
+  /** Fights the weekly tower's next floor with the arena team (no tickets, no rest). */
+  | { type: 'towerFight' }
+  | { type: 'claimTower'; floor: TowerRewardFloor }
   /** Pets a dinosaur (a little food, PET.perDay times a day), or starts its free training (TRAINING). */
   | { type: 'pet' | 'train'; dinoId: string }
   /** Ends a finished training (+1 level) or picks up the island's lost treasure. */
@@ -1186,6 +1278,7 @@ export function newSave(now: number): Save {
     dinos: [],
     champion: null,
     team: [],
+    defense: [],
     eggs: [{ id: 'egg-ignis', species: 'trex', element: 'fire', seconds: EGG_SECONDS.tutorial, hatchAt: null }],
     hatcheryLevel: 1,
     workshopLevel: 1,
@@ -1216,7 +1309,9 @@ export function newSave(now: number): Save {
     discovered: [],
     collectionMilestones: 0,
     lamps: 0,
+    lampSpots: [],
     legend: { week: weekId(now), trials: 0 },
+    tower: { week: weekId(now), floor: 0, claimed: [] },
     training: null,
   };
   // The first day's missions are drawn among those a newcomer can do.
@@ -1312,16 +1407,41 @@ export function treasureSpot(s: Save, now: number) {
   );
   return free.length ? free[Math.floor(roll(`${day.day}:spot:${day.treasures}`) * free.length)] : null;
 }
-export const stats = (level: number, stage: Stage, species: Species = 'trex', rarity: Rarity = 'common') => {
-  const factor = (1 + 0.06 * (level - 10)) * (stage === 'adult' ? 1.05 : 1) * RARITY_POWER[rarity],
-    m = SPECIES_STATS[species];
+/**
+ * Stat points: one per level above 1, plus 3 for each evolution reached. Every level grows hp, power and defense by
+ * 0.03 on its own and each point adds POINT_GROWTH to its stat; an even spread (or no spending) gives today's 0.06.
+ */
+export const statPoints = (d: Pick<Dino, 'level' | 'stage'>) =>
+  d.level - 1 + (d.stage === 'baby' ? 0 : 3) + (d.stage === 'adult' ? 3 : 0);
+export const POINT_GROWTH = 0.09;
+export const spentPoints = (d: Pick<Dino, 'points'>) => (d.points ? d.points.hp + d.points.power + d.points.defense : 0);
+export const freePoints = (d: Pick<Dino, 'level' | 'stage' | 'points'>) => statPoints(d) - spentPoints(d);
+export const RESET_COST = (d: Pick<Dino, 'level'>) => 50 * d.level;
+export const stats = (
+  level: number,
+  stage: Stage,
+  species: Species = 'trex',
+  rarity: Rarity = 'common',
+  points?: StatPoints,
+) => {
+  const base = 1 + 0.06 * (level - 10),
+    m = SPECIES_STATS[species],
+    avg = points ? (points.hp + points.power + points.defense) / 3 : 0,
+    // Free points count as spread evenly, so only the gap from the average moves a stat.
+    f = (stat: PointStat) =>
+      (base + (points ? POINT_GROWTH * (points[stat] - avg) : 0)) *
+      (stage === 'adult' ? 1.05 : 1) *
+      RARITY_POWER[rarity];
   return {
-    hp: Math.round(220 * m.hp * factor),
-    power: Math.round(40 * m.power * factor),
-    defense: Math.round(20 * m.defense * factor),
+    hp: Math.round(220 * m.hp * f('hp')),
+    power: Math.round(40 * m.power * f('power')),
+    defense: Math.round(20 * m.defense * f('defense')),
     speed: Math.round(25 * m.speed),
   };
 };
+/** A dinosaur's stats with the points its keeper spent. */
+export const dinoStats = (d: Pick<Dino, 'level' | 'stage' | 'species' | 'rarity' | 'points'>) =>
+  stats(d.level, d.stage, d.species, rarityOf(d), d.points);
 /** Rolls the egg an encounter may drop, with the shared pity counter. Mutates `s.eggLuck`. */
 function rollEgg(s: Save, encounter: Encounter, now: number): EggKind | undefined {
   const odds = eggOdds(encounter);
@@ -1446,12 +1566,16 @@ export const isTired = (s: Pick<Save, 'tired'>, dinoId: string, now: number) => 
 export const HIT = 0.9;
 const blow = (power: number, defense: number) => (power * 100 * HIT) / (100 + defense);
 /** Damage the dinosaur's strike deals against `defense`, before element and guard; `defend` deals none. */
-export function strikeDamage(d: Pick<Dino, 'level' | 'stage' | 'species' | 'rarity'>, action: AllyMove, defense = 20) {
+export function strikeDamage(
+  d: Pick<Dino, 'level' | 'stage' | 'species' | 'rarity' | 'points'>,
+  action: AllyMove,
+  defense = 20,
+) {
   if (action === 'defend') return 0;
-  const st = stats(d.level, d.stage, d.species, rarityOf(d));
+  const st = dinoStats(d);
   return Math.max(1, Math.floor(blow(st.power * (action === 'ultimate' ? ULTIMATE_POWER : 1), defense)));
 }
-type Stand = Pick<Battle, 'round' | 'enemyEnergy' | 'foes' | 'foeIndex'>;
+type Stand = Pick<Battle, 'round' | 'enemyEnergy' | 'foes' | 'foeIndex'> & Partial<Pick<Battle, 'hp' | 'maxHp'>>;
 /** The opponent on stage. */
 export const activeFoe = (b: Pick<Battle, 'foes' | 'foeIndex'>) => b.foes[b.foeIndex];
 /** The opponent's move this round, fixed by the round and its bar, so the fight stays replayable. */
@@ -1467,15 +1591,20 @@ export function foeMove(b: Stand): FoeMove {
 export const ENERGY = { basic: 50, defend: 25, hit: 15, foe: 50 };
 /** Power of either side's ultimate, against a basic strike. */
 export const ULTIMATE_POWER = 1.3;
+/** Extra power of an ultimate the player tapped in time (on top of ULTIMATE_POWER). */
+export const TAP_BONUS = 1.15;
 /** A guarding opponent takes half of the blow. */
 export const FOE_GUARD = 0.5;
 /** A guarding dinosaur takes this share of the blow. */
 export const GUARD_TAKEN = 0.6;
 /** Share of the incoming blow a guarding dinosaur turns back on its opponent. */
 export const REFLECT = 0.25;
-/** Chance to dodge an unguarded blow: faster species slip away more often (raptor about 9%, ankylosaur 1%). */
+/** Chance to dodge an unguarded blow: faster species slip away more often (raptor about 9%, ankylosaur 1%); fast roles more. */
 export function dodgeChance(d: Pick<Dino, 'level' | 'stage' | 'species' | 'rarity'>) {
-  return Math.min(0.12, Math.max(0.01, (stats(d.level, d.stage, d.species, rarityOf(d)).speed - 20) / 100));
+  return (
+    Math.min(0.12, Math.max(0.01, (stats(d.level, d.stage, d.species, rarityOf(d)).speed - 20) / 100)) +
+    (SPECIES_ROLE[d.species] === 'fast' ? ROLE_EFFECTS.swiftAlly : 0)
+  );
 }
 /**
  * The element wheel: each element beats exactly one and is beaten by exactly one. Fire burns nature, nature
@@ -1511,7 +1640,7 @@ export function battleEdge(encounterId: string, d: Pick<Dino, 'element'>): -1 | 
   const foe = encounterElement(encounterId);
   return foe ? elementEdge(d.element, foe) : 0;
 }
-type Fighter = Pick<Dino, 'level' | 'stage' | 'species' | 'element' | 'rarity'>;
+type Fighter = Pick<Dino, 'level' | 'stage' | 'species' | 'element' | 'rarity' | 'points'>;
 /**
  * Levels above the opponent count on their own, beyond the stats they bring: each one adds `perLevel` to the
  * damage dealt and takes it off the damage taken, up to `max` levels. Without it a few extra levels would hardly
@@ -1520,8 +1649,48 @@ type Fighter = Pick<Dino, 'level' | 'stage' | 'species' | 'element' | 'rarity'>;
 export const LEVEL_GAP = { perLevel: 0.04, max: 10 };
 export const levelEdge = (gap: number) =>
   1 + LEVEL_GAP.perLevel * Math.max(-LEVEL_GAP.max, Math.min(LEVEL_GAP.max, gap));
-/** Damage the dinosaur's strike deals to the opponent on stage this round, after its element and guard. */
-export function strikeAgainst(b: Stand, d: Fighter, action: AllyMove) {
+type Side = { hp: number; maxHp?: number; species?: Species; shieldUsed?: true };
+const hasRole = (x: { species?: Species } | undefined, role: Role) => !!x?.species && SPECIES_ROLE[x.species] === role;
+const raging = (x: Side) => hasRole(x, 'attacker') && x.maxHp !== undefined && x.hp < x.maxHp * ROLE_EFFECTS.rageBelow;
+const shielded = (x: Side | undefined) => hasRole(x, 'tank') && !x!.shieldUsed;
+/** A living support of the side waits on the bench. */
+const aura = (side: Side[] | undefined, active: number | undefined) =>
+  !!side && side.some((m, i) => i !== active && m.hp > 0 && hasRole(m, 'support'));
+type Board = Stand & Partial<Pick<Battle, 'team' | 'active'>>;
+/** Role abilities that change the dinosaur's strike this round (rage on its side; shield and aura on the foe's). */
+export function strikeAbilities(b: Board, d: Fighter): Ability[] {
+  const foe = activeFoe(b),
+    out: Ability[] = [];
+  if (b.hp !== undefined && raging({ hp: b.hp, maxHp: b.maxHp, species: d.species })) out.push({ on: 'ally', kind: 'rage' });
+  if (shielded(foe)) out.push({ on: 'enemy', kind: 'shield' });
+  if (aura(b.foes, b.foeIndex)) out.push({ on: 'enemy', kind: 'aura' });
+  return out;
+}
+/** Role abilities that change the opponent's blow this round (rage on its side; shield and aura on the team's). */
+export function blowAbilities(b: Pick<Board, 'foes' | 'foeIndex' | 'team' | 'active'>, d: Fighter): Ability[] {
+  const foe = activeFoe(b),
+    ally = b.team?.[b.active ?? 0],
+    out: Ability[] = [];
+  if (raging(foe)) out.push({ on: 'enemy', kind: 'rage' });
+  if (ally && shielded({ ...ally, species: d.species })) out.push({ on: 'ally', kind: 'shield' });
+  if (aura(b.team, b.active)) out.push({ on: 'ally', kind: 'aura' });
+  return out;
+}
+const abilityFactor = (list: Ability[]) =>
+  list.reduce(
+    (m, a) =>
+      m *
+      (a.kind === 'rage'
+        ? a.on === 'enemy' ? ROLE_EFFECTS.foeRage : ROLE_EFFECTS.rage
+        : a.kind === 'shield'
+          ? ROLE_EFFECTS.shield
+          : a.kind === 'aura'
+            ? a.on === 'enemy' ? ROLE_EFFECTS.foeAura : ROLE_EFFECTS.aura
+            : 1),
+    1,
+  );
+/** Damage the dinosaur's strike deals to the opponent on stage this round, after its element, roles and guard. */
+export function strikeAgainst(b: Board, d: Fighter, action: AllyMove) {
   if (action === 'defend') return 0;
   const foe = activeFoe(b),
     raw = Math.max(
@@ -1529,22 +1698,28 @@ export function strikeAgainst(b: Stand, d: Fighter, action: AllyMove) {
       Math.floor(
         strikeDamage(d, action, foe.defense) *
           EDGE_DEALT[elementEdge(d.element, foe.element)] *
-          levelEdge(d.level - foe.level),
+          levelEdge(d.level - foe.level) *
+          abilityFactor(strikeAbilities(b, d)),
       ),
     );
   return foeMove(b) === 'defend' ? Math.max(1, Math.floor(raw * FOE_GUARD)) : raw;
 }
-/** Damage the opponent on stage deals back with a plain blow, reduced when the dinosaur defends. */
-export function incomingDamage(b: Pick<Battle, 'foes' | 'foeIndex'>, d: Fighter, defending: boolean) {
+/** Damage the opponent on stage deals back with a plain blow, after roles, reduced when the dinosaur defends. */
+export function incomingDamage(
+  b: Pick<Battle, 'foes' | 'foeIndex'> & Partial<Pick<Battle, 'team' | 'active'>>,
+  d: Fighter,
+  defending: boolean,
+) {
   const foe = activeFoe(b),
-    st = stats(d.level, d.stage, d.species, rarityOf(d));
+    st = dinoStats(d);
   return Math.max(
     1,
     Math.floor(
       blow(foe.power, st.defense) *
         (defending ? GUARD_TAKEN : 1) *
         EDGE_TAKEN[elementEdge(d.element, foe.element)] *
-        levelEdge(foe.level - d.level),
+        levelEdge(foe.level - d.level) *
+        abilityFactor(blowAbilities(b, d)),
     ),
   );
 }
@@ -1570,11 +1745,15 @@ export const isFriendly = (encounterId: string) => encounterId.startsWith(FRIEND
  */
 export function friendlyBattle(me: Save, rival: Save, rivalId: string, now: number): Save {
   const s = advance(me, now);
+  const defense = (rival.defense ?? [])
+    .map((id) => rival.dinos.find((d) => d.id === id))
+    .filter((d): d is Dino => !!d && d.stage !== 'baby');
   const team = teamDinos(s).filter((d) => d.stage !== 'baby'),
-    foes: Foe[] = teamDinos(rival)
+    foes: Foe[] = (defense.length ? defense : teamDinos(rival))
       .filter((d) => d.stage !== 'baby')
       .map((d) => {
-        const st = stats(d.level, d.stage, d.species, rarityOf(d));
+        // The friend's own point allocation counts: how they built their team decides the fight.
+        const st = dinoStats(d);
         return {
           species: d.species,
           element: d.element,
@@ -1593,8 +1772,8 @@ export function friendlyBattle(me: Save, rival: Save, rivalId: string, now: numb
   const b: Battle = {
     encounterId: `${FRIENDLY_PREFIX}${rivalId}`,
     team: team.map((d) => {
-      const hp = stats(d.level, d.stage, d.species, rarityOf(d)).hp;
-      return { dinoId: d.id, hp, maxHp: hp };
+      const hp = dinoStats(d).hp;
+      return { dinoId: d.id, hp, maxHp: hp, species: d.species };
     }),
     active: 0,
     foes,
@@ -1616,6 +1795,96 @@ export function friendlyBattle(me: Save, rival: Save, rivalId: string, now: numb
   s.rewardPending = false;
   return s;
 }
+/** The weekly tower: TOWER_FLOORS floors fought with the arena team, reset every Bucharest week. */
+export const TOWER_FLOORS = 10;
+export const TOWER_PREFIX = 'tower:';
+export const isTower = (encounterId: string) => encounterId.startsWith(TOWER_PREFIX);
+export const towerId = (week: string, floor: number) => `${TOWER_PREFIX}${week}:${floor}`;
+/** The week and floor of a tower fight id, or null. */
+export function parseTowerId(id: string) {
+  const m = /^tower:(\d{4}-\d{2}-\d{2}):(\d{1,2})$/.exec(id),
+    floor = m ? Number(m[2]) : 0;
+  return m && floor >= 1 && floor <= TOWER_FLOORS ? { week: m[1], floor } : null;
+}
+/** A floor's twist: foes of one element, no support heals, dodging foes, or one foe with extra health. */
+export type TowerRule = `element:${RealmId}` | 'noHeal' | 'swift' | 'giant';
+export const TOWER_SWIFT = 0.12;
+export const TOWER_GIANT = 1.5;
+export type TowerRewardFloor = 3 | 6 | 10;
+export const TOWER_REWARDS: Record<TowerRewardFloor, DailyReward & { egg?: { rare: number; epic: number } }> = {
+  3: { gold: 1500, food: 1000 },
+  6: { materials: { wood: 30, stone: 30, crystal: 10 }, tickets: 2 },
+  10: { gems: 5, egg: { rare: 0.45, epic: 0.35 } },
+};
+const towerElements = () => ELEMENTS.map((e) => e.id).filter((e) => playableSpecies(e).length);
+export function towerRule(week: string, floor: number): TowerRule {
+  const seed = `${towerId(week, floor)}:rule`,
+    r = roll(seed);
+  if (r < 0.4) {
+    const pool = towerElements();
+    return `element:${pool[Math.floor(roll(`${seed}:element`) * pool.length)]}`;
+  }
+  return r < 0.6 ? 'noHeal' : r < 0.8 ? 'swift' : 'giant';
+}
+export const towerRuleElement = (rule: TowerRule) =>
+  rule.startsWith('element:') ? (rule.slice(8) as RealmId) : null;
+/** The level tower floors scale from: the team's best level, kept within 10 to 50. */
+export const towerBase = (team: Pick<Dino, 'level'>[]) => Math.min(50, Math.max(10, ...team.map((d) => d.level)));
+/** The top floor's boss league: one of the open leagues with a boss (any boss when none is open), fixed by the week. */
+export function towerBossLeague(week: string, open: RealmId[]): RealmId {
+  const bosses = Object.keys(ARENA_BOSSES) as RealmId[],
+    pool = bosses.filter((e) => open.includes(e)),
+    list = pool.length ? pool : bosses;
+  return list[Math.floor(roll(`${TOWER_PREFIX}${week}:boss`) * list.length)];
+}
+/**
+ * The foes of tower floor `floor` (1 to TOWER_FLOORS) in `week`: 1 to 3 foes at `base + floor - 5`, the top floor
+ * two foes and a boss. The same inputs always give the same foes.
+ */
+export function towerFoes(week: string, floor: number, base: number, bossLeague: RealmId): Foe[] {
+  const seed = towerId(week, floor),
+    rule = towerRule(week, floor),
+    fixed = towerRuleElement(rule),
+    level = base + floor - 5,
+    pool = towerElements();
+  const count = floor === TOWER_FLOORS ? 2 : 1 + Math.floor(roll(`${seed}:count`) * 3),
+    scale = [1.3, 1, 0.85][count - 1];
+  const make = (species: Species, element: RealmId, stage: Stage, rarity: Rarity, hp: number, power: number, boss?: true): Foe => {
+    const st = stats(level, stage, species, rarity),
+      maxHp = Math.max(1, Math.round(st.hp * hp));
+    return {
+      species,
+      element,
+      stage,
+      level,
+      rarity,
+      hp: maxHp,
+      maxHp,
+      power: Math.max(1, Math.round(st.power * power)),
+      defense: st.defense,
+      speed: st.speed,
+      ...(boss ? { boss } : {}),
+    };
+  };
+  const foes = Array.from({ length: count }, (_, i) => {
+    const element = fixed ?? pool[Math.floor(roll(`${seed}:${i}:element`) * pool.length)],
+      kinds = playableSpecies(element);
+    const species = kinds[Math.floor(roll(`${seed}:${i}:species`) * kinds.length)];
+    return make(species, element, level >= 25 ? 'adult' : 'juvenile', 'common', scale, scale);
+  });
+  if (floor === TOWER_FLOORS) {
+    const league = fixed && ARENA_BOSSES[fixed] ? fixed : bossLeague;
+    foes.push(make('boss', league, 'adult', 'legendary', BOSS_STATS.hp, BOSS_STATS.power, true));
+  }
+  if (rule === 'giant') {
+    const f = foes[Math.floor(roll(`${seed}:giant`) * foes.length)];
+    f.maxHp = f.hp = Math.round(f.maxHp * TOWER_GIANT);
+  }
+  return foes;
+}
+/** The foes of the save's next tower floor for its arena team, as `towerFight` would start them. */
+export const nextTowerFoes = (s: Save, floor = s.tower.floor + 1) =>
+  towerFoes(s.tower.week, floor, towerBase(teamDinos(s)), towerBossLeague(s.tower.week, ticketWorlds(s)));
 /** The season step a week with `wins` wins has reached (0 to ARENA_SEASON.length). */
 export const seasonStep = (wins: number) => ARENA_SEASON.filter((x) => x.wins <= wins).length;
 /**
@@ -1658,6 +1927,7 @@ export function advance(save: Save, now: number): Save {
   const week = weekId(s.updatedAt);
   if (s.arena.week !== week) s.arena = { week, weekWins: 0, weekClaimed: 0 };
   if (s.legend.week !== week) s.legend = { week, trials: 0 };
+  if (s.tower.week !== week) s.tower = { week, floor: 0, claimed: [] };
   // The team leads and the champion follows it (the players view reads `champion`). A save that only names a
   // champion fights with it alone.
   s.team = s.team.filter((id) => s.dinos.some((d) => d.id === id));
@@ -1705,7 +1975,18 @@ export function canBuild(s: Save, x: number, y: number, moving?: string) {
       const gx = Math.abs(b.x - x) - 3,
         gy = Math.abs(b.y - y) - 3;
       return b.id !== moving && ((gx < 1 && gy < 0) || (gx < 0 && gy < 1));
-    })
+    }) &&
+    !s.lampSpots.some((l) => l.x >= x && l.x < x + 3 && l.y >= y && l.y < y + 3)
+  );
+}
+/** A lamp takes one open cell, clear of buildings and other lamps (`moving`: the index of the lamp being moved). */
+export function canLamp(s: Save, x: number, y: number, moving?: number) {
+  return (
+    Number.isInteger(x) &&
+    Number.isInteger(y) &&
+    buildable(x, y) &&
+    !s.buildings.some((b) => x >= b.x && x < b.x + 3 && y >= b.y && y < b.y + 3) &&
+    !s.lampSpots.some((l, i) => i !== moving && l.x === x && l.y === y)
   );
 }
 const nicknameFor = (s: Save, species: Species, element: RealmId) =>
@@ -1900,8 +2181,38 @@ export function command(save: Save, c: Command, now: number): Save {
       require(s.dinos.length > 1, 'lastDino');
       s.gold += releaseGold(d!);
       s.dinos = s.dinos.filter((x) => x !== d);
+      s.defense = s.defense.filter((id) => id !== d!.id);
       delete s.tired[d!.id];
       if (s.training?.dinoId === d!.id) s.training = null;
+      break;
+    }
+    case 'setDefense': {
+      const ids = c.dinoIds;
+      require(Array.isArray(ids) && ids.length <= 3 && new Set(ids).size === ids.length, 'team');
+      for (const id of ids) {
+        const d = s.dinos.find((x) => x.id === id);
+        require(d, 'dino');
+        require(d!.stage !== 'baby', 'juvenile');
+      }
+      s.defense = [...ids];
+      break;
+    }
+    case 'allocate': {
+      const d = target(c.dinoId),
+        amount = c.amount ?? 1;
+      require(POINT_STATS.includes(c.stat), 'stat');
+      require(Number.isInteger(amount) && amount >= 1, 'points');
+      require(freePoints(d) >= amount, 'points');
+      d.points = { hp: 0, power: 0, defense: 0, ...d.points };
+      d.points[c.stat] += amount;
+      break;
+    }
+    case 'resetPoints': {
+      const d = target(c.dinoId);
+      require(spentPoints(d) > 0, 'points');
+      require(s.gold >= RESET_COST(d), 'gold');
+      s.gold -= RESET_COST(d);
+      delete d.points;
       break;
     }
     case 'pet': {
@@ -2173,6 +2484,57 @@ export function command(save: Save, c: Command, now: number): Save {
       if (egg) receiveEgg(s, egg);
       break;
     }
+    case 'towerFight': {
+      const team = teamDinos(s);
+      require(s.buildings.some((b) => b.kind === 'arena'), 'building');
+      require(team.length &&
+        team.length === s.team.length &&
+        team.every((d) => d.stage !== 'baby') &&
+        !s.battle &&
+        !s.rewardPending, 'juvenile');
+      require(team.every((d) => !busyDinos(s).has(d.id)), 'away');
+      require(team.every((d) => !isTired(s, d.id, now)), 'tired');
+      require(s.tower.floor < TOWER_FLOORS, 'towerDone');
+      const b: Battle = {
+        encounterId: towerId(s.tower.week, s.tower.floor + 1),
+        team: team.map((d) => {
+          const hp = dinoStats(d).hp;
+          return { dinoId: d.id, hp, maxHp: hp, species: d.species };
+        }),
+        active: 0,
+        foes: nextTowerFoes(s),
+        foeIndex: 0,
+        reward: { gold: 0, food: 0, materials: {} },
+        dinoId: '',
+        hp: 0,
+        maxHp: 0,
+        energy: 0,
+        enemy: 0,
+        enemyMax: 0,
+        enemyEnergy: 0,
+        round: 1,
+        result: null,
+        log: 'start',
+      };
+      onStage(b);
+      s.battle = b;
+      break;
+    }
+    case 'claimTower': {
+      const reward = TOWER_REWARDS[c.floor];
+      require(reward, 'towerReward');
+      require(s.tower.floor >= c.floor, 'towerFloor');
+      require(!s.tower.claimed.includes(c.floor), 'towerClaimed');
+      const seed = `${towerId(s.tower.week, c.floor)}:reward`;
+      grantReward(s, reward, seed);
+      if (reward.egg) {
+        const worlds = ELEMENTS.map((e) => e.id).filter((e) => s.habitats[e] && playableSpecies(e).length),
+          egg = worlds.length && drawEgg(s, worlds[Math.floor(roll(seed) * worlds.length)], seed, reward.egg);
+        if (egg) receiveEgg(s, egg);
+      }
+      s.tower.claimed.push(c.floor);
+      break;
+    }
     case 'gemRest': {
       // One dinosaur, or the whole arena team for at most GEMS.restTeam.
       const ids = c.team
@@ -2220,12 +2582,29 @@ export function command(save: Save, c: Command, now: number): Save {
       s.crafting = s.crafting.filter((j) => j.endsAt > now);
       break;
     }
-    case 'placeLamp':
+    case 'placeLamp': {
       require(s.lamps < MAX_LAMPS, 'maxLevel');
       require(s.inventory.lamp > 0, 'materials');
+      const spot =
+        c.x === undefined || c.y === undefined
+          ? BUILDABLE_CELLS.find((p) => canLamp(s, p.x, p.y))
+          : { x: c.x, y: c.y };
+      require(spot && canLamp(s, spot.x, spot.y), 'placement');
+      if (!spot) break;
       s.inventory.lamp--;
       s.lamps++;
+      s.lampSpots.push({ x: spot.x, y: spot.y });
       break;
+    }
+    case 'moveLamp': {
+      const lamp = s.lampSpots[c.index];
+      require(lamp && canLamp(s, c.x, c.y, c.index), 'placement');
+      if (lamp) {
+        lamp.x = c.x;
+        lamp.y = c.y;
+      }
+      break;
+    }
     // Test tools behind the "i" button.
     case 'devSkip': {
       for (const e of s.eggs) if (e.hatchAt !== null) e.hatchAt = Math.min(e.hatchAt, now);
@@ -2295,8 +2674,8 @@ export function command(save: Save, c: Command, now: number): Save {
       const b: Battle = {
         encounterId: encounter.id,
         team: team.map((d) => {
-          const hp = stats(d.level, d.stage, d.species, rarityOf(d)).hp;
-          return { dinoId: d.id, hp, maxHp: hp };
+          const hp = dinoStats(d).hp;
+          return { dinoId: d.id, hp, maxHp: hp, species: d.species };
         }),
         active: 0,
         foes: arenaFoes(encounter.id),
@@ -2397,12 +2776,30 @@ export function command(save: Save, c: Command, now: number): Save {
       require(b && ally && d && !b.result, 'battle');
       if (!b || !ally || !d) break;
       require(['basic', 'defend', 'ultimate'].includes(c.action), 'action');
+      require(!c.tapped || c.action === 'ultimate', 'action');
       // A full bar unlocks the ultimate; it may also land as the finishing blow, which kills either way.
       require(c.action !== 'ultimate' ||
         (d.stage === 'adult' && (b.energy >= 100 || strikeAgainst(b, d, 'basic') >= b.enemy)), 'energy');
       const foe = activeFoe(b),
-        move = foeMove(b);
-      const dealt = strikeAgainst(b, d, c.action);
+        move = foeMove(b),
+        abilities: Ability[] = [];
+      const strikes = c.action !== 'defend';
+      // A fast opponent may slip an unguarded strike; on a swift tower floor every opponent may.
+      const tower = parseTowerId(b.encounterId),
+        rule = tower ? towerRule(tower.week, tower.floor) : null,
+        slipChance =
+          (SPECIES_ROLE[foe.species] === 'fast' ? ROLE_EFFECTS.swiftFoe : 0) + (rule === 'swift' ? TOWER_SWIFT : 0);
+      const foeSlips =
+        strikes &&
+        move !== 'defend' &&
+        slipChance > 0 &&
+        roll(`${b.encounterId}:${b.round}:${b.foeIndex}:swift`) < slipChance;
+      const dealt = foeSlips ? 0 : Math.floor(strikeAgainst(b, d, c.action) * (c.tapped ? TAP_BONUS : 1));
+      if (foeSlips) abilities.push({ on: 'enemy', kind: 'swift' });
+      else if (strikes) {
+        abilities.push(...strikeAbilities(b, d));
+        if (SPECIES_ROLE[foe.species] === 'tank') foe.shieldUsed = true;
+      }
       foe.hp = Math.max(0, foe.hp - dealt);
       const enemyAfterStrike = foe.hp;
       b.energy = c.action === 'ultimate' ? 0 : Math.min(100, b.energy + ENERGY[c.action]);
@@ -2414,17 +2811,36 @@ export function command(save: Save, c: Command, now: number): Save {
       const acts = foe.hp > 0;
       if (acts && move !== 'defend') {
         const guarding = c.action === 'defend',
-          power = move === 'ultimate' ? ULTIMATE_POWER : 1;
+          power = move === 'ultimate' ? ULTIMATE_POWER : 1,
+          fired = blowAbilities(b, d);
         if (guarding) {
           taken = Math.floor(incomingDamage(b, d, true) * power);
           reflected = Math.floor(incomingDamage(b, d, false) * power * REFLECT);
           foe.hp = Math.max(0, foe.hp - reflected);
         } else if (roll(`${b.encounterId}:${b.round}:${d.id}:dodge`) < dodgeChance(d)) dodged = true;
         else taken = Math.floor(incomingDamage(b, d, false) * power);
+        if (dodged) {
+          if (SPECIES_ROLE[d.species] === 'fast') abilities.push({ on: 'ally', kind: 'swift' });
+        } else {
+          abilities.push(...fired);
+          if (SPECIES_ROLE[d.species] === 'tank') ally.shieldUsed = true;
+        }
         ally.hp = Math.max(0, ally.hp - taken);
       }
       if (acts) b.enemyEnergy = move === 'ultimate' ? 0 : Math.min(100, b.enemyEnergy + ENERGY.foe);
       if (taken > 0 && ally.hp > 0) b.energy = Math.min(100, b.energy + ENERGY.hit);
+      // A support on stage heals once, as soon as a full heal's worth of health is missing.
+      for (const [x, on, species] of [
+        [ally, 'ally', d.species],
+        [foe, 'enemy', foe.species],
+      ] as const) {
+        const amount = Math.round(x.maxHp * ROLE_EFFECTS.heal);
+        if (rule === 'noHeal') continue;
+        if (SPECIES_ROLE[species] !== 'support' || x.healed || amount < 1 || x.hp === 0 || x.hp > x.maxHp - amount) continue;
+        x.hp += amount;
+        x.healed = true;
+        abilities.push({ on, kind: 'heal', amount });
+      }
       b.report = {
         ally: c.action,
         foe: acts ? move : 'none',
@@ -2435,7 +2851,11 @@ export function command(save: Save, c: Command, now: number): Save {
         reflected,
         hpAfter: ally.hp,
         enemyAfter: foe.hp,
+        ...(abilities.length ? { abilities } : {}),
+        ...(c.tapped ? { tapped: true as const } : {}),
       };
+      if (dealt > (b.bestHit?.amount ?? 0)) b.bestHit = { amount: dealt, dinoId: d.id };
+      if (dealt + reflected > 0) b.damage = { ...b.damage, [d.id]: (b.damage?.[d.id] ?? 0) + dealt + reflected };
       b.log = c.action;
       b.round++;
       // The relay: a fallen fighter is replaced by the next of its side, who steps in with an empty bar.
@@ -2456,6 +2876,12 @@ export function command(save: Save, c: Command, now: number): Save {
       onStage(b);
       b.result = foesDown ? 'victory' : teamDown ? 'defeat' : b.round > roundCap(b.foes.length) ? 'draw' : null;
       if (!b.result || isFriendly(b.encounterId)) break;
+      if (isTower(b.encounterId)) {
+        // A fight won after the week turned counts for nothing: the tower was reset.
+        if (b.result === 'victory' && tower && tower.week === s.tower.week)
+          s.tower.floor = Math.max(s.tower.floor, tower.floor);
+        break;
+      }
       const encounter = ENCOUNTERS.find((e) => e.id === b.encounterId)!,
         tier = arenaTier(encounter.id);
       // Every member rests: by tier after a win (longer if it fell), twenty minutes after a defeat or a draw.
@@ -2554,13 +2980,14 @@ export function command(save: Save, c: Command, now: number): Save {
   if (harvested) addDailyProgress(s, 'harvest', harvested);
   const crafted = save.crafting.filter((j) => !s.crafting.some((next) => next.id === j.id) && j.endsAt <= now).length;
   if (crafted && (c.type === 'claimCraft' || c.type === 'collectAvailable')) addDailyProgress(s, 'craft', crafted);
-  if (c.type === 'claim' && save.battle?.result) addDailyProgress(s, 'battle');
+  const towerFought = c.type === 'claim' && !!save.battle && isTower(save.battle.encounterId);
+  if (c.type === 'claim' && save.battle?.result && !towerFought) addDailyProgress(s, 'battle');
   if (c.type === 'claimExpedition') {
     addDailyProgress(s, 'expedition');
     if (save.expeditions.find((x) => x.id === (c.runId ?? save.expeditions[0]?.id))?.kind === 'patrol')
       addDailyProgress(s, 'patrol');
   }
-  if (c.type === 'claim' && save.battle?.result === 'victory') addDailyProgress(s, 'win');
+  if (c.type === 'claim' && save.battle?.result === 'victory' && !towerFought) addDailyProgress(s, 'win');
   if (c.type === 'plant') addDailyProgress(s, 'plant');
   if (c.type === 'craft') addDailyProgress(s, 'startCraft');
   if ((c.type === 'collect' || c.type === 'collectAvailable') && s.gold > save.gold) addDailyProgress(s, 'collect');
@@ -2610,6 +3037,7 @@ export function parseSave(text: string): Save {
     boostUntil: 0,
     storedGold: 0,
     team: typeof s.champion === 'string' ? [s.champion] : [],
+    defense: [],
     hatcheryLevel: 1,
     workshopLevel: 1,
     arenaLevel: 1,
@@ -2636,7 +3064,9 @@ export function parseSave(text: string): Save {
     discovered: [],
     collectionMilestones: 0,
     lamps: 0,
+    lampSpots: [],
     legend: fresh.legend,
+    tower: fresh.tower,
     training: null,
   };
   for (const [key, value] of Object.entries(defaults)) if (fields[key] === undefined) fields[key] = value;
@@ -2709,6 +3139,13 @@ export function parseSave(text: string): Save {
     kinds.add(b.kind);
   }
   if (!kinds.has('hatchery') || (s.plots.some((p) => p) && !kinds.has('farm'))) throw Error('Missing building');
+  // Lamps lit before they had a place go on the first free cells.
+  if (Array.isArray(s.lampSpots) && integer(s.lamps, MAX_LAMPS))
+    while (s.lampSpots.length < s.lamps) {
+      const free = BUILDABLE_CELLS.find((c) => canLamp(s, c.x, c.y));
+      if (!free) break;
+      s.lampSpots.push(free);
+    }
   if (
     !s.habitats ||
     typeof s.habitats !== 'object' ||
@@ -2735,6 +3172,14 @@ export function parseSave(text: string): Save {
     typeof s.legend.week !== 'string' ||
     !/^\d{4}-\d{2}-\d{2}$/.test(s.legend.week) ||
     !integer(s.legend.trials, LEGEND_TRIAL.perWeek) ||
+    !s.tower ||
+    typeof s.tower !== 'object' ||
+    typeof s.tower.week !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(s.tower.week) ||
+    !integer(s.tower.floor, TOWER_FLOORS) ||
+    !Array.isArray(s.tower.claimed) ||
+    new Set(s.tower.claimed).size !== s.tower.claimed.length ||
+    s.tower.claimed.some((n) => !Object.hasOwn(TOWER_REWARDS, String(n)) || n > s.tower.floor) ||
     !Array.isArray(s.questEggs) ||
     new Set(s.questEggs).size !== s.questEggs.length ||
     s.questEggs.some((id) => !QUEST_EGGS.some((q) => q.id === id)) ||
@@ -2779,7 +3224,12 @@ export function parseSave(text: string): Save {
       (d.rarity !== undefined && !RARITIES.includes(d.rarity)) ||
       typeof d.nickname !== 'string' ||
       d.nickname.length > 40 ||
-      (d.stage === 'baby' ? d.level > 9 : d.stage === 'juvenile' ? d.level < 10 || d.level > 24 : d.level < 25)
+      (d.stage === 'baby' ? d.level > 9 : d.stage === 'juvenile' ? d.level < 10 || d.level > 24 : d.level < 25) ||
+      (d.points !== undefined &&
+        (!d.points ||
+          typeof d.points !== 'object' ||
+          !POINT_STATS.every((k) => integer(d.points![k], 999)) ||
+          spentPoints(d) > statPoints(d)))
     )
       throw Error('Invalid dinosaur');
     else dinoIds.add(d.id);
@@ -2789,7 +3239,11 @@ export function parseSave(text: string): Save {
     !Array.isArray(s.team) ||
     s.team.length > 3 ||
     new Set(s.team).size !== s.team.length ||
-    s.team.some((id) => !dinoIds.has(id))
+    s.team.some((id) => !dinoIds.has(id)) ||
+    !Array.isArray(s.defense) ||
+    s.defense.length > 3 ||
+    new Set(s.defense).size !== s.defense.length ||
+    s.defense.some((id) => !dinoIds.has(id))
   )
     throw Error('Invalid dinosaur');
   const eggIds = new Set<string>();
@@ -2813,6 +3267,9 @@ export function parseSave(text: string): Save {
     Object.keys(s.inventory).length !== Object.keys(ITEMS).length ||
     !Object.keys(ITEMS).every((id) => integer(s.inventory[id as ItemId])) ||
     !integer(s.lamps, MAX_LAMPS) ||
+    !Array.isArray(s.lampSpots) ||
+    s.lampSpots.length !== s.lamps ||
+    s.lampSpots.some((l) => !l || !Number.isInteger(l.x) || !Number.isInteger(l.y) || !buildable(l.x, l.y)) ||
     !(
       s.training === null ||
       (!!s.training &&
@@ -2963,7 +3420,20 @@ export function parseSave(text: string): Save {
     throw Error('Invalid construction');
   if (s.battle !== null) {
     const b = s.battle;
-    const expected = b && typeof b.encounterId === 'string' ? arenaFoes(b.encounterId) : [];
+    const tower = b && typeof b.encounterId === 'string' ? parseTowerId(b.encounterId) : null;
+    // Tower foes are checked against the floor they claim: the base level and boss league come from the stored foes.
+    const towerFoesOf = (t: { week: string; floor: number }) => {
+      const first = Array.isArray(b?.foes) ? b.foes[0] : undefined,
+        last = Array.isArray(b?.foes) ? b.foes[b.foes.length - 1] : undefined,
+        base = first && integer(first.level, 100) ? first.level - (t.floor - 5) : 0;
+      if (base < 10 || base > 50) return [];
+      return towerFoes(t.week, t.floor, base, last?.boss && element(last.element) ? last.element : 'fire');
+    };
+    const expected = tower
+      ? towerFoesOf(tower)
+      : b && typeof b.encounterId === 'string'
+        ? arenaFoes(b.encounterId)
+        : [];
     const allies = Array.isArray(b?.team) ? b.team.map((a) => a && s.dinos.find((d) => d.id === a.dinoId)) : [];
     const sameFoe = (f: Foe, e: Foe) =>
       !!f &&
@@ -2977,8 +3447,19 @@ export function parseSave(text: string): Save {
       f.defense === e.defense &&
       f.speed === e.speed &&
       f.boss === e.boss &&
+      (f.shieldUsed === undefined || f.shieldUsed === true) &&
+      (f.healed === undefined || f.healed === true) &&
       integer(f.hp, f.maxHp);
     const report = b?.report;
+    // The recap is cosmetic: a malformed one is dropped, not refused.
+    if (b?.bestHit !== undefined && !(b.bestHit && typeof b.bestHit.dinoId === 'string' && integer(b.bestHit.amount, 1e6)))
+      delete b.bestHit;
+    if (
+      b?.damage !== undefined &&
+      !(b.damage && typeof b.damage === 'object' && Object.values(b.damage).every((n) => integer(n, 1e8)))
+    )
+      delete b.damage;
+    if (report && report.tapped !== undefined && report.tapped !== true) delete report.tapped;
     if (
       !b ||
       !expected.length ||
@@ -3001,7 +3482,10 @@ export function parseSave(text: string): Save {
           away.has(a.dinoId) ||
           !integer(a.maxHp, 100_000) ||
           a.maxHp < 1 ||
-          !integer(a.hp, a.maxHp),
+          !integer(a.hp, a.maxHp) ||
+          !(a.species === undefined || a.species === allies[i]!.species) ||
+          !(a.shieldUsed === undefined || a.shieldUsed === true) ||
+          !(a.healed === undefined || a.healed === true),
       ) ||
       !integer(b.active, b.team.length - 1) ||
       b.team.some((a, i) => i < b.active && a.hp !== 0) ||
@@ -3031,6 +3515,17 @@ export function parseSave(text: string): Save {
           !(report.hpAfter === undefined || integer(report.hpAfter, 100_000)) ||
           !(report.enemyAfter === undefined || integer(report.enemyAfter, 100_000)) ||
           !(report.swap === undefined || ['ally', 'enemy', 'both'].includes(report.swap)) ||
+          !(
+            report.abilities === undefined ||
+            (Array.isArray(report.abilities) &&
+              report.abilities.every(
+                (x) =>
+                  !!x &&
+                  (x.on === 'ally' || x.on === 'enemy') &&
+                  ABILITY_KINDS.includes(x.kind) &&
+                  (x.amount === undefined || integer(x.amount, 100_000)),
+              ))
+          ) ||
           typeof report.dodged !== 'boolean')) ||
       ![null, 'victory', 'defeat', 'draw'].includes(b.result) ||
       (b.result === 'victory') !== b.foes.every((f) => f.hp === 0) ||
@@ -3046,6 +3541,7 @@ export function parseSave(text: string): Save {
   s.eggs = s.eggs.filter((e) => isPlayableDinosaur(e.species, e.element));
   s.owedEggs = s.owedEggs.filter((e) => isPlayableDinosaur(e.species, e.element));
   s.team = s.team.filter((id) => s.dinos.some((d) => d.id === id));
+  s.defense = s.defense.filter((id) => s.dinos.some((d) => d.id === id));
   if (!s.dinos.some((d) => d.id === s.champion)) s.champion = s.dinos[0]?.id ?? null;
   if (!s.team.length && s.champion) s.team = [s.champion];
   s.champion = s.team[0] ?? null;

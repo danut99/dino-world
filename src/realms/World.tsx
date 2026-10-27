@@ -11,6 +11,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import {
   advance,
   canBuild,
+  canLamp,
   ELEMENTS,
   farmNextAt,
   rarityOf,
@@ -549,6 +550,31 @@ export function drawBuilding(
   ctx.restore();
 }
 
+/** An ornamental lamp standing with its foot at (x, y). */
+function drawLamp(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  ctx.save();
+  ctx.fillStyle = '#00000044';
+  ctx.beginPath();
+  ctx.ellipse(x, y, 16, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#3b2c22';
+  ctx.fillRect(x - 10, y - 8, 20, 8);
+  ctx.fillStyle = '#584332';
+  ctx.fillRect(x - 4, y - 58, 8, 52);
+  ctx.shadowColor = '#ffd36e';
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = '#3b2c22';
+  ctx.fillRect(x - 15, y - 80, 30, 24);
+  ctx.fillStyle = '#f6d277';
+  ctx.fillRect(x - 12, y - 77, 24, 18);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#fff0af';
+  ctx.fillRect(x - 6, y - 73, 12, 10);
+  ctx.fillStyle = '#3b2c22';
+  ctx.fillRect(x - 18, y - 86, 36, 6);
+  ctx.restore();
+}
+
 export default function World({
   save,
   placing,
@@ -566,6 +592,7 @@ export default function World({
   neighbors,
   onNavigate,
   treasures = false,
+  lampMode = false,
 }: {
   save: Save;
   placing: boolean;
@@ -587,6 +614,8 @@ export default function World({
   onNavigate?: (to: Place) => void;
   /** Shows the lost treasure on the main island when one waits (your own island only). */
   treasures?: boolean;
+  /** While placing: a lamp (one cell) instead of a building. */
+  lampMode?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null),
     image = useRef<HTMLImageElement | null>(null),
@@ -783,10 +812,21 @@ export default function World({
         return Math.abs(p.x - q.x) < size / 2 && p.y < q.y + (40 * size) / BUILDING_SIZE && p.y > q.y - lift;
       });
   // Target top-left cell for the held building, keeping the grab point under the pointer.
-  const heldCell = (p: { x: number; y: number }, h: { ox: number; oy: number }) => {
+  const heldCell = (p: { x: number; y: number }, h: { id: string; ox: number; oy: number }) => {
     const c = unproject(p.x - h.ox, p.y - h.oy);
-    return { x: c.x - 1, y: c.y - 1 };
+    return h.id.startsWith('lamp:') ? c : { x: c.x - 1, y: c.y - 1 };
   };
+  /** The front-most lamp under the pointer, or -1. */
+  const lampAt = (p: { x: number; y: number }) => {
+    let found = -1;
+    save.lampSpots.forEach((l, i) => {
+      const q = project(l.x + 0.5, l.y + 0.5);
+      const hit = Math.abs(p.x - q.x) < 20 && p.y < q.y + 10 && p.y > q.y - 90;
+      if (hit && (found < 0 || l.x + l.y >= save.lampSpots[found].x + save.lampSpots[found].y)) found = i;
+    });
+    return found;
+  };
+  const heldLamp = held?.id.startsWith('lamp:') ? Number(held.id.slice(5)) : -1;
   const showGhost = placing || held !== null;
   const ghostId = held?.id ?? moving;
   useEffect(() => {
@@ -1057,22 +1097,22 @@ export default function World({
           }
         }
         const drawHomeObjects = () => {
-          [...save.buildings]
-            .sort((a, b) => a.x + a.y - b.x - b.y)
-            .forEach((b) => {
+          const lamps = save.lampSpots.map((l, i) => ({ lamp: true as const, i, ...l, depth: l.x + l.y }));
+          [...save.buildings.map((b) => ({ lamp: false as const, b, depth: b.x + b.y + 2 })), ...lamps]
+            .sort((a, b) => a.depth - b.depth)
+            .forEach((o) => {
+              if (o.lamp) {
+                const p = project(o.x + 0.5, o.y + 0.5);
+                if (o.i === heldLamp) ctx.globalAlpha = 0.3;
+                drawLamp(ctx, p.x, p.y);
+                ctx.globalAlpha = 1;
+                return;
+              }
+              const b = o.b;
               if (b.id === held?.id) ctx.globalAlpha = 0.3;
               drawBuilding(ctx, b, ...artFor(b.kind as UtilityKind), reducedMotion ? 0 : time);
               ctx.globalAlpha = 1;
             });
-          for (let i = 0; i < save.lamps; i++) {
-            const p = project(2 + i * 2, 10);
-            ctx.fillStyle = '#584332';
-            ctx.fillRect(p.x - 3, p.y - 32, 6, 32);
-            ctx.fillStyle = '#f6d277';
-            ctx.fillRect(p.x - 8, p.y - 43, 16, 13);
-            ctx.fillStyle = '#fff0af';
-            ctx.fillRect(p.x - 4, p.y - 40, 8, 7);
-          }
         };
         for (const n of sides) {
           const img = n.id === 'home' ? image.current : worlds.current[n.id];
@@ -1173,7 +1213,29 @@ export default function World({
             ctx.fillStyle = tone.text;
             ctx.fillText(label, p.x, p.y + 19);
           });
-        if (cell && showGhost) {
+        if (cell && showGhost && (lampMode || heldLamp >= 0)) {
+          const p = project(cell.x, cell.y),
+            valid = canLamp(save, cell.x, cell.y, heldLamp >= 0 ? heldLamp : undefined);
+          ctx.globalAlpha = 0.75;
+          const c = project(cell.x + 0.5, cell.y + 0.5);
+          drawLamp(ctx, c.x, c.y);
+          ctx.globalAlpha = 1;
+          polygon(
+            ctx,
+            [
+              [p.x, p.y],
+              [p.x + GRID.w, p.y + GRID.h],
+              [p.x, p.y + GRID.h * 2],
+              [p.x - GRID.w, p.y + GRID.h],
+            ],
+            valid ? '#74e99e59' : '#f06c6966',
+          );
+          ctx.save();
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = valid ? '#c1ffbf' : '#ffb6a7';
+          ctx.stroke();
+          ctx.restore();
+        } else if (cell && showGhost) {
           const p = project(cell.x, cell.y),
             valid = canBuild(save, cell.x, cell.y, ghostId ?? undefined),
             ghostKind = ghostId ? (save.buildings.find((b) => b.id === ghostId)?.kind ?? placementKind) : placementKind;
@@ -1251,6 +1313,8 @@ export default function World({
     save.dinos,
     save.champion,
     save.lamps,
+    save.lampSpots,
+    lampMode,
     loaded,
     placing,
     moving,
@@ -1372,7 +1436,19 @@ export default function World({
           const p = coords(e);
           if (placing) setCell(unproject(p.x, p.y));
           cancelHold();
-          const b = !placing && realm === 'home' && onMove ? buildingAt(p) : undefined;
+          const lamp = !placing && realm === 'home' && onMove ? lampAt(p) : -1;
+          const b = !placing && realm === 'home' && onMove && lamp < 0 ? buildingAt(p) : undefined;
+          if (lamp >= 0) {
+            const l = save.lampSpots[lamp],
+              q = project(l.x + 0.5, l.y + 0.5),
+              grab = { id: `lamp:${lamp}`, ox: p.x - q.x, oy: p.y - q.y };
+            holdTimer.current = window.setTimeout(() => {
+              holdTimer.current = null;
+              navigator.vibrate?.(30);
+              setHeld(grab);
+              setCell({ x: l.x, y: l.y });
+            }, 400);
+          }
           if (b) {
             const q = project(b.x + 1.5, b.y + 1.5),
               grab = { id: b.id, ox: p.x - q.x, oy: p.y - q.y };
@@ -1399,7 +1475,7 @@ export default function World({
             const p = coords(e);
             setHovering(
               realm === 'home'
-                ? !!buildingAt(p)
+                ? !!buildingAt(p) || lampAt(p) >= 0
                 : here.some((x, i) => {
                     const spots = ISLANDS[realm as RealmId].spots;
                     const dp = spots[i % spots.length];
@@ -1481,7 +1557,7 @@ export default function World({
           if (travel) return onNavigate?.(travel);
           if (held) {
             const c = heldCell(coords(e), held),
-              b = save.buildings.find((b) => b.id === held.id);
+              b = heldLamp >= 0 ? save.lampSpots[heldLamp] : save.buildings.find((b) => b.id === held.id);
             setHeld(null);
             setCell(null);
             if (b && (b.x !== c.x || b.y !== c.y)) onMove?.(held.id, c.x, c.y);

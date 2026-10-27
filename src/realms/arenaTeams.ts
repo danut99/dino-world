@@ -20,6 +20,10 @@ export interface Foe {
   speed: number;
   /** The league boss: always last, and always legendary. */
   boss?: true;
+  /** A tank's half-damage first blow is spent. */
+  shieldUsed?: true;
+  /** A support's one heal is spent. */
+  healed?: true;
 }
 
 /**

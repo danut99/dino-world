@@ -1229,11 +1229,31 @@
     0 4px 0 #2f2520,
     0 0 22px #4ab8ff99;
 }
-.battle-callout.kind-dodge {
+.battle-callout.kind-dodge,
+.battle-callout.kind-swift {
   color: #b8ffcf;
   text-shadow:
     0 4px 0 #2f2520,
     0 0 22px #3fdc8a99;
+}
+.battle-callout.kind-shield,
+.battle-callout.kind-aura {
+  color: #bfe9ff;
+  text-shadow:
+    0 4px 0 #2f2520,
+    0 0 22px #4ab8ff99;
+}
+.battle-callout.kind-rage {
+  color: #ffb36b;
+  text-shadow:
+    0 4px 0 #2f2520,
+    0 0 22px #ff5a1f99;
+}
+.battle-callout.kind-heal {
+  color: #9dff9d;
+  text-shadow:
+    0 4px 0 #2f2520,
+    0 0 22px #3fdc5a99;
 }
 .battle-callout.kind-reflect {
   color: #e2c8ff;
@@ -1316,6 +1336,23 @@
   }
   70% {
     transform: translate(-22%, 0);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+.battle-unit.enemy[data-dodge] {
+  animation-name: battle-dodge-enemy;
+}
+@keyframes battle-dodge-enemy {
+  0% {
+    transform: translate(0, 0);
+  }
+  35% {
+    transform: translate(22%, -12%);
+  }
+  70% {
+    transform: translate(22%, 0);
   }
   100% {
     transform: translate(0, 0);
@@ -1928,6 +1965,68 @@
     min-height: 44px;
   }
 }
+/* Ultimate tap (Auto on, full bar): big glowing button over the arena. */
+.battle-tap-ultimate {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 22%;
+  translate: -50% 0;
+  min-width: min(260px, 70vw);
+  min-height: 64px;
+  padding: 10px 24px;
+  font:
+    700 clamp(22px, 5vw, 32px) 'Realms Pixel',
+    'Pixelify Sans',
+    sans-serif;
+  letter-spacing: 2px;
+  color: #2f2520;
+  background: radial-gradient(circle, #fff1b8, #ffb84a 70%);
+  border: 3px solid #fff8dc;
+  box-shadow:
+    0 4px 0 #7a3d12,
+    0 0 24px #ff9a1fcc;
+  cursor: pointer;
+  touch-action: manipulation;
+  animation: battle-tap-pulse 0.7s ease-in-out infinite alternate;
+}
+.battle-tap-ultimate:active {
+  translate: -50% 3px;
+}
+.battle-tap-ultimate:focus-visible {
+  outline: 3px solid #fff1b8;
+  outline-offset: 3px;
+}
+@keyframes battle-tap-pulse {
+  from {
+    scale: 1;
+    box-shadow:
+      0 4px 0 #7a3d12,
+      0 0 16px #ff9a1f99;
+  }
+  to {
+    scale: 1.08;
+    box-shadow:
+      0 4px 0 #7a3d12,
+      0 0 40px #ffd36bff;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle-tap-ultimate {
+    animation: none;
+  }
+}
+@media (max-width: 720px) {
+  .battle-tap-ultimate {
+    bottom: 120px;
+  }
+}
+.battle-callout.kind-perfect {
+  color: #fff8dc;
+  text-shadow:
+    0 4px 0 #2f2520,
+    0 0 28px #ffd36bee;
+}
 /* At ×2 the one-off effects run twice as fast too. */
 .battle-environment .battle-callout {
   animation-duration: calc(0.9s / var(--battle-speed, 1));
@@ -2531,6 +2630,15 @@
   color: #2f2520;
   background: #f6d77a;
   border: 1px solid #1b1411;
+}
+.team-pick-role {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  font-size: 10px;
+  font-style: normal;
+  line-height: 1;
+  pointer-events: none;
 }
 .team-pick-reason {
   position: absolute;
@@ -3346,6 +3454,21 @@
   background: #3a2e27;
   opacity: 0.6;
 }
+/* Role pips: the member's role icon in a small tile instead of a diamond. */
+.battle-pips.roles > i {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  transform: none;
+  font-size: 10px;
+  font-style: normal;
+  line-height: 1;
+}
+.battle-pips.roles > i.fallen {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
 .battle-callout.kind-enter {
   color: #fff1b8;
   font-size: clamp(16px, 3vw, 30px);
@@ -3389,6 +3512,15 @@
 .battle-result .result-rest {
   font-size: 13px;
   color: #cdbfa8;
+}
+.battle-result .result-recap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 14px;
+  margin: 6px 0;
+  font-size: 13px;
+  color: #fff1b8;
 }
 .battle-result .result-loot {
   margin: 6px 0;
@@ -4623,4 +4755,125 @@
   .destination-list button.cleared .destination-list-progress {
     color: #9be38f;
   }
+}
+/* Weekly tower: a ladder of floors, the next one's foes, and three chests. */
+.arena-tower {
+  display: grid;
+  gap: 10px;
+}
+.arena-tower-reset {
+  margin: 0;
+  font-size: 12px;
+  color: var(--px-bone-3, #b9a98c);
+}
+.arena-tower-ladder {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.arena-tower-floor {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 1px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 3px 2px;
+  font-size: 13px;
+  color: #e2d3b2;
+  background: #211a15;
+  border: 2px solid #3d332d;
+}
+.arena-tower-floor.cleared {
+  color: #9be38f;
+  border-color: #3f5a37;
+}
+.arena-tower-floor.next {
+  color: #fff1b8;
+  background: #3a2e27;
+  border-color: #f6d77a;
+  box-shadow: 0 0 8px #f6d77a66;
+}
+.arena-tower-floor.locked {
+  opacity: 0.55;
+}
+.arena-tower-floor.locked.chest {
+  opacity: 0.85;
+}
+.arena-tower-num {
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1;
+}
+.arena-tower-mark {
+  font-size: 11px;
+  line-height: 1;
+}
+.arena-tower-next {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 8px;
+  background: #2f2520e6;
+  border: 1px solid #f6d77a88;
+}
+.arena-tower-next p {
+  margin: 0;
+  font-size: 13px;
+}
+.arena-tower-foes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.arena-tower-foes .arena-face {
+  width: 48px;
+  height: 48px;
+}
+.arena-tower-foes .arena-face.boss {
+  outline: 2px solid #f6d77a;
+}
+.arena-tower-blocker {
+  color: #f0a58a;
+}
+/* One row per chest: name, prize, button; never wider than the panel. */
+.arena-tower-chests {
+  display: grid;
+  gap: 4px;
+}
+.arena-tower-reward {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 6px;
+  font-size: 12px;
+  background: #211a15;
+  border: 2px solid #3d332d;
+}
+.arena-tower-reward-name {
+  white-space: nowrap;
+  color: #fff1b8;
+}
+.arena-tower-reward small {
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.25;
+  color: #cdbfa8;
+}
+.arena-tower-reward.ready {
+  border-color: #9be38f;
+}
+.arena-tower-reward.claimed {
+  opacity: 0.6;
+}
+.arena-tower-reward .realm-button {
+  min-width: 0;
+  min-height: 34px;
+  padding: 2px 10px;
+  font-size: 12px !important;
 }

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { DinosaurArt } from './DinosaurArt';
 import { rarityClass } from './Rarity';
-import { ELEMENTS, type Dino, type RealmId } from './game';
+import { ELEMENTS, ROLE_ICONS, ROLE_NAMES, SPECIES_ROLE, type Dino, type RealmId } from './game';
 import { Pager } from './ui/Pager';
 import { usePager } from './ui/usePager';
 import { Icon, elementIcon } from './ui/Icon';
@@ -75,7 +75,7 @@ export function TeamPicker({
                 className={`team-pick${place >= 0 ? ' picked' : ''}${reason ? ' unable' : ''}${recommended === d.element ? ' recommended' : ''}`}
                 aria-pressed={place >= 0}
                 disabled={!!reason && place < 0}
-                title={`${d.nickname} · ${element.name[lang]} · ${tr('nivel', 'level')} ${d.level}${reason ? ` · ${reason}` : ''}`}
+                title={`${d.nickname} · ${element.name[lang]} · ${ROLE_NAMES[SPECIES_ROLE[d.species]][lang]} · ${tr('nivel', 'level')} ${d.level}${reason ? ` · ${reason}` : ''}`}
                 onClick={() => toggle(d.id)}
               >
                 <span className="team-pick-art">
@@ -86,6 +86,9 @@ export function TeamPicker({
                   {d.level}
                 </span>
                 {place >= 0 && <b className="team-pick-place">{place + 1}</b>}
+                <i className="team-pick-role" aria-hidden="true">
+                  {ROLE_ICONS[SPECIES_ROLE[d.species]]}
+                </i>
                 {reason && <small className="team-pick-reason">{reason}</small>}
               </button>
             );

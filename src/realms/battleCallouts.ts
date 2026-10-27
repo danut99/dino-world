@@ -16,7 +16,19 @@ export function calloutText(c: Callout, lang: number) {
       return `${tr('REFLECTAT', 'REFLECTED')} −${c.amount}`;
     case 'ultimate':
       return tr('ERUPȚIE!', 'ERUPTION!');
+    case 'perfect':
+      return 'PERFECT!';
     case 'ko':
       return 'K.O.!';
+    case 'shield':
+      return tr('SCUT!', 'SHIELD!');
+    case 'rage':
+      return tr('FURIE!', 'RAGE!');
+    case 'aura':
+      return tr('AURĂ', 'AURA');
+    case 'heal':
+      return `${tr('VINDECARE', 'HEAL')} +${c.amount}`;
+    case 'swift':
+      return tr('ESCHIVĂ RAPIDĂ', 'SWIFT DODGE');
   }
 }

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   acceptFriend,
   fetchAcceptHelp,
   fetchFriendScores,
+  fetchWeeklyRanking,
   listFriends,
   listLeaderboard,
   listPlayers,
@@ -13,10 +14,13 @@ import {
   type Leaderboard,
   type PlayerSummary,
   type RankBy,
+  type RankRow,
   type Score,
 } from './cloud';
+import { weekStart } from './daily';
 import { DinosaurArt } from './DinosaurArt';
-import { ELEMENTS, SPECIES, type RealmId, type Species, type Stage } from './game';
+import { ELEMENTS, SPECIES, type Command, type Dino, type RealmId, type Save, type Species, type Stage } from './game';
+import { TeamPicker } from './TeamPicker';
 import { Icon } from './ui/Icon';
 import { TabPanel, Tabs } from './ui/Tabs';
 
@@ -151,13 +155,19 @@ type Challenge = (player: { user_id: string; name: string }) => void;
 export function PlayersPanel({
   lang,
   selfId,
+  save,
+  run,
   onVisit,
   onChallenge,
+  onFriendsChange,
 }: {
   lang: number;
   selfId: string;
+  save: Save;
+  run: (c: Command) => boolean;
   onVisit: Visit;
   onChallenge: Challenge;
+  onFriendsChange?: () => void;
 }) {
   const tr = (ro: string, en: string) => T(lang, ro, en);
   const [search, setSearch] = useState('');
@@ -168,19 +178,32 @@ export function PlayersPanel({
   const [scores, setScores] = useState<Map<string, Score>>(new Map());
   const [acceptHelp, setAcceptHelp] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [ranking, setRanking] = useState<RankRow[] | null>(null);
+  const [pickDefense, setPickDefense] = useState(false);
+  const defense = save.defense
+    .map((id) => save.dinos.find((d) => d.id === id))
+    .filter((d): d is Dino => !!d);
+  const defenseEligible = useCallback(
+    (d: Dino) => (d.stage === 'baby' ? (lang ? 'baby' : 'pui') : null),
+    [lang],
+  );
 
   const reloadFriends = () => listFriends(selfId).then(setFriends, () => {});
   useEffect(() => {
     void reloadFriends();
     fetchAcceptHelp(selfId).then(setAcceptHelp, () => {});
     fetchFriendScores(selfId).then(setScores, () => {});
+    fetchWeeklyRanking(new Date(weekStart(Date.now()))).then(setRanking, () => setRanking([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selfId]);
   const act = (job: () => Promise<void>) => {
     setBusy(true);
     job()
       .then(reloadFriends, () => {})
-      .finally(() => setBusy(false));
+      .finally(() => {
+        setBusy(false);
+        onFriendsChange?.();
+      });
   };
   const toggleHelp = (on: boolean) => {
     setAcceptHelp(on);
@@ -231,6 +254,55 @@ export function PlayersPanel({
         <TabPanel idBase="players" id="players" className="realm-players">
           <section className="realm-friends" aria-label={tr('Prieteni', 'Friends')}>
             <h3>{tr('Prieteni', 'Friends')}</h3>
+            <div className="realm-friends-defense">
+              <span>{tr('Echipa de apărare:', 'Defense team:')}</span>
+              {defense.length ? (
+                defense.map((d) => (
+                  <span key={d.id} className="realm-player-portrait" title={d.nickname}>
+                    <DinosaurArt species={d.species} element={d.element} stage={d.stage} paused frame={0} />
+                  </span>
+                ))
+              ) : (
+                <small>{tr('echipa din arenă', 'your arena team')}</small>
+              )}
+              <button className="realm-button secondary" onClick={() => setPickDefense((v) => !v)}>
+                {pickDefense ? tr('Gata', 'Done') : tr('Schimbă', 'Change')}
+              </button>
+            </div>
+            {pickDefense && (
+              <TeamPicker
+                dinos={save.dinos}
+                selected={defense.map((d) => d.id)}
+                max={3}
+                lang={lang}
+                label={tr('Apărare', 'Defense')}
+                isEligible={defenseEligible}
+                onChange={(ids) => run({ type: 'setDefense', dinoIds: ids })}
+              />
+            )}
+            <div className="realm-friends-weekly">
+              <h4>🏆 {tr('Clasament săptămânal', 'Weekly ranking')}</h4>
+              <small>{tr('Victorii amicale de luni încoace', 'Friendly wins since Monday')}</small>
+              {!ranking ? (
+                <p className="realm-note">{tr('Se încarcă…', 'Loading…')}</p>
+              ) : !ranking.length ? (
+                <p className="realm-note">{tr('Clasamentul nu s-a putut încărca.', 'The ranking could not load.')}</p>
+              ) : (
+                <ol>
+                  {ranking.map((r, i) => (
+                    <li key={r.userId} className={`realm-rank-row${r.userId === selfId ? ' self' : ''}`}>
+                      <span className="realm-rank-place">{MEDALS[i] ?? `#${i + 1}`}</span>{' '}
+                      <strong>
+                        {r.name} {r.userId === selfId && <em>{tr('tu', 'you')}</em>}
+                      </strong>{' '}
+                      <span className="realm-rank-score">
+                        {r.wins} {tr(r.wins === 1 ? 'victorie' : 'victorii', r.wins === 1 ? 'win' : 'wins')}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
             <label className="realm-friends-help">
               <input type="checkbox" checked={acceptHelp} onChange={(e) => toggleHelp(e.target.checked)} />
               <span>

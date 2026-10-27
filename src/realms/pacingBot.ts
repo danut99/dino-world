@@ -47,7 +47,7 @@ import {
   rarityOf,
   residents,
   starTotal,
-  stats,
+  dinoStats,
   storyChapter,
   WORLD_UNLOCK,
   worldLock,
@@ -426,7 +426,8 @@ export function runBot(options: BotOptions): BotResult {
       const pick = plan.find(([id, want]) => {
         if (!want()) return false;
         const recipe = RECIPES.find((r) => r.id === id)!;
-        // Raw materials the next world needs stay untouched, and supply packs always keep a little wood and fiber back
+        // Raw materials the next world needs stay untouched (except by supply packs: without them no patrol leaves to
+        // bring the wood back), and supply packs always keep a little wood and fiber back
         // for themselves (without them no patrol leaves, and patrols bring the wood). Supplies and kits feed the next
         // upgrades instead of waiting behind them; only the optional lamps also leave the upgrades' materials alone.
         const kept = (item: ItemId) => (id !== 'provisions' && (item === 'wood' || item === 'fiber') ? 12 : 0);
@@ -434,7 +435,7 @@ export function runBot(options: BotOptions): BotResult {
         return (Object.entries(recipe.cost) as [ItemId, number][]).every(
           ([item, n]) =>
             s.inventory[item] - n >=
-            (['wood', 'stone', 'fiber', 'crystal'].includes(item) && id !== 'evolution' ? (reserve[item] ?? 0) : 0) +
+            (['wood', 'stone', 'fiber', 'crystal'].includes(item) && id !== 'evolution' && id !== 'provisions' ? (reserve[item] ?? 0) : 0) +
               kept(item),
         );
       });
@@ -497,7 +498,7 @@ export function runBot(options: BotOptions): BotResult {
   // ---- arena -----------------------------------------------------------------------------------------------------
   /** How strong a dinosaur is against a league at a level: health × power, its element edge and its level edge. */
   function strength(d: Dino, league: RealmId, level: number) {
-    const st = stats(d.level, d.stage, d.species, rarityOf(d)),
+    const st = dinoStats(d),
       edge = elementEdge(d.element, league);
     return st.hp * st.power * (edge === 1 ? 1.6 : edge === -1 ? 0.6 : 1) * levelEdge(d.level - level) ** 2;
   }

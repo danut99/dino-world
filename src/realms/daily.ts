@@ -238,6 +238,8 @@ export function dailyReset(day: string) {
       .find((t) => dailyDay(t) === next && dailyDay(t - 1) === day) ?? Date.parse(`${next}T00:00:00Z`)
   );
 }
+/** Monday 00:00 in Bucharest of the week `now` falls in (ms). */
+export const weekStart = (now: number) => dailyReset(shiftDay(weekId(now), -1));
 /** A fresh day: its missions are drawn among those `save` can do (any mission without a save). */
 export function newDaily(now: number, save?: QuestSave): DailyState {
   const day = dailyDay(now);

@@ -419,6 +419,10 @@
   right: 0;
   bottom: calc(100% + 10px);
 }
+/* the daily wheel sits in the same corner: the hint moves to its left */
+.realms-app .realm-camera:has(.realm-camera-action) .realm-world-hint {
+  right: 72px;
+}
 .realms-app .realm-quest-progress i {
   background: var(--px-stone-4);
   border-radius: 0;

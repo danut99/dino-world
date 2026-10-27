@@ -41,7 +41,7 @@ export const affordable = (save: Save, gold = 0, materials: Partial<Record<ItemI
   save.gold >= gold && save.food >= food && (Object.entries(materials) as [ItemId, number][]).every(([id, n]) => save.inventory[id] >= n);
 
 /** Ornamental lamps: each one placed on the island adds LAMP_BONUS to habitat gold, up to MAX_LAMPS. */
-export function LampCard({ save, lang, run, openWorkshop }: { save: Save; lang: number; run: (c: Command) => boolean; openWorkshop?: () => void }) {
+export function LampCard({ save, lang, run, openWorkshop, place }: { save: Save; lang: number; run: (c: Command) => boolean; openWorkshop?: () => void; place?: () => void }) {
   const tr = (ro: string, en: string) => (lang ? en : ro);
   const full = save.lamps >= MAX_LAMPS,
     have = save.inventory.lamp;
@@ -67,7 +67,7 @@ export function LampCard({ save, lang, run, openWorkshop }: { save: Save; lang: 
           {tr('Atelier', 'Workshop')} →
         </button>
       ) : (
-        <button className="realm-button sm" disabled={full || have < 1} onClick={() => run({ type: 'placeLamp' })}>
+        <button className="realm-button sm" disabled={full || have < 1} onClick={() => (place ? place() : run({ type: 'placeLamp' }))}>
           {tr('Pune lampă', 'Place lamp')}
         </button>
       )}
