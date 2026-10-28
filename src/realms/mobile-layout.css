@@ -761,6 +761,13 @@
     border-radius: 4px;
     text-shadow: none;
   }
+  main.realms-app .realm-mobile-wallet > button.realm-fullscreen {
+    justify-content: center;
+    width: 32px;
+    padding: 0;
+    font-size: 16px;
+    border-color: #cdbfa899;
+  }
   /* The place name moves under the wallet. */
   main.realms-app .realm-location {
     top: calc(max(10px, env(safe-area-inset-top)) + 50px);
@@ -812,6 +819,31 @@
   main.realms-app .realm-nav.collapsed > button.realm-nav-toggle {
     background: #3a2e27;
     border: 2px solid #cdbfa8aa;
+  }
+  /* Collect gives way on narrow phones: it shrinks and its words end in "…" instead of leaving the bar. */
+  main.realms-app .realm-nav.collapsed {
+    overflow: hidden;
+  }
+  main.realms-app .realm-nav.collapsed > .realm-collect {
+    flex: 0 1 auto;
+    overflow: hidden;
+  }
+  main.realms-app .realm-nav.collapsed > .realm-collect > div {
+    min-width: 0;
+    overflow: hidden;
+  }
+  main.realms-app .realm-nav.collapsed > .realm-collect :is(strong, small) {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  @media (max-width: 420px) {
+    main.realms-app .realm-nav.collapsed > button.realm-nav-toggle,
+    main.realms-app .realm-nav.collapsed > button.realm-nav-hub:not(.realm-nav-toggle),
+    main.realms-app .realm-nav.collapsed > .realm-collect {
+      padding: 0 8px;
+    }
   }
   main.realms-app .realm-nav.collapsed > button.realm-nav-toggle > .realm-nav-toggle-label,
   main.realms-app .realm-nav.collapsed > button.realm-nav-hub > strong {
@@ -1288,6 +1320,23 @@ main.realms-app .gameplay-expedition .expedition-detail .expedition-tab {
   main.realms-app .daily-bonus > .realm-button {
     width: 100%;
     min-width: 0;
+    min-height: 38px;
+  }
+  /* Cards keep their full height; the stamp stays inside its card, flat and to the left. */
+  main.realms-app .daily-quests {
+    grid-auto-rows: max-content;
+    gap: 8px;
+  }
+  main.realms-app .daily-quest,
+  main.realms-app .daily-bonus {
+    padding: 8px 10px 10px;
+    overflow: visible;
+  }
+  main.realms-app :is(.daily-quest, .daily-bonus) > .daily-stamp {
+    justify-self: start;
+    transform: none;
+    padding: 2px 10px;
+    font-size: 12px;
   }
   main.realms-app .dino-sheet.solo {
     grid-template-rows: 150px minmax(0, 1fr);

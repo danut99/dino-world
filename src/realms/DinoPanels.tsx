@@ -34,6 +34,7 @@ import {
   feedCost,
   goldCap,
   goldRate,
+  awayAt,
   habitatCapacity,
   hatcherySlots,
   incubating,
@@ -610,7 +611,8 @@ export function HabitatsPanel({
     here = residents(save, selected),
     lock = level ? null : worldLockText(save, selected, lang),
     unlock = WORLD_UNLOCK[selected];
-  const income = Math.round(here.reduce((n, d) => n + dinoIncome(save, d), 0));
+  const income = Math.round(here.reduce((n, d) => n + (awayAt(save, d.id, now) ? 0 : dinoIncome(save, d)), 0));
+  const onTrip = save.dinos.filter((d) => awayAt(save, d.id, now)).length;
   return (
     <div className="fit-panel habitats-panel">
       <header className="pk-head">
@@ -623,7 +625,9 @@ export function HabitatsPanel({
             {cap.toLocaleString(lang ? 'en-US' : 'ro-RO')} {tr(lang, 'aur strâns', 'gold stored')}
           </strong>
           <small>
-            {Math.round(goldRate(save))} {tr(lang, 'aur/oră', 'gold/hour')} ·{' '}
+            {Math.round(goldRate(save, now))} {tr(lang, 'aur/oră', 'gold/hour')} ·{' '}
+            {onTrip > 0 &&
+              `${tr(lang, `${onTrip} în expediție (nu produc)`, `${onTrip} on expedition (not earning)`)} · `}
             {tr(lang, 'max. 8h offline', '8h offline max')} · ☼ {save.lamps}/5 {tr(lang, 'lămpi', 'lamps')} ·{' '}
             {ITEMS.habitatKit.icon} {save.inventory.habitatKit} {tr(lang, 'kituri', 'kits')}
           </small>
@@ -836,7 +840,12 @@ export function DinoPanel({
         </b>
       </span>
       <span>
-        <b className="pk-num">{Math.round(residents(save, realm).reduce((n, x) => n + dinoIncome(save, x), 0))}</b> ●/h
+        <b className="pk-num">
+          {Math.round(
+            residents(save, realm).reduce((n, x) => n + (awayAt(save, x.id, Date.now()) ? 0 : dinoIncome(save, x)), 0),
+          )}
+        </b>{' '}
+        ●/h
       </span>
       {openHabitats && (
         <button className="realm-link" onClick={openHabitats}>
@@ -1107,6 +1116,8 @@ export function DinoPanel({
                 <span className="dino-sheet-income">
                   <Icon name="gold" scale={1} /> <b className="pk-num">{Math.round(dinoIncome(save, d))}</b>{' '}
                   {tr(lang, 'aur/oră', 'gold/hour')}
+                  {awayAt(save, d.id, Date.now()) &&
+                    ` · ${tr(lang, 'în expediție: nu produce acum', 'on expedition: not earning now')}`}
                 </span>
                 {previewHero && d.id === save.dinos[0]?.id && d.stage !== 'adult' && (
                   <button className="realm-link" onClick={() => previewHero(d)}>

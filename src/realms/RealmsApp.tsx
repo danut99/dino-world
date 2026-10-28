@@ -60,6 +60,8 @@ import {
   clearFriendHelps,
   fetchCloudSave,
   fetchFriendHelps,
+  duelBlock,
+  fetchDefenses,
   fetchFriendNews,
   guestName,
   helpFriend,
@@ -336,6 +338,27 @@ export default function RealmsApp({
     }
   });
   const [sound, setSound] = useState(soundEnabled);
+  // Phones can hide the browser bars: the Fullscreen API where it exists (Android), never when installed as an app.
+  const fullscreenTarget = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
+  const canFullscreen =
+    (document.fullscreenEnabled || !!fullscreenTarget.webkitRequestFullscreen) &&
+    !window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+  const [fullscreen, setFullscreen] = useState(() => !!document.fullscreenElement);
+  useEffect(() => {
+    const change = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', change);
+    document.addEventListener('webkitfullscreenchange', change);
+    return () => {
+      document.removeEventListener('fullscreenchange', change);
+      document.removeEventListener('webkitfullscreenchange', change);
+    };
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    else if (fullscreenTarget.requestFullscreen)
+      void fullscreenTarget.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+    else fullscreenTarget.webkitRequestFullscreen?.();
+  };
   // Every button answers with a soft click; actions add their own sound on top (see COMMAND_SOUNDS).
   useEffect(() => {
     const click = (e: MouseEvent) => {
@@ -1048,6 +1071,20 @@ export default function RealmsApp({
   };
   /** Starts a friendly fight: your arena team against theirs, as they are saved in the cloud. */
   const challenge = async (player: { user_id: string; name: string }) => {
+    // Tell the limits before the fight rather than after it (record_duel, 0011).
+    const block = account ? await duelBlock(account.user.id, player.user_id).catch(() => null) : null;
+    if (block) {
+      playSound('error');
+      setMessage(
+        block.code === 'too_soon'
+          ? tr(`Următorul duel peste ${block.wait} secunde.`, `Next duel in ${block.wait} seconds.`)
+          : tr(
+              `Ai jucat deja 3 dueluri în ultimele 24 de ore cu ${player.name}. Mai poți peste ${block.wait}, sau provoacă pe altcineva.`,
+              `You already had 3 duels with ${player.name} in the last 24 hours. Try again in ${block.wait}, or challenge someone else.`,
+            ),
+      );
+      return;
+    }
     try {
       const remote = await fetchCloudSave(player.user_id);
       if (!remote || remote.outdated) throw new Error('rivalTeam');
@@ -1180,6 +1217,19 @@ export default function RealmsApp({
 
   // Friend requests waiting for an answer (a badge until answered) and friendly fights against us (told once).
   const [friendRequests, setFriendRequests] = useState(0);
+  // Duels against our defense since the Players window was last opened: a badge until it is.
+  const [unreadDuels, setUnreadDuels] = useState(0);
+  const duelsReadKey = account ? `dino-realms-duels-read-${account.user.id}` : '';
+  useEffect(() => {
+    if (panel !== 'players' || !duelsReadKey) return;
+    try {
+      localStorage.setItem(duelsReadKey, new Date().toISOString());
+    } catch {
+      /* The badge then comes back next time. */
+    }
+    setUnreadDuels(0);
+  }, [panel, duelsReadKey]);
+  const playersBadge = friendRequests + unreadDuels;
   const checkNewsRef = useRef<() => void>(() => {});
   useEffect(() => {
     if (!account) return;
@@ -1199,6 +1249,16 @@ export default function RealmsApp({
       try {
         const seen = read() ?? { requests: [], since: new Date(0).toISOString() };
         const news = await fetchFriendNews(uid, seen.since);
+        let readAt = new Date(0).toISOString();
+        try {
+          readAt = localStorage.getItem(`dino-realms-duels-read-${uid}`) ?? readAt;
+        } catch {
+          /* Everything counts as unread. */
+        }
+        fetchDefenses(uid, readAt).then(
+          (d) => setUnreadDuels(d.length),
+          () => {},
+        );
         setFriendRequests(news.requests.length);
         const fresh = news.requests.filter((r) => !seen.requests.includes(r.id));
         // One line for the latest attack on our defense team, the others only counted.
@@ -1293,9 +1353,12 @@ export default function RealmsApp({
             !
           </b>
         )}
-        {friendRequests > 0 && (
-          <b className="realm-friend-alert" title={tr('Cereri de prietenie', 'Friend requests')}>
-            {friendRequests}
+        {playersBadge > 0 && (
+          <b
+            className="realm-friend-alert"
+            title={tr('Cereri de prietenie și dueluri noi', 'Friend requests and new duels')}
+          >
+            {playersBadge}
           </b>
         )}
       </button>
@@ -1348,7 +1411,7 @@ export default function RealmsApp({
                       {tr('Jucători', 'Players')}
                       <small>{tr('Vizitează lumile altora', "Visit other players' worlds")}</small>
                     </span>
-                    {friendRequests > 0 && <b className="realm-menu-count">{friendRequests}</b>}
+                    {playersBadge > 0 && <b className="realm-menu-count">{playersBadge}</b>}
                     <em aria-hidden="true">›</em>
                   </button>
                 )}
@@ -1439,7 +1502,7 @@ export default function RealmsApp({
                 {account && (
                   <button onClick={closeThen(() => setPanel('players'))}>
                     {tr('Jucători', 'Players')}
-                    {friendRequests > 0 && <b className="realm-menu-count">{friendRequests}</b>}
+                    {playersBadge > 0 && <b className="realm-menu-count">{playersBadge}</b>}
                   </button>
                 )}
                 <button onClick={closeThen(() => setPanel('account'))}>
@@ -1626,6 +1689,19 @@ export default function RealmsApp({
           <button onClick={() => setPanel('shop')} aria-label={tr('Diamante · magazin', 'Diamonds · shop')}>
             💎 {save.gems.toLocaleString(lang ? 'en-US' : 'ro-RO')} <b aria-hidden="true">+</b>
           </button>
+          {canFullscreen && (
+            <button
+              className="realm-fullscreen"
+              onClick={toggleFullscreen}
+              aria-pressed={fullscreen}
+              aria-label={
+                fullscreen ? tr('Ieși din ecran complet', 'Exit full screen') : tr('Ecran complet', 'Full screen')
+              }
+              title={fullscreen ? tr('Ieși din ecran complet', 'Exit full screen') : tr('Ecran complet', 'Full screen')}
+            >
+              {fullscreen ? '✕' : '⛶'}
+            </button>
+          )}
         </div>
         <header className="realm-hud">
           <a

@@ -371,6 +371,34 @@ export async function clearFriendHelps(ids: number[]) {
 }
 
 export type FightResult = 'victory' | 'defeat' | 'draw';
+/** Whether record_duel (0011) would refuse a duel against `rivalId` now, and how long until it would not. */
+export async function duelBlock(
+  selfId: string,
+  rivalId: string,
+): Promise<{ code: 'too_soon'; wait: number } | { code: 'daily_limit'; wait: string } | null> {
+  if (!cloud) return null;
+  const now = Date.now(),
+    day = 86_400_000;
+  const { data, error } = await cloud
+    .from('friend_battles')
+    .select('defender, created_at')
+    .eq('attacker', selfId)
+    .gt('created_at', new Date(now - day).toISOString())
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const rows = ((data ?? []) as { defender: string; created_at: string }[]).map((r) => ({
+    rival: r.defender,
+    at: new Date(r.created_at).getTime(),
+  }));
+  const last = rows[0]?.at ?? 0;
+  if (now - last < 60_000) return { code: 'too_soon', wait: Math.ceil((60_000 - (now - last)) / 1000) };
+  const against = rows.filter((r) => r.rival === rivalId);
+  if (against.length >= 3) {
+    const minutes = Math.ceil((against[2].at + day - now) / 60_000);
+    return { code: 'daily_limit', wait: minutes >= 60 ? `${Math.ceil(minutes / 60)}h` : `${minutes} min` };
+  }
+  return null;
+}
 /** Records a duel this player started against `otherId` (see record_duel, 0010). Throws with the refusal code. */
 export async function recordFriendBattle(_selfId: string, otherId: string, result: FightResult) {
   if (!cloud) return;
@@ -395,7 +423,7 @@ export async function fetchFriendNews(selfId: string, since: string) {
   return { requests: requests.map((r) => ({ id: r.requester, name: names.get(r.requester) ?? '?' })), battles };
 }
 /** A friendly fight a friend started against this player; `result` is the attacker's. */
-export type Defense = { attackerName: string; result: FightResult; at: string };
+export type Defense = { attackerId: string; attackerName: string; result: FightResult; at: string };
 /** Friendly fights against this player after `since` (ISO time), oldest first. */
 export async function fetchDefenses(selfId: string, since: string): Promise<Defense[]> {
   if (!cloud) return [];
@@ -413,7 +441,12 @@ export async function fetchDefenses(selfId: string, since: string): Promise<Defe
     .select('user_id, name')
     .in('user_id', [...new Set(rows.map((r) => r.attacker))]);
   const names = new Map((people ?? []).map((p) => [p.user_id as string, p.name as string]));
-  return rows.map((r) => ({ attackerName: names.get(r.attacker) ?? '?', result: r.result, at: r.created_at }));
+  return rows.map((r) => ({
+    attackerId: r.attacker,
+    attackerName: names.get(r.attacker) ?? '?',
+    result: r.result,
+    at: r.created_at,
+  }));
 }
 /** Friendly-fight wins since `since` for this player and their accepted friends, best first. */
 export type RankRow = { userId: string; name: string; wins: number };

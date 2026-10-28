@@ -2124,6 +2124,17 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
 .realm-rank.no-portrait { grid-template-columns: 40px minmax(0, 1fr) auto; }
 /* Defense team and the help switch sit below the friends, as settings. */
 .realm-friends-settings { display: grid; gap: 8px; }
+/* Duels against your defense team in the last week, newest first, each with a revenge button. */
+.realm-duels-recent { display: grid; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid #a3938055; }
+.realm-duels-recent h3 { margin: 0; font-size: 15px; color: #fff1b8; }
+.realm-duels-recent ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.realm-duels-recent li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #241c18; border: 1px solid #a3938055; border-left: 3px solid #cdbfa8; }
+.realm-duels-recent li.won { border-left-color: #9be38f; }
+.realm-duels-recent li.lost { border-left-color: #f0a58a; }
+.realm-duels-recent li > span { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; color: #e2d3b2; }
+.realm-duels-recent strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff1b8; }
+.realm-duels-recent small { font-size: 11px; color: #cdbfa8; }
+.realm-duels-recent .realm-button { flex: none; min-height: 36px; }
 .realm-friends:has(> .realm-note:only-child) { padding-bottom: 8px; }
 
 /* Visiting another player's world: a bar on top with their worlds and the way home; nothing else of the HUD. */

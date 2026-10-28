@@ -1,0 +1,11 @@
+{
+  "name": "Dino Realms",
+  "short_name": "Dino Realms",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#172d3b",
+  "theme_color": "#172d3b",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

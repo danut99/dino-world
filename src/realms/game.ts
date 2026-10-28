@@ -1363,7 +1363,7 @@ export const dinoIncome = (s: Pick<Save, 'habitats' | 'lamps'>, d: Dino) =>
 export const goldRate = (s: Save, now?: number) =>
   s.dinos.reduce((n, d) => n + (now !== undefined && awayAt(s, d.id, now) ? 0 : dinoIncome(s, d)), 0);
 /** Whether a dinosaur is away on an expedition at `at`. */
-const awayAt = (s: Pick<Save, 'expeditions'>, id: string, at: number) =>
+export const awayAt = (s: Pick<Save, 'expeditions'>, id: string, at: number) =>
   s.expeditions.some((x) => x.team.includes(id) && x.startedAt <= at && at < x.endsAt);
 export const workshop = (s: Save) => WORKSHOP_LEVELS[s.workshopLevel - 1];
 /** When each workshop lane is free again (never before `now`). */

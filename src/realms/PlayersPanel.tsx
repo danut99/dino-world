@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   acceptFriend,
   fetchAcceptHelp,
+  fetchDefenses,
   fetchFriendScores,
   fetchWeeklyRanking,
   listFriends,
@@ -11,6 +12,7 @@ import {
   requestFriend,
   saveAcceptHelp,
   type Friend,
+  type Defense,
   type Leaderboard,
   type PlayerSummary,
   type RankBy,
@@ -226,6 +228,7 @@ export function PlayersPanel({
   const [acceptHelp, setAcceptHelp] = useState(false);
   const [busy, setBusy] = useState(false);
   const [ranking, setRanking] = useState<RankRow[] | null>(null);
+  const [recent, setRecent] = useState<Defense[]>([]);
   const [pickDefense, setPickDefense] = useState(false);
   const defense = save.defense.map((id) => save.dinos.find((d) => d.id === id)).filter((d): d is Dino => !!d);
   const defenseEligible = useCallback((d: Dino) => (d.stage === 'baby' ? (lang ? 'baby' : 'pui') : null), [lang]);
@@ -236,6 +239,10 @@ export function PlayersPanel({
     fetchAcceptHelp(selfId).then(setAcceptHelp, () => {});
     fetchFriendScores(selfId).then(setScores, () => {});
     fetchWeeklyRanking(new Date(weekStart(Date.now()))).then(setRanking, () => setRanking([]));
+    fetchDefenses(selfId, new Date(Date.now() - 7 * 86_400_000).toISOString()).then(
+      (d) => setRecent(d.reverse().slice(0, 8)),
+      () => {},
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selfId]);
   const act = (job: () => Promise<void>) => {
@@ -304,6 +311,34 @@ export function PlayersPanel({
         </TabPanel>
       ) : view === 'friends' ? (
         <TabPanel idBase="players" id="friends" className="realm-players">
+          {recent.length > 0 && (
+            <section className="realm-duels-recent" aria-label={tr('Cine te-a atacat', 'Who attacked you')}>
+              <h3>⚔ {tr('Cine te-a atacat', 'Who attacked you')}</h3>
+              <ul>
+                {recent.map((r) => (
+                  <li key={r.at} className={r.result === 'victory' ? 'lost' : r.result === 'defeat' ? 'won' : ''}>
+                    <span>
+                      <strong>{r.attackerName}</strong>
+                      <small>
+                        {r.result === 'victory'
+                          ? tr('a câștigat contra apărării tale', 'beat your defense')
+                          : r.result === 'defeat'
+                            ? tr('a pierdut — apărarea ta a rezistat!', 'lost — your defense held!')
+                            : tr('egalitate', 'draw')}{' '}
+                        · {lastSeen(r.at, lang)}
+                      </small>
+                    </span>
+                    <button
+                      className="realm-button"
+                      onClick={() => onChallenge({ user_id: r.attackerId, name: r.attackerName })}
+                    >
+                      ⚔ {tr('Revanșă', 'Revenge')}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           <section className="realm-friends" aria-label={tr('Prieteni', 'Friends')}>
             {!friends.length ? (
               <p className="realm-note">
