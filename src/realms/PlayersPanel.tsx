@@ -72,11 +72,13 @@ function LeaderboardView({
   lang,
   selfId,
   visit,
+  challenge,
   weekly,
 }: {
   lang: number;
   selfId: string;
   visit: (p: PlayerSummary) => void;
+  challenge: Challenge;
   weekly: RankRow[] | null;
 }) {
   const tr = (ro: string, en: string) => T(lang, ro, en);
@@ -107,6 +109,17 @@ function LeaderboardView({
   ];
   const score = (p: PlayerSummary) =>
     by === 'dinos' ? `${p.dinos}` : by === 'level' ? `${tr('Nv.', 'Lv.')} ${p.level}` : `${p.stars} ★`;
+  const duel = (p: { user_id: string; name: string }) =>
+    p.user_id === selfId ? null : (
+      <button
+        className="realm-rank-duel"
+        aria-label={tr(`Duel cu ${p.name}`, `Duel ${p.name}`)}
+        title={tr('Duel', 'Duel')}
+        onClick={() => challenge(p)}
+      >
+        ⚔
+      </button>
+    );
   const row = (p: PlayerSummary, rank: number) => {
     const self = p.user_id === selfId;
     return (
@@ -119,6 +132,7 @@ function LeaderboardView({
           </strong>
           <span className="realm-rank-score">{score(p)}</span>
         </button>
+        {duel(p)}
       </li>
     );
   };
@@ -161,6 +175,7 @@ function LeaderboardView({
                       </strong>
                       <span className="realm-rank-score">{r.wins} ⚔</span>
                     </button>
+                    {duel({ user_id: r.userId, name: r.name })}
                   </li>
                 );
               })}
@@ -230,6 +245,9 @@ export function PlayersPanel({
   const [ranking, setRanking] = useState<RankRow[] | null>(null);
   const [recent, setRecent] = useState<Defense[]>([]);
   const [pickDefense, setPickDefense] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  /** The friend whose extra actions (visit, remove) are unfolded. */
+  const [menuFor, setMenuFor] = useState<string | null>(null);
   const defense = save.defense.map((id) => save.dinos.find((d) => d.id === id)).filter((d): d is Dino => !!d);
   const defenseEligible = useCallback((d: Dino) => (d.stage === 'baby' ? (lang ? 'baby' : 'pui') : null), [lang]);
 
@@ -283,39 +301,130 @@ export function PlayersPanel({
     };
   }, [search]);
 
+  const incoming = friends.filter((f) => f.status === 'pending' && f.incoming);
+  const others = friends.filter((f) => !(f.status === 'pending' && f.incoming));
+  const defenseStrip = (
+    <section className="realm-friends-settings" aria-label={tr('Echipa de apărare', 'Defense team')}>
+      <div className="realm-friends-defense">
+        <span>
+          🛡 {tr('Echipa de apărare', 'Defense team')}
+          <small>{tr('Luptă când alt jucător te atacă.', 'Fights when another player attacks you.')}</small>
+        </span>
+        {defense.length ? (
+          defense.map((d) => (
+            <span key={d.id} className="realm-player-portrait" title={d.nickname}>
+              <DinosaurArt species={d.species} element={d.element} stage={d.stage} paused frame={0} />
+            </span>
+          ))
+        ) : (
+          <small>{tr('echipa din arenă', 'your arena team')}</small>
+        )}
+        <button className="realm-button secondary" onClick={() => setPickDefense((v) => !v)}>
+          {pickDefense ? tr('Gata', 'Done') : tr('Schimbă', 'Change')}
+        </button>
+      </div>
+      {pickDefense && (
+        <TeamPicker
+          dinos={save.dinos}
+          selected={defense.map((d) => d.id)}
+          max={3}
+          lang={lang}
+          label={tr('Apărare', 'Defense')}
+          isEligible={defenseEligible}
+          onChange={(ids) => run({ type: 'setDefense', dinoIds: ids })}
+        />
+      )}
+    </section>
+  );
+  const settings = (
+    <section className="realm-friends-settings" aria-label={tr('Setări', 'Settings')}>
+      <label className="realm-friends-help">
+        <input type="checkbox" checked={acceptHelp} onChange={(e) => toggleHelp(e.target.checked)} />
+        <span>
+          {tr('Prietenii îmi pot colecta aurul', 'Friends may collect my gold')}
+          <small>{tr('O dată pe oră, când îți vizitează lumea.', 'Once an hour, when they visit your world.')}</small>
+        </span>
+      </label>
+    </section>
+  );
+
   return (
     <div className="realm-players">
-      <Tabs
-        idBase="players"
-        label={tr('Jucători', 'Players')}
-        active={view}
-        onChange={setView}
-        tabs={[
-          {
-            id: 'friends',
-            label: tr('Prieteni', 'Friends'),
-            badge: friends.filter((f) => f.status === 'pending' && f.incoming).length,
-          },
-          { id: 'players', label: tr('Caută', 'Find') },
-          { id: 'ranking', label: `🏆 ${tr('Clasament', 'Leaderboard')}` },
-        ]}
-      />
-      {view === 'ranking' ? (
+      <div className="realm-players-top">
+        <Tabs
+          idBase="players"
+          label={tr('Jucători', 'Players')}
+          active={view}
+          onChange={(v) => {
+            setSettingsOpen(false);
+            setView(v);
+          }}
+          tabs={[
+            { id: 'friends', label: tr('Prieteni', 'Friends'), badge: incoming.length },
+            { id: 'ranking', label: `🏆 ${tr('Clasament', 'Leaderboard')}` },
+            { id: 'players', label: tr('Caută', 'Find') },
+          ]}
+        />
+        <button
+          className="realm-players-gear"
+          aria-pressed={settingsOpen}
+          aria-label={tr('Setări: ajutor de la prieteni', 'Settings: help from friends')}
+          title={tr('Setări', 'Settings')}
+          onClick={() => setSettingsOpen((v) => !v)}
+        >
+          ⚙
+        </button>
+      </div>
+      {!settingsOpen && view !== 'players' && defenseStrip}
+      {settingsOpen ? (
+        settings
+      ) : view === 'ranking' ? (
         <TabPanel idBase="players" id="ranking">
           <LeaderboardView
             lang={lang}
             selfId={selfId}
             weekly={ranking}
+            challenge={onChallenge}
             visit={(p) => onVisit(p, canHelp(friendOf(p.user_id)))}
           />
         </TabPanel>
       ) : view === 'friends' ? (
         <TabPanel idBase="players" id="friends" className="realm-players">
+          {incoming.length > 0 && (
+            <section className="realm-friends realm-friends-requests" aria-label={tr('Cereri', 'Requests')}>
+              <h3>{tr('Cereri de prietenie', 'Friend requests')}</h3>
+              <ul>
+                {incoming.map((f) => (
+                  <li key={f.user_id} className="realm-friend">
+                    <span>
+                      <strong>{f.name}</strong>
+                      <small>{tr('Vrea să fiți prieteni', 'Wants to be friends')}</small>
+                    </span>
+                    <button
+                      className="realm-button"
+                      disabled={busy}
+                      onClick={() => act(() => acceptFriend(selfId, f.user_id))}
+                    >
+                      {tr('Acceptă', 'Accept')}
+                    </button>
+                    <button
+                      className="realm-button secondary"
+                      disabled={busy}
+                      aria-label={tr(`Refuză ${f.name}`, `Decline ${f.name}`)}
+                      onClick={() => act(() => removeFriend(selfId, f.user_id))}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {recent.length > 0 && (
             <section className="realm-duels-recent" aria-label={tr('Cine te-a atacat', 'Who attacked you')}>
               <h3>⚔ {tr('Cine te-a atacat', 'Who attacked you')}</h3>
               <ul>
-                {recent.map((r) => (
+                {recent.slice(0, 3).map((r) => (
                   <li key={r.at} className={r.result === 'victory' ? 'lost' : r.result === 'defeat' ? 'won' : ''}>
                     <span>
                       <strong>{r.attackerName}</strong>
@@ -332,7 +441,7 @@ export function PlayersPanel({
                       className="realm-button"
                       onClick={() => onChallenge({ user_id: r.attackerId, name: r.attackerName })}
                     >
-                      ⚔ {tr('Revanșă', 'Revenge')}
+                      ⚔ <span className="realm-btn-label">{tr('Revanșă', 'Revenge')}</span>
                     </button>
                   </li>
                 ))}
@@ -340,7 +449,7 @@ export function PlayersPanel({
             </section>
           )}
           <section className="realm-friends" aria-label={tr('Prieteni', 'Friends')}>
-            {!friends.length ? (
+            {!others.length ? (
               <p className="realm-note">
                 {tr(
                   'Încă n-ai prieteni. Caută jucători în tabul „Caută” și apasă +.',
@@ -349,103 +458,65 @@ export function PlayersPanel({
               </p>
             ) : (
               <ul>
-                {friends.map((f) => {
-                  const score = scores.get(f.user_id);
+                {others.map((f) => {
+                  const score = scores.get(f.user_id),
+                    open = menuFor === f.user_id,
+                    friend = f.status === 'accepted';
                   return (
                     <li key={f.user_id} className="realm-friend">
                       <span>
                         <strong>{f.name}</strong>
-                        <small>
-                          {f.status === 'accepted'
-                            ? f.acceptHelp
-                              ? tr('Prieten · acceptă ajutor', 'Friend · accepts help')
-                              : tr('Prieten', 'Friend')
-                            : f.incoming
-                              ? tr('Vrea să fiți prieteni', 'Wants to be friends')
-                              : tr('Cerere trimisă', 'Request sent')}
-                        </small>
-                        {score && (
-                          <small className="realm-friend-score">
-                            ⚔ {tr('Tu', 'You')} {score.wins} – {score.losses} {f.name}
-                            {score.draws > 0 &&
-                              ` · ${score.draws} ${tr(score.draws === 1 ? 'remiză' : 'remize', score.draws === 1 ? 'draw' : 'draws')}`}
-                          </small>
+                        {friend ? (
+                          score && (
+                            <small className="realm-friend-score">
+                              ⚔ {tr('Tu', 'You')} {score.wins} – {score.losses}
+                              {score.draws > 0 && ` · ${score.draws} ${tr('egal', 'drawn')}`}
+                            </small>
+                          )
+                        ) : (
+                          <small>{tr('Cerere trimisă', 'Request sent')}</small>
                         )}
                       </span>
-                      {f.status === 'pending' && f.incoming && (
-                        <button
-                          className="realm-button"
-                          disabled={busy}
-                          onClick={() => act(() => acceptFriend(selfId, f.user_id))}
-                        >
-                          {tr('Acceptă', 'Accept')}
+                      {open && friend && (
+                        <button className="realm-button secondary" onClick={() => onVisit(f, canHelp(f))}>
+                          {tr('Vizitează', 'Visit')}
                         </button>
                       )}
-                      {f.status === 'accepted' && (
+                      {open && (
+                        <button
+                          className="realm-button secondary"
+                          disabled={busy}
+                          onClick={() => {
+                            setMenuFor(null);
+                            act(() => removeFriend(selfId, f.user_id));
+                          }}
+                        >
+                          {friend ? tr('Elimină', 'Remove') : tr('Anulează', 'Cancel')}
+                        </button>
+                      )}
+                      {friend && !open && (
                         <button
                           className="realm-button"
                           title={tr('Luptă amicală cu echipa lui', 'Friendly fight against their team')}
                           aria-label={tr(`Provoacă-l pe ${f.name} la luptă`, `Challenge ${f.name} to a fight`)}
                           onClick={() => onChallenge(f)}
                         >
-                          ⚔
-                        </button>
-                      )}
-                      {f.status === 'accepted' && (
-                        <button className="realm-button" onClick={() => onVisit(f, canHelp(f))}>
-                          {tr('Vizitează', 'Visit')}
+                          ⚔ <span className="realm-btn-label">{tr('Provoacă', 'Challenge')}</span>
                         </button>
                       )}
                       <button
-                        className="realm-button secondary"
-                        disabled={busy}
-                        aria-label={tr(`Elimină ${f.name}`, `Remove ${f.name}`)}
-                        onClick={() => act(() => removeFriend(selfId, f.user_id))}
+                        className="realm-button secondary realm-friend-more"
+                        aria-expanded={open}
+                        aria-label={tr(`Mai multe: ${f.name}`, `More: ${f.name}`)}
+                        onClick={() => setMenuFor(open ? null : f.user_id)}
                       >
-                        ×
+                        {open ? '×' : '...'}
                       </button>
                     </li>
                   );
                 })}
               </ul>
             )}
-          </section>
-          <section className="realm-friends-settings" aria-label={tr('Setări', 'Settings')}>
-            <div className="realm-friends-defense">
-              <span>{tr('Echipa de apărare', 'Defense team')}</span>
-              {defense.length ? (
-                defense.map((d) => (
-                  <span key={d.id} className="realm-player-portrait" title={d.nickname}>
-                    <DinosaurArt species={d.species} element={d.element} stage={d.stage} paused frame={0} />
-                  </span>
-                ))
-              ) : (
-                <small>{tr('echipa din arenă', 'your arena team')}</small>
-              )}
-              <button className="realm-button secondary" onClick={() => setPickDefense((v) => !v)}>
-                {pickDefense ? tr('Gata', 'Done') : tr('Schimbă', 'Change')}
-              </button>
-            </div>
-            {pickDefense && (
-              <TeamPicker
-                dinos={save.dinos}
-                selected={defense.map((d) => d.id)}
-                max={3}
-                lang={lang}
-                label={tr('Apărare', 'Defense')}
-                isEligible={defenseEligible}
-                onChange={(ids) => run({ type: 'setDefense', dinoIds: ids })}
-              />
-            )}
-            <label className="realm-friends-help">
-              <input type="checkbox" checked={acceptHelp} onChange={(e) => toggleHelp(e.target.checked)} />
-              <span>
-                {tr('Prietenii îmi pot colecta aurul', 'Friends may collect my gold')}
-                <small>
-                  {tr('O dată pe oră, când îți vizitează lumea.', 'Once an hour, when they visit your world.')}
-                </small>
-              </span>
-            </label>
           </section>
         </TabPanel>
       ) : (

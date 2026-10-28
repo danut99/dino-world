@@ -1338,7 +1338,7 @@ export default function RealmsApp({
     <>
       <button
         className="realm-avatar"
-        aria-label={desk ? tr('Profil și setări', 'Profile and settings') : tr('Resurse', 'Resources')}
+        aria-label={desk ? tr('Profil și setări', 'Profile and settings') : tr('Profil', 'Profile')}
         aria-expanded={profileOpen}
         aria-controls={id}
         onClick={() => setProfileOpen((open) => !open)}
@@ -1351,14 +1351,6 @@ export default function RealmsApp({
             title={tr('Progresul nu e salvat în cont', 'Progress is not saved to an account')}
           >
             !
-          </b>
-        )}
-        {playersBadge > 0 && (
-          <b
-            className="realm-friend-alert"
-            title={tr('Cereri de prietenie și dueluri noi', 'Friend requests and new duels')}
-          >
-            {playersBadge}
           </b>
         )}
       </button>
@@ -1394,27 +1386,6 @@ export default function RealmsApp({
               </header>
               {sync.user?.email && <p className="realm-hud-menu-email">{sync.user.email}</p>}
               <nav>
-                <button className="realm-hud-menu-shop" onClick={closeThen(() => setPanel('shop'))}>
-                  <span className="realm-hud-menu-gem" aria-hidden="true">
-                    💎
-                  </span>
-                  <span>
-                    {tr('Magazin', 'Shop')} · {save.gems}
-                    <small>{tr('Diamante pentru a avansa mai repede', 'Diamonds to move faster')}</small>
-                  </span>
-                  <em aria-hidden="true">›</em>
-                </button>
-                {account && (
-                  <button onClick={closeThen(() => setPanel('players'))}>
-                    <Icon name="trophy" />
-                    <span>
-                      {tr('Jucători', 'Players')}
-                      <small>{tr('Vizitează lumile altora', "Visit other players' worlds")}</small>
-                    </span>
-                    {playersBadge > 0 && <b className="realm-menu-count">{playersBadge}</b>}
-                    <em aria-hidden="true">›</em>
-                  </button>
-                )}
                 <button
                   className={guest ? 'realm-hud-menu-guest' : undefined}
                   onClick={closeThen(() => setPanel('account'))}
@@ -1471,46 +1442,33 @@ export default function RealmsApp({
               }}
             >
               <header>
-                <strong>{badge.title}</strong>
+                <div>
+                  <strong>{sync.name ?? d?.nickname ?? tr('Explorator', 'Explorer')}</strong>
+                  <small>
+                    {badge.rank} · {badge.title}
+                  </small>
+                </div>
                 <button aria-label={tr('Închide', 'Close')} onClick={() => setProfileOpen(false)}>
                   ×
                 </button>
               </header>
               {sync.user?.email && <p className="realm-profile-email">{sync.user.email}</p>}
-              <div className="realm-profile-stats">
-                <Resource icon="gold" value={Math.floor(save.gold)} label={tr('Aur', 'Gold')} color="gold" />
-                <Resource icon="food" value={save.food} label={tr('Hrană', 'Food')} color="food" />
-                <button className="realm-resource gems realm-gems-chip" onClick={closeThen(() => setPanel('shop'))}>
-                  <span aria-hidden="true">💎</span>
-                  <div>
-                    <small>{tr('Diamante', 'Diamonds')}</small>
-                    <strong>{save.gems.toLocaleString('en-GB')}</strong>
-                  </div>
-                </button>
-                <Resource icon="star" value={d?.level ?? 1} label={tr('Nivel', 'Level')} color="gold" />
-              </div>
               <footer>
-                <button onClick={closeThen(() => setPanel('shop'))}>💎 {tr('Magazin', 'Shop')}</button>
-                <button
-                  onClick={closeThen(() => {
-                    setDinoRealm(null);
-                    setPanel('dino');
-                  })}
-                >
-                  {tr('Dinozauri', 'Dinosaurs')}
-                </button>
-                {account && (
-                  <button onClick={closeThen(() => setPanel('players'))}>
-                    {tr('Jucători', 'Players')}
-                    {playersBadge > 0 && <b className="realm-menu-count">{playersBadge}</b>}
-                  </button>
-                )}
                 <button onClick={closeThen(() => setPanel('account'))}>
                   {guest ? tr('Creează cont', 'Create account') : tr('Cont', 'Account')}
                 </button>
                 <button onClick={closeThen(() => setPanel('settings'))}>{tr('Setări', 'Settings')}</button>
-                <button onClick={closeThen(() => setPanel('wiki'))}>Wikipedia</button>
                 <button onClick={closeThen(replayTour)}>{tr('Ghid de start', 'Getting started')}</button>
+                {account && !guest && (
+                  <button
+                    className="realm-profile-signout"
+                    onClick={closeThen(() => {
+                      void cloudSync.flush().finally(() => void signOut());
+                    })}
+                  >
+                    {tr('Ieși din cont', 'Sign out')}
+                  </button>
+                )}
               </footer>
             </section>
           )}
@@ -1689,6 +1647,15 @@ export default function RealmsApp({
           <button onClick={() => setPanel('shop')} aria-label={tr('Diamante · magazin', 'Diamonds · shop')}>
             💎 {save.gems.toLocaleString(lang ? 'en-US' : 'ro-RO')} <b aria-hidden="true">+</b>
           </button>
+          {account && (
+            <button
+              className="realm-players-chip"
+              onClick={() => setPanel('players')}
+              aria-label={tr('Jucători', 'Players')}
+            >
+              ⚔{playersBadge > 0 && <i className="realm-friend-alert">{playersBadge}</i>}
+            </button>
+          )}
           {canFullscreen && (
             <button
               className="realm-fullscreen"
@@ -1758,6 +1725,17 @@ export default function RealmsApp({
           <button className="realm-square" onClick={() => setPanel('wiki')} aria-label="Wikipedia" title="Wikipedia">
             <Icon name="wiki" />
           </button>
+          {account && (
+            <button
+              className="realm-square realm-players-button"
+              onClick={() => setPanel('players')}
+              aria-label={tr('Jucători', 'Players')}
+              title={tr('Jucători · prieteni, dueluri, clasament', 'Players · friends, duels, leaderboard')}
+            >
+              <Icon name="trophy" />
+              {playersBadge > 0 && <b className="realm-friend-alert">{playersBadge}</b>}
+            </button>
+          )}
           <div className="realm-hud-profile">{profileMenu('realm-hud-menu', true)}</div>
         </header>
         {DEV_TOOLS && devOpen && (

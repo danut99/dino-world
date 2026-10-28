@@ -2107,6 +2107,12 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
 /* Defense team row and the weekly friends ranking. */
 .realm-friends-defense { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; font-size: 13px; color: #e2d3b2; background: #241c18; border: 1px solid #a3938055; }
 .realm-friends-defense > .realm-player-portrait { width: 40px; height: 40px; }
+.realm-friends-defense > span:first-child { display: flex; flex: 1 1 140px; flex-direction: column; gap: 2px; min-width: 0; color: #fff1b8; }
+@media (max-width: 760px) {
+  .realm-friends-defense { gap: 6px; padding: 6px 8px; }
+  .realm-friends-defense > .realm-player-portrait { width: 34px; height: 34px; }
+  .realm-friends-defense > .realm-button { min-height: 34px; padding-inline: 10px; }
+}
 .realm-friends-defense small { color: #cdbfa8; }
 .realm-friends-defense > .realm-button { margin-left: auto; min-height: 36px; }
 .realm-friends-weekly { display: grid; gap: 4px; padding: 8px 10px; background: #241c18; border: 1px solid #a3938055; }
@@ -2119,10 +2125,30 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
 .realm-friends-weekly .realm-rank-row.self { outline: 1px solid #e0a96a; }
 .realm-friends-weekly .realm-rank-row .realm-rank-score { color: #f6d77a; white-space: nowrap; }
 .realm-rank .realm-player-portrait { grid-area: auto; }
-/* Leaderboard rows: one button per row; the weekly wins list has no portrait column. */
-.realm-leaderboard .realm-rank-row { display: block; min-width: 0; }
+/* Leaderboard rows: the row opens their world, ⚔ beside it starts a duel; the weekly wins list has no portrait. */
+.realm-leaderboard .realm-rank-row { display: flex; align-items: stretch; gap: 6px; min-width: 0; }
+.realm-leaderboard .realm-rank-row > .realm-rank { flex: 1; min-width: 0; }
+.realm-rank-duel { flex: none; width: 48px; font-size: 18px; color: #fff1b8; background: #3a5a32; border: 1px solid #9be38f88; cursor: pointer; }
+.realm-rank-duel:hover, .realm-rank-duel:focus-visible { background: #4a7340; }
 .realm-rank.no-portrait { grid-template-columns: 40px minmax(0, 1fr) auto; }
-/* Defense team and the help switch sit below the friends, as settings. */
+/* Tabs with the settings gear at their end. */
+.realm-players-top { display: flex; align-items: flex-end; gap: 6px; }
+.realm-players-top > :first-child { flex: 1; min-width: 0; }
+.realm-players-gear { flex: none; align-self: flex-end; width: 32px; height: 30px; margin: 0 0 2px; padding: 0; font-size: 15px; line-height: 1; color: var(--px-bone-3, #e2d3b2); background: var(--px-stone-4, #3d332d); border: 2px solid var(--px-outline, #1a1412); cursor: pointer; }
+.realm-players-gear[aria-pressed='true'] { color: #2f2520; background: #e0a96a; }
+.realm-friends-requests { border-bottom: 1px solid #a3938055; }
+.realm-friends-requests .realm-friend { border-left: 3px solid #f6d77a; }
+.realm-friend .realm-friend-more { width: 40px; padding: 0; font-size: 18px; }
+@media (max-width: 760px) {
+  .realm-players-top { align-items: flex-end; }
+  .realm-players-top .ui-tab { flex: 1 1 auto; justify-content: center; min-width: 0; padding: 5px 7px 6px; font-size: 12px; }
+  .realm-players-gear { width: 30px; height: 28px; font-size: 14px; }
+  .realm-btn-label { display: none; }
+  .realm-friend .realm-button, .realm-duels-recent .realm-button { min-width: 44px; padding-inline: 10px; }
+  .realm-friend > span strong { white-space: normal; overflow-wrap: anywhere; }
+  .realm-duels-recent li, .realm-friend { padding: 6px 8px; }
+}
+/* Defense team and the help switch, behind the gear. */
 .realm-friends-settings { display: grid; gap: 8px; }
 /* Duels against your defense team in the last week, newest first, each with a revenge button. */
 .realm-duels-recent { display: grid; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid #a3938055; }
@@ -2210,7 +2236,12 @@ button.realm-quest-top:focus-visible { outline: 2px solid #f6d77a; outline-offse
 .realm-save-invite { max-width: 420px; margin: 0 auto 14px; font-size: 13px; line-height: 1.6; color: #fff1b8; text-align: center; }
 .realms-app .realm-hud-menu > nav > button.realm-hud-menu-guest { border-image: var(--frame-card-active); }
 .realm-guest-alert { position: absolute; top: -4px; right: -4px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: 12px; font-weight: 700; color: #2f2520; background: #f6d77a; box-shadow: 0 0 0 2px #1b1411; }
-.realm-friend-alert { position: absolute; top: -4px; left: -4px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; font-size: 11px; font-weight: 700; color: #fff; background: #d9483b; box-shadow: 0 0 0 2px #1b1411; }
+.realm-friend-alert { position: absolute; top: -4px; left: -4px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; font-size: 11px; font-style: normal; font-weight: 700; color: #fff; background: #d9483b; box-shadow: 0 0 0 2px #1b1411; }
+.realm-players-button, .realm-players-chip { position: relative; }
+.realm-players-button .realm-friend-alert, .realm-players-chip .realm-friend-alert { left: auto; right: -6px; top: -6px; }
+.realm-profile-card > header > div { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.realm-profile-card > header > div small { font-size: 11px; color: #cdbfa8; }
+.realm-profile-card > footer .realm-profile-signout { flex-basis: 100%; color: #ffb3a8; background: transparent; border-style: dashed; }
 .realm-menu-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 6px; padding: 0 4px; border-radius: 9px; font-size: 11px; font-weight: 700; color: #fff; background: #d9483b; }
 /* A bottom-bar button unlocked since the player last looked. */
 .realm-nav > button { position: relative; }

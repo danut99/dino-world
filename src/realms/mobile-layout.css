@@ -761,12 +761,17 @@
     border-radius: 4px;
     text-shadow: none;
   }
-  main.realms-app .realm-mobile-wallet > button.realm-fullscreen {
+  main.realms-app .realm-mobile-wallet > button.realm-fullscreen,
+  main.realms-app .realm-mobile-wallet > button.realm-players-chip {
     justify-content: center;
     width: 32px;
     padding: 0;
     font-size: 16px;
     border-color: #cdbfa899;
+  }
+  main.realms-app .realm-mobile-wallet > button.realm-players-chip {
+    width: 36px;
+    border-color: #e0a96acc;
   }
   /* The place name moves under the wallet. */
   main.realms-app .realm-location {
