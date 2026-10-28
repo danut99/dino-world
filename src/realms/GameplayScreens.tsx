@@ -15,6 +15,7 @@ import {
   busyDinos,
   command,
   currentTrip,
+  DUEL,
   elementEdge,
   ELEMENT_BEATS,
   ELEMENTS,
@@ -52,6 +53,8 @@ import {
   type TowerRewardFloor,
   type TowerRule,
 } from './game';
+/** A finished duel: whether it paid the day's prize, whether that rival was already beaten today, prizes taken. */
+export type DuelOutcome = { paid: boolean; again: boolean; count: number };
 import { weekId, weekStart } from './daily';
 import { arenaFoes, arenaTier, foeHasUltimate, roundCap, teamReward } from './arenaTeams';
 import { DinosaurArt } from './DinosaurArt';
@@ -1357,7 +1360,13 @@ export function BattleScreen({
   close,
   embedded = false,
   friendly,
-}: Pick<Props, 'save' | 'lang' | 'run' | 'close'> & { embedded?: boolean; friendly?: string }) {
+  duel,
+}: Pick<Props, 'save' | 'lang' | 'run' | 'close'> & {
+  embedded?: boolean;
+  friendly?: string;
+  /** What the finished duel paid (see DUEL): set once it is over. */
+  duel?: DuelOutcome;
+}) {
   const battle = save.battle!,
     encounter = ENCOUNTERS.find((e) => e.id === battle.encounterId),
     tower = parseTowerId(battle.encounterId);
@@ -1837,13 +1846,40 @@ export function BattleScreen({
               </p>
             );
           })()}
+          {friendly ? (
+            <div className="result-duel">
+              {battle.result === 'victory' && duel?.paid && (
+                <p className="result-loot">
+                  +{DUEL.gold} ● &nbsp; +{DUEL.food} ❧
+                </p>
+              )}
+              <p>
+                {battle.result !== 'victory'
+                  ? battle.result === 'draw'
+                    ? tr(`Remiză cu ${friendly}: fără premiu.`, `A draw with ${friendly}: no prize.`)
+                    : tr(
+                        `${friendly} a rezistat. Schimbă echipa de duel și încearcă din nou!`,
+                        `${friendly} held out. Change your duel team and try again!`,
+                      )
+                  : duel?.again
+                    ? tr(
+                        `L-ai mai bătut azi pe ${friendly}: fără premiu și fără punct nou.`,
+                        `You already beat ${friendly} today: no prize and no new point.`,
+                      )
+                    : duel?.paid
+                      ? tr(
+                          `⚔ +1 victorie în clasament · premii azi ${duel.count}/${DUEL.rewards}`,
+                          `⚔ +1 leaderboard win · prizes today ${duel.count}/${DUEL.rewards}`,
+                        )
+                      : tr(
+                          `⚔ +1 victorie în clasament · premiile de azi s-au terminat`,
+                          `⚔ +1 leaderboard win · today's prizes are used up`,
+                        )}
+              </p>
+            </div>
+          ) : (
           <p className="result-rest">
-            {friendly
-              ? tr(
-                  `Duel cu ${friendly}: victoria intră în clasamentul săptămânal, iar primele victorii ale zilei aduc aur și hrană.`,
-                  `Duel with ${friendly}: the win counts on the weekly leaderboard, and the day's first wins pay gold and food.`,
-                )
-              : tower
+            {tower
                 ? battle.result === 'victory'
                   ? tr(
                       `Etajul ${tower.floor} cucerit! Fără odihnă: urcă mai departe.`,
@@ -1868,6 +1904,7 @@ export function BattleScreen({
                         `The team returns safely and rests ${restMinutes} min. Try a better-suited element or higher levels.`,
                       )}
           </p>
+          )}
           {save.rewardPending && (
             <>
               {!!battle.reward.milestones && (

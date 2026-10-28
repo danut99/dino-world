@@ -375,11 +375,11 @@ export function PlayersPanel({
   const incoming = friends.filter((f) => f.status === 'pending' && f.incoming);
   const others = friends.filter((f) => !(f.status === 'pending' && f.incoming));
   const defenseStrip = (
-    <section className="realm-friends-settings" aria-label={tr('Echipa de apărare', 'Defense team')}>
+    <section className="realm-friends-settings" aria-label={tr('Echipa de duel', 'Duel team')}>
       <div className="realm-friends-defense">
         <span>
-          🛡 {tr('Echipa de apărare', 'Defense team')}
-          <small>{tr('Luptă când alt jucător te atacă.', 'Fights when another player attacks you.')}</small>
+          ⚔ {tr('Echipa de duel', 'Duel team')}
+          <small>{tr('Atacă și te apară în dueluri.', 'Attacks and defends in duels.')}</small>
         </span>
         {defense.length ? (
           defense.map((d) => (
@@ -400,7 +400,7 @@ export function PlayersPanel({
           selected={defense.map((d) => d.id)}
           max={3}
           lang={lang}
-          label={tr('Apărare', 'Defense')}
+          label={tr('Duel', 'Duel')}
           isEligible={defenseEligible}
           onChange={(ids) => run({ type: 'setDefense', dinoIds: ids })}
         />

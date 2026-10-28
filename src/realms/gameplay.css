@@ -3513,6 +3513,23 @@
   font-size: 13px;
   color: #cdbfa8;
 }
+/* Duel result: what it paid, then one clear line about the ranking. */
+.battle-result .result-duel {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  margin: 4px auto 12px;
+  text-align: center;
+}
+.battle-result .result-duel p {
+  margin: 0;
+  font-size: 14px;
+  color: #fff1b8;
+}
+.battle-result .result-duel .result-loot {
+  font-size: 18px;
+  color: #f6d77a;
+}
 .battle-result .result-recap {
   display: flex;
   flex-wrap: wrap;

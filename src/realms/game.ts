@@ -1796,12 +1796,13 @@ export const isFriendly = (encounterId: string) => encounterId.startsWith(FRIEND
  */
 export function friendlyBattle(me: Save, rival: Save, rivalId: string, now: number): Save {
   const s = advance(me, now);
-  const defense = (rival.defense ?? [])
-    .map((id) => rival.dinos.find((d) => d.id === id))
-    .filter((d): d is Dino => !!d && d.stage !== 'baby');
-  const team = teamDinos(s).filter((d) => d.stage !== 'baby'),
-    foes: Foe[] = (defense.length ? defense : teamDinos(rival))
-      .filter((d) => d.stage !== 'baby')
+  // Each side fights with its duel team (Players → duel team), or its arena team when none is set.
+  const duelTeam = (x: Save) => {
+    const set = (x.defense ?? []).map((id) => x.dinos.find((d) => d.id === id)).filter((d): d is Dino => !!d);
+    return (set.length ? set : teamDinos(x)).filter((d) => d.stage !== 'baby');
+  };
+  const team = duelTeam(s),
+    foes: Foe[] = duelTeam(rival)
       .map((d) => {
         // The friend's own point allocation counts: how they built their team decides the fight.
         const st = dinoStats(d);

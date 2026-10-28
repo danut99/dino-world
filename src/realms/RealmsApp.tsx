@@ -10,7 +10,7 @@ import { DinosaurArt } from './DinosaurArt';
 import { HeroVision } from './HeroVision';
 import { AnimationViewer } from './AnimationViewer';
 import { SPECIES_NAMES } from './dinosaurs';
-import { GameplayScreen, BattleScreen, type GameplayView } from './GameplayScreens';
+import { GameplayScreen, BattleScreen, type DuelOutcome, type GameplayView } from './GameplayScreens';
 import { WorkshopPanel } from './WorkshopPanel';
 import { GemShop } from './GemShop';
 import { unlockedNav, type NavKey } from './navUnlocks';
@@ -323,7 +323,12 @@ export default function RealmsApp({
   /** Another player's world being looked at (read only), and which of its worlds is shown. */
   const [visit, setVisit] = useState<{ id: string; name: string; save: Save; canHelp: boolean } | null>(null);
   /** A friendly fight against a friend's team, played on a copy of the save that is thrown away afterwards. */
-  const [friendFight, setFriendFight] = useState<{ id: string; name: string; save: Save } | null>(null);
+  const [friendFight, setFriendFight] = useState<{
+    id: string;
+    name: string;
+    save: Save;
+    outcome?: DuelOutcome;
+  } | null>(null);
   const friendRef = useRef(friendFight);
   friendRef.current = friendFight;
   const [visitView, setVisitView] = useState<'home' | RealmId>('home');
@@ -1122,29 +1127,12 @@ export default function RealmsApp({
     try {
       const next = command(fight.save, c, Date.now());
       const result = next.battle?.result;
+      let outcome = fight.outcome;
       if (result && !fight.save.battle?.result) {
         const before = saveRef.current.daily.duels,
-          beatenToday = saveRef.current.daily.duelRivals.includes(fight.id);
+          again = saveRef.current.daily.duelRivals.includes(fight.id);
         run({ type: 'duelReward', result, rival: fight.id });
-        const paid = saveRef.current.daily.duels > before;
-        setMessage(
-          result !== 'victory'
-            ? tr('Duelul s-a terminat. Încearcă din nou!', 'The duel is over. Try again!')
-            : paid
-              ? tr(
-                  `Victorie! +${DUEL.gold} aur, +${DUEL.food} hrană (${saveRef.current.daily.duels}/${DUEL.rewards} azi).`,
-                  `Victory! +${DUEL.gold} gold, +${DUEL.food} food (${saveRef.current.daily.duels}/${DUEL.rewards} today).`,
-                )
-              : beatenToday
-                ? tr(
-                    `Victorie! L-ai mai bătut azi pe ${fight.name}: fără premiu și fără punct nou în clasament. Încearcă alt jucător!`,
-                    `Victory! You already beat ${fight.name} today: no prize and no new ranking point. Try another player!`,
-                  )
-                : tr(
-                    'Victorie! Premiile de azi s-au terminat, dar victoria intră în clasament.',
-                    "Victory! Today's prizes are used up, but the win counts on the leaderboard.",
-                  ),
-        );
+        outcome = { paid: saveRef.current.daily.duels > before, again, count: saveRef.current.daily.duels };
         if (account)
           recordFriendBattle(account.user.id, fight.id, result).catch((e) => {
             console.error('Duel result not saved', e);
@@ -1169,7 +1157,7 @@ export default function RealmsApp({
             );
           });
       }
-      friendRef.current = { ...fight, save: next };
+      friendRef.current = { ...fight, save: next, outcome };
       setFriendFight(friendRef.current);
       return true;
     } catch {
@@ -1532,6 +1520,7 @@ export default function RealmsApp({
           run={runFriendFight}
           close={() => setFriendFight(null)}
           friendly={friendFight.name}
+          duel={friendFight.outcome}
         />
         {message && (
           <div className="realm-toast" role="status">
