@@ -4,7 +4,7 @@ import {
   fetchAcceptHelp,
   fetchDefenses,
   fetchFriendScores,
-  fetchWeeklyRanking,
+  fetchLeagueRanking,
   listFriends,
   listLeaderboard,
   listPlayers,
@@ -21,7 +21,18 @@ import {
 } from './cloud';
 import { weekStart } from './daily';
 import { DinosaurArt } from './DinosaurArt';
-import { ELEMENTS, SPECIES, type Command, type Dino, type RealmId, type Save, type Species, type Stage } from './game';
+import {
+  DUEL_SEASON_PRIZES,
+  duelLeague,
+  ELEMENTS,
+  SPECIES,
+  type Command,
+  type Dino,
+  type RealmId,
+  type Save,
+  type Species,
+  type Stage,
+} from './game';
 import { TeamPicker } from './TeamPicker';
 import { Icon } from './ui/Icon';
 import { TabPanel, Tabs } from './ui/Tabs';
@@ -74,14 +85,37 @@ function LeaderboardView({
   visit,
   challenge,
   weekly,
+  level,
+  beaten,
 }: {
   lang: number;
   selfId: string;
   visit: (p: PlayerSummary) => void;
   challenge: Challenge;
   weekly: RankRow[] | null;
+  /** This player's champion level: it picks the league. */
+  level: number;
+  /** Rivals already beaten today (no prize or ranking point again). */
+  beaten: string[];
 }) {
   const tr = (ro: string, en: string) => T(lang, ro, en);
+  const league = duelLeague(level);
+  const [suggested, setSuggested] = useState<PlayerSummary[] | null>(null);
+  useEffect(() => {
+    listPlayers('').then(
+      (rows) =>
+        setSuggested(
+          rows
+            .filter((p) => p.user_id !== selfId && p.level >= 10 && !beaten.includes(p.user_id))
+            .filter((p) => duelLeague(p.level).id === league.id)
+            .sort((a, b) => Math.abs(a.level - level) - Math.abs(b.level - level))
+            .slice(0, 3),
+        ),
+      () => setSuggested([]),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selfId, league.id]);
+  const daysLeft = Math.max(1, Math.ceil((weekStart(Date.now()) + 7 * 86_400_000 - Date.now()) / 86_400_000));
   const [by, setBy] = useState<RankBy | 'wins'>('wins');
   const [board, setBoard] = useState<Leaderboard | null>(null);
   const [failed, setFailed] = useState(false);
@@ -120,17 +154,17 @@ function LeaderboardView({
         ⚔
       </button>
     );
-  const row = (p: PlayerSummary, rank: number) => {
+  const row = (p: PlayerSummary, rank: number, label = score(p)) => {
     const self = p.user_id === selfId;
     return (
-      <li key={p.user_id} className={`realm-rank-row${self ? ' self' : ''}${rank <= 3 ? ' podium' : ''}`}>
-        <button className="realm-rank" disabled={self} onClick={() => visit(p)}>
-          <span className="realm-rank-place">{MEDALS[rank - 1] ?? `#${rank}`}</span>
+      <li key={p.user_id} className={`realm-rank-row${self ? ' self' : ''}${rank && rank <= 3 ? ' podium' : ''}`}>
+        <button className={`realm-rank${rank ? '' : ' no-place'}`} disabled={self} onClick={() => visit(p)}>
+          {rank > 0 && <span className="realm-rank-place">{MEDALS[rank - 1] ?? `#${rank}`}</span>}
           <Portrait p={p} />
           <strong>
             {p.name} {self && <em>{tr('tu', 'you')}</em>}
           </strong>
-          <span className="realm-rank-score">{score(p)}</span>
+          <span className="realm-rank-score">{label}</span>
         </button>
         {duel(p)}
       </li>
@@ -150,8 +184,41 @@ function LeaderboardView({
       </div>
       {by === 'wins' ? (
         <>
+          <div className="realm-league">
+            <strong>
+              <span>
+                {league.icon} {league.name[lang]}
+              </span>
+              <small>
+                {tr('nivel', 'level')} {league.min}–{league.max} ·{' '}
+                {tr(
+                  `încheiere în ${daysLeft} ${daysLeft === 1 ? 'zi' : 'zile'}`,
+                  `ends in ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'}`,
+                )}
+              </small>
+            </strong>
+            <ol className="realm-league-prizes" aria-label={tr('Premii', 'Prizes')}>
+              {DUEL_SEASON_PRIZES.map((p, i) => (
+                <li key={i}>
+                  {MEDALS[i]} {p.gems}💎
+                  <small>
+                    + {tr(p.rarity === 'epic' ? 'ou epic' : 'ou rar', p.rarity === 'epic' ? 'epic egg' : 'rare egg')}
+                  </small>
+                </li>
+              ))}
+            </ol>
+          </div>
+          {suggested && suggested.length > 0 && (
+            <section className="realm-suggested" aria-label={tr('Adversari pe măsura ta', 'Opponents your level')}>
+              <h4>{tr('Adversari pe măsura ta', 'Opponents your level')}</h4>
+              <ol>{suggested.map((p) => row(p, 0, `${tr('Nv.', 'Lv.')} ${p.level}`))}</ol>
+            </section>
+          )}
           <p className="realm-note">
-            {tr('Lupte amicale câștigate de luni încoace.', 'Friendly fights won since Monday.')}
+            {tr(
+              'Victorii în duel de luni încoace, cel mult una pe zi pentru fiecare adversar.',
+              'Duel wins since Monday, at most one a day per opponent.',
+            )}
           </p>
           {!weekly ? (
             <p className="realm-note">{tr('Se încarcă…', 'Loading…')}</p>
@@ -249,6 +316,7 @@ export function PlayersPanel({
   /** The friend whose extra actions (visit, remove) are unfolded. */
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const defense = save.defense.map((id) => save.dinos.find((d) => d.id === id)).filter((d): d is Dino => !!d);
+  const championLevel = save.dinos.find((d) => d.id === save.champion)?.level ?? 0;
   const defenseEligible = useCallback((d: Dino) => (d.stage === 'baby' ? (lang ? 'baby' : 'pui') : null), [lang]);
 
   const reloadFriends = () => listFriends(selfId).then(setFriends, () => {});
@@ -256,7 +324,10 @@ export function PlayersPanel({
     void reloadFriends();
     fetchAcceptHelp(selfId).then(setAcceptHelp, () => {});
     fetchFriendScores(selfId).then(setScores, () => {});
-    fetchWeeklyRanking(new Date(weekStart(Date.now()))).then(setRanking, () => setRanking([]));
+    fetchLeagueRanking(new Date(weekStart(Date.now())), new Date(Date.now() + 60_000), duelLeague(championLevel)).then(
+      setRanking,
+      () => setRanking([]),
+    );
     fetchDefenses(selfId, new Date(Date.now() - 7 * 86_400_000).toISOString()).then(
       (d) => setRecent(d.reverse().slice(0, 8)),
       () => {},
@@ -384,6 +455,8 @@ export function PlayersPanel({
             lang={lang}
             selfId={selfId}
             weekly={ranking}
+            level={championLevel}
+            beaten={save.daily.duelRivals}
             challenge={onChallenge}
             visit={(p) => onVisit(p, canHelp(friendOf(p.user_id)))}
           />

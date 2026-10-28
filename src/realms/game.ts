@@ -319,12 +319,19 @@ export const RARITY_NAMES: Record<Rarity, readonly [string, string]> = {
   epic: ['Epic', 'Epic'],
   legendary: ['Legendar', 'Legendary'],
 };
-/** Chance of a rare and of an epic egg, by where it is won; harder arena tiers pay better. Market eggs are common. */
-export function rarityOdds(encounter: { id: string; mode: 'arena' | 'expedition' }): { rare: number; epic: number } {
-  if (encounter.mode !== 'arena') return { rare: 0.2, epic: 0.04 };
+/** Chance of a rare, epic and legendary egg, by where it is won; harder arena tiers pay better. */
+export type RarityChance = { rare: number; epic: number; legendary?: number };
+export function rarityOdds(encounter: { id: string; mode: 'arena' | 'expedition' }): RarityChance {
+  if (encounter.mode !== 'arena') return { rare: 0.25, epic: 0.06 };
   const tier = Number(encounter.id.split('-')[2] ?? 1);
-  return tier >= 3 ? { rare: 0.25, epic: 0.12 } : tier === 2 ? { rare: 0.22, epic: 0.08 } : { rare: 0.2, epic: 0.05 };
+  return tier >= 3
+    ? { rare: 0.35, epic: 0.15, legendary: 0.02 }
+    : tier === 2
+      ? { rare: 0.3, epic: 0.1 }
+      : { rare: 0.25, epic: 0.06 };
 }
+/** Market eggs: mostly common, with a small surprise. */
+export const MARKET_RARITY: RarityChance = { rare: 0.1, epic: 0.02 };
 export const rarityOf = (x: { rarity?: Rarity }): Rarity => x.rarity ?? 'common';
 /** A team member in an arena fight: its health, kept through the relay (a fallen member stays at 0). */
 export interface BattleAlly {
@@ -500,6 +507,8 @@ export interface Save {
   lampSpots: { x: number; y: number }[];
   /** Legend trials done in the Bucharest week `week`, once the story is finished (see LEGEND_TRIAL). */
   legend: { week: string; trials: number };
+  /** The last duel season (its Monday, YYYY-MM-DD) whose prize was taken, or '' (see DUEL_SEASON_PRIZES). */
+  duelSeason: string;
   /** The weekly tower: highest floor cleared this week (0 to TOWER_FLOORS) and reward floors already claimed. */
   tower: { week: string; floor: number; claimed: number[] };
   /** The dinosaur training for a free level, and when it is done (see TRAINING); null when nobody trains. */
@@ -514,6 +523,8 @@ export interface Notice {
   eggSold?: number;
   gems?: number;
   tickets?: { realm: RealmId; count: number };
+  /** A world just unlocked and its welcome egg went to the waiting list. */
+  worldEgg?: RealmId;
 }
 export interface CraftJob {
   id: string;
@@ -739,7 +750,7 @@ export const releaseGold = (d: Pick<Dino, 'stage' | 'rarity' | 'species'>) =>
  * the time. Expeditions bring their region's egg: always at a region's last stage, sometimes on patrols (see
  * PATROL); those never touch the pity counter.
  */
-export const EGG_DROP = { tiers: [0.1, 0.12, 0.15], pity: 8, fresh: 0.75 };
+export const EGG_DROP = { tiers: [0.15, 0.2, 0.25], pity: 6, fresh: 0.75 };
 /** Won eggs waiting for the shelf: twenty regular ones, plus room kept for the unique boss and story eggs. */
 const MAX_OWED_EGGS = 40,
   MAX_OWED_REGULAR = 20;
@@ -1263,6 +1274,8 @@ export type Command =
   | { type: 'claimTraining' | 'treasure' }
   /** A duel ended: the first win of the day against each rival pays, up to DUEL.rewards a day. */
   | { type: 'duelReward'; result: 'victory' | 'defeat' | 'draw'; rival: string }
+  /** Last week's duel season prize for a place (1 to 3) in the player's league. */
+  | { type: 'duelSeason'; week: string; rank: number }
   /** Wakes a resting dinosaur (the champion when none is given), or with `team` every resting team member. */
   | { type: 'gemRest'; dinoId?: string; team?: boolean }
   | { type: 'gemSpin' };
@@ -1316,6 +1329,7 @@ export function newSave(now: number): Save {
     lamps: 0,
     lampSpots: [],
     legend: { week: weekId(now), trials: 0 },
+    duelSeason: '',
     tower: { week: weekId(now), floor: 0, claimed: [] },
     training: null,
   };
@@ -1392,6 +1406,21 @@ export const PET = { perDay: 5, food: 10 };
 export const TRAINING = { minutes: 30, perDay: 3 };
 export const TREASURE = { perDay: 4, everyMs: 2 * 3_600_000 };
 export const DUEL = { rewards: 5, gold: 120, food: 60 };
+/** Duels are ranked in leagues by the champion's level, so newcomers meet players of their own strength. */
+export const DUEL_LEAGUES = [
+  { id: 'bronze', name: ['Liga de Bronz', 'Bronze League'], icon: '🥉', min: 0, max: 19 },
+  { id: 'silver', name: ['Liga de Argint', 'Silver League'], icon: '🥈', min: 20, max: 34 },
+  { id: 'gold', name: ['Liga de Aur', 'Gold League'], icon: '🥇', min: 35, max: 50 },
+] as const;
+export const duelLeague = (level: number) => DUEL_LEAGUES.find((l) => level <= l.max) ?? DUEL_LEAGUES[2];
+/** The top three of each league at the end of a week (wins counted once per rival a day, see 0011). */
+export const DUEL_SEASON_PRIZES = [
+  { gems: 30, rarity: 'epic' },
+  { gems: 20, rarity: 'rare' },
+  { gems: 10, rarity: 'rare' },
+] as const;
+/** The Monday (YYYY-MM-DD) of the week before the one `now` falls in. */
+export const lastWeekId = (now: number) => weekId(Date.parse(`${weekId(now)}T12:00:00Z`) - 7 * 86_400_000);
 /** Whether a treasure waits on the island: up to TREASURE.perDay a day, TREASURE.everyMs apart. */
 export const treasureReady = (s: Save, now: number) => {
   const day = dailyState(s, now);
@@ -1466,21 +1495,31 @@ function rollEgg(s: Save, encounter: Encounter, now: number): EggKind | undefine
  * The family and rarity of an egg of `element`, fixed by `seed`: a family still missing from the collection comes
  * first, most of the time (EGG_DROP.fresh). Undefined when the element has no playable family.
  */
+/** The rarity `r` (a roll in [0, 1)) lands on with `chance`. */
+const rarityFrom = (r: number, chance: RarityChance): Rarity => {
+  const legendary = chance.legendary ?? 0;
+  return r < legendary
+    ? 'legendary'
+    : r < legendary + chance.epic
+      ? 'epic'
+      : r < legendary + chance.epic + chance.rare
+        ? 'rare'
+        : 'common';
+};
 function drawEgg(
   s: Pick<Save, 'discovered'>,
   element: RealmId,
   seed: string,
-  chance: { rare: number; epic: number },
+  chance: RarityChance,
 ): EggKind | undefined {
   const all = playableSpecies(element),
     fresh = all.filter((species) => !s.discovered.includes(familyId({ species, element })));
   if (!all.length) return undefined;
   const species = fresh.length && roll(`${seed}:fresh`) < EGG_DROP.fresh ? fresh : all;
-  const r = roll(`${seed}:rarity`);
   return {
     species: species[Math.floor(roll(`${seed}:species`) * species.length)],
     element,
-    rarity: r < chance.epic ? 'epic' : r < chance.epic + chance.rare ? 'rare' : 'common',
+    rarity: rarityFrom(roll(`${seed}:rarity`), chance),
   };
 }
 /**
@@ -1823,10 +1862,10 @@ export type TowerRule = `element:${RealmId}` | 'noHeal' | 'swift' | 'giant';
 export const TOWER_SWIFT = 0.12;
 export const TOWER_GIANT = 1.5;
 export type TowerRewardFloor = 3 | 6 | 10;
-export const TOWER_REWARDS: Record<TowerRewardFloor, DailyReward & { egg?: { rare: number; epic: number } }> = {
+export const TOWER_REWARDS: Record<TowerRewardFloor, DailyReward & { egg?: RarityChance }> = {
   3: { gold: 1500, food: 1000 },
   6: { materials: { wood: 30, stone: 30, crystal: 10 }, tickets: 2 },
-  10: { gems: 5, egg: { rare: 0.45, epic: 0.35 } },
+  10: { gems: 5, egg: { rare: 0.45, epic: 0.35, legendary: 0.02 } },
 };
 const towerElements = () => ELEMENTS.map((e) => e.id).filter((e) => playableSpecies(e).length);
 export function towerRule(week: string, floor: number): TowerRule {
@@ -2292,6 +2331,20 @@ export function command(save: Save, c: Command, now: number): Save {
       s.food += DUEL.food;
       break;
     }
+    case 'duelSeason': {
+      const prize = DUEL_SEASON_PRIZES[c.rank - 1];
+      require(prize && c.week === lastWeekId(now) && s.duelSeason !== c.week, 'duel');
+      if (!prize) break;
+      s.duelSeason = c.week;
+      earnGems(s, prize.gems);
+      const worlds = ELEMENTS.map((e) => e.id).filter((e) => s.habitats[e] && playableSpecies(e).length),
+        world = worlds[Math.floor(roll(`season:${c.week}`) * worlds.length)];
+      const egg =
+        world &&
+        drawEgg(s, world, `season:${c.week}`, prize.rarity === 'epic' ? { rare: 0, epic: 1 } : { rare: 1, epic: 0 });
+      if (egg) receiveEgg(s, egg);
+      break;
+    }
     case 'treasure': {
       require(treasureReady(s, now), 'treasure');
       const n = s.daily.treasures;
@@ -2308,12 +2361,14 @@ export function command(save: Save, c: Command, now: number): Save {
       require(MARKET_ELEMENTS.includes(c.element), 'fightEgg');
       require(s.eggs.length < BALANCE.maxEggs, 'eggsFull');
       pay(eggPrice(c.element), {});
+      const marketRarity = rarityFrom(roll(`${s.revision}:${now}:market:${c.element}`), MARKET_RARITY);
       s.eggs.push({
         id: `egg-${s.revision + 1}`,
         species: c.species,
         element: c.element,
         seconds: EGG_SECONDS.market,
         hatchAt: null,
+        ...(marketRarity !== 'common' ? { rarity: marketRarity } : {}),
       });
       break;
     }
@@ -2356,6 +2411,11 @@ export function command(save: Save, c: Command, now: number): Save {
       require(!lock, lock?.reason === 'region' ? 'worldRegion' : 'worldOrder');
       pay(WORLD_UNLOCK[c.realm].gold, WORLD_UNLOCK[c.realm].materials);
       s.habitats[c.realm] = 1;
+      // A new world comes with a common egg of its own, so its habitat does not open empty.
+      const egg = drawEgg(s, c.realm, `unlock:${c.realm}`, { rare: 0, epic: 0 }),
+        waiting = s.owedEggs.length;
+      if (egg) receiveEgg(s, egg);
+      if (s.owedEggs.length > waiting) s.notice = { ...(s.notice as Notice | undefined), worldEgg: c.realm };
       break;
     }
     case 'upgradeHabitat':
@@ -3115,6 +3175,7 @@ export function parseSave(text: string): Save {
     lamps: 0,
     lampSpots: [],
     legend: fresh.legend,
+    duelSeason: '',
     tower: fresh.tower,
     training: null,
   };
@@ -3219,6 +3280,8 @@ export function parseSave(text: string): Save {
     !s.legend ||
     typeof s.legend !== 'object' ||
     typeof s.legend.week !== 'string' ||
+    typeof s.duelSeason !== 'string' ||
+    !(s.duelSeason === '' || /^\d{4}-\d{2}-\d{2}$/.test(s.duelSeason)) ||
     !/^\d{4}-\d{2}-\d{2}$/.test(s.legend.week) ||
     !integer(s.legend.trials, LEGEND_TRIAL.perWeek) ||
     !s.tower ||
@@ -3336,6 +3399,7 @@ export function parseSave(text: string): Save {
         typeof s.notice === 'object' &&
         (s.notice.eggSold === undefined || integer(s.notice.eggSold)) &&
         (s.notice.gems === undefined || integer(s.notice.gems, 1000)) &&
+        (s.notice.worldEgg === undefined || element(s.notice.worldEgg)) &&
         (s.notice.tickets === undefined ||
           (!!s.notice.tickets && element(s.notice.tickets.realm) && integer(s.notice.tickets.count, 100))))
     ) ||

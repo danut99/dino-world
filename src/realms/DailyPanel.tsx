@@ -13,7 +13,7 @@ import {
   type DailyReward,
 } from './daily';
 import { ITEMS, type ItemId } from './content';
-import { GEMS, storyLevel, type Command, type Save } from './game';
+import { DUEL, GEMS, PET, storyLevel, TRAINING, TREASURE, type Command, type Save } from './game';
 import { useReducedMotion } from './useMotion';
 import { Icon, type IconName } from './ui/Icon';
 import { Tabs, tabPanelId } from './ui/Tabs';
@@ -61,12 +61,15 @@ export function DailyPanel({
   lang,
   run,
   navigate,
+  duels = false,
 }: {
   save: Save;
   now: number;
   lang: number;
   run: (c: Command) => boolean;
-  navigate: (to: 'dino' | 'farm' | 'workshop' | 'arena' | 'expedition' | null) => void;
+  navigate: (to: 'dino' | 'farm' | 'workshop' | 'arena' | 'expedition' | 'players' | null) => void;
+  /** Signed in: duels count among today's things to do. */
+  duels?: boolean;
 }) {
   const tr = (ro: string, en: string) => (lang ? en : ro);
   const daily = dailyState(save, now);
@@ -110,6 +113,53 @@ export function DailyPanel({
     scale = dailyScale(chapter),
     freeReroll = daily.rerolls < DAILY_REROLLS_FREE,
     canSwap = availableQuests(save).some((id) => !quests.includes(id));
+  // Everything the day offers, in one row: each shows how far it is and leads to where it is done.
+  const today: { id: string; icon: string; label: string; have: number; of: number; go: () => void }[] = [
+    {
+      id: 'wheel',
+      icon: '🎡',
+      label: tr('Roata', 'Wheel'),
+      have: daily.spin === null ? 0 : 1,
+      of: 1,
+      go: () => setView('wheel'),
+    },
+    {
+      id: 'quests',
+      icon: '📜',
+      label: tr('Misiuni', 'Missions'),
+      have: claimedCount + (daily.bonus ? 1 : 0),
+      of: quests.length + 1,
+      go: () => setView('quests'),
+    },
+    {
+      id: 'treasure',
+      icon: '💎',
+      label: tr('Comori', 'Treasures'),
+      have: daily.treasures,
+      of: TREASURE.perDay,
+      go: () => navigate(null),
+    },
+    {
+      id: 'care',
+      icon: '🦕',
+      label: tr('Îngrijire', 'Care'),
+      have: daily.pets + daily.trainings,
+      of: PET.perDay + TRAINING.perDay,
+      go: () => navigate('dino'),
+    },
+    ...(duels
+      ? [
+          {
+            id: 'duels',
+            icon: '⚔',
+            label: tr('Dueluri', 'Duels'),
+            have: daily.duels,
+            of: DUEL.rewards,
+            go: () => navigate('players'),
+          },
+        ]
+      : []),
+  ];
   return (
     <div className="fit-panel daily-panel">
       <header className="daily-head">
@@ -133,6 +183,21 @@ export function DailyPanel({
           {remaining % 60}min
         </span>
       </header>
+      <nav className="daily-today" aria-label={tr('Azi', 'Today')}>
+        <strong>{tr('Azi', 'Today')}</strong>
+        {today.map((t) => {
+          const done = t.have >= t.of;
+          return (
+            <button key={t.id} className={done ? 'done' : ''} onClick={t.go}>
+              <span aria-hidden="true">{done ? '✓' : t.icon}</span>
+              {t.label}
+              <b>
+                {Math.min(t.have, t.of)}/{t.of}
+              </b>
+            </button>
+          );
+        })}
+      </nav>
       <Tabs
         idBase="daily"
         className="daily-tabs"

@@ -629,9 +629,9 @@
     min-height: 40px;
   }
   main.realms-app .realm-atlas > .pk-head .pk-level {
-    width: 40px;
-    height: 40px;
-    padding: 3px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 3px 4px;
   }
   main.realms-app .realm-atlas .atlas-elements {
     gap: 4px;
@@ -706,8 +706,8 @@
   }
   main.realms-app .realm-atlas > .pk-head .pk-level {
     min-width: 36px;
-    width: 36px;
-    height: 32px;
+    min-height: 34px;
+    padding: 2px 4px;
   }
   main.realms-app .realm-atlas .atlas-body > .realm-button {
     min-height: 28px;

@@ -21,13 +21,16 @@ import { DailyPanel } from './DailyPanel';
 import { GuidedTour, type TourStep } from './GuidedTour';
 import { AdventureJournal } from './AdventureJournal';
 import { goalPurpose } from './journey';
-import { dailyState, DAILY_QUESTS } from './daily';
+import { dailyState, DAILY_QUESTS, weekStart } from './daily';
 import { DevPanel, DinoPanel, EggArt, HabitatsPanel, HatcheryPanel, MarketPanel } from './DinoPanels';
 import {
   advance,
   friendCollect,
   friendlyBattle,
   DUEL,
+  DUEL_SEASON_PRIZES,
+  duelLeague,
+  lastWeekId,
   isTower,
   champion,
   command,
@@ -63,6 +66,7 @@ import {
   duelBlock,
   fetchDefenses,
   fetchFriendNews,
+  fetchLeagueRanking,
   guestName,
   helpFriend,
   recordFriendBattle,
@@ -158,6 +162,13 @@ function noticeText(s: Save, lang: number) {
   const n = s.notice;
   if (!n) return '';
   return [
+    n.worldEgg
+      ? text(
+          lang,
+          `Lumea ${ELEMENTS.find((e) => e.id === n.worldEgg)!.name[0]} e deschisă! Ai primit un ou: îl găsești la Incubator.`,
+          `The ${ELEMENTS.find((e) => e.id === n.worldEgg)!.name[1]} world is open! You got an egg: it waits at the Hatchery.`,
+        )
+      : '',
     n.gems ? text(lang, `+${n.gems} 💎 diamante câștigate!`, `+${n.gems} 💎 diamonds earned!`) : '',
     n.tickets
       ? text(
@@ -599,12 +610,9 @@ export default function RealmsApp({
   const tourBuilt = (kind: string) => saveRef.current.buildings.some((b) => b.kind === kind);
   const endTour = () => {
     setTour(false);
-    // A fresh guide already opened today's rewards: they need not pop up again right after it.
-    if (tour === 'fresh') dailyOpened.current = today.day;
     try {
       localStorage.setItem('dino-realms-tour', 'done');
       localStorage.removeItem(TOUR_STEP_KEY);
-      if (tour === 'fresh') localStorage.setItem('dino-realms-daily-opened', today.day);
     } catch {
       /* Optional: the guide then only shows again on the next visit. */
     }
@@ -1317,6 +1325,45 @@ export default function RealmsApp({
       window.removeEventListener('focus', check);
       window.clearInterval(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account?.user.id]);
+
+  // Last week's duel season: a top-three place in the player's league pays once (see DUEL_SEASON_PRIZES).
+  useEffect(() => {
+    if (!account) return;
+    const uid = account.user.id,
+      week = lastWeekId(Date.now()),
+      key = `dino-realms-season-${uid}`;
+    if (saveRef.current.duelSeason === week) return;
+    try {
+      if (localStorage.getItem(key) === week) return;
+    } catch {
+      /* Checked again next time. */
+    }
+    const level = saveRef.current.dinos.find((x) => x.id === saveRef.current.champion)?.level ?? 0,
+      league = duelLeague(level),
+      until = weekStart(Date.now());
+    fetchLeagueRanking(new Date(weekStart(until - 1)), new Date(until), league, false).then(
+      (rows) => {
+        try {
+          localStorage.setItem(key, week);
+        } catch {
+          /* The command refuses a second claim anyway. */
+        }
+        const mine = rows.find((r) => r.userId === uid);
+        const rank = mine && mine.wins > 0 ? rows.findIndex((r) => r.wins === mine.wins) + 1 : 0;
+        const prize = DUEL_SEASON_PRIZES[rank - 1];
+        if (!prize || !run({ type: 'duelSeason', week, rank })) return;
+        playSound('victory');
+        setMessage(
+          tr(
+            `Sezonul de dueluri s-a încheiat: locul ${rank} în ${league.name[0]}! +${prize.gems} 💎 și un ou ${prize.rarity === 'epic' ? 'epic' : 'rar'} la Incubator.`,
+            `The duel season is over: place ${rank} in the ${league.name[1]}! +${prize.gems} 💎 and a ${prize.rarity} egg at the Hatchery.`,
+          ),
+        );
+      },
+      () => {},
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account?.user.id]);
 
@@ -2162,7 +2209,9 @@ export default function RealmsApp({
                 ← {tr('Înapoi la expediție', 'Back to expedition')}
               </button>
             )}
-            {panel === 'daily' && <DailyPanel save={save} now={now} lang={lang} run={run} navigate={setPanel} />}
+            {panel === 'daily' && (
+              <DailyPanel save={save} now={now} lang={lang} run={run} navigate={setPanel} duels={!!account} />
+            )}
             {panel === 'hatchery' && (
               <HatcheryPanel
                 save={save}
@@ -2470,32 +2519,6 @@ export default function RealmsApp({
                     : 'A quick tour of the screen. Close it any time with ×.',
                 ],
               },
-              {
-                target: ['.realm-resources', '.realm-mobile-wallet'],
-                title: ['Resursele tale', 'Your resources'],
-                body: [
-                  'Aurul construiește, hrana îți crește dinozaurii, iar diamantele termină orice instant. Le vezi mereu sus.',
-                  'Gold builds, food grows your dinosaurs, and diamonds finish anything instantly. They are always at the top.',
-                ],
-              },
-              {
-                target: '.realm-quest',
-                prepare: () => setStoryOpen(true),
-                title: ['Povestea ta', 'Your story'],
-                body: [
-                  'Aici vezi mereu ce ai de făcut. Fiecare pas terminat îți dă aur, hrană și uneori ouă noi.',
-                  'This always shows what to do next. Every finished step pays gold, food and sometimes new eggs.',
-                ],
-              },
-              {
-                target: '.realm-nav',
-                prepare: () => setNavOpen(true),
-                title: ['Meniul de jos', 'The bottom menu'],
-                body: [
-                  'Clădiri, dinozauri și lumi. Pe măsură ce avansezi apar butoane noi aici, marcate cu „NOU”.',
-                  'Buildings, dinosaurs and worlds. More buttons appear here as you progress, marked "NEW".',
-                ],
-              },
               ...(tour === 'fresh'
                 ? ([
                     {
@@ -2516,27 +2539,16 @@ export default function RealmsApp({
                       body: ['Apasă „Incubează” ca să pui oul la cald.', 'Tap "Incubate" to keep the egg warm.'],
                     },
                     {
-                      target: ['.hatch-nest.warming .realm-gem-finish', '.hatch-nest.ready .realm-button'],
-                      prepare: () => setPanel('hatchery'),
-                      wait: true,
-                      click: true,
-                      until: () =>
-                        tourHatched() ||
-                        saveRef.current.eggs.some((e) => e.hatchAt !== null && Date.now() >= e.hatchAt),
-                      title: ['Grăbește-l cu un diamant', 'Rush it with a diamond'],
-                      body: [
-                        'Oul are nevoie de 30 de secunde. Poți aștepta sau apeși ⚡ ca să-l termini instant cu un diamant de start.',
-                        'The egg needs 30 seconds. Wait, or tap ⚡ to finish it instantly with a starter diamond.',
-                      ],
-                    },
-                    {
-                      target: '.hatch-nest.ready .realm-button',
+                      target: ['.hatch-nest.ready .realm-button', '.hatch-nest.warming .realm-gem-finish'],
                       prepare: () => setPanel('hatchery'),
                       wait: true,
                       click: true,
                       until: tourHatched,
                       title: ['Crapă coaja!', 'Crack the shell!'],
-                      body: ['Oul e gata. Apasă „Eclozează”.', 'The egg is ready. Tap "Hatch".'],
+                      body: [
+                        'Oul are nevoie de 30 de secunde: așteaptă sau apasă ⚡ ca să-l termini cu un diamant de start, apoi „Eclozează”.',
+                        'The egg needs 30 seconds: wait, or tap ⚡ to finish it with a starter diamond, then "Hatch".',
+                      ],
                     },
                     {
                       target: ['.hero-vision-primary', '.realm-window:has(.hero-vision)'],
@@ -2563,61 +2575,6 @@ export default function RealmsApp({
                       ],
                     },
                     {
-                      target: '.realm-window .realm-close',
-                      wait: true,
-                      click: true,
-                      until: () => !document.querySelector('.realm-window'),
-                      title: ['Bravo!', 'Well done!'],
-                      body: [
-                        'Închide fereastra și hai înapoi pe insulă.',
-                        "Close the window and let's head back to the island.",
-                      ],
-                    },
-                    {
-                      target: '.realm-daily-access',
-                      wait: true,
-                      click: true,
-                      until: () => !!document.querySelector('.daily-spin') || tourSpun(),
-                      title: ['Misiuni zilnice', 'Daily missions'],
-                      body: [
-                        'În fiecare zi te așteaptă premii noi. Apasă pe steluță ca să le deschizi.',
-                        'New rewards wait for you every day. Tap the star to open them.',
-                      ],
-                    },
-                    {
-                      target: '.daily-spin',
-                      prepare: () => setPanel('daily'),
-                      wait: true,
-                      click: true,
-                      until: tourSpun,
-                      title: ['Roata norocului', 'The lucky wheel'],
-                      body: [
-                        'Ai o rotire gratuită în fiecare zi. Apasă ca să învârți roata!',
-                        'You get one free spin every day. Tap to spin the wheel!',
-                      ],
-                    },
-                    {
-                      target: '.daily-quests',
-                      prepare: () => setPanel('daily'),
-                      wait: true,
-                      title: ['Misiunile zilei', "Today's missions"],
-                      body: [
-                        'Primești 3 misiuni pe zi. Termină-le și apasă „Colectează” pentru premii. Cu toate trei deschizi Cufărul zilei. O misiune grea o poți schimba gratuit o dată pe zi.',
-                        'You get 3 missions a day. Finish them and tap "Claim" for rewards. All three open the Chest of the day. You can swap a hard mission once a day for free.',
-                      ],
-                    },
-                    {
-                      target: '.realm-window .realm-close',
-                      wait: true,
-                      click: true,
-                      until: () => !document.querySelector('.realm-window'),
-                      title: ['Înapoi pe insulă', 'Back to the island'],
-                      body: [
-                        'Închide fereastra. Revino aici în fiecare zi!',
-                        'Close the window. Come back here every day!',
-                      ],
-                    },
-                    {
                       target: '.realm-quest .realm-button',
                       prepare: () => {
                         setPanel(null);
@@ -2628,8 +2585,8 @@ export default function RealmsApp({
                       until: () => saveRef.current.questEggs.includes('c1-hatch'),
                       title: ['Ia-ți premiul', 'Take your reward'],
                       body: [
-                        'Ai terminat primul pas din poveste. Apasă „Ia premiul”.',
-                        'You finished the first story step. Tap "Claim".',
+                        'Aici, în „Povestea ta”, vezi mereu pasul următor. L-ai terminat pe primul: apasă „Ia premiul”.',
+                        '"Your story" always shows the next step. You finished the first one: tap "Claim".',
                       ],
                     },
                     {
@@ -2671,92 +2628,37 @@ export default function RealmsApp({
                       ],
                     },
                     {
-                      target: '.realm-quest .realm-button',
-                      prepare: () => {
-                        setPanel(null);
-                        setStoryOpen(true);
-                      },
-                      wait: true,
-                      click: true,
-                      until: () => saveRef.current.questEggs.includes('c1-farm'),
-                      title: ['Ferma e gata!', 'The farm is up!'],
-                      body: ['Ia premiul pentru fermă.', 'Claim the reward for the farm.'],
-                    },
-                    {
-                      target: '.realm-quest .realm-button',
-                      prepare: () => {
-                        setPanel(null);
-                        setStoryOpen(true);
-                        setHelpBuilding('market');
-                      },
-                      wait: true,
-                      click: true,
-                      until: () =>
-                        tourBuilt('market') || placingRef.current || !!document.querySelector('.build-buttons'),
-                      title: ['Construiește piața', 'Build the market'],
-                      body: [
-                        'Din Piață poți alege ouă pentru a-ți diversifica echipa. Construiește-o acum; oul îl poți cumpăra când dorești. Apasă „Mergi”.',
-                        'The Market lets you choose eggs to diversify your team. Build it now; buy an egg whenever you want. Tap "Go".',
-                      ],
-                    },
-                    {
-                      target: '.build-buttons .realm-button:not(.secondary)',
-                      wait: true,
-                      click: true,
-                      until: () => tourBuilt('market') || placingRef.current,
-                      rewind: { when: () => !document.querySelector('.realm-window') && !placingRef.current, by: 1 },
-                      title: ['Piața', 'The market'],
-                      body: [
-                        'Piața e aleasă. Apasă „Amplasează pe insulă”.',
-                        'The market is picked. Tap "Place on island".',
-                      ],
-                    },
-                    {
-                      until: () => tourBuilt('market'),
-                      rewind: { when: () => !placingRef.current, by: 2 },
-                      title: ['Alege un loc pe insulă', 'Pick a spot on the island'],
-                      body: [
-                        'Apasă pe un loc liber de pe insulă. Verde înseamnă că încape, roșu că e ocupat.',
-                        'Tap a free spot on the island. Green means it fits, red means it is taken.',
-                      ],
-                    },
-                    {
-                      target: '.realm-quest .realm-button',
-                      prepare: () => {
-                        setPanel(null);
-                        setStoryOpen(true);
-                      },
-                      wait: true,
-                      click: true,
-                      until: () => saveRef.current.questEggs.includes('w-earth-market'),
-                      title: ['Piața e gata!', 'The market is up!'],
-                      body: ['Ia premiul pentru piață.', 'Claim the reward for the market.'],
-                    },
-                    {
-                      target: '.market-eggs',
-                      prepare: () => setPanel('market'),
-                      wait: true,
-                      title: ['Piața de ouă', 'The egg market'],
-                      body: [
-                        `Aici cumperi ouă cu aur pentru lumile deblocate; un ou de Foc costă ${eggPrice('fire')} aur. Fiecare ou devine un dinozaur nou. Cumpărarea e opțională.`,
-                        `Buy eggs with gold for the worlds you have unlocked; a Fire egg costs ${eggPrice('fire')} gold. Every egg becomes a new dinosaur. Buying is optional.`,
-                      ],
-                    },
-                    {
                       title: ['Aventura continuă!', 'Your adventure continues!'],
                       body: [
-                        'Când cumperi un ou, îl găsești pe Raftul din Incubator. Acum continuă din „Povestea ta”: crește-ți companionul până la juvenil, construiește Portalul și pornește în prima expediție de un minut. Jurnalul îți arată traseul și premiile.',
-                        'Purchased eggs wait on the Hatchery shelf. Continue from "Your story": raise your companion to juvenile, build the Portal and start your first one-minute expedition. The journal shows your path and rewards.',
+                        'Ferma e gata! De aici te conduce „Povestea ta”: crește-ți companionul până la juvenil și pornește în prima expediție. Steluța „Zilnic” are în fiecare zi roata, misiuni și comori, iar butoanele noi din meniu apar marcate cu „NOU”.',
+                        'The farm is up! From here "Your story" leads the way: raise your companion to juvenile and start your first expedition. The "Daily" star has the wheel, missions and treasures every day, and new menu buttons show up marked "NEW".',
                       ],
                     },
                   ] satisfies TourStep[])
                 : ([
                     {
+                      target: ['.realm-resources', '.realm-mobile-wallet'],
+                      title: ['Resursele tale', 'Your resources'],
+                      body: [
+                        'Aurul construiește, hrana îți crește dinozaurii, iar diamantele termină orice instant. Le vezi mereu sus.',
+                        'Gold builds, food grows your dinosaurs, and diamonds finish anything instantly. They are always at the top.',
+                      ],
+                    },
+                    {
+                      target: '.realm-nav',
+                      prepare: () => setNavOpen(true),
+                      title: ['Meniul de jos', 'The bottom menu'],
+                      body: [
+                        'Clădiri, dinozauri și lumi. Pe măsură ce avansezi apar butoane noi aici, marcate cu „NOU”.',
+                        'Buildings, dinosaurs and worlds. More buttons appear here as you progress, marked "NEW".',
+                      ],
+                    },
+                    {
                       target: '.realm-daily-access',
                       title: ['Misiuni zilnice', 'Daily missions'],
                       body: [
-                        'În fiecare zi primești 3 misiuni noi și o rotire gratuită la roată. Semnul „!” înseamnă un premiu de luat.',
-                        'Every day brings 3 new missions and a free spin of the wheel. A "!" means a reward is waiting.',
+                        'În fiecare zi: roata, 3 misiuni, comori și dueluri, toate în „Azi”. Semnul „!” înseamnă un premiu de luat.',
+                        'Every day: the wheel, 3 missions, treasures and duels, all under "Today". A "!" means a reward is waiting.',
                       ],
                     },
                     {

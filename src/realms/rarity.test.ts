@@ -35,19 +35,20 @@ describe('rarity', () => {
     const tier = (n: number) => rarityOdds(ENCOUNTERS.find((e) => e.id === `arena-fire-${n}`)!);
     expect(tier(3).epic).toBeGreaterThan(tier(2).epic);
     expect(tier(2).epic).toBeGreaterThan(tier(1).epic);
-    expect(rarityOdds({ id: 'training', mode: 'expedition' }).epic).toBeLessThan(tier(1).epic);
+    expect(tier(3).legendary).toBeGreaterThan(0);
+    expect(rarityOdds({ id: 'training', mode: 'expedition' }).epic).toBeLessThanOrEqual(tier(1).epic);
   });
   it('drops eggs more often on harder tiers, only in fight-only worlds', () => {
     const e = (id: string) => ENCOUNTERS.find((x) => x.id === id)!;
     expect([1, 2, 3].map((t) => eggOdds(e(`arena-nature-${t}`))?.chance)).toEqual(EGG_DROP.tiers);
-    expect(EGG_DROP.tiers).toEqual([0.1, 0.12, 0.15]);
+    expect(EGG_DROP.tiers).toEqual([0.15, 0.2, 0.25]);
     for (const market of ['fire', 'water', 'earth']) expect(eggOdds(e(`arena-${market}-2`))).toBeNull();
     // The preview shows the boss egg while it is owed (market worlds too), then the real chance.
     const s = newSave(0);
     expect(rewardPreview(s, 'arena-fire-3', 1)).toMatchObject({ bossEgg: true, eggChance: undefined });
     s.bossEggsClaimed = ['fire', 'nature'];
     expect(rewardPreview(s, 'arena-fire-3', 1)).toMatchObject({ bossEgg: false, eggChance: undefined });
-    expect(rewardPreview(s, 'arena-nature-3', 1)).toMatchObject({ bossEgg: false, eggChance: 0.15 });
+    expect(rewardPreview(s, 'arena-nature-3', 1)).toMatchObject({ bossEgg: false, eggChance: 0.25 });
     // A full pity counter shows the certain egg, but only where eggs drop at all.
     s.eggLuck = EGG_DROP.pity;
     expect(rewardPreview(s, 'arena-nature-1', 1)?.eggChance).toBe(1);

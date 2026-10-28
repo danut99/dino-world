@@ -1,6 +1,42 @@
 /* Daily panel (fixed height): today's missions and the chest on the left, the wheel on the right. */
 .realms-app .daily-panel {
-  --fit-rows: auto minmax(0, 1fr);
+  --fit-rows: auto auto minmax(0, 1fr);
+}
+/* Today: every daily activity as a chip with its progress; a tap leads to it. */
+.realms-app .daily-today {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.realms-app .daily-today > strong {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: #f6d77a;
+}
+.realms-app .daily-today button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--px-bone-1);
+  background: var(--px-ui-5);
+  border: 2px solid var(--px-outline);
+  cursor: pointer;
+}
+.realms-app .daily-today button b {
+  font-family: var(--font-display);
+  color: #f6d77a;
+}
+.realms-app .daily-today button.done {
+  color: #c9f5c0;
+  background: #2f4a2c;
+}
+.realms-app .daily-today button.done b {
+  color: #9be38f;
 }
 .realms-app .daily-tabs {
   display: none;
@@ -443,7 +479,16 @@
 }
 @media (max-width: 700px) {
   .realms-app .daily-panel {
-    --fit-rows: auto auto minmax(0, 1fr);
+    --fit-rows: auto auto auto minmax(0, 1fr);
+  }
+  .realms-app .daily-today button {
+    flex: 1 1 calc(33% - 6px);
+    justify-content: center;
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+  .realms-app .daily-today > strong {
+    flex-basis: 100%;
   }
   .realms-app .daily-tabs {
     display: flex;

@@ -113,6 +113,7 @@
 .realms-app .pk-level small {
   font-family: var(--font-display);
   font-size: 9px;
+  line-height: 1.2;
   letter-spacing: 0.08em;
   color: var(--px-moss-0);
   text-shadow: none;

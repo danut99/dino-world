@@ -29,8 +29,17 @@ import {
 
 const t0 = 1_800_000_000_000;
 /** A playable family of each element used here. */
-const FAMILY: Partial<Record<Dino['element'], Dino['species']>> = { fire: 'trex', water: 'thalassaur', earth: 'terrasaur' };
-const dino = (id: string, element: Dino['element'], level: number, stage: Dino['stage'] = level >= 25 ? 'adult' : level >= 10 ? 'juvenile' : 'baby'): Dino => ({
+const FAMILY: Partial<Record<Dino['element'], Dino['species']>> = {
+  fire: 'trex',
+  water: 'thalassaur',
+  earth: 'terrasaur',
+};
+const dino = (
+  id: string,
+  element: Dino['element'],
+  level: number,
+  stage: Dino['stage'] = level >= 25 ? 'adult' : level >= 10 ? 'juvenile' : 'baby',
+): Dino => ({
   id,
   species: FAMILY[element] ?? 'trex',
   element,
@@ -64,12 +73,27 @@ const worth = (r: { gold: number; food: number; materials: Partial<Record<string
 describe('expedition regions', () => {
   it('chains ten regions over the worlds in order, five stages each, from level 10 to 50', () => {
     expect(REGIONS.map((r) => r.element)).toEqual(ELEMENTS.map((e) => e.id));
-    expect(REGIONS.map((r) => r.id)).toEqual(['training', 'ruins', 'canyon', 'frost', 'lagoon', 'wind', 'thunder', 'twilight', 'dawn', 'sigils']);
+    expect(REGIONS.map((r) => r.id)).toEqual([
+      'training',
+      'ruins',
+      'canyon',
+      'frost',
+      'lagoon',
+      'wind',
+      'thunder',
+      'twilight',
+      'dawn',
+      'sigils',
+    ]);
     expect(REGIONS[0].name).toEqual(['Pasul de jar', 'Ember pass']);
     expect(REGIONS[3].name).toEqual(['Poiana ferigilor', 'Fern glade']);
     expect(REGIONS[0].minutes).toEqual([1, 3, 7, 15, 25]);
     expect(REGIONS[9].minutes).toEqual([360, 420, 480, 540, 600]);
-    for (const r of REGIONS) expect([...r.minutes].every((m, i) => i === 0 || m > r.minutes[i - 1]), r.id).toBe(true);
+    for (const r of REGIONS)
+      expect(
+        [...r.minutes].every((m, i) => i === 0 || m > r.minutes[i - 1]),
+        r.id,
+      ).toBe(true);
     expect(stageLevel(1, 1)).toBe(10);
     expect(stageLevel(3, 2)).toBe(19);
     expect(stageLevel(10, 5)).toBe(50);
@@ -81,15 +105,28 @@ describe('expedition regions', () => {
   });
   it('pays a stage by its minutes and region: gold, food, the region materials and an arena ticket', () => {
     expect(stageReward('training', 0)).toEqual({ gold: 13, food: 5, materials: { wood: 1 }, tickets: 1 });
-    expect(stageReward('canyon', 2)).toEqual({ gold: 525, food: 150, materials: { stone: 12, crystal: 11 }, tickets: 1 });
-    expect(stageReward('sigils', 4)).toMatchObject({ gold: 4200, food: 600, materials: { crystal: 45, fiber: 45 }, tickets: 2, gems: 3 });
+    expect(stageReward('canyon', 2)).toEqual({
+      gold: 525,
+      food: 150,
+      materials: { stone: 12, crystal: 11 },
+      tickets: 1,
+    });
+    expect(stageReward('sigils', 4)).toMatchObject({
+      gold: 4200,
+      food: 600,
+      materials: { crystal: 45, fiber: 45 },
+      tickets: 2,
+      gems: 3,
+    });
   });
 });
 
 describe('timed expeditions with teams', () => {
   it('sends a team on the next stage and pays out once, only after it is back', () => {
     let s = command(ready(), { type: 'expedition', regionId: 'training', team: ['f'] }, t0);
-    expect(s.expeditions).toMatchObject([{ kind: 'stage', regionId: 'training', team: ['f'], stage: 0, endsAt: t0 + 60_000 }]);
+    expect(s.expeditions).toMatchObject([
+      { kind: 'stage', regionId: 'training', team: ['f'], stage: 0, endsAt: t0 + 60_000 },
+    ]);
     expect(s.battle).toBeNull();
     expect(() => command(s, { type: 'claimExpedition' }, t0 + 1000)).toThrow('expedition');
     const { gold, food } = s;
@@ -107,7 +144,13 @@ describe('timed expeditions with teams', () => {
     s.expeditionProgress = { training: 5, ruins: 5 };
     s.inventory.provisions = 9;
     // Canyon ruins: region 3 takes two members at level 18 for its first stage.
-    expect(expeditionPlan(s, 'canyon', ['w'])).toMatchObject({ teamSize: 2, level: 18, supplies: 2, blocker: 'teamSize', canSend: false });
+    expect(expeditionPlan(s, 'canyon', ['w'])).toMatchObject({
+      teamSize: 2,
+      level: 18,
+      supplies: 2,
+      blocker: 'teamSize',
+      canSend: false,
+    });
     expect(() => command(s, { type: 'expedition', regionId: 'canyon', team: ['w'] }, t0)).toThrow('teamSize');
     expect(() => command(s, { type: 'expedition', regionId: 'canyon', team: ['w', 'w'] }, t0)).toThrow('teamSize');
     expect(() => command(s, { type: 'expedition', regionId: 'canyon', team: ['w', 'e', 'f'] }, t0)).toThrow('teamSize');
@@ -152,7 +195,11 @@ describe('timed expeditions with teams', () => {
     s.expeditionProgress = { training: 3 };
     s.inventory.provisions = 1;
     s = command(s, { type: 'patrol', regionId: 'training', hours: 8, team: ['w'] }, t0);
-    const rate = (id: string) => dinoIncome(s, s.dinos.find((d) => d.id === id)!);
+    const rate = (id: string) =>
+      dinoIncome(
+        s,
+        s.dinos.find((d) => d.id === id)!,
+      );
     const home = rate('f') + rate('e') + rate('b');
     const at4 = advance(s, t0 + 4 * 3_600_000);
     expect(at4.storedGold - s.storedGold).toBeCloseTo(4 * home, 6);
@@ -168,7 +215,11 @@ describe('timed expeditions with teams', () => {
     expect(expeditionPlan(s, 'training', ['f'])).toMatchObject({ done: true, blocker: 'done', canSend: false });
     expect(() => command(s, { type: 'expedition', regionId: 'training', team: ['f'] }, t0)).toThrow('done');
     // A saved run of a stage already crossed is refused.
-    const forged = command({ ...ready(), expeditionProgress: { training: 2 } }, { type: 'expedition', regionId: 'training', team: ['f'] }, t0);
+    const forged = command(
+      { ...ready(), expeditionProgress: { training: 2 } },
+      { type: 'expedition', regionId: 'training', team: ['f'] },
+      t0,
+    );
     forged.expeditionProgress.training = 3;
     expect(() => parseSave(JSON.stringify(forged))).toThrow('Invalid expedition');
   });
@@ -200,7 +251,9 @@ describe('timed expeditions with teams', () => {
     noPortal.portalLevel = 0;
     noPortal.buildings = noPortal.buildings.filter((b) => b.kind !== 'portal');
     expect(() => command(noPortal, { type: 'expedition', regionId: 'training', team: ['f'] }, t0)).toThrow('building');
-    expect(() => command(ready(), { type: 'expedition', regionId: 'arena-fire-1', team: ['f'] }, t0)).toThrow('encounter');
+    expect(() => command(ready(), { type: 'expedition', regionId: 'arena-fire-1', team: ['f'] }, t0)).toThrow(
+      'encounter',
+    );
   });
   it('adds 20% per member of the recommended element, up to 60%', () => {
     const s = ready();
@@ -221,7 +274,13 @@ describe('timed expeditions with teams', () => {
     expect(expeditionPlan(s, 'training', ['f']).supplies).toBe(0);
     expect(expeditionPlan(s, 'ruins', ['w']).supplies).toBe(1);
     expect(expeditionPlan(s, 'wind', []).supplies).toBe(3);
-    expect(() => command({ ...s, expeditionProgress: { training: 5 } }, { type: 'expedition', regionId: 'ruins', team: ['w'] }, t0)).toThrow('provisions');
+    expect(() =>
+      command(
+        { ...s, expeditionProgress: { training: 5 } },
+        { type: 'expedition', regionId: 'ruins', team: ['w'] },
+        t0,
+      ),
+    ).toThrow('provisions');
   });
   it('survives a reload mid-trip and rejects a tampered timer, stage or team', () => {
     let s = ready();
@@ -267,7 +326,11 @@ describe('timed expeditions with teams', () => {
       const x = ready();
       x.expeditionProgress = { training: 4 };
       x.revision = i;
-      if (command(x, { type: 'expedition', regionId: 'training', team: ['f'] }, t0).expeditions[0].reward.egg!.species !== 'trex') fresh++;
+      if (
+        command(x, { type: 'expedition', regionId: 'training', team: ['f'] }, t0).expeditions[0].reward.egg!.species !==
+        'trex'
+      )
+        fresh++;
     }
     expect(fresh / 200).toBeGreaterThan(0.7);
   });
@@ -279,14 +342,23 @@ describe('patrols', () => {
     s.expeditionProgress = { training: 2 };
     s.inventory.provisions = 2;
     expect(patrolPlan(s, 'training', 1, ['f']).blocker).toBe('patrolLocked');
-    expect(() => command(s, { type: 'patrol', regionId: 'training', hours: 1, team: ['f'] }, t0)).toThrow('patrolLocked');
+    expect(() => command(s, { type: 'patrol', regionId: 'training', hours: 1, team: ['f'] }, t0)).toThrow(
+      'patrolLocked',
+    );
     s.expeditionProgress.training = 3;
-    expect(() => command(s, { type: 'patrol', regionId: 'training', hours: 2 as 1, team: ['f'] }, t0)).toThrow('teamSize');
+    expect(() => command(s, { type: 'patrol', regionId: 'training', hours: 2 as 1, team: ['f'] }, t0)).toThrow(
+      'teamSize',
+    );
     expect(() => command(s, { type: 'patrol', regionId: 'training', hours: 1, team: [] }, t0)).toThrow('teamSize');
     expect(() => command(s, { type: 'patrol', regionId: 'training', hours: 1, team: ['b'] }, t0)).toThrow('juvenile');
     s = command(s, { type: 'patrol', regionId: 'training', hours: 3, team: ['f', 'w', 'e'] }, t0);
     expect(s.inventory.provisions).toBe(1);
-    expect(s.expeditions[0]).toMatchObject({ kind: 'patrol', hours: 3, endsAt: t0 + 3 * 3_600_000, reward: { tickets: 1 } });
+    expect(s.expeditions[0]).toMatchObject({
+      kind: 'patrol',
+      hours: 3,
+      endsAt: t0 + 3 * 3_600_000,
+      reward: { tickets: 1 },
+    });
     roundTrip(s);
   });
   it('pays more than its supply pack costs, in every region and for every length', () => {
@@ -324,21 +396,22 @@ describe('patrols', () => {
     expect(s.daily.patrols).toBe(4);
     roundTrip(s);
   });
-  it('finds an egg of the region about 1.5% of the time per hour', () => {
+  it('finds an egg of the region about 3% of the time per hour', () => {
     let eggs = 0;
     for (let i = 0; i < 400; i++) {
       const s = ready();
       s.expeditionProgress = { training: 3 };
       s.inventory.provisions = 1;
       s.revision = i;
-      const egg = command(s, { type: 'patrol', regionId: 'training', hours: 8, team: ['f'] }, t0).expeditions[0].reward.egg;
+      const egg = command(s, { type: 'patrol', regionId: 'training', hours: 8, team: ['f'] }, t0).expeditions[0].reward
+        .egg;
       if (egg) {
         eggs++;
         expect(egg.element).toBe('fire');
       }
     }
-    expect(eggs / 400).toBeGreaterThan(0.06);
-    expect(eggs / 400).toBeLessThan(0.2);
+    expect(eggs / 400).toBeGreaterThan(0.15);
+    expect(eggs / 400).toBeLessThan(0.35);
   });
 });
 

@@ -1,5 +1,14 @@
 import { REGIONS, REGION_STAGES, regionNumber, regionTeamSize, stageLevel, type ItemId, type Region } from './content';
-import { busyDinos, ELEMENT_BEATS, ELEMENTS, portalSlots, type Dino, type RealmId, type Reward, type Save } from './game';
+import {
+  busyDinos,
+  ELEMENT_BEATS,
+  ELEMENTS,
+  portalSlots,
+  type Dino,
+  type RealmId,
+  type Reward,
+  type Save,
+} from './game';
 
 /**
  * Expeditions (see REGIONS): a team of one to three dinosaurs crosses a region's five stages once each, region by
@@ -12,7 +21,8 @@ export const regionById = (id: string): Region | undefined => REGIONS.find((r) =
 /** How long stage `stage` (0 to 4) of a region takes. */
 export const stageMs = (regionId: string, stage: number) => (regionById(regionId)?.minutes[stage] ?? 0) * 60_000;
 /** Stages completed in a region (0 to 5). */
-export const regionProgress = (save: Pick<Save, 'expeditionProgress'>, regionId: string) => save.expeditionProgress[regionId] ?? 0;
+export const regionProgress = (save: Pick<Save, 'expeditionProgress'>, regionId: string) =>
+  save.expeditionProgress[regionId] ?? 0;
 /** A world opens once the previous world's region is secured this far (see `worldLock`). */
 export const WORLD_UNLOCK_STAGE = 3;
 export const PATROL_HOURS = [1, 3, 8] as const;
@@ -31,7 +41,7 @@ export const PATROL = {
   daily: 3,
   dailyBonus: 1.5,
   /** Chance of an egg for every hour away. */
-  eggPerHour: 0.015,
+  eggPerHour: 0.02,
   /** Arena tickets of the region's element. */
   tickets: { 1: 0, 3: 1, 8: 2 } as Record<PatrolHours, number>,
 };
@@ -42,10 +52,15 @@ export const ELEMENT_BONUS_MAX = 0.6;
 export const STAGE_REWARD = { food: 1, materials: 0.15, tickets: 1, finaleTickets: 2, finaleGems: 3 };
 export const stageGoldPerMinute = (region: number) => 2 + 0.5 * region;
 /** Patrol pay per hour, before the length, team and element multipliers. */
-export const patrolPerHour = (region: number) => ({ gold: 20 + 8 * region, food: 8 + 4 * region, materials: 3 + region });
+export const patrolPerHour = (region: number) => ({
+  gold: 20 + 8 * region,
+  food: 8 + 4 * region,
+  materials: 3 + region,
+});
 
 /** The element that beats the region's: its dinosaurs bring more back. */
-export const recommendedElement = (element: RealmId): RealmId => ELEMENTS.find((e) => ELEMENT_BEATS[e.id].includes(element))!.id;
+export const recommendedElement = (element: RealmId): RealmId =>
+  ELEMENTS.find((e) => ELEMENT_BEATS[e.id].includes(element))!.id;
 export function elementBonus(save: Pick<Save, 'dinos'>, team: readonly string[], element: RealmId) {
   const matching = team.filter((id) => save.dinos.find((d) => d.id === id)?.element === element).length;
   return Math.min(ELEMENT_BONUS_MAX, ELEMENT_BONUS * matching);
@@ -98,13 +113,20 @@ export function patrolDailyExtra(reward: Pick<Reward, 'gold' | 'food' | 'materia
   return {
     gold: extra(reward.gold),
     food: extra(reward.food),
-    materials: Object.fromEntries(Object.entries(reward.materials).map(([id, n]) => [id, extra(n!)])) as Partial<Record<ItemId, number>>,
+    materials: Object.fromEntries(Object.entries(reward.materials).map(([id, n]) => [id, extra(n!)])) as Partial<
+      Record<ItemId, number>
+    >,
   };
 }
 
 /** Why a dinosaur cannot join a team: missing, still a baby, under the level, or away (trip or fight). */
 export type MemberIssue = 'missing' | 'baby' | 'level' | 'busy';
-export function memberIssue(save: Pick<Save, 'dinos' | 'expeditions' | 'battle'>, dino: Dino | string, level: number, busy = busyDinos(save)): MemberIssue | null {
+export function memberIssue(
+  save: Pick<Save, 'dinos' | 'expeditions' | 'battle'>,
+  dino: Dino | string,
+  level: number,
+  busy = busyDinos(save),
+): MemberIssue | null {
   const d = typeof dino === 'string' ? save.dinos.find((x) => x.id === dino) : dino;
   if (!d) return 'missing';
   if (d.stage === 'baby') return 'baby';
@@ -114,20 +136,13 @@ export function memberIssue(save: Pick<Save, 'dinos' | 'expeditions' | 'battle'>
 }
 /** The first thing stopping a departure, in the order the player meets them. */
 export type ExpeditionBlocker =
-  | 'world'
-  | 'previous'
-  | 'portal'
-  | 'done'
-  | 'running'
-  | 'patrolLocked'
-  | 'slots'
-  | 'teamSize'
-  | 'team'
-  | 'supplies';
+  'world' | 'previous' | 'portal' | 'done' | 'running' | 'patrolLocked' | 'slots' | 'teamSize' | 'team' | 'supplies';
 
 function teamCheck(save: Save, team: readonly string[], level: number) {
   const busy = busyDinos(save);
-  const failing = team.map((id) => ({ id, reason: memberIssue(save, id, level, busy) })).filter((x): x is { id: string; reason: MemberIssue } => !!x.reason);
+  const failing = team
+    .map((id) => ({ id, reason: memberIssue(save, id, level, busy) }))
+    .filter((x): x is { id: string; reason: MemberIssue } => !!x.reason);
   return { failing, unique: new Set(team).size === team.length };
 }
 
@@ -278,6 +293,19 @@ export function suggestTeam(save: Save, regionId: string, kind: 'stage' | 'patro
 }
 /** Error code a blocked departure throws (the messages live in RealmsApp). */
 export function blockerCode(blocker: ExpeditionBlocker, failing: { reason: MemberIssue }[]) {
-  if (blocker === 'team') return ({ missing: 'dino', baby: 'juvenile', level: 'level', busy: 'busy' } as const)[failing[0].reason];
-  return ({ world: 'locked', previous: 'locked', portal: 'building', done: 'done', running: 'busy', patrolLocked: 'patrolLocked', slots: 'slots', teamSize: 'teamSize', supplies: 'provisions' } as const)[blocker];
+  if (blocker === 'team')
+    return ({ missing: 'dino', baby: 'juvenile', level: 'level', busy: 'busy' } as const)[failing[0].reason];
+  return (
+    {
+      world: 'locked',
+      previous: 'locked',
+      portal: 'building',
+      done: 'done',
+      running: 'busy',
+      patrolLocked: 'patrolLocked',
+      slots: 'slots',
+      teamSize: 'teamSize',
+      supplies: 'provisions',
+    } as const
+  )[blocker];
 }

@@ -233,8 +233,8 @@ export function wikiArticles(lang: number): Article[] {
       title: tr('Lumi și habitate', 'Worlds and habitats'),
       paragraphs: [
         tr(
-          'Fiecare element are propria lume. Lumile se deschid pe rând, după etapa 3 din regiunea de expediție a lumii precedente; deblochează-le cu aur și materiale, apoi eclozează dinozaurii acelui element. Îmbunătățește habitatul când nu mai ai loc.',
-          'Each element has its own world. Worlds open in order, after stage 3 of the previous world’s expedition region; unlock them with gold and materials, then hatch dinosaurs of that element. Upgrade the habitat when it is full.',
+          'Fiecare element are propria lume. Lumile se deschid pe rând, după etapa 3 din regiunea de expediție a lumii precedente; deblochează-le cu aur și materiale și primești un ou comun al acelei lumi, apoi eclozează dinozaurii acelui element. Îmbunătățește habitatul când nu mai ai loc.',
+          'Each element has its own world. Worlds open in order, after stage 3 of the previous world’s expedition region; unlock them with gold and materials and get a common egg of that world, then hatch dinosaurs of that element. Upgrade the habitat when it is full.',
         ),
       ],
       rows: ELEMENTS.map(

@@ -458,6 +458,28 @@ export async function fetchWeeklyRanking(since: Date): Promise<RankRow[]> {
     .map((r) => ({ userId: r.user_id, name: r.name, wins: Number(r.wins) }))
     .sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name));
 }
+/** Duel wins between `since` and `until` among players whose champion level is in [min, max] (0012). */
+export async function fetchLeagueRanking(
+  since: Date,
+  until: Date,
+  league: { min: number; max: number },
+  /** Without 0012, fall back to the plain weekly ranking (fine to show, wrong for a past week). */
+  fallback = true,
+): Promise<RankRow[]> {
+  if (!cloud) return [];
+  const { data, error } = await cloud.rpc('league_ranking', {
+    since: since.toISOString(),
+    until: until.toISOString(),
+    min_level: league.min,
+    max_level: league.max,
+  });
+  // Before 0012 is applied: the plain weekly ranking of everyone.
+  if (error?.code === 'PGRST202' && fallback) return fetchWeeklyRanking(since);
+  if (error) throw error;
+  return ((data ?? []) as { user_id: string; name: string; wins: number }[])
+    .map((r) => ({ userId: r.user_id, name: r.name, wins: Number(r.wins) }))
+    .sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name));
+}
 /** Wins, losses and draws against each friend, counting fights started by either side. */
 export type Score = { wins: number; losses: number; draws: number };
 export async function fetchFriendScores(selfId: string): Promise<Map<string, Score>> {
