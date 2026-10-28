@@ -174,8 +174,18 @@ export function FarmPanel({
                   key={c.id}
                   className={`farm-crop${locked ? ' locked' : ''}`}
                   aria-pressed={cropId === c.id}
-                  onClick={() => setCropId(c.id)}
-                  title={c.name[lang]}
+                  onClick={() => {
+                    setCropId(c.id);
+                    // One tap plants it on the chosen (or first free) plot when it can; otherwise it only selects it.
+                    if (
+                      !locked &&
+                      target >= 0 &&
+                      save.gold >= c.cost &&
+                      run({ type: 'plant', crop: c.id, plot: target })
+                    )
+                      setPicked(null);
+                  }}
+                  title={locked ? c.name[lang] : `${tr('Plantează', 'Plant')}: ${c.name[lang]}`}
                 >
                   <span className="farm-crop-icon">{c.icon}</span>
                   <span className="farm-crop-body">

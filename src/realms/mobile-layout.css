@@ -735,10 +735,12 @@
   }
   main.realms-app .realm-mobile-wallet > * {
     display: flex;
+    flex: none;
     align-items: center;
     gap: 4px;
     height: 32px;
-    padding: 0 8px;
+    padding: 0 7px;
+    white-space: nowrap;
     font: 700 13px var(--font-display, inherit);
     color: #fff4d6;
     background: #241c18e6;
@@ -753,8 +755,8 @@
   main.realms-app .realm-mobile-wallet > button b {
     display: grid;
     place-items: center;
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
     font-size: 13px;
     color: #12303d;
     background: #7fd8ff;
@@ -770,8 +772,20 @@
     border-color: #cdbfa899;
   }
   main.realms-app .realm-mobile-wallet > button.realm-players-chip {
-    width: 36px;
+    width: 34px;
     border-color: #e0a96acc;
+  }
+  @media (max-width: 380px) {
+    main.realms-app .realm-mobile-wallet > * {
+      height: 30px;
+      padding: 0 6px;
+      font-size: 12px;
+    }
+    main.realms-app .realm-mobile-wallet > button.realm-fullscreen,
+    main.realms-app .realm-mobile-wallet > button.realm-players-chip {
+      width: 30px;
+      font-size: 15px;
+    }
   }
   /* The place name moves under the wallet. */
   main.realms-app .realm-location {

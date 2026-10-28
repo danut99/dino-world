@@ -51,7 +51,7 @@ import {
   type RealmId,
   type Dino,
 } from './game';
-import { roman } from './format';
+import { compact, roman } from './format';
 import './realms.css';
 import './pixel-theme.css';
 import './panel-kit.css';
@@ -1685,14 +1685,17 @@ export default function RealmsApp({
         <div className="realm-mobile-profile">{profileMenu('realm-mobile-stats')}</div>
         {/* Phones hide the HUD; gold, food and diamonds stay in sight beside the avatar. */}
         <div className="realm-mobile-wallet">
-          <span title={tr('Aur', 'Gold')}>
-            <Icon name="gold" scale={1} /> {Math.floor(save.gold).toLocaleString(lang ? 'en-US' : 'ro-RO')}
+          <span title={`${tr('Aur', 'Gold')}: ${Math.floor(save.gold).toLocaleString(lang ? 'en-US' : 'ro-RO')}`}>
+            <Icon name="gold" scale={1} /> {compact(save.gold)}
           </span>
-          <span title={tr('Hrană', 'Food')}>
-            <Icon name="food" scale={1} /> {save.food.toLocaleString(lang ? 'en-US' : 'ro-RO')}
+          <span title={`${tr('Hrană', 'Food')}: ${save.food.toLocaleString(lang ? 'en-US' : 'ro-RO')}`}>
+            <Icon name="food" scale={1} /> {compact(save.food)}
           </span>
-          <button onClick={() => setPanel('shop')} aria-label={tr('Diamante · magazin', 'Diamonds · shop')}>
-            💎 {save.gems.toLocaleString(lang ? 'en-US' : 'ro-RO')} <b aria-hidden="true">+</b>
+          <button
+            onClick={() => setPanel('shop')}
+            aria-label={`${tr('Diamante', 'Diamonds')}: ${save.gems} · ${tr('magazin', 'shop')}`}
+          >
+            💎 {compact(save.gems)} <b aria-hidden="true">+</b>
           </button>
           {account && (
             <button

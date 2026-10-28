@@ -524,6 +524,12 @@
   line-height: 1.1;
   text-align: center;
 }
+.realms-app .dino-care > .realm-button > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .realms-app .dino-care .dino-sheet-cost {
   display: inline-flex;
   align-items: center;

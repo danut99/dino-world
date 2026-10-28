@@ -1243,16 +1243,15 @@ export function DinoPanel({
                     </button>
                     {t && left === 0 ? (
                       <button className="realm-button dino-train" onClick={() => run({ type: 'claimTraining' })}>
-                        ⬆{' '}
-                        {tr(
-                          lang,
-                          `${trainee?.nickname ?? ''} e gata: +1 nivel`,
-                          `${trainee?.nickname ?? ''} is done: +1 level`,
-                        )}
+                        <span>⬆ {tr(lang, 'Ia nivelul', 'Claim level')}</span>
+                        <span className="dino-sheet-cost">
+                          {trainee?.nickname ?? ''} · +1 {tr(lang, 'nivel', 'level')}
+                        </span>
                       </button>
                     ) : t ? (
                       <button className="realm-button secondary dino-train" disabled>
-                        ⏳ {trainee?.nickname} · {duration(Math.ceil(left / 1000))}
+                        <span>⏳ {trainee?.nickname}</span>
+                        <span className="dino-sheet-cost">{duration(Math.ceil(left / 1000))}</span>
                       </button>
                     ) : (
                       <button

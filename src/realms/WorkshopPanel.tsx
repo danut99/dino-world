@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ITEM_USE, ITEMS, RECIPES, recipeFoodCost, type ItemId } from './content';
 import { advance, gemsToFinish, WORKSHOP_LEVELS, workshop, type CraftJob, type Command, type Save } from './game';
 import { AnimatedWorkshopSprite } from './AnimatedWorkshopSprite';
@@ -58,18 +58,11 @@ export function WorkshopPanel({
     ...Array.from({ length: free }, (_, i) => ({ kind: 'free' as const, id: `free-${i}` })),
   ];
   const pager = usePager(queue, { itemSelector: '.ui-card' });
-  const [phone, setPhone] = useState(() => window.matchMedia('(max-width: 760px) and (orientation: portrait)').matches);
+  const grid = useRef<HTMLDivElement>(null);
+  // A recipe asked for from elsewhere (an expedition's missing item) scrolls into view.
   useEffect(() => {
-    const query = window.matchMedia('(max-width: 760px) and (orientation: portrait)');
-    const update = () => setPhone(query.matches);
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
-  }, []);
-  const recipes = usePager(RECIPES, { itemSelector: '.craft-recipe', max: 6 });
-  useEffect(() => {
-    const index = RECIPES.findIndex((r) => r.id === recipeId);
-    if (phone && index >= 0) recipes.setPage(Math.floor(index / recipes.perPage));
-  }, [phone, recipeId, recipes.perPage, recipes.setPage]);
+    grid.current?.querySelector('.craft-recipe.focus')?.scrollIntoView({ block: 'nearest' });
+  }, [recipeId]);
   const idBase = 'workshop';
 
   if (!hasBuilding)
@@ -243,8 +236,8 @@ export function WorkshopPanel({
       />
       {tab === 'recipes' && (
         <TabPanel idBase={idBase} id="recipes" className="fit-fill craft-recipes-tab">
-          <div className="craft-grid" ref={phone ? recipes.ref : undefined}>
-            {(phone ? recipes.pageItems : RECIPES).map((r) => {
+          <div className="craft-grid" ref={grid}>
+            {RECIPES.map((r) => {
               const food = recipeFoodCost(r);
               const costs = Object.entries(r.cost) as [ItemId, number][];
               const canPay = save.food >= food && costs.every(([id, n]) => save.inventory[id] >= n);
@@ -252,6 +245,11 @@ export function WorkshopPanel({
                 <article
                   key={r.id}
                   className={`craft-recipe${r.id === recipeId ? ' focus' : ''}${canPay ? ' ready' : ''}`}
+                  // A tap anywhere on a recipe that can be made queues it; its own buttons keep their jobs.
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest('button, a')) return;
+                    if (!full && canPay) run({ type: 'craft', recipeId: r.id });
+                  }}
                 >
                   <header>
                     <span className="craft-icon" style={{ color: ITEMS[r.output].color }}>
@@ -283,17 +281,6 @@ export function WorkshopPanel({
               );
             })}
           </div>
-          {phone && (
-            <div className="pk-foot">
-              <Pager
-                page={recipes.page}
-                pages={recipes.pages}
-                onPrev={recipes.prev}
-                onNext={recipes.next}
-                lang={lang}
-              />
-            </div>
-          )}
           {full && (
             <p className="pk-note warn">
               {tr(

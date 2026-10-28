@@ -46,6 +46,12 @@
 .realms-app .craft-recipe.focus {
   border-image: var(--frame-card-active);
 }
+.realms-app .craft-recipe.ready {
+  cursor: pointer;
+}
+.realms-app .craft-recipe.ready:hover {
+  filter: brightness(1.08);
+}
 .realms-app .craft-recipe > header {
   display: flex;
   align-items: center;
