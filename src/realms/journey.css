@@ -207,6 +207,30 @@
   color: #d4bc96;
   font: 12px/1.5 var(--font-body);
 }
+.realms-app .realm-quest-meanwhile {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 6px 8px;
+  background: #241c1899;
+  border: 1px dashed #9be38f66;
+}
+.realms-app .realm-quest-meanwhile small {
+  font-size: 11px;
+  color: #9be38f;
+}
+.realms-app .realm-quest-meanwhile button {
+  padding: 3px 0;
+  font: 600 12px var(--font-body);
+  text-align: left;
+  color: #fff1b8;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.realms-app .realm-quest-meanwhile button:hover {
+  color: #f6d77a;
+}
 .realms-app .realm-journey-link {
   display: block;
   margin-top: 8px;

@@ -1061,11 +1061,12 @@ export const STORY_CHAPTERS: StoryChapter[] = [
           ...regionStep('fire', ['Prima ta aventură, în lumea focului.', 'Your first adventure, in the fire world.']),
         },
       ] satisfies Goal[]
-    ).map((step, i, all) => ({
+    ).map((step) => ({
       ...step,
       chapter: 1,
       ...pay(1),
-      ...(i === all.length - 1 ? { species: 'ignasaur' as Species, element: 'fire' as RealmId } : {}),
+      // The second egg comes with the farm, so a second dinosaur grows while the first is away on its trip.
+      ...(step.id === 'c1-farm' ? { species: 'ignasaur' as Species, element: 'fire' as RealmId } : {}),
     })),
   },
   worldChapter(2, 'water', ['Navigator', 'Navigator'], 'thalassaur', [
@@ -1367,7 +1368,7 @@ export const goldCap = (s: Pick<Save, 'habitats' | 'boostUntil'>, now?: number) 
   (Object.values(s.habitats) as number[]).reduce((n, level) => n + HABITAT_LEVELS[level - 1].cap, 0) *
   (now !== undefined && s.boostUntil > now ? BOOST_CAP : 1);
 /** Gold per hour of one dinosaur: by stage, earth ×1.25, times its habitat's level and the placed lamps. */
-export const STAGE_INCOME: Record<Stage, number> = { baby: 3, juvenile: 8, adult: 15 };
+export const STAGE_INCOME: Record<Stage, number> = { baby: 30, juvenile: 50, adult: 100 };
 export const dinoIncome = (s: Pick<Save, 'habitats' | 'lamps'>, d: Dino) =>
   STAGE_INCOME[d.stage] *
   (d.element === 'earth' ? 1.25 : 1) *
@@ -2169,14 +2170,14 @@ export function command(save: Save, c: Command, now: number): Save {
       require(s.habitats[egg.element], 'habitat');
       require(residents(s, egg.element).length < habitatCapacity(s, egg.element), 'habitatFull');
       require(s.dinos.length < BALANCE.maxDinos, 'habitatFull');
-      // A boss egg hatches a young champion: juvenile, level 10, legendary.
+      // A boss egg hatches a grown champion: adult, level 25, legendary.
       const boss = egg.species === 'boss';
       const dino: Dino = {
         id: egg.id === 'egg-ignis' ? 'ignis' : `dino-${s.revision + 1}`,
         species: egg.species,
         element: egg.element,
-        level: boss ? 10 : 1,
-        stage: boss ? 'juvenile' : 'baby',
+        level: boss ? 25 : 1,
+        stage: boss ? 'adult' : 'baby',
         nickname: boss ? ARENA_BOSSES[egg.element].name : nicknameFor(s, egg.species, egg.element),
         rarity: boss ? 'legendary' : rarityOf(egg),
       };
@@ -3324,6 +3325,12 @@ export function parseSave(text: string): Save {
     throw Error('Invalid habitats');
   const dinoIds = new Set<string>();
   if (!Array.isArray(s.dinos) || s.dinos.length > BALANCE.maxDinos) throw Error('Invalid dinosaurs');
+  // Bosses used to hatch as juveniles; they are adults now, at least level 25.
+  for (const d of s.dinos)
+    if (d?.species === 'boss' && d.stage === 'juvenile') {
+      d.stage = 'adult';
+      if (Number.isInteger(d.level)) d.level = Math.max(d.level, 25);
+    }
   for (const d of s.dinos)
     if (
       !d ||

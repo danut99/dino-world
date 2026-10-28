@@ -3037,6 +3037,17 @@ button.realm-quest-top:focus-visible {
   color: #cdbfa8;
 }
 /* Sign-in gate: the account window alone, over the game's night sky, before anything else loads. */
+/* Live habitat gold on the world's bubble: ticks up every second, with the world's rate an hour. */
+.production-bubble.habitat-gold strong {
+  min-width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.production-bubble.habitat-gold .habitat-rate {
+  margin-left: 4px;
+  font-size: 11px;
+  color: #9be38f;
+}
 /* Gate screens after sign-in (name, error, new password): a window over the still home island. */
 .realm-gate {
   position: fixed;

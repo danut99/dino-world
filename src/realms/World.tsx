@@ -10,8 +10,10 @@ import { drawFarm, farmGround, isAnimatedFarm } from './animatedFarm';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import {
   advance,
+  awayAt,
   canBuild,
   canLamp,
+  dinoIncome,
   ELEMENTS,
   farmNextAt,
   rarityOf,
@@ -1334,7 +1336,13 @@ export default function World({
     lang,
   ]);
   const here = realm === 'home' ? [] : save.dinos.filter((x) => x.element === realm);
-  const availableGold = Math.floor(advance(save, now).storedGold);
+  const storedGold = advance(save, now).storedGold,
+    availableGold = Math.floor(storedGold);
+  // This world's gold an hour, from its residents at home.
+  const worldRate =
+    realm === 'home'
+      ? 0
+      : Math.round(here.filter((x) => !awayAt(save, x.id, now)).reduce((n, x) => n + dinoIncome(save, x), 0));
   // Two-finger pinch on phones: the scene point between the fingers stays under them while zooming and moving.
   const fingers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<{ distance: number; zoom: number; wx: number; wy: number } | null>(null);
@@ -1714,7 +1722,8 @@ export default function World({
                 onClick={() => onSelect('income')}
               >
                 <Icon name="gold" scale={1} />
-                <strong>{availableGold.toLocaleString(lang ? 'en-US' : 'ro-RO')}</strong>
+                <strong>{storedGold.toFixed(1)}</strong>
+                {worldRate > 0 && <small className="habitat-rate">+{worldRate}/h</small>}
               </button>
             </>
           ) : null}

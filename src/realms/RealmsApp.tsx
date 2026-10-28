@@ -37,6 +37,14 @@ import {
   currentTrip,
   ELEMENTS,
   farmReadyFood,
+  feedCost,
+  levelCap,
+  awayAt,
+  dinoIncome,
+  workshop,
+  treasureReady,
+  TRAINING,
+  goldRate,
   eggPrice,
   storyChapter,
   storyEgg,
@@ -340,6 +348,8 @@ export default function RealmsApp({
     if (panel !== 'dino') setTrainAfterVision(false);
   }, [panel]);
   const [realm, setRealm] = useState<'home' | RealmId>(() => {
+    // A new game always opens on the main island; the last world only comes back for someone already playing.
+    if (save.dinos.length === 0) return 'home';
     try {
       const last = localStorage.getItem('dino-realms-current-world');
       return ELEMENTS.some((el) => el.id === last) ? (last as RealmId) : 'home';
@@ -625,6 +635,65 @@ export default function RealmsApp({
     }
   };
   const dailyOpened = useRef<string | null>(null);
+  // While the story waits on a timer (a trip, a build, an egg), the card offers a few things to do meanwhile.
+  const waitingOnTimer =
+    save.expeditions.some((x) => now < x.endsAt) ||
+    !!save.construction ||
+    save.eggs.some((e) => e.hatchAt !== null && now < e.hatchAt);
+  const meanwhile: { id: string; label: string; go: () => void }[] = [];
+  if (waitingOnTimer) {
+    const home = save.dinos.filter((x) => !awayAt(save, x.id, now));
+    const hungry = home.find((x) => x.level < levelCap(x.stage) && save.food >= feedCost(x.level));
+    const hasFarm = save.buildings.some((b) => b.kind === 'farm');
+    if (hasFarm && farmReadyFood(save, now) > 0)
+      meanwhile.push({ id: 'harvest', label: tr('Recoltează ferma', 'Harvest the farm'), go: () => setPanel('farm') });
+    else if (hasFarm && save.plots.some((p) => !p))
+      meanwhile.push({ id: 'plant', label: tr('Plantează la fermă', 'Plant at the farm'), go: () => setPanel('farm') });
+    if (hungry)
+      meanwhile.push({
+        id: 'feed',
+        label: tr(`Hrănește-l pe ${hungry.nickname}`, `Feed ${hungry.nickname}`),
+        go: () => {
+          setSelectedDino(hungry.id);
+          setDinoRealm(null);
+          setPanel('dino');
+        },
+      });
+    if (!save.training && today.trainings < TRAINING.perDay && home.some((x) => x.level < levelCap(x.stage)))
+      meanwhile.push({
+        id: 'train',
+        label: tr('Antrenament gratuit', 'Free training'),
+        go: () => {
+          setDinoRealm(null);
+          setPanel('dino');
+        },
+      });
+    if (treasureReady(save, now))
+      meanwhile.push({
+        id: 'treasure',
+        label: tr('Ia comoara de pe insulă', 'Pick up the island treasure'),
+        go: () => {
+          setPanel(null);
+          setRealm('home');
+        },
+      });
+    if (today.spin === null)
+      meanwhile.push({
+        id: 'wheel',
+        label: tr('Învârte roata zilei', 'Spin the daily wheel'),
+        go: () => setPanel('daily'),
+      });
+    if (
+      save.buildings.some((b) => b.kind === 'workshop') &&
+      save.crafting.filter((j) => now < j.endsAt).length < workshop(save).slots
+    )
+      meanwhile.push({
+        id: 'craft',
+        label: tr('Fă ceva în Atelier', 'Craft in the Workshop'),
+        go: () => setPanel('workshop'),
+      });
+  }
+  meanwhile.splice(3);
   // When the overnight crop the guide suggests is ready, as a clock time.
   const feastPlot = save.plots.find((p) => p?.crop === 'feast');
   const feastAt = feastPlot
@@ -1877,6 +1946,16 @@ export default function RealmsApp({
                   {storyReady ? tr('Gata! Ia-ți recompensa.', 'Done! Take your reward.') : story.hint[lang]}
                 </p>
                 {!storyReady && <p className="realm-quest-purpose">{goalPurpose(story)[lang]}</p>}
+                {!storyReady && meanwhile.length > 0 && (
+                  <div className="realm-quest-meanwhile">
+                    <small>{tr('În timp ce aștepți:', 'While you wait:')}</small>
+                    {meanwhile.map((m) => (
+                      <button key={m.id} type="button" onClick={m.go}>
+                        {m.label} →
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {storyProgress && !storyReady && (
                   <div
                     className="realm-quest-bar"

@@ -1140,8 +1140,9 @@ export function DinoPanel({
           {tab === 'grow' && (
             <TabPanel idBase={idBase} id="grow" className="fit-fill dino-tab">
               <ol className="dino-evo" aria-label={tr(lang, 'Evoluție', 'Evolution')}>
-                {STAGE_ORDER.map((stage, i) => {
-                  const at = STAGE_ORDER.indexOf(d.stage);
+                {(d.species === 'boss' ? (['adult'] as Stage[]) : STAGE_ORDER).map((stage) => {
+                  const at = STAGE_ORDER.indexOf(d.stage),
+                    i = STAGE_ORDER.indexOf(stage);
                   return (
                     <li
                       key={stage}
