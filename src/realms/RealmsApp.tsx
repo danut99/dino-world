@@ -348,9 +348,9 @@ export default function RealmsApp({
   });
   const [lang, setLang] = useState(() => {
     try {
-      return localStorage.getItem('dino-realms-language') === 'en' ? 1 : 0;
+      return localStorage.getItem('dino-realms-language') === 'ro' ? 0 : 1;
     } catch {
-      return 0;
+      return 1;
     }
   });
   const [sound, setSound] = useState(soundEnabled);

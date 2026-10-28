@@ -45,11 +45,28 @@ const element = (id: RealmId) => ELEMENTS.find((e) => e.id === id)!;
 const params = () => new URLSearchParams(window.location.search);
 
 /** The sprite of either side of the arena, as the real battle screen draws it. */
-function CombatantArt({ who, clip, className, paused }: { who: Combatant; clip: Clip; className?: string; paused?: boolean }) {
+function CombatantArt({
+  who,
+  clip,
+  className,
+  paused,
+}: {
+  who: Combatant;
+  clip: Clip;
+  className?: string;
+  paused?: boolean;
+}) {
   return who.kind === 'boss' ? (
     <AnimatedBoss element={who.element} name={who.name} animation={clip} className={className ?? ''} paused={paused} />
   ) : (
-    <DinosaurArt species={who.entry.species} element={who.entry.element} stage={who.entry.stage} animation={clip} className={className} paused={paused} />
+    <DinosaurArt
+      species={who.entry.species}
+      element={who.entry.element}
+      stage={who.entry.stage}
+      animation={clip}
+      className={className}
+      paused={paused}
+    />
   );
 }
 
@@ -60,9 +77,9 @@ function CombatantArt({ who, clip, className, paused }: { who: Combatant; clip: 
 export default function ScenePreview() {
   const [lang, setLang] = useState(() => {
     try {
-      return localStorage.getItem('dino-realms-language') === 'en' ? 1 : 0;
+      return localStorage.getItem('dino-realms-language') === 'ro' ? 0 : 1;
     } catch {
-      return 0;
+      return 1;
     }
   });
   const tr = (ro: string, en: string) => (lang ? en : ro);
@@ -113,7 +130,13 @@ export default function ScenePreview() {
     const id = combatantId(who),
       active = id === combatantId(selected);
     return (
-      <button key={id} type="button" className={`scene-preview-stage${active ? ' selected' : ''}`} aria-pressed={active} onClick={() => choose(who)}>
+      <button
+        key={id}
+        type="button"
+        className={`scene-preview-stage${active ? ' selected' : ''}`}
+        aria-pressed={active}
+        onClick={() => choose(who)}
+      >
         <CombatantArt who={who} clip="idle" paused={!animateThumbs} />
         <span>{label}</span>
       </button>
@@ -126,8 +149,8 @@ export default function ScenePreview() {
           <span className="realm-eyebrow">DINO REALMS</span>
           <h1>{tr('Previzualizare scene', 'Scene preview')}</h1>
           <p className="realm-note">
-            {ROSTER.length} {tr('modele animate', 'animated models')} · {FAMILIES.length} {tr('familii', 'families')} · {BOSSES.length}{' '}
-            {tr('campioni', 'champions')}
+            {ROSTER.length} {tr('modele animate', 'animated models')} · {FAMILIES.length} {tr('familii', 'families')} ·{' '}
+            {BOSSES.length} {tr('campioni', 'champions')}
           </p>
           <label className="scene-preview-check">
             <input type="checkbox" checked={animateThumbs} onChange={(e) => setAnimateThumbs(e.target.checked)} />
@@ -153,7 +176,9 @@ export default function ScenePreview() {
         <section className="scene-preview-family scene-preview-bosses">
           <h3>✹ {tr('Campionii arenei (boss)', 'Arena champions (boss)')}</h3>
           <div className="scene-preview-stages">
-            {BOSSES.map((b) => card({ kind: 'boss', element: b.element, name: b.name }, `${element(b.element).symbol} ${b.name}`))}
+            {BOSSES.map((b) =>
+              card({ kind: 'boss', element: b.element, name: b.name }, `${element(b.element).symbol} ${b.name}`),
+            )}
           </div>
         </section>
         <footer>
@@ -194,7 +219,14 @@ export default function ScenePreview() {
           </div>
         </div>
         {scene === 'arena' ? (
-          <ArenaScene key={`${combatantId(selected)}-${combatantId(foe)}`} ally={selected} foe={foe} setFoe={setFoe} swap={swap} lang={lang} />
+          <ArenaScene
+            key={`${combatantId(selected)}-${combatantId(foe)}`}
+            ally={selected}
+            foe={foe}
+            setFoe={setFoe}
+            swap={swap}
+            lang={lang}
+          />
         ) : selected.kind === 'boss' ? (
           <p className="realm-note">
             {tr(
@@ -246,7 +278,9 @@ function ArenaScene({
   lang: number;
 }) {
   const tr = (ro: string, en: string) => (lang ? en : ro);
-  const [fighters, setFighters] = useState<{ ally: Fighter; enemy: Fighter; manifest: SpriteManifest | null } | null>(null);
+  const [fighters, setFighters] = useState<{ ally: Fighter; enemy: Fighter; manifest: SpriteManifest | null } | null>(
+    null,
+  );
   const [steps, setSteps] = useState<Step[]>([]);
   const [index, setIndex] = useState(0);
   const [alive, setAlive] = useState({ ally: true, enemy: true });
@@ -293,14 +327,22 @@ function ArenaScene({
   // A made-up report: the preview has no reducer, only the beats and callouts of a round to judge.
   const round = (action: BattleAction, next = alive) => {
     if (!fighters) return;
-    const foe: RoundReport['foe'] = !next.enemy && action !== 'defend' ? 'none' : foeMoveChoice === 'dodge' ? 'attack' : foeMoveChoice;
+    const foe: RoundReport['foe'] =
+      !next.enemy && action !== 'defend' ? 'none' : foeMoveChoice === 'dodge' ? 'attack' : foeMoveChoice;
     const guarding = action === 'defend' && foe !== 'none' && foe !== 'defend';
     const report: RoundReport = {
       ally: action,
       foe,
       dealt: action === 'defend' ? 0 : foe === 'defend' ? 9 : action === 'ultimate' ? 35 : 18,
       enemyAfterStrike: !next.enemy && !guarding ? 0 : Math.max(1, hp.enemy - 18),
-      taken: foe === 'none' || foe === 'defend' || (foeMoveChoice === 'dodge' && action !== 'defend') ? 0 : guarding ? 8 : foe === 'ultimate' ? 27 : 18,
+      taken:
+        foe === 'none' || foe === 'defend' || (foeMoveChoice === 'dodge' && action !== 'defend')
+          ? 0
+          : guarding
+            ? 8
+            : foe === 'ultimate'
+              ? 27
+              : 18,
       dodged: foeMoveChoice === 'dodge' && action !== 'defend' && foe === 'attack',
       reflected: guarding ? 5 : 0,
     };
@@ -322,7 +364,8 @@ function ArenaScene({
     foeEl = element(combatantElement(foe));
   const allyName = combatantName(ally, lang),
     foeName = combatantName(foe, lang);
-  const level = (c: Combatant) => (c.kind === 'boss' ? 30 : c.entry.stage === 'baby' ? 1 : c.entry.stage === 'juvenile' ? 8 : 20);
+  const level = (c: Combatant) =>
+    c.kind === 'boss' ? 30 : c.entry.stage === 'baby' ? 1 : c.entry.stage === 'juvenile' ? 8 : 20;
   const stage = combatantStage(ally);
   const commands: BattleAction[] = stage === 'adult' ? ['basic', 'defend', 'ultimate'] : ['basic', 'defend'];
   const opponentOption = (c: Combatant, label: string) => (
@@ -340,7 +383,12 @@ function ArenaScene({
               {allyName} → {foeName} · 1v1
             </small>
           </div>
-          <div className="battle-unit ally" data-motion={a.clip} data-dodge={step?.dodge === 'ally' || undefined} style={a.style}>
+          <div
+            className="battle-unit ally"
+            data-motion={a.clip}
+            data-dodge={step?.dodge === 'ally' || undefined}
+            style={a.style}
+          >
             <div className="battle-vitals">
               <strong>
                 {allyEl.symbol} {allyName} <small>Lv. {level(ally)}</small>
@@ -369,12 +417,26 @@ function ArenaScene({
             <CombatantArt key={e.key} who={foe} clip={e.clip} className="dinosaur-opponent" />
           </div>
           {step?.impact && (
-            <div className={`battle-impact on-${step.impact.on} kind-${step.impact.kind}`} key={index} aria-hidden="true">
-              {step.impact.kind === 'guard' ? '🛡' : step.impact.kind === 'ultimate' ? '✹' : step.impact.kind === 'reflect' ? '↩' : '╱'}
+            <div
+              className={`battle-impact on-${step.impact.on} kind-${step.impact.kind}`}
+              key={index}
+              aria-hidden="true"
+            >
+              {step.impact.kind === 'guard'
+                ? '🛡'
+                : step.impact.kind === 'ultimate'
+                  ? '✹'
+                  : step.impact.kind === 'reflect'
+                    ? '↩'
+                    : '╱'}
             </div>
           )}
           {step?.say?.map((c, i) => (
-            <div key={`${index}-${i}`} className={`battle-callout on-${c.on} kind-${c.kind}`} style={{ '--row': i } as CSSProperties}>
+            <div
+              key={`${index}-${i}`}
+              className={`battle-callout on-${c.on} kind-${c.kind}`}
+              style={{ '--row': i } as CSSProperties}
+            >
               {calloutText(c, lang)}
             </div>
           ))}
@@ -389,8 +451,16 @@ function ArenaScene({
               onClick={() => round(name)}
             >
               <span>{name === 'basic' ? '⚔' : name === 'defend' ? '◇' : '✹'}</span>
-              <strong>{name === 'basic' ? tr('Lovitură', 'Basic') : name === 'defend' ? tr('Apărare', 'Defend') : tr('Erupție', 'Eruption')}</strong>
-              <small>{name === 'ultimate' ? '100 ϟ' : name === 'defend' ? '−40% damage' : tr('+25 energie', '+25 energy')}</small>
+              <strong>
+                {name === 'basic'
+                  ? tr('Lovitură', 'Basic')
+                  : name === 'defend'
+                    ? tr('Apărare', 'Defend')
+                    : tr('Erupție', 'Eruption')}
+              </strong>
+              <small>
+                {name === 'ultimate' ? '100 ϟ' : name === 'defend' ? '−40% damage' : tr('+25 energie', '+25 energy')}
+              </small>
             </button>
           ))}
         </div>
@@ -399,15 +469,27 @@ function ArenaScene({
         <button type="button" disabled={!fighters || busy} onClick={reset}>
           {tr('Intrare în arenă', 'Arena entrance')}
         </button>
-        <button type="button" disabled={!fighters || busy || !alive.enemy} onClick={() => round('basic', { ally: true, enemy: false })}>
+        <button
+          type="button"
+          disabled={!fighters || busy || !alive.enemy}
+          onClick={() => round('basic', { ally: true, enemy: false })}
+        >
           {tr('Inamicul cade', 'Enemy falls')}
         </button>
-        <button type="button" disabled={!fighters || busy || !alive.ally || !alive.enemy} onClick={() => round('basic', { ally: false, enemy: true })}>
+        <button
+          type="button"
+          disabled={!fighters || busy || !alive.ally || !alive.enemy}
+          onClick={() => round('basic', { ally: false, enemy: true })}
+        >
           {tr('Aliatul cade', 'Ally falls')}
         </button>
         <label>
           {tr('Adversarul', 'Opponent move')}
-          <select aria-label={tr('Mișcarea adversarului', 'Opponent move')} value={foeMoveChoice} onChange={(ev) => setFoeMoveChoice(ev.target.value as typeof foeMoveChoice)}>
+          <select
+            aria-label={tr('Mișcarea adversarului', 'Opponent move')}
+            value={foeMoveChoice}
+            onChange={(ev) => setFoeMoveChoice(ev.target.value as typeof foeMoveChoice)}
+          >
             <option value="attack">{tr('atacă', 'attacks')}</option>
             <option value="defend">{tr('se apără', 'guards')}</option>
             <option value="ultimate">{tr('ultimate', 'ultimate')}</option>
@@ -441,11 +523,19 @@ function ArenaScene({
             }}
           >
             <optgroup label={tr('Campioni (boss)', 'Champions (boss)')}>
-              {BOSSES.map((b) => opponentOption({ kind: 'boss', element: b.element, name: b.name }, `${b.name} · ${element(b.element).name[lang]}`))}
+              {BOSSES.map((b) =>
+                opponentOption(
+                  { kind: 'boss', element: b.element, name: b.name },
+                  `${b.name} · ${element(b.element).name[lang]}`,
+                ),
+              )}
             </optgroup>
             <optgroup label={tr('Dinozauri', 'Dinosaurs')}>
               {ROSTER.map((entry) =>
-                opponentOption({ kind: 'dino', entry }, `${SPECIES_NAMES[entry.species]} · ${element(entry.element).name[lang]} · ${stageLabel(entry.stage, lang)}`),
+                opponentOption(
+                  { kind: 'dino', entry },
+                  `${SPECIES_NAMES[entry.species]} · ${element(entry.element).name[lang]} · ${stageLabel(entry.stage, lang)}`,
+                ),
               )}
             </optgroup>
           </select>
@@ -475,7 +565,10 @@ function HabitatScene({
   allFamilies: boolean;
   lang: number;
 }) {
-  const dinos = useMemo(() => habitatResidents(entry, { allStages, allFamilies }, lang), [entry, allStages, allFamilies, lang]);
+  const dinos = useMemo(
+    () => habitatResidents(entry, { allStages, allFamilies }, lang),
+    [entry, allStages, allFamilies, lang],
+  );
   const save = useMemo(() => previewSave(dinos), [dinos]);
   const [now] = useState(() => Date.now());
   return (

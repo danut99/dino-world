@@ -1878,8 +1878,8 @@ export function BattleScreen({
               </p>
             </div>
           ) : (
-          <p className="result-rest">
-            {tower
+            <p className="result-rest">
+              {tower
                 ? battle.result === 'victory'
                   ? tr(
                       `Etajul ${tower.floor} cucerit! Fără odihnă: urcă mai departe.`,
@@ -1903,7 +1903,7 @@ export function BattleScreen({
                         `Echipa se întoarce în siguranță și se odihnește ${restMinutes} min. Încearcă un element mai potrivit sau niveluri mai mari.`,
                         `The team returns safely and rests ${restMinutes} min. Try a better-suited element or higher levels.`,
                       )}
-          </p>
+            </p>
           )}
           {save.rewardPending && (
             <>

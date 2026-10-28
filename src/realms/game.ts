@@ -1798,27 +1798,28 @@ export function friendlyBattle(me: Save, rival: Save, rivalId: string, now: numb
   const s = advance(me, now);
   // Each side fights with its duel team (Players → duel team), or its arena team when none is set.
   const duelTeam = (x: Save) => {
-    const set = (x.defense ?? []).map((id) => x.dinos.find((d) => d.id === id)).filter((d): d is Dino => !!d);
-    return (set.length ? set : teamDinos(x)).filter((d) => d.stage !== 'baby');
+    const set = (x.defense ?? [])
+      .map((id) => x.dinos.find((d) => d.id === id))
+      .filter((d): d is Dino => !!d && d.stage !== 'baby');
+    return set.length ? set : teamDinos(x).filter((d) => d.stage !== 'baby');
   };
   const team = duelTeam(s),
-    foes: Foe[] = duelTeam(rival)
-      .map((d) => {
-        // The friend's own point allocation counts: how they built their team decides the fight.
-        const st = dinoStats(d);
-        return {
-          species: d.species,
-          element: d.element,
-          stage: d.stage,
-          level: d.level,
-          rarity: rarityOf(d),
-          hp: st.hp,
-          maxHp: st.hp,
-          power: st.power,
-          defense: st.defense,
-          speed: st.speed,
-        };
-      });
+    foes: Foe[] = duelTeam(rival).map((d) => {
+      // The friend's own point allocation counts: how they built their team decides the fight.
+      const st = dinoStats(d);
+      return {
+        species: d.species,
+        element: d.element,
+        stage: d.stage,
+        level: d.level,
+        rarity: rarityOf(d),
+        hp: st.hp,
+        maxHp: st.hp,
+        power: st.power,
+        defense: st.defense,
+        speed: st.speed,
+      };
+    });
   if (!team.length) throw new Error('juvenile');
   if (!foes.length) throw new Error('rivalTeam');
   const b: Battle = {

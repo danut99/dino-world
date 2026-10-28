@@ -22,9 +22,9 @@ import { useAuth } from './useAuth';
 const T = (lang: number, ro: string, en: string) => (lang ? en : ro);
 const language = () => {
   try {
-    return localStorage.getItem('dino-realms-language') === 'en' ? 1 : 0;
+    return localStorage.getItem('dino-realms-language') === 'ro' ? 0 : 1;
   } catch {
-    return 0;
+    return 1;
   }
 };
 const dropBootLoader = () => document.getElementById('boot-loader')?.remove();
