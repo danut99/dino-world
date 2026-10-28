@@ -86,8 +86,10 @@ export function Landing({
   island,
   returning,
   endRecovery,
+  setLang,
 }: {
   lang: number;
+  setLang: (lang: number) => void;
   /** The still home island drawn behind the page. */
   island: ReactNode;
   /** Someone who already signed in on this device: the main button signs in. */
@@ -141,9 +143,18 @@ export function Landing({
           DINO <b>REALMS</b>
           <small>BETA</small>
         </span>
-        <button className="landing-signin" onClick={() => setAuth('signin')}>
-          {tr('Intră în cont', 'Sign in')}
-        </button>
+        <span className="landing-nav-actions">
+          <button
+            className="landing-lang"
+            onClick={() => setLang(lang ? 0 : 1)}
+            aria-label={lang ? 'Schimbă în română' : 'Switch to English'}
+          >
+            {lang ? 'RO' : 'EN'}
+          </button>
+          <button className="landing-signin" onClick={() => setAuth('signin')}>
+            {tr('Intră în cont', 'Sign in')}
+          </button>
+        </span>
       </nav>
 
       <section className="landing-hero">

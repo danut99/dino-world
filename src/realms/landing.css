@@ -73,6 +73,27 @@
 .landing-signin:hover {
   background: #ffffff26;
 }
+.landing-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.landing-lang {
+  padding: 8px 12px;
+  font:
+    700 13px 'Barlow',
+    sans-serif;
+  letter-spacing: 1px;
+  color: #cbbd9f;
+  background: transparent;
+  border: 1px solid #ffffff22;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.landing-lang:hover {
+  color: #f4ead6;
+  border-color: #ffffff44;
+}
 
 /* hero */
 .landing-hero {

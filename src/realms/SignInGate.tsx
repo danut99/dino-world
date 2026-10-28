@@ -53,7 +53,16 @@ type Start =
  */
 export default function SignInGate() {
   const auth = useAuth();
-  const [lang] = useState(language);
+  const [lang, setLang] = useState(language);
+  const switchLanguage = (next: number) => {
+    setLang(next);
+    document.documentElement.lang = next ? 'en' : 'ro';
+    try {
+      localStorage.setItem('dino-realms-language', next ? 'en' : 'ro');
+    } catch {
+      /* Only this visit then. */
+    }
+  };
   const [start, setStart] = useState<Start>({ phase: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const tr = (ro: string, en: string) => T(lang, ro, en);
@@ -224,5 +233,13 @@ export default function SignInGate() {
         sync={{ user: null, status: 'signedOut', recovering: !!auth.user, endRecovery: auth.endRecovery }}
       />,
     );
-  return <Landing lang={lang} island={island} returning={hadAccount()} endRecovery={auth.endRecovery} />;
+  return (
+    <Landing
+      lang={lang}
+      setLang={switchLanguage}
+      island={island}
+      returning={hadAccount()}
+      endRecovery={auth.endRecovery}
+    />
+  );
 }
