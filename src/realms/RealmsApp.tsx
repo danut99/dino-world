@@ -52,6 +52,7 @@ import {
   type Dino,
 } from './game';
 import { compact, roman } from './format';
+import { track, trackReturn } from './analytics';
 import './realms.css';
 import './pixel-theme.css';
 import './panel-kit.css';
@@ -615,6 +616,7 @@ export default function RealmsApp({
   const tourBuilt = (kind: string) => saveRef.current.buildings.some((b) => b.kind === kind);
   const endTour = () => {
     setTour(false);
+    track('tour_end', { kind: tour || 'none' });
     try {
       localStorage.setItem('dino-realms-tour', 'done');
       localStorage.removeItem(TOUR_STEP_KEY);
@@ -623,6 +625,36 @@ export default function RealmsApp({
     }
   };
   const dailyOpened = useRef<string | null>(null);
+  // When the overnight crop the guide suggests is ready, as a clock time.
+  const feastPlot = save.plots.find((p) => p?.crop === 'feast');
+  const feastAt = feastPlot
+    ? new Date(feastPlot.readyAt).toLocaleTimeString(lang ? 'en-GB' : 'ro-RO', { hour: '2-digit', minute: '2-digit' })
+    : null;
+  // First-session milestones, each counted once per device (see analytics.ts).
+  useEffect(() => {
+    const marks: [string, boolean][] = [
+      ['first_hatch', save.dinos.length > 0],
+      ['first_feed', save.dinos.some((x) => x.level > 1)],
+      ['farm_built', save.buildings.some((b) => b.kind === 'farm')],
+      ['overnight_crop', save.plots.some((p) => p?.crop === 'feast')],
+      ['first_juvenile', save.dinos.some((x) => x.stage !== 'baby')],
+    ];
+    for (const [name, reached] of marks) {
+      if (!reached) continue;
+      try {
+        const key = `dino-realms-event-${name}`;
+        if (localStorage.getItem(key)) continue;
+        localStorage.setItem(key, '1');
+      } catch {
+        continue;
+      }
+      track(name);
+    }
+  }, [save.dinos, save.buildings, save.plots]);
+  useEffect(() => {
+    if (account) trackReturn(account.user.id, today.day);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account?.user.id, today.day]);
   useEffect(() => {
     if (
       tour ||
@@ -1882,7 +1914,18 @@ export default function RealmsApp({
                   ))}
                 </div>
                 {storyReady ? (
-                  <button className="realm-button" onClick={() => run({ type: 'claimQuestEgg', questId: story.id })}>
+                  <button
+                    className="realm-button"
+                    onClick={() => {
+                      if (run({ type: 'claimQuestEgg', questId: story.id }))
+                        setMessage(
+                          tr(
+                            `Premiu luat: +${story.gold} aur, +${story.food} hrană!`,
+                            `Reward claimed: +${story.gold} gold, +${story.food} food!`,
+                          ),
+                        );
+                    }}
+                  >
                     <Icon name={storyEgg(story) ? 'egg' : 'star'} scale={1} /> {tr('Ia premiul', 'Claim')}{' '}
                     <span>→</span>
                   </button>
@@ -2215,7 +2258,8 @@ export default function RealmsApp({
                 onHatched={() => {
                   const born = saveRef.current.dinos.at(-1)!;
                   setMessage(`${tr('Bun venit', 'Welcome')}, ${born.nickname}!`);
-                  setRealm(born.element);
+                  // The first hatch keeps the home island behind: the guide goes on there.
+                  if (save.dinos.length > 0) setRealm(born.element);
                   setSelectedDino(born.id);
                   setDinoRealm(born.element);
                   setDinoFromHatchery(true);
@@ -2492,6 +2536,7 @@ export default function RealmsApp({
             paused={!!save.battle}
             start={tour === 'fresh' ? tourStart : 0}
             onStep={(i) => {
+              track('tour_step', { step: i, kind: tour });
               if (tour !== 'fresh') return;
               try {
                 localStorage.setItem(TOUR_STEP_KEY, String(i));
@@ -2620,10 +2665,22 @@ export default function RealmsApp({
                       ],
                     },
                     {
+                      target: '.farm-crop[data-crop="feast"]',
+                      prepare: () => setPanel('farm'),
+                      wait: true,
+                      click: true,
+                      until: () => saveRef.current.plots.some((p) => p?.crop === 'feast'),
+                      title: ['Înainte să pleci', 'Before you go'],
+                      body: [
+                        'Plantează un Ospăț: crește 8 ore cât ești plecat și dă multă hrană. Apasă pe el.',
+                        'Plant a Feast: it grows for 8 hours while you are away and gives lots of food. Tap it.',
+                      ],
+                    },
+                    {
                       title: ['Aventura continuă!', 'Your adventure continues!'],
                       body: [
-                        'Ferma e gata! De aici te conduce „Povestea ta”: crește-ți companionul până la juvenil și pornește în prima expediție. Steluța „Zilnic” are în fiecare zi roata, misiuni și comori, iar butoanele noi din meniu apar marcate cu „NOU”.',
-                        'The farm is up! From here "Your story" leads the way: raise your companion to juvenile and start your first expedition. The "Daily" star has the wheel, missions and treasures every day, and new menu buttons show up marked "NEW".',
+                        `Ospățul e gata ${feastAt ? `la ${feastAt}` : 'în 8 ore'}: revino atunci să-l recoltezi. Până atunci te conduce „Povestea ta”, iar steluța „Zilnic” are în fiecare zi roata, misiuni și comori.`,
+                        `Your Feast is ready ${feastAt ? `at ${feastAt}` : 'in 8 hours'}: come back then to harvest it. Until then "Your story" leads the way, and the "Daily" star has the wheel, missions and treasures every day.`,
                       ],
                     },
                   ] satisfies TourStep[])

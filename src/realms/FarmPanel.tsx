@@ -144,7 +144,11 @@ export function FarmPanel({
                 <div key={i} className="farm-plot growing">
                   <span>{c.icon}</span>
                   <strong>{c.name[lang]}</strong>
-                  <small className="pk-num">{duration(Math.ceil(left / 1000))}</small>
+                  <small className="pk-num">
+                    {left > 3_600_000
+                      ? `${tr('gata la', 'ready at')} ${new Date(p.readyAt).toLocaleTimeString(lang ? 'en-GB' : 'ro-RO', { hour: '2-digit', minute: '2-digit' })}`
+                      : duration(Math.ceil(left / 1000))}
+                  </small>
                   <div className="pk-meter" style={{ '--meter': 'var(--px-moss-1)' } as React.CSSProperties}>
                     <i style={{ width: `${done * 100}%` }} />
                   </div>
@@ -174,6 +178,7 @@ export function FarmPanel({
                   key={c.id}
                   className={`farm-crop${locked ? ' locked' : ''}`}
                   aria-pressed={cropId === c.id}
+                  data-crop={c.id}
                   onClick={() => {
                     setCropId(c.id);
                     // One tap plants it on the chosen (or first free) plot when it can; otherwise it only selects it.
