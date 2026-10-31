@@ -3526,9 +3526,9 @@ export function parseSave(text: string): Save {
       (x.rushed
         ? x.endsAt < x.startedAt || x.endsAt - x.startedAt > length
         : // Signposts placed when it left may have shortened it.
-          !Array.from({ length: DECOR.signpost.max + 1 }, (_, k) => tripLength(length, 1 - DECOR.signpost.bonus * k)).includes(
-            x.endsAt - x.startedAt,
-          )) ||
+          !Array.from({ length: DECOR.signpost.max + 1 }, (_, k) =>
+            tripLength(length, 1 - DECOR.signpost.bonus * k),
+          ).includes(x.endsAt - x.startedAt)) ||
       (x.kind === 'stage'
         ? // Stages go in order, one run per region at a time, with the region's team size.
           x.hours !== undefined ||

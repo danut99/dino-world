@@ -867,7 +867,10 @@ export default function RealmsApp({
     for (const e of save.eggs)
       add(`egg:${e.id}`, e.hatchAt, {
         icon: 'egg',
-        title: tr(`Oul de ${SPECIES_NAMES[e.species]} e gata de eclozat!`, `Your ${SPECIES_NAMES[e.species]} egg is ready to hatch!`),
+        title: tr(
+          `Oul de ${SPECIES_NAMES[e.species]} e gata de eclozat!`,
+          `Your ${SPECIES_NAMES[e.species]} egg is ready to hatch!`,
+        ),
         go: 'hatchery',
       });
     if (save.construction)
@@ -883,10 +886,19 @@ export default function RealmsApp({
         go: 'expedition',
       });
     save.plots.forEach((p, i) => {
-      if (p) add(`plot:${i}:${p.readyAt}`, p.readyAt, { icon: 'food', title: tr('Recolta e gata!', 'Your crop is ready!'), go: 'farm' });
+      if (p)
+        add(`plot:${i}:${p.readyAt}`, p.readyAt, {
+          icon: 'food',
+          title: tr('Recolta e gata!', 'Your crop is ready!'),
+          go: 'farm',
+        });
     });
     for (const j of save.crafting)
-      add(`craft:${j.id}`, j.endsAt, { icon: 'workshop', title: tr('Atelierul a terminat!', 'The workshop is done!'), go: 'workshop' });
+      add(`craft:${j.id}`, j.endsAt, {
+        icon: 'workshop',
+        title: tr('Atelierul a terminat!', 'The workshop is done!'),
+        go: 'workshop',
+      });
     if (save.training)
       add(`train:${save.training.dinoId}:${save.training.endsAt}`, save.training.endsAt, {
         icon: 'dino',
@@ -1163,7 +1175,8 @@ export default function RealmsApp({
     if (!go) return;
     if (go.kind === 'claimStory') claimStory();
     else if (go.kind === 'harvest') {
-      if (run({ type: 'harvest' })) setMessage(tr('Recoltă strânsă! Replantează stratul.', 'Harvested! Replant the plot.'));
+      if (run({ type: 'harvest' }))
+        setMessage(tr('Recoltă strânsă! Replantează stratul.', 'Harvested! Replant the plot.'));
     } else if (go.kind === 'home') {
       setRealm('home');
       setPanel(null);
@@ -2411,7 +2424,14 @@ export default function RealmsApp({
             {message}
           </div>
         )}
-        {next && !tour && !panel && !placing && !heroVision && !save.battle && !visit && !offline &&
+        {next &&
+          !tour &&
+          !panel &&
+          !placing &&
+          !heroVision &&
+          !save.battle &&
+          !visit &&
+          !offline &&
           (nextCollapsed && !nextPeek ? (
             <button
               type="button"
@@ -2442,7 +2462,11 @@ export default function RealmsApp({
                   <strong>{next.text[lang]}</strong>
                   <em>{next.why[lang]}</em>
                 </span>
-                {next.go && <span className="realm-next-go" aria-hidden="true">→</span>}
+                {next.go && (
+                  <span className="realm-next-go" aria-hidden="true">
+                    →
+                  </span>
+                )}
               </button>
               <button
                 type="button"
@@ -3162,10 +3186,7 @@ export default function RealmsApp({
                             />
                           )}
                           <small className="pk-note">
-                            {tr(
-                              'Un singur anunț pentru fiecare, nimic zilnic.',
-                              'One notice for each, nothing daily.',
-                            )}
+                            {tr('Un singur anunț pentru fiecare, nimic zilnic.', 'One notice for each, nothing daily.')}
                           </small>
                         </>
                       ),

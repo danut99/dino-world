@@ -35,7 +35,17 @@ export function MomentArt({
 }
 
 /** Evolution: the old age for a moment, a flash, then the new age showing off the move it just learned. */
-export function EvolveMoment({ dino, from, lang, close }: { dino: Dino; from: Stage; lang: number; close: () => void }) {
+export function EvolveMoment({
+  dino,
+  from,
+  lang,
+  close,
+}: {
+  dino: Dino;
+  from: Stage;
+  lang: number;
+  close: () => void;
+}) {
   const tr = (ro: string, en: string) => (lang ? en : ro);
   const [grown, setGrown] = useState(false);
   useEffect(() => {

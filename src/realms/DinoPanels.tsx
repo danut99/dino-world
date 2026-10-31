@@ -640,8 +640,8 @@ export function HabitatsPanel({
             {onTrip > 0 &&
               `${tr(lang, `${onTrip} în expediție (nu produc)`, `${onTrip} on expedition (not earning)`)} · `}
             {tr(lang, 'max. 8h offline', '8h offline max')} · ☼ {decorCount(save, 'lamp')}/{DECOR.lamp.max}{' '}
-            {tr(lang, 'lămpi', 'lamps')} ·{' '}
-            {ITEMS.habitatKit.icon} {save.inventory.habitatKit} {tr(lang, 'kituri', 'kits')}
+            {tr(lang, 'lămpi', 'lamps')} · {ITEMS.habitatKit.icon} {save.inventory.habitatKit}{' '}
+            {tr(lang, 'kituri', 'kits')}
           </small>
           <div className="pk-meter">
             <i style={{ width: `${cap ? Math.min(100, (save.storedGold / cap) * 100) : 0}%` }} />

@@ -318,7 +318,8 @@ export function FarmPanel({
                     </li>
                     <li>
                       {best.icon} {best.name[lang]}: +{fmt(farmYield(save.farmLevel, best.id, scarecrows))} →{' '}
-                      <b className="pk-num">+{fmt(farmYield(save.farmLevel + 1, best.id, scarecrows))}</b> {tr('hrană', 'food')}
+                      <b className="pk-num">+{fmt(farmYield(save.farmLevel + 1, best.id, scarecrows))}</b>{' '}
+                      {tr('hrană', 'food')}
                     </li>
                   </ul>
                 </div>

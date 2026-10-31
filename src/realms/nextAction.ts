@@ -38,7 +38,9 @@ export interface NextAction {
 const minutes = (ms: number) => Math.max(1, Math.ceil(ms / 60_000));
 const span = (ms: number): Text => {
   const m = minutes(ms);
-  return m >= 60 ? [`${Math.floor(m / 60)}h ${m % 60}m`, `${Math.floor(m / 60)}h ${m % 60}m`] : [`${m} min`, `${m} min`];
+  return m >= 60
+    ? [`${Math.floor(m / 60)}h ${m % 60}m`, `${Math.floor(m / 60)}h ${m % 60}m`]
+    : [`${m} min`, `${m} min`];
 };
 
 export function nextAction(s: Save, now: number): NextAction | null {
@@ -55,8 +57,14 @@ export function nextAction(s: Save, now: number): NextAction | null {
       icon: '🎁',
       text: [`Ia premiul: ${story.task[0]}`, `Claim: ${story.task[1]}`],
       why: story.species
-        ? ['Ai terminat pasul din poveste. Premiul are și un ou nou!', 'You finished the story step. The reward includes a new egg!']
-        : ['Ai terminat pasul din poveste: aur și hrană te așteaptă.', 'You finished the story step: gold and food are waiting.'],
+        ? [
+            'Ai terminat pasul din poveste. Premiul are și un ou nou!',
+            'You finished the story step. The reward includes a new egg!',
+          ]
+        : [
+            'Ai terminat pasul din poveste: aur și hrană te așteaptă.',
+            'You finished the story step: gold and food are waiting.',
+          ],
       go: { kind: 'claimStory' },
     };
   if (s.eggs.some((e) => e.hatchAt !== null && e.hatchAt <= now))
@@ -64,7 +72,10 @@ export function nextAction(s: Save, now: number): NextAction | null {
       id: 'hatch',
       icon: '🥚',
       text: ['Eclozează oul', 'Hatch the egg'],
-      why: ['Un ou din Incubator e gata: un dinozaur nou te așteaptă.', 'An egg in the Hatchery is ready: a new dinosaur is waiting.'],
+      why: [
+        'Un ou din Incubator e gata: un dinozaur nou te așteaptă.',
+        'An egg in the Hatchery is ready: a new dinosaur is waiting.',
+      ],
       go: { kind: 'panel', panel: 'hatchery' },
     };
   if (s.expeditions.some((x) => x.endsAt <= now))
@@ -72,7 +83,10 @@ export function nextAction(s: Save, now: number): NextAction | null {
       id: 'trip-back',
       icon: '🧭',
       text: ['Echipa s-a întors: ia prăzile', 'Your team is back: claim the loot'],
-      why: ['Expediția s-a terminat. Ia premiile și trimite-i mai departe.', 'The trip is over. Take the loot and send them on.'],
+      why: [
+        'Expediția s-a terminat. Ia premiile și trimite-i mai departe.',
+        'The trip is over. Take the loot and send them on.',
+      ],
       go: { kind: 'panel', panel: 'expedition' },
     };
   if (s.training && s.training.endsAt <= now)
@@ -88,7 +102,10 @@ export function nextAction(s: Save, now: number): NextAction | null {
       id: 'harvest',
       icon: '🌾',
       text: [`Recoltează +${farmReadyFood(s, now)} hrană`, `Harvest +${farmReadyFood(s, now)} food`],
-      why: ['Hrana crește dinozaurii. Replantează după ce culegi.', 'Food grows your dinosaurs. Replant after you harvest.'],
+      why: [
+        'Hrana crește dinozaurii. Replantează după ce culegi.',
+        'Food grows your dinosaurs. Replant after you harvest.',
+      ],
       go: { kind: 'harvest' },
     };
   if (s.crafting.some((j) => j.endsAt <= now))
@@ -104,7 +121,10 @@ export function nextAction(s: Save, now: number): NextAction | null {
       id: 'wheel',
       icon: '🎡',
       text: ['Învârte roata zilei (gratuit)', 'Spin the daily wheel (free)'],
-      why: ['O rotire gratuită pe zi: aur, hrană, materiale sau diamante.', 'One free spin a day: gold, food, materials or diamonds.'],
+      why: [
+        'O rotire gratuită pe zi: aur, hrană, materiale sau diamante.',
+        'One free spin a day: gold, food, materials or diamonds.',
+      ],
       go: { kind: 'panel', panel: 'daily' },
     };
   if (day.quests.some((id) => !day.claimed.includes(id) && day.progress[id] >= DAILY_QUESTS[id].target))
@@ -112,7 +132,10 @@ export function nextAction(s: Save, now: number): NextAction | null {
       id: 'daily-claim',
       icon: '📜',
       text: ['Ia premiul misiunii zilnice', 'Claim a daily mission'],
-      why: ['Ai terminat o misiune zilnică: premiul te așteaptă în „Zilnic”.', 'You finished a daily mission: the reward waits under "Daily".'],
+      why: [
+        'Ai terminat o misiune zilnică: premiul te așteaptă în „Zilnic”.',
+        'You finished a daily mission: the reward waits under "Daily".',
+      ],
       go: { kind: 'panel', panel: 'daily' },
     };
 
@@ -123,7 +146,10 @@ export function nextAction(s: Save, now: number): NextAction | null {
       id: 'evolve',
       icon: '✦',
       text: [`Evoluează-l pe ${gate.nickname}`, `Evolve ${gate.nickname}`],
-      why: ['A ajuns la nivelul 9: devine juvenil, mai puternic, și poate pleca în expediții.', 'It reached level 9: it becomes a stronger juvenile that can go on expeditions.'],
+      why: [
+        'A ajuns la nivelul 9: devine juvenil, mai puternic, și poate pleca în expediții.',
+        'It reached level 9: it becomes a stronger juvenile that can go on expeditions.',
+      ],
       go: { kind: 'panel', panel: 'dino', dinoId: gate.id },
     };
 
@@ -136,7 +162,10 @@ export function nextAction(s: Save, now: number): NextAction | null {
         return {
           id: 'story-build',
           icon: '🏗',
-          text: [`Construiește: ${UTILITY_BUILDINGS[story.building].name[0]}`, `Build: ${UTILITY_BUILDINGS[story.building].name[1]}`],
+          text: [
+            `Construiește: ${UTILITY_BUILDINGS[story.building].name[0]}`,
+            `Build: ${UTILITY_BUILDINGS[story.building].name[1]}`,
+          ],
           why: story.hint,
           go: { kind: 'panel', panel: 'build', building: story.building },
         };
@@ -145,12 +174,19 @@ export function nextAction(s: Save, now: number): NextAction | null {
       if (region && s.portalLevel > 0 && !s.expeditions.some((x) => x.kind === 'stage' && x.regionId === region.id)) {
         const level = stageLevel(regionNumber(region.id), (s.expeditionProgress[region.id] ?? 0) + 1);
         const ready = home.filter((d) => d.stage !== 'baby' && d.level >= level);
-        const plan = expeditionPlan(s, region.id, ready.slice(0, 1).map((d) => d.id));
+        const plan = expeditionPlan(
+          s,
+          region.id,
+          ready.slice(0, 1).map((d) => d.id),
+        );
         if (ready.length && (plan.blocker === null || plan.blocker === 'teamSize'))
           return {
             id: 'story-trip',
             icon: '🧭',
-            text: [`Pornește etapa ${plan.stage + 1}: ${region.name[0]}`, `Start stage ${plan.stage + 1}: ${region.name[1]}`],
+            text: [
+              `Pornește etapa ${plan.stage + 1}: ${region.name[0]}`,
+              `Start stage ${plan.stage + 1}: ${region.name[1]}`,
+            ],
             why: [
               `Durează ${Math.round(plan.duration / 60_000)} min și aduce aur, hrană și materiale.`,
               `It takes ${Math.round(plan.duration / 60_000)} min and brings gold, food and materials.`,
@@ -163,7 +199,10 @@ export function nextAction(s: Save, now: number): NextAction | null {
           return {
             id: 'feed-for-trip',
             icon: '🍖',
-            text: [`Hrănește-l pe ${best.nickname} (${feedCost(best.level)} hrană)`, `Feed ${best.nickname} (${feedCost(best.level)} food)`],
+            text: [
+              `Hrănește-l pe ${best.nickname} (${feedCost(best.level)} hrană)`,
+              `Feed ${best.nickname} (${feedCost(best.level)} food)`,
+            ],
             why: [
               `Etapa următoare cere nivelul ${level}; ${best.nickname} e la ${best.level}.`,
               `The next stage needs level ${level}; ${best.nickname} is at ${best.level}.`,
@@ -205,7 +244,10 @@ export function nextAction(s: Save, now: number): NextAction | null {
       id: 'incubate',
       icon: '🥚',
       text: ['Pune un ou la incubat', 'Put an egg in the nest'],
-      why: ['Ai un ou pe raft și un cuib liber. Ouăle nu eclozează singure.', 'You have an egg on the shelf and a free nest. Eggs never hatch by themselves.'],
+      why: [
+        'Ai un ou pe raft și un cuib liber. Ouăle nu eclozează singure.',
+        'You have an egg on the shelf and a free nest. Eggs never hatch by themselves.',
+      ],
       go: { kind: 'panel', panel: 'hatchery' },
     };
   const hungry = home
@@ -215,8 +257,14 @@ export function nextAction(s: Save, now: number): NextAction | null {
     return {
       id: 'feed',
       icon: '🍖',
-      text: [`Hrănește-l pe ${hungry.nickname} (${feedCost(hungry.level)} hrană)`, `Feed ${hungry.nickname} (${feedCost(hungry.level)} food)`],
-      why: ['Fiecare masă = +1 nivel. Nivelurile deschid etape noi și lupte.', 'Every meal = +1 level. Levels open new stages and fights.'],
+      text: [
+        `Hrănește-l pe ${hungry.nickname} (${feedCost(hungry.level)} hrană)`,
+        `Feed ${hungry.nickname} (${feedCost(hungry.level)} food)`,
+      ],
+      why: [
+        'Fiecare masă = +1 nivel. Nivelurile deschid etape noi și lupte.',
+        'Every meal = +1 level. Levels open new stages and fights.',
+      ],
       go: { kind: 'panel', panel: 'dino', dinoId: hungry.id },
     };
   if (has('farm') && s.plots.some((p) => !p))
@@ -224,7 +272,10 @@ export function nextAction(s: Save, now: number): NextAction | null {
       id: 'plant',
       icon: '🌿',
       text: ['Plantează la fermă', 'Plant at the farm'],
-      why: ['Un strat e gol. Ferigile sunt gata în 5 minute, gratuit.', 'A plot is empty. Ferns are ready in 5 minutes, for free.'],
+      why: [
+        'Un strat e gol. Ferigile sunt gata în 5 minute, gratuit.',
+        'A plot is empty. Ferns are ready in 5 minutes, for free.',
+      ],
       go: { kind: 'panel', panel: 'farm' },
     };
   if (day.pets < PET.perDay && home.length)
@@ -232,7 +283,10 @@ export function nextAction(s: Save, now: number): NextAction | null {
       id: 'pet',
       icon: '❤',
       text: [`Mângâie-l pe ${home[0].nickname} (+${PET.food} hrană)`, `Pet ${home[0].nickname} (+${PET.food} food)`],
-      why: [`De ${PET.perDay} ori pe zi, fiecare mângâiere dă hrană.`, `${PET.perDay} times a day, every pet gives food.`],
+      why: [
+        `De ${PET.perDay} ori pe zi, fiecare mângâiere dă hrană.`,
+        `${PET.perDay} times a day, every pet gives food.`,
+      ],
       go: { kind: 'panel', panel: 'dino', dinoId: home[0].id },
     };
   const trainee = home.find((d) => d.level < levelCap(d.stage));
@@ -241,7 +295,10 @@ export function nextAction(s: Save, now: number): NextAction | null {
       id: 'train',
       icon: '⬆',
       text: [`Antrenează-l pe ${trainee.nickname} (gratuit)`, `Train ${trainee.nickname} (free)`],
-      why: [`${TRAINING.minutes} de minute pentru +1 nivel, fără hrană.`, `${TRAINING.minutes} minutes for +1 level, no food needed.`],
+      why: [
+        `${TRAINING.minutes} de minute pentru +1 nivel, fără hrană.`,
+        `${TRAINING.minutes} minutes for +1 level, no food needed.`,
+      ],
       go: { kind: 'panel', panel: 'dino', dinoId: trainee.id },
     };
   if (treasureReady(s, now))
@@ -258,8 +315,14 @@ export function nextAction(s: Save, now: number): NextAction | null {
     return {
       id: 'story-gold',
       icon: '🪙',
-      text: [`Strânge ${missing} aur pentru ${UTILITY_BUILDINGS[story.building].name[0]}`, `Save ${missing} gold for the ${UTILITY_BUILDINGS[story.building].name[1]}`],
-      why: ['Dinozaurii din lumi fac aur singuri: apasă „Colectează” jos.', 'Dinosaurs in their worlds make gold on their own: tap "Collect" below.'],
+      text: [
+        `Strânge ${missing} aur pentru ${UTILITY_BUILDINGS[story.building].name[0]}`,
+        `Save ${missing} gold for the ${UTILITY_BUILDINGS[story.building].name[1]}`,
+      ],
+      why: [
+        'Dinozaurii din lumi fac aur singuri: apasă „Colectează” jos.',
+        'Dinosaurs in their worlds make gold on their own: tap "Collect" below.',
+      ],
       go: null,
       waiting: true,
     };
@@ -268,10 +331,14 @@ export function nextAction(s: Save, now: number): NextAction | null {
   // ---- only timers left ----
   const timers: { at: number; text: Text }[] = [
     ...s.expeditions.map((x) => ({ at: x.endsAt, text: ['Echipa revine', 'The team is back'] as Text })),
-    ...s.eggs.filter((e) => e.hatchAt !== null).map((e) => ({ at: e.hatchAt!, text: ['Oul e gata', 'The egg is ready'] as Text })),
+    ...s.eggs
+      .filter((e) => e.hatchAt !== null)
+      .map((e) => ({ at: e.hatchAt!, text: ['Oul e gata', 'The egg is ready'] as Text })),
     ...s.plots.flatMap((p) => (p ? [{ at: p.readyAt, text: ['Recolta e gata', 'The crop is ready'] as Text }] : [])),
     ...(s.training ? [{ at: s.training.endsAt, text: ['Antrenamentul e gata', 'Training is done'] as Text }] : []),
-    ...(s.construction ? [{ at: s.construction.endsAt, text: ['Construcția e gata', 'The build is done'] as Text }] : []),
+    ...(s.construction
+      ? [{ at: s.construction.endsAt, text: ['Construcția e gata', 'The build is done'] as Text }]
+      : []),
   ].filter((t) => t.at > now);
   const soonest = timers.sort((a, b) => a.at - b.at)[0];
   if (soonest) {

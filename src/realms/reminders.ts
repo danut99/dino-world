@@ -28,8 +28,7 @@ export const remindersSupported = () =>
   typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator;
 export const reminderSet = (id: string) => read().some((r) => r.id === id);
 
-const register = () =>
-  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => undefined);
+const register = () => navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => undefined);
 
 async function fire(r: Reminder) {
   timers.delete(r.id);

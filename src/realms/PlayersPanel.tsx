@@ -185,10 +185,7 @@ function LeaderboardView({
       {mode === 'top' && (
         <>
           <p className="realm-note">
-            {tr(
-              'Recordurile tuturor jucătorilor. Alege ce compari:',
-              'Records of every player. Pick what to compare:',
-            )}
+            {tr('Recordurile tuturor jucătorilor. Alege ce compari:', 'Records of every player. Pick what to compare:')}
           </p>
           <div className="pk-chips" role="group" aria-label={tr('Clasament după', 'Rank by')}>
             {kinds.map(([id, label]) => (
@@ -253,7 +250,12 @@ function LeaderboardView({
           {!weekly ? (
             <p className="realm-note">{tr('Se încarcă…', 'Loading…')}</p>
           ) : !weekly.length ? (
-            <p className="realm-note">{tr('Încă nicio victorie în liga ta săptămâna asta. Fii primul!', 'No wins in your league this week yet. Be the first!')}</p>
+            <p className="realm-note">
+              {tr(
+                'Încă nicio victorie în liga ta săptămâna asta. Fii primul!',
+                'No wins in your league this week yet. Be the first!',
+              )}
+            </p>
           ) : (
             <ol>
               {weekly.map((r, i) => {
@@ -587,7 +589,9 @@ export function PlayersPanel({
                               : tr('Încă nu v-ați luptat', 'No fights yet')}
                           </small>
                         ) : (
-                          <small>{tr('Cerere trimisă, așteptăm răspunsul', 'Request sent, waiting for an answer')}</small>
+                          <small>
+                            {tr('Cerere trimisă, așteptăm răspunsul', 'Request sent, waiting for an answer')}
+                          </small>
                         )}
                       </span>
                       {open ? (
@@ -634,69 +638,69 @@ export function PlayersPanel({
           </section>
           <section className="realm-friends-find" aria-label={tr('Adaugă prieteni', 'Add friends')}>
             <h3>➕ {tr('Adaugă prieteni', 'Add friends')}</h3>
-          <label className="realm-players-search">
-            <input
-              type="search"
-              aria-label={tr('Caută un jucător', 'Search for a player')}
-              placeholder={tr('Caută după nume…', 'Search by name…')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </label>
-          {failed ? (
-            <p className="realm-note">
-              {tr(
-                'Lista nu s-a putut încărca. Verifică internetul.',
-                'The list could not load. Check your connection.',
-              )}
-            </p>
-          ) : !players ? (
-            <p className="realm-note">{tr('Se încarcă jucătorii…', 'Loading players…')}</p>
-          ) : !players.length ? (
-            <p className="realm-note">
-              {search
-                ? tr('Niciun jucător cu acest nume.', 'No player by that name.')
-                : tr('Încă nu sunt alți jucători.', 'No other players yet.')}
-            </p>
-          ) : (
-            <ul>
-              {players
-                .filter((p) => p.user_id !== selfId && !friendOf(p.user_id))
-                .slice(0, search ? 30 : 8)
-                .map((p) => {
-                const self = p.user_id === selfId;
-                const friend = friendOf(p.user_id);
-                return (
-                  <li key={p.user_id} className="realm-player-row">
-                    <button className="realm-player" disabled={self} onClick={() => onVisit(p, canHelp(friend))}>
-                      <Portrait p={p} />
-                      <span className="realm-player-main">
-                        <strong>
-                          {p.name} {self && <em>{tr('tu', 'you')}</em>}
-                        </strong>
-                        <small>
-                          {tr('Nv.', 'Lv.')} {p.level} · 🦖 {p.dinos} · ★ {p.stars} · {p.worlds}{' '}
-                          {tr(p.worlds === 1 ? 'lume' : 'lumi', p.worlds === 1 ? 'world' : 'worlds')}
-                        </small>
-                      </span>
-                      <span className="realm-player-seen">{lastSeen(p.updated_at, lang)}</span>
-                      {!self && <span className="realm-player-visit">{tr('Vizitează', 'Visit')} →</span>}
-                    </button>
-                    {!self && !friend && (
-                      <button
-                        className="realm-button realm-player-add-text"
-                        disabled={busy}
-                        aria-label={tr(`Adaugă prieten: ${p.name}`, `Add friend: ${p.name}`)}
-                        onClick={() => act(() => requestFriend(selfId, p.user_id))}
-                      >
-                        + {tr('Prieten', 'Friend')}
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+            <label className="realm-players-search">
+              <input
+                type="search"
+                aria-label={tr('Caută un jucător', 'Search for a player')}
+                placeholder={tr('Caută după nume…', 'Search by name…')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </label>
+            {failed ? (
+              <p className="realm-note">
+                {tr(
+                  'Lista nu s-a putut încărca. Verifică internetul.',
+                  'The list could not load. Check your connection.',
+                )}
+              </p>
+            ) : !players ? (
+              <p className="realm-note">{tr('Se încarcă jucătorii…', 'Loading players…')}</p>
+            ) : !players.length ? (
+              <p className="realm-note">
+                {search
+                  ? tr('Niciun jucător cu acest nume.', 'No player by that name.')
+                  : tr('Încă nu sunt alți jucători.', 'No other players yet.')}
+              </p>
+            ) : (
+              <ul>
+                {players
+                  .filter((p) => p.user_id !== selfId && !friendOf(p.user_id))
+                  .slice(0, search ? 30 : 8)
+                  .map((p) => {
+                    const self = p.user_id === selfId;
+                    const friend = friendOf(p.user_id);
+                    return (
+                      <li key={p.user_id} className="realm-player-row">
+                        <button className="realm-player" disabled={self} onClick={() => onVisit(p, canHelp(friend))}>
+                          <Portrait p={p} />
+                          <span className="realm-player-main">
+                            <strong>
+                              {p.name} {self && <em>{tr('tu', 'you')}</em>}
+                            </strong>
+                            <small>
+                              {tr('Nv.', 'Lv.')} {p.level} · 🦖 {p.dinos} · ★ {p.stars} · {p.worlds}{' '}
+                              {tr(p.worlds === 1 ? 'lume' : 'lumi', p.worlds === 1 ? 'world' : 'worlds')}
+                            </small>
+                          </span>
+                          <span className="realm-player-seen">{lastSeen(p.updated_at, lang)}</span>
+                          {!self && <span className="realm-player-visit">{tr('Vizitează', 'Visit')} →</span>}
+                        </button>
+                        {!self && !friend && (
+                          <button
+                            className="realm-button realm-player-add-text"
+                            disabled={busy}
+                            aria-label={tr(`Adaugă prieten: ${p.name}`, `Add friend: ${p.name}`)}
+                            onClick={() => act(() => requestFriend(selfId, p.user_id))}
+                          >
+                            + {tr('Prieten', 'Friend')}
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+              </ul>
+            )}
           </section>
           {settings}
         </TabPanel>

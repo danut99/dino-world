@@ -428,8 +428,7 @@
 /* features: the same cards as the moves, each tinted by its world */
 .feature-card .move-card-stage {
   background:
-    radial-gradient(ellipse at 50% 80%, color-mix(in srgb, var(--el) 30%, transparent) 0%, transparent 65%),
-    #120d18;
+    radial-gradient(ellipse at 50% 80%, color-mix(in srgb, var(--el) 30%, transparent) 0%, transparent 65%), #120d18;
 }
 .feature-card:hover {
   border-color: color-mix(in srgb, var(--el) 45%, transparent);
