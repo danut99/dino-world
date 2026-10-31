@@ -12,7 +12,7 @@ import {
   advance,
   awayAt,
   canBuild,
-  canLamp,
+  canDecor,
   dinoIncome,
   ELEMENTS,
   farmNextAt,
@@ -21,6 +21,7 @@ import {
   treasureReady,
   treasureSpot,
   type Building,
+  type DecorKind,
   type Save,
   type RealmId,
 } from './game';
@@ -577,6 +578,90 @@ function drawLamp(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.restore();
 }
 
+/** A straw scarecrow standing with its foot at (x, y). */
+function drawScarecrow(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  ctx.save();
+  ctx.fillStyle = '#00000044';
+  ctx.beginPath();
+  ctx.ellipse(x, y, 18, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#584332';
+  ctx.fillRect(x - 3, y - 64, 6, 64);
+  ctx.fillRect(x - 28, y - 56, 56, 5);
+  ctx.fillStyle = '#e8c45c';
+  ctx.fillRect(x - 32, y - 54, 6, 10);
+  ctx.fillRect(x + 26, y - 54, 6, 10);
+  ctx.fillRect(x - 10, y - 26, 20, 8);
+  ctx.fillStyle = '#b8452f';
+  ctx.fillRect(x - 26, y - 58, 52, 9);
+  ctx.fillRect(x - 13, y - 58, 26, 34);
+  ctx.fillStyle = '#7d2f22';
+  ctx.fillRect(x - 13, y - 44, 26, 3);
+  ctx.fillRect(x - 2, y - 58, 3, 34);
+  ctx.fillStyle = '#5f8a3e';
+  ctx.fillRect(x + 4, y - 38, 7, 7);
+  ctx.fillStyle = '#d6b98a';
+  ctx.beginPath();
+  ctx.arc(x, y - 70, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#2b1f18';
+  ctx.fillRect(x - 5, y - 72, 3, 3);
+  ctx.fillRect(x + 2, y - 72, 3, 3);
+  ctx.fillRect(x - 4, y - 65, 8, 2);
+  ctx.fillStyle = '#8a6136';
+  ctx.fillRect(x - 17, y - 80, 34, 4);
+  ctx.fillStyle = '#6b4a2a';
+  ctx.fillRect(x - 9, y - 90, 18, 11);
+  ctx.restore();
+}
+
+/** A wooden signpost with two arrows, standing with its foot at (x, y). */
+function drawSignpost(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  ctx.save();
+  ctx.fillStyle = '#00000044';
+  ctx.beginPath();
+  ctx.ellipse(x, y, 16, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#8b8a80';
+  ctx.fillRect(x - 10, y - 6, 20, 6);
+  ctx.fillStyle = '#584332';
+  ctx.fillRect(x - 3, y - 84, 6, 80);
+  const arrow = (from: number, to: number, top: number) => {
+    const tip = to > from ? 8 : -8;
+    ctx.fillStyle = '#3b2c22';
+    ctx.beginPath();
+    ctx.moveTo(x + from, y + top - 1);
+    ctx.lineTo(x + to, y + top - 1);
+    ctx.lineTo(x + to + tip + Math.sign(tip), y + top + 7);
+    ctx.lineTo(x + to, y + top + 15);
+    ctx.lineTo(x + from, y + top + 15);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#c99a5e';
+    ctx.beginPath();
+    ctx.moveTo(x + from + Math.sign(tip), y + top + 1);
+    ctx.lineTo(x + to, y + top + 1);
+    ctx.lineTo(x + to + tip, y + top + 7);
+    ctx.lineTo(x + to, y + top + 13);
+    ctx.lineTo(x + from + Math.sign(tip), y + top + 13);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#8a6136';
+    ctx.fillRect(Math.min(x + from, x + to) + 4, y + top + 6, Math.abs(to - from) - 8, 2);
+  };
+  arrow(-6, 24, -78);
+  arrow(6, -24, -56);
+  ctx.fillStyle = '#3b2c22';
+  ctx.fillRect(x - 5, y - 88, 10, 5);
+  ctx.restore();
+}
+
+const DRAW_DECOR: Record<DecorKind, (ctx: CanvasRenderingContext2D, x: number, y: number) => void> = {
+  lamp: drawLamp,
+  scarecrow: drawScarecrow,
+  signpost: drawSignpost,
+};
+
 export default function World({
   save,
   placing,
@@ -594,7 +679,7 @@ export default function World({
   neighbors,
   onNavigate,
   treasures = false,
-  lampMode = false,
+  decorMode = null,
 }: {
   save: Save;
   placing: boolean;
@@ -616,8 +701,8 @@ export default function World({
   onNavigate?: (to: Place) => void;
   /** Shows the lost treasure on the main island when one waits (your own island only). */
   treasures?: boolean;
-  /** While placing: a lamp (one cell) instead of a building. */
-  lampMode?: boolean;
+  /** While placing: this decoration (one cell) instead of a building. */
+  decorMode?: DecorKind | null;
 }) {
   const ref = useRef<HTMLCanvasElement>(null),
     image = useRef<HTMLImageElement | null>(null),
@@ -816,19 +901,19 @@ export default function World({
   // Target top-left cell for the held building, keeping the grab point under the pointer.
   const heldCell = (p: { x: number; y: number }, h: { id: string; ox: number; oy: number }) => {
     const c = unproject(p.x - h.ox, p.y - h.oy);
-    return h.id.startsWith('lamp:') ? c : { x: c.x - 1, y: c.y - 1 };
+    return h.id.startsWith('decor:') ? c : { x: c.x - 1, y: c.y - 1 };
   };
-  /** The front-most lamp under the pointer, or -1. */
-  const lampAt = (p: { x: number; y: number }) => {
+  /** The front-most decoration under the pointer, or -1. */
+  const decorAt = (p: { x: number; y: number }) => {
     let found = -1;
-    save.lampSpots.forEach((l, i) => {
+    save.decor.forEach((l, i) => {
       const q = project(l.x + 0.5, l.y + 0.5);
       const hit = Math.abs(p.x - q.x) < 20 && p.y < q.y + 10 && p.y > q.y - 90;
-      if (hit && (found < 0 || l.x + l.y >= save.lampSpots[found].x + save.lampSpots[found].y)) found = i;
+      if (hit && (found < 0 || l.x + l.y >= save.decor[found].x + save.decor[found].y)) found = i;
     });
     return found;
   };
-  const heldLamp = held?.id.startsWith('lamp:') ? Number(held.id.slice(5)) : -1;
+  const heldDecor = held?.id.startsWith('decor:') ? Number(held.id.slice(6)) : -1;
   const showGhost = placing || held !== null;
   const ghostId = held?.id ?? moving;
   useEffect(() => {
@@ -1099,14 +1184,14 @@ export default function World({
           }
         }
         const drawHomeObjects = () => {
-          const lamps = save.lampSpots.map((l, i) => ({ lamp: true as const, i, ...l, depth: l.x + l.y }));
-          [...save.buildings.map((b) => ({ lamp: false as const, b, depth: b.x + b.y + 2 })), ...lamps]
+          const decor = save.decor.map((l, i) => ({ decor: true as const, i, ...l, depth: l.x + l.y }));
+          [...save.buildings.map((b) => ({ decor: false as const, b, depth: b.x + b.y + 2 })), ...decor]
             .sort((a, b) => a.depth - b.depth)
             .forEach((o) => {
-              if (o.lamp) {
+              if (o.decor) {
                 const p = project(o.x + 0.5, o.y + 0.5);
-                if (o.i === heldLamp) ctx.globalAlpha = 0.3;
-                drawLamp(ctx, p.x, p.y);
+                if (o.i === heldDecor) ctx.globalAlpha = 0.3;
+                DRAW_DECOR[o.kind](ctx, p.x, p.y);
                 ctx.globalAlpha = 1;
                 return;
               }
@@ -1215,12 +1300,13 @@ export default function World({
             ctx.fillStyle = tone.text;
             ctx.fillText(label, p.x, p.y + 19);
           });
-        if (cell && showGhost && (lampMode || heldLamp >= 0)) {
+        const ghostDecor = heldDecor >= 0 ? save.decor[heldDecor]?.kind : decorMode;
+        if (cell && showGhost && ghostDecor) {
           const p = project(cell.x, cell.y),
-            valid = canLamp(save, cell.x, cell.y, heldLamp >= 0 ? heldLamp : undefined);
+            valid = canDecor(save, cell.x, cell.y, heldDecor >= 0 ? heldDecor : undefined);
           ctx.globalAlpha = 0.75;
           const c = project(cell.x + 0.5, cell.y + 0.5);
-          drawLamp(ctx, c.x, c.y);
+          DRAW_DECOR[ghostDecor](ctx, c.x, c.y);
           ctx.globalAlpha = 1;
           polygon(
             ctx,
@@ -1314,9 +1400,8 @@ export default function World({
     save.buildings,
     save.dinos,
     save.champion,
-    save.lamps,
-    save.lampSpots,
-    lampMode,
+    save.decor,
+    decorMode,
     loaded,
     placing,
     moving,
@@ -1444,12 +1529,12 @@ export default function World({
           const p = coords(e);
           if (placing) setCell(unproject(p.x, p.y));
           cancelHold();
-          const lamp = !placing && realm === 'home' && onMove ? lampAt(p) : -1;
-          const b = !placing && realm === 'home' && onMove && lamp < 0 ? buildingAt(p) : undefined;
-          if (lamp >= 0) {
-            const l = save.lampSpots[lamp],
+          const item = !placing && realm === 'home' && onMove ? decorAt(p) : -1;
+          const b = !placing && realm === 'home' && onMove && item < 0 ? buildingAt(p) : undefined;
+          if (item >= 0) {
+            const l = save.decor[item],
               q = project(l.x + 0.5, l.y + 0.5),
-              grab = { id: `lamp:${lamp}`, ox: p.x - q.x, oy: p.y - q.y };
+              grab = { id: `decor:${item}`, ox: p.x - q.x, oy: p.y - q.y };
             holdTimer.current = window.setTimeout(() => {
               holdTimer.current = null;
               navigator.vibrate?.(30);
@@ -1483,7 +1568,7 @@ export default function World({
             const p = coords(e);
             setHovering(
               realm === 'home'
-                ? !!buildingAt(p) || lampAt(p) >= 0
+                ? !!buildingAt(p) || decorAt(p) >= 0
                 : here.some((x, i) => {
                     const spots = ISLANDS[realm as RealmId].spots;
                     const dp = spots[i % spots.length];
@@ -1565,7 +1650,7 @@ export default function World({
           if (travel) return onNavigate?.(travel);
           if (held) {
             const c = heldCell(coords(e), held),
-              b = heldLamp >= 0 ? save.lampSpots[heldLamp] : save.buildings.find((b) => b.id === held.id);
+              b = heldDecor >= 0 ? save.decor[heldDecor] : save.buildings.find((b) => b.id === held.id);
             setHeld(null);
             setCell(null);
             if (b && (b.x !== c.x || b.y !== c.y)) onMove?.(held.id, c.x, c.y);
@@ -1665,11 +1750,15 @@ export default function World({
                   </button>
                 );
               const label = ready
-                ? lang
-                  ? 'Collect'
-                  : 'Colectează'
+                ? kind === 'hatchery'
+                  ? lang
+                    ? 'Hatch!'
+                    : 'Eclozează!'
+                  : lang
+                    ? 'Collect'
+                    : 'Colectează'
                 : at
-                  ? `${Math.max(0, Math.ceil((at - now) / 1000))}s`
+                  ? clock(at - now)
                   : UTILITY_BUILDINGS[kind].name[lang];
               return (
                 <button

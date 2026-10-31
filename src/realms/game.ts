@@ -105,6 +105,8 @@ const craftMs = (recipe: { seconds: number }) =>
 /** An expedition's planned length: its stage's minutes, or the patrol's hours. */
 const tripMs = (x: Pick<ExpeditionRun, 'kind' | 'regionId' | 'stage' | 'hours'>) =>
   x.kind === 'patrol' ? (x.hours ?? 0) * 3_600_000 : stageMs(x.regionId, x.stage ?? -1);
+/** A trip's length once shortened by signposts (`speed`, see `tripSpeed`). */
+export const tripLength = (ms: number, speed: number) => Math.round(ms * speed);
 /**
  * Diamonds to finish a wait of `ms` right away: `ceil(1.2 × √minutes)`, at least one. Long waits cost less per
  * minute: 5 minutes is 3, an hour 10, eight hours 27.
@@ -501,10 +503,8 @@ export interface Save {
   discovered: string[];
   /** Collection milestones already paid out. */
   collectionMilestones: number;
-  /** Ornamental lamps placed on the island, each adding to habitat gold (see LAMP_BONUS). */
-  lamps: number;
-  /** Where each lamp stands on the home grid (one cell each), as many as `lamps`. */
-  lampSpots: { x: number; y: number }[];
+  /** Decorations placed on the home grid, one cell each (see DECOR). */
+  decor: { kind: DecorKind; x: number; y: number }[];
   /** Legend trials done in the Bucharest week `week`, once the story is finished (see LEGEND_TRIAL). */
   legend: { week: string; trials: number };
   /** The last duel season (its Monday, YYYY-MM-DD) whose prize was taken, or '' (see DUEL_SEASON_PRIZES). */
@@ -621,9 +621,20 @@ export const HABITAT_LEVELS: {
   { capacity: 5, cap: 2000, income: 1.45, gold: 7000, kits: 2, minutes: 240 },
   { capacity: 6, cap: 2800, income: 1.6, gold: 14000, kits: 2, minutes: 480 },
 ];
-/** Each placed lamp adds this share to habitat gold, up to MAX_LAMPS. */
-export const LAMP_BONUS = 0.05;
-export const MAX_LAMPS = 5;
+/**
+ * Island decorations, crafted in the workshop: each one placed adds `bonus` to its effect, up to `max` of a kind.
+ * Lamp: habitat gold. Scarecrow: farm harvests. Signpost: shorter expeditions and patrols.
+ */
+export const DECOR = {
+  lamp: { bonus: 0.05, max: 5 },
+  scarecrow: { bonus: 0.05, max: 5 },
+  signpost: { bonus: 0.05, max: 5 },
+} as const;
+export type DecorKind = keyof typeof DECOR;
+export const DECOR_KINDS = Object.keys(DECOR) as DecorKind[];
+export const decorCount = (s: Pick<Save, 'decor'>, kind: DecorKind) => s.decor.filter((d) => d.kind === kind).length;
+/** The share of a trip's time left by the placed signposts. */
+export const tripSpeed = (s: Pick<Save, 'decor'>) => 1 - DECOR.signpost.bonus * decorCount(s, 'signpost');
 /**
  * Construction: building upgrades take time (each level's `minutes`, from 5 minutes to 8 hours) and there is one
  * builder, so one upgrade is built at a time. The price is paid when it starts; the building keeps working at its
@@ -1245,6 +1256,8 @@ export type Command =
   | { type: 'unlockHabitat' | 'upgradeHabitat'; realm: RealmId }
   | { type: 'plant'; crop?: CropId; plot?: number }
   | { type: 'harvest'; plot?: number }
+  /** Picks a growing crop now, for EARLY_HARVEST of the food it has grown so far, and frees its plot. */
+  | { type: 'harvestEarly'; plot: number }
   | { type: 'battle'; encounterId?: string }
   /** Sends a team (1 to 3 dinosaurs) on a region's next stage. */
   | { type: 'expedition'; regionId: string; team: string[] }
@@ -1256,9 +1269,9 @@ export type Command =
   | { type: 'craft'; recipeId: string }
   | { type: 'claimCraft' | 'cancelCraft'; jobId: string }
   | { type: 'move'; id: string; x: number; y: number }
-  /** Lights a lamp from the inventory on cell (x, y), or on the first free cell when none is given. */
-  | { type: 'placeLamp'; x?: number; y?: number }
-  | { type: 'moveLamp'; index: number; x: number; y: number }
+  /** Places a decoration from the inventory on cell (x, y), or on the first free cell when none is given. */
+  | { type: 'placeDecor'; kind: DecorKind; x?: number; y?: number }
+  | { type: 'moveDecor'; index: number; x: number; y: number }
   | { type: 'action'; action: AllyMove; tapped?: boolean }
   /** Adds diamonds: the test button now, real purchases later. */
   | { type: 'addGems'; amount: number }
@@ -1327,8 +1340,7 @@ export function newSave(now: number): Save {
     construction: null,
     discovered: [],
     collectionMilestones: 0,
-    lamps: 0,
-    lampSpots: [],
+    decor: [],
     legend: { week: weekId(now), trials: 0 },
     duelSeason: '',
     tower: { week: weekId(now), floor: 0, claimed: [] },
@@ -1338,20 +1350,32 @@ export function newSave(now: number): Save {
   s.daily = newDaily(now, s);
   return s;
 }
-export const farmYield = (level: number, crop: CropId) =>
-  Math.round(CROPS.find((c) => c.id === crop)!.food * FARM_LEVELS[level - 1].yield);
+export const farmYield = (level: number, crop: CropId, scarecrows = 0) =>
+  Math.round(
+    CROPS.find((c) => c.id === crop)!.food * FARM_LEVELS[level - 1].yield * (1 + DECOR.scarecrow.bonus * scarecrows),
+  );
 /** Food waiting in ready plots. */
 export const farmReadyFood = (s: Save, now: number) =>
-  s.plots.reduce((n, p) => n + (p && p.readyAt <= now ? farmYield(s.farmLevel, p.crop) : 0), 0);
+  s.plots.reduce(
+    (n, p) => n + (p && p.readyAt <= now ? farmYield(s.farmLevel, p.crop, decorCount(s, 'scarecrow')) : 0),
+    0,
+  );
 /** When the next growing plot is ready, or null if nothing grows. */
 export const farmNextAt = (s: Save) =>
   s.plots.reduce<number | null>((at, p) => (p && (at === null || p.readyAt < at) ? p.readyAt : at), null);
+/** A crop picked before it is ready gives this share of the food it has grown so far. */
+export const EARLY_HARVEST = 0.7;
+export function earlyHarvestFood(s: Pick<Save, 'farmLevel' | 'decor'>, p: FarmPlot, now: number) {
+  const full = CROPS.find((c) => c.id === p.crop)!.seconds * 1000,
+    grown = Math.max(0, Math.min(1, 1 - (p.readyAt - now) / full));
+  return Math.floor(farmYield(s.farmLevel, p.crop, decorCount(s, 'scarecrow')) * grown * EARLY_HARVEST);
+}
 function harvestPlots(s: Save, now: number, indexes: number[]) {
   let food = 0;
   for (const i of indexes) {
     const p = s.plots[i];
     if (!p || p.readyAt > now) continue;
-    food += farmYield(s.farmLevel, p.crop);
+    food += farmYield(s.farmLevel, p.crop, decorCount(s, 'scarecrow'));
     s.plots[i] = null;
   }
   s.food += food;
@@ -1369,11 +1393,11 @@ export const goldCap = (s: Pick<Save, 'habitats' | 'boostUntil'>, now?: number) 
   (now !== undefined && s.boostUntil > now ? BOOST_CAP : 1);
 /** Gold per hour of one dinosaur: by stage, earth ×1.25, times its habitat's level and the placed lamps. */
 export const STAGE_INCOME: Record<Stage, number> = { baby: 30, juvenile: 50, adult: 100 };
-export const dinoIncome = (s: Pick<Save, 'habitats' | 'lamps'>, d: Dino) =>
+export const dinoIncome = (s: Pick<Save, 'habitats' | 'decor'>, d: Dino) =>
   STAGE_INCOME[d.stage] *
   (d.element === 'earth' ? 1.25 : 1) *
   HABITAT_LEVELS[(s.habitats[d.element] ?? 1) - 1].income *
-  (1 + LAMP_BONUS * s.lamps);
+  (1 + DECOR.lamp.bonus * decorCount(s, 'lamp'));
 /** Gold per hour of every dinosaur; with `now`, of those at home at that moment (a team away earns nothing). */
 export const goldRate = (s: Save, now?: number) =>
   s.dinos.reduce((n, d) => n + (now !== undefined && awayAt(s, d.id, now) ? 0 : dinoIncome(s, d)), 0);
@@ -2059,17 +2083,17 @@ export function canBuild(s: Save, x: number, y: number, moving?: string) {
         gy = Math.abs(b.y - y) - 3;
       return b.id !== moving && ((gx < 1 && gy < 0) || (gx < 0 && gy < 1));
     }) &&
-    !s.lampSpots.some((l) => l.x >= x && l.x < x + 3 && l.y >= y && l.y < y + 3)
+    !s.decor.some((l) => l.x >= x && l.x < x + 3 && l.y >= y && l.y < y + 3)
   );
 }
-/** A lamp takes one open cell, clear of buildings and other lamps (`moving`: the index of the lamp being moved). */
-export function canLamp(s: Save, x: number, y: number, moving?: number) {
+/** A decoration takes one open cell, clear of buildings and other decorations (`moving`: its index in `decor`). */
+export function canDecor(s: Save, x: number, y: number, moving?: number) {
   return (
     Number.isInteger(x) &&
     Number.isInteger(y) &&
     buildable(x, y) &&
     !s.buildings.some((b) => x >= b.x && x < b.x + 3 && y >= b.y && y < b.y + 3) &&
-    !s.lampSpots.some((l, i) => i !== moving && l.x === x && l.y === y)
+    !s.decor.some((l, i) => i !== moving && l.x === x && l.y === y)
   );
 }
 const nicknameFor = (s: Save, species: Species, element: RealmId) =>
@@ -2479,6 +2503,14 @@ export function command(save: Save, c: Command, now: number): Save {
       require(harvestPlots(s, now, indexes) > 0, 'timer');
       break;
     }
+    case 'harvestEarly': {
+      const p = s.plots[c.plot];
+      require(p && p.readyAt > now, 'timer');
+      if (!p) break;
+      s.food += earlyHarvestFood(s, p, now);
+      s.plots[c.plot] = null;
+      break;
+    }
     case 'upgradeFarm':
       require(s.buildings.some((b) => b.kind === 'farm'), 'farm');
       startUpgrade('farm');
@@ -2695,24 +2727,26 @@ export function command(save: Save, c: Command, now: number): Save {
       s.crafting = s.crafting.filter((j) => j.endsAt > now);
       break;
     }
-    case 'placeLamp': {
-      require(s.lamps < MAX_LAMPS, 'maxLevel');
-      require(s.inventory.lamp > 0, 'materials');
+    case 'placeDecor': {
+      require(Object.hasOwn(DECOR, c.kind), 'placement');
+      require(decorCount(s, c.kind) < DECOR[c.kind].max, 'maxLevel');
+      require(s.inventory[c.kind] > 0, 'materials');
       const spot =
-        c.x === undefined || c.y === undefined ? BUILDABLE_CELLS.find((p) => canLamp(s, p.x, p.y)) : { x: c.x, y: c.y };
-      require(spot && canLamp(s, spot.x, spot.y), 'placement');
+        c.x === undefined || c.y === undefined
+          ? BUILDABLE_CELLS.find((p) => canDecor(s, p.x, p.y))
+          : { x: c.x, y: c.y };
+      require(spot && canDecor(s, spot.x, spot.y), 'placement');
       if (!spot) break;
-      s.inventory.lamp--;
-      s.lamps++;
-      s.lampSpots.push({ x: spot.x, y: spot.y });
+      s.inventory[c.kind]--;
+      s.decor.push({ kind: c.kind, x: spot.x, y: spot.y });
       break;
     }
-    case 'moveLamp': {
-      const lamp = s.lampSpots[c.index];
-      require(lamp && canLamp(s, c.x, c.y, c.index), 'placement');
-      if (lamp) {
-        lamp.x = c.x;
-        lamp.y = c.y;
+    case 'moveDecor': {
+      const item = s.decor[c.index];
+      require(item && canDecor(s, c.x, c.y, c.index), 'placement');
+      if (item) {
+        item.x = c.x;
+        item.y = c.y;
       }
       break;
     }
@@ -3175,13 +3209,18 @@ export function parseSave(text: string): Save {
     construction: null,
     discovered: [],
     collectionMilestones: 0,
-    lamps: 0,
-    lampSpots: [],
+    decor: [],
     legend: fresh.legend,
     duelSeason: '',
     tower: fresh.tower,
     training: null,
   };
+  // Lamps used to be kept apart (`lamps`, `lampSpots`); they are decorations now.
+  const oldLamps = fields.lamps;
+  if (fields.decor === undefined && Array.isArray(fields.lampSpots))
+    fields.decor = (fields.lampSpots as unknown[]).map((l) => ({ kind: 'lamp', ...(l as object) }));
+  delete fields.lamps;
+  delete fields.lampSpots;
   for (const [key, value] of Object.entries(defaults)) if (fields[key] === undefined) fields[key] = value;
   if (s.inventory && typeof s.inventory === 'object')
     for (const id of Object.keys(ITEMS) as ItemId[]) s.inventory[id] ??= 0;
@@ -3253,11 +3292,11 @@ export function parseSave(text: string): Save {
   }
   if (!kinds.has('hatchery') || (s.plots.some((p) => p) && !kinds.has('farm'))) throw Error('Missing building');
   // Lamps lit before they had a place go on the first free cells.
-  if (Array.isArray(s.lampSpots) && integer(s.lamps, MAX_LAMPS))
-    while (s.lampSpots.length < s.lamps) {
-      const free = BUILDABLE_CELLS.find((c) => canLamp(s, c.x, c.y));
+  if (Array.isArray(s.decor) && Number.isInteger(oldLamps))
+    while (decorCount(s, 'lamp') < Math.min(oldLamps as number, DECOR.lamp.max)) {
+      const free = BUILDABLE_CELLS.find((c) => canDecor(s, c.x, c.y));
       if (!free) break;
-      s.lampSpots.push(free);
+      s.decor.push({ kind: 'lamp', ...free });
     }
   if (
     !s.habitats ||
@@ -3387,10 +3426,17 @@ export function parseSave(text: string): Save {
     !s.inventory ||
     Object.keys(s.inventory).length !== Object.keys(ITEMS).length ||
     !Object.keys(ITEMS).every((id) => integer(s.inventory[id as ItemId])) ||
-    !integer(s.lamps, MAX_LAMPS) ||
-    !Array.isArray(s.lampSpots) ||
-    s.lampSpots.length !== s.lamps ||
-    s.lampSpots.some((l) => !l || !Number.isInteger(l.x) || !Number.isInteger(l.y) || !buildable(l.x, l.y)) ||
+    !Array.isArray(s.decor) ||
+    s.decor.some(
+      (d) =>
+        !d ||
+        typeof d !== 'object' ||
+        !Object.hasOwn(DECOR, d.kind) ||
+        !Number.isInteger(d.x) ||
+        !Number.isInteger(d.y) ||
+        !buildable(d.x, d.y),
+    ) ||
+    DECOR_KINDS.some((k) => decorCount(s, k) > DECOR[k].max) ||
     !(
       s.training === null ||
       (!!s.training &&
@@ -3477,7 +3523,12 @@ export function parseSave(text: string): Save {
       !integer(x.endsAt, 1e14) ||
       !(length > 0) ||
       !(x.rushed === undefined || x.rushed === true) ||
-      (x.rushed ? x.endsAt < x.startedAt || x.endsAt - x.startedAt > length : x.endsAt - x.startedAt !== length) ||
+      (x.rushed
+        ? x.endsAt < x.startedAt || x.endsAt - x.startedAt > length
+        : // Signposts placed when it left may have shortened it.
+          !Array.from({ length: DECOR.signpost.max + 1 }, (_, k) => tripLength(length, 1 - DECOR.signpost.bonus * k)).includes(
+            x.endsAt - x.startedAt,
+          )) ||
       (x.kind === 'stage'
         ? // Stages go in order, one run per region at a time, with the region's team size.
           x.hours !== undefined ||

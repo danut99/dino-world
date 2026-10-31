@@ -1,13 +1,14 @@
 import { ResourceHelpContext } from './ResourceHelp';
 import { RealmsPanel } from './RealmsPanel';
 import { BuildPanel } from './BuildPanel';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import World from './World';
 import { RealmsWiki } from './RealmsWiki';
 import { Hero } from './Hero';
 import { DinosaurCollection } from './DinosaurCollection';
 import { DinosaurArt } from './DinosaurArt';
 import { HeroVision } from './HeroVision';
+import { EvolveMoment, HatchMoment, TripReturn } from './DinoMoment';
 import { AnimationViewer } from './AnimationViewer';
 import { SPECIES_NAMES } from './dinosaurs';
 import { GameplayScreen, BattleScreen, type DuelOutcome, type GameplayView } from './GameplayScreens';
@@ -55,6 +56,7 @@ import {
   parseSave,
   SAVE_KEY,
   type Command,
+  type DecorKind,
   type Save,
   type RealmId,
   type Dino,
@@ -66,6 +68,9 @@ import './pixel-theme.css';
 import './panel-kit.css';
 import './mobile-layout.css';
 import { Icon, type IconName } from './ui/Icon';
+import { ReminderButton } from './ui/ReminderButton';
+import { restoreReminders } from './reminders';
+import { nextAction, type NextAction } from './nextAction';
 import { playSound, setSoundEnabled, soundEnabled, type SoundId } from './sound';
 import { useCloudSync } from './useCloudSync';
 import {
@@ -106,6 +111,7 @@ const COMMAND_SOUNDS: Partial<Record<Command['type'], SoundId>> = {
   collectAvailable: 'coin',
   claim: 'coin',
   harvest: 'coin',
+  harvestEarly: 'coin',
   claimCraft: 'coin',
   claimExpedition: 'coin',
   claimDailyQuest: 'coin',
@@ -120,7 +126,7 @@ const COMMAND_SOUNDS: Partial<Record<Command['type'], SoundId>> = {
   evolve: 'evolve',
   useCrystal: 'evolve',
   build: 'build',
-  placeLamp: 'build',
+  placeDecor: 'build',
   unlockHabitat: 'build',
   upgradeHabitat: 'build',
   upgradeFarm: 'build',
@@ -328,6 +334,10 @@ export default function RealmsApp({
 }: { initialSave?: Save; account?: SignedIn; guest?: boolean } = {}) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [heroVision, setHeroVision] = useState<Dino | null>(null);
+  const [moment, setMoment] = useState<
+    { kind: 'evolve'; dino: Dino; from: Dino['stage'] } | { kind: 'hatch'; dino: Dino } | null
+  >(null);
+  const [trip, setTrip] = useState<{ dino: Dino; gold: number; food: number; key: number } | null>(null);
   const [trainAfterVision, setTrainAfterVision] = useState(false);
   /** Another player's world being looked at (read only), and which of its worlds is shown. */
   const [visit, setVisit] = useState<{ id: string; name: string; save: Save; canHelp: boolean } | null>(null);
@@ -396,7 +406,7 @@ export default function RealmsApp({
     return () => document.removeEventListener('click', click, true);
   }, []);
   const [placing, setPlacing] = useState(false),
-    [placingLamp, setPlacingLamp] = useState(false),
+    [placingDecor, setPlacingDecor] = useState<DecorKind | null>(null),
     [moving, setMoving] = useState<string | null>(null),
     [message, setMessage] = useState(() =>
       saveRecovered
@@ -413,14 +423,14 @@ export default function RealmsApp({
   const [workshopRecipe, setWorkshopRecipe] = useState('provisions');
   const [helpRealm, setHelpRealm] = useState<RealmId | undefined>();
   const [helpBuilding, setHelpBuilding] = useState<UtilityKind>('farm');
-  // The bottom bar can fold down to just the Collect button; phones start folded, where it covers more island.
+  // The bottom bar can fold down to just the Collect button on wide screens; phones always show every button.
   const [navOpen, setNavOpen] = useState(() => {
     // Same query as the phone layout in realms.css.
     if (
       window.matchMedia('(max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px)')
         .matches
     )
-      return false;
+      return true;
     try {
       return localStorage.getItem('dino-realms-nav') !== 'closed';
     } catch {
@@ -447,6 +457,11 @@ export default function RealmsApp({
     }
     return window.innerWidth > 760;
   });
+  // On a phone the open story card covers the island where a building is being placed.
+  useEffect(() => {
+    if (placing && window.matchMedia('(max-width: 760px), (max-height: 500px) and (orientation: landscape)').matches)
+      setStoryOpen(false);
+  }, [placing]);
   const toggleStory = () =>
     setStoryOpen((open) => {
       try {
@@ -599,19 +614,25 @@ export default function RealmsApp({
   // Browser checks (navigator.webdriver) start without it unless they ask with dino-realms-tour = 'show'.
   // A 'fresh' guide (no dinosaur yet) walks through hatching the first egg; a 'replay' only tours the screen.
   const tourKind = (s: Save) => (s.dinos.length ? 'replay' : 'fresh') as 'fresh' | 'replay';
+  // Kept per account, so a new account on a phone that already finished the guide still gets it.
+  const tourKey = account ? `dino-realms-tour:${account.user.id}` : 'dino-realms-tour';
+  const tourStepKey = account ? `${TOUR_STEP_KEY}:${account.user.id}` : TOUR_STEP_KEY;
   // A first guide cut short by a reload picks up where it was (see TOUR_STEP_KEY).
   const [tourStart, setTourStart] = useState(() => {
     try {
-      return Number(localStorage.getItem(TOUR_STEP_KEY) ?? 0) || 0;
+      return Number(localStorage.getItem(tourStepKey) ?? 0) || 0;
     } catch {
       return 0;
     }
   });
   const [tour, setTour] = useState<false | 'fresh' | 'replay'>(() => {
     try {
-      const kept = localStorage.getItem('dino-realms-tour');
-      const resuming = localStorage.getItem(TOUR_STEP_KEY) !== null;
-      return (kept === 'show' || (kept !== 'done' && !navigator.webdriver)) && (resuming ? 'fresh' : tourKind(save));
+      const forced = localStorage.getItem('dino-realms-tour') === 'show';
+      // Players from before per-account keys keep the device-wide answer.
+      const kept =
+        localStorage.getItem(tourKey) ?? (save.dinos.length ? localStorage.getItem('dino-realms-tour') : null);
+      const resuming = localStorage.getItem(tourStepKey) !== null;
+      return (forced || (kept !== 'done' && !navigator.webdriver)) && (resuming ? 'fresh' : tourKind(save));
     } catch {
       return false;
     }
@@ -628,8 +649,8 @@ export default function RealmsApp({
     setTour(false);
     track('tour_end', { kind: tour || 'none' });
     try {
-      localStorage.setItem('dino-realms-tour', 'done');
-      localStorage.removeItem(TOUR_STEP_KEY);
+      localStorage.setItem(tourKey, 'done');
+      localStorage.removeItem(tourStepKey);
     } catch {
       /* Optional: the guide then only shows again on the next visit. */
     }
@@ -699,6 +720,11 @@ export default function RealmsApp({
   const feastAt = feastPlot
     ? new Date(feastPlot.readyAt).toLocaleTimeString(lang ? 'en-GB' : 'ro-RO', { hour: '2-digit', minute: '2-digit' })
     : null;
+  const clockAt = (at: number) =>
+    new Date(at).toLocaleTimeString(lang ? 'en-GB' : 'ro-RO', { hour: '2-digit', minute: '2-digit' });
+  const firstDino = save.dinos[0];
+  const warmEgg = save.eggs.find((e) => e.hatchAt !== null && e.hatchAt > now);
+  useEffect(() => restoreReminders(), []);
   // First-session milestones, each counted once per device (see analytics.ts).
   useEffect(() => {
     const marks: [string, boolean][] = [
@@ -827,6 +853,62 @@ export default function RealmsApp({
     const id = setTimeout(() => setMessage(''), 4000);
     return () => clearTimeout(id);
   }, [message]);
+  // A big notice when a timer the player started runs out while they play (an egg, a build, a trip, a crop…).
+  type Ready = { key: string; icon: IconName; title: string; go: Panel | null };
+  const [ready, setReady] = useState<Ready[]>([]);
+  const timers = useRef<Map<string, { endsAt: number; info: Omit<Ready, 'key'> }>>(new Map());
+  useEffect(() => {
+    // Real time, not the 1 s tick: a timer just finished with diamonds must not look pending.
+    const at = Date.now();
+    const pending = new Map<string, { endsAt: number; info: Omit<Ready, 'key'> }>();
+    const add = (key: string, endsAt: number | null | undefined, info: Omit<Ready, 'key'>) => {
+      if (endsAt && endsAt > at) pending.set(key, { endsAt, info });
+    };
+    for (const e of save.eggs)
+      add(`egg:${e.id}`, e.hatchAt, {
+        icon: 'egg',
+        title: tr(`Oul de ${SPECIES_NAMES[e.species]} e gata de eclozat!`, `Your ${SPECIES_NAMES[e.species]} egg is ready to hatch!`),
+        go: 'hatchery',
+      });
+    if (save.construction)
+      add(`build:${save.construction.target}:${save.construction.level}`, save.construction.endsAt, {
+        icon: 'build',
+        title: tr('Construcția e gata!', 'Construction finished!'),
+        go: null,
+      });
+    for (const x of save.expeditions)
+      add(`trip:${x.id}`, x.endsAt, {
+        icon: 'expedition',
+        title: tr('Expediția s-a întors!', 'Your expedition is back!'),
+        go: 'expedition',
+      });
+    save.plots.forEach((p, i) => {
+      if (p) add(`plot:${i}:${p.readyAt}`, p.readyAt, { icon: 'food', title: tr('Recolta e gata!', 'Your crop is ready!'), go: 'farm' });
+    });
+    for (const j of save.crafting)
+      add(`craft:${j.id}`, j.endsAt, { icon: 'workshop', title: tr('Atelierul a terminat!', 'The workshop is done!'), go: 'workshop' });
+    if (save.training)
+      add(`train:${save.training.dinoId}:${save.training.endsAt}`, save.training.endsAt, {
+        icon: 'dino',
+        title: tr('Antrenamentul s-a terminat!', 'Training finished!'),
+        go: 'dino',
+      });
+    // Timers gone early (finished with diamonds, cancelled) drop out unannounced: the player already knows.
+    const fired: Ready[] = [...timers.current]
+      .filter(([, t]) => t.endsAt <= at)
+      .map(([key, t]) => ({ key, ...t.info }));
+    timers.current = pending;
+    if (!fired.length) return;
+    setReady((r) => [...r.filter((x) => !fired.some((f) => f.key === x.key)), ...fired]);
+    playSound('pop');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, save]);
+  const readyNow = ready[ready.length - 1];
+  useEffect(() => {
+    if (!readyNow) return;
+    const id = setTimeout(() => setReady([]), 8000);
+    return () => clearTimeout(id);
+  }, [readyNow]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -859,11 +941,31 @@ export default function RealmsApp({
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildingDone]);
+  /** The dinosaur moments a command may have caused: an evolution, a hatchling (not the first), a team back home. */
+  const celebrate = (prev: Save, next: Save, c: Command) => {
+    if (c.type === 'evolve') {
+      const was = prev.dinos.find((d) => d.id === (c.dinoId ?? prev.champion)),
+        now = was && next.dinos.find((d) => d.id === was.id);
+      if (was && now && now.stage !== was.stage) setMoment({ kind: 'evolve', dino: now, from: was.stage });
+    }
+    // The first hatchling gets HeroVision instead.
+    if (c.type === 'hatch' && prev.dinos.length) {
+      const born = next.dinos.find((d) => !prev.dinos.some((p) => p.id === d.id));
+      if (born) setMoment({ kind: 'hatch', dino: born });
+    }
+    if (c.type === 'claimExpedition') {
+      const back = prev.expeditions.find((x) => !next.expeditions.some((y) => y.id === x.id)),
+        lead = back && next.dinos.find((d) => d.id === back.team[0]);
+      if (lead) setTrip({ dino: lead, gold: next.gold - prev.gold, food: next.food - prev.food, key: Date.now() });
+    }
+  };
   const run = (c: Command) => {
     try {
-      const next = command(saveRef.current, c, Date.now());
+      const prev = saveRef.current;
+      const next = command(prev, c, Date.now());
       saveRef.current = next;
       setSave(next);
+      celebrate(prev, next, c);
       const sound = COMMAND_SOUNDS[c.type];
       if (sound) playSound(sound);
       const notes = noticeText(next, lang);
@@ -1039,6 +1141,98 @@ export default function RealmsApp({
     storyReady = !!story && story.done(save),
     navKeys = unlockedNav(save, story?.panel),
     storyProgress = story?.progress?.(save);
+  const claimStory = () => {
+    if (!story || !run({ type: 'claimQuestEgg', questId: story.id })) return;
+    setMessage(
+      story.species
+        ? tr(
+            `Premiu luat: +${story.gold} aur, +${story.food} hrană și un ou nou în Incubator!`,
+            `Reward claimed: +${story.gold} gold, +${story.food} food and a new egg in the Hatchery!`,
+          )
+        : tr(
+            `Premiu luat: +${story.gold} aur, +${story.food} hrană!`,
+            `Reward claimed: +${story.gold} gold, +${story.food} food!`,
+          ),
+    );
+  };
+  // The one thing to do now (see nextAction.ts), shown above the bottom bar.
+  const next = nextAction(live, now);
+  const doNext = (n: NextAction) => {
+    const go = n.go;
+    track('next_action', { id: n.id });
+    if (!go) return;
+    if (go.kind === 'claimStory') claimStory();
+    else if (go.kind === 'harvest') {
+      if (run({ type: 'harvest' })) setMessage(tr('Recoltă strânsă! Replantează stratul.', 'Harvested! Replant the plot.'));
+    } else if (go.kind === 'home') {
+      setRealm('home');
+      setPanel(null);
+    } else {
+      if (go.dinoId) setSelectedDino(go.dinoId);
+      if (go.building) setHelpBuilding(go.building);
+      setDinoRealm(null);
+      setPanel(go.panel as Panel);
+    }
+  };
+  // Idle for a while with something to do: the "what now" button calls for attention.
+  const [nudge, setNudge] = useState(false);
+  // "What now" can shrink to its icon; a new step still shows itself for a few seconds.
+  const [nextCollapsed, setNextCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('realms-next-collapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const collapseNext = (collapsed: boolean) => {
+    setNextCollapsed(collapsed);
+    setNextPeek(false);
+    try {
+      localStorage.setItem('realms-next-collapsed', collapsed ? '1' : '0');
+    } catch {
+      /* Optional: it then opens again after a reload. */
+    }
+  };
+  const [nextPeek, setNextPeek] = useState(false);
+  const nextId = next?.id;
+  const seenNext = useRef(nextId);
+  useEffect(() => {
+    if (!nextId || nextId === seenNext.current) return;
+    seenNext.current = nextId;
+    if (!nextCollapsed) return;
+    setNextPeek(true);
+    const t = window.setTimeout(() => setNextPeek(false), 4000);
+    return () => window.clearTimeout(t);
+  }, [nextId, nextCollapsed]);
+  const lastInput = useRef(Date.now());
+  useEffect(() => {
+    const input = () => {
+      lastInput.current = Date.now();
+      setNudge(false);
+    };
+    window.addEventListener('pointerdown', input, true);
+    window.addEventListener('keydown', input, true);
+    return () => {
+      window.removeEventListener('pointerdown', input, true);
+      window.removeEventListener('keydown', input, true);
+    };
+  }, []);
+  const stuckSent = useRef(false);
+  useEffect(() => {
+    const idle = now - lastInput.current;
+    if (!next || panel || tour) return;
+    if (!next.waiting && idle >= 45_000) setNudge(true);
+    // Measures where players stop: nothing tapped for 90 s while nothing is ready.
+    if (next.waiting && idle >= 90_000 && !stuckSent.current) {
+      stuckSent.current = true;
+      track('stuck_idle', { next: next.id, story: story?.id ?? 'done' });
+    }
+  }, [now, next?.id, panel, tour]);
+  const navCount =
+    1 +
+    (['build', 'dino', 'collection', 'expedition', 'arena', 'workshop', 'collect'] as NavKey[]).filter((k) =>
+      navKeys.has(k),
+    ).length;
   // The header badge follows the chapter: its numeral, rank, title and how far into it the player is.
   const badge = current
     ? {
@@ -1066,6 +1260,7 @@ export default function RealmsApp({
   });
   const navItem = (key: NavKey) => ({
     fresh: !seenNav.has(key),
+    newLabel: tr('NOU', 'NEW'),
     featured: story?.panel === key,
     seen: () =>
       setSeenNav((seen) => {
@@ -1120,15 +1315,15 @@ export default function RealmsApp({
   };
   const startPlacement = (id: string | null = null, kind: UtilityKind = 'farm') => {
     setPlacementKind(kind);
-    setPlacingLamp(false);
+    setPlacingDecor(null);
     setRealm('home');
     setPanel(null);
     setMoving(id);
     setPlacing(true);
   };
-  const startLampPlacement = () => {
+  const startDecorPlacement = (kind: DecorKind) => {
     startPlacement();
-    setPlacingLamp(true);
+    setPlacingDecor(kind);
   };
   // Tell the player once when a dinosaur is back from its expedition, wherever they are in the game.
   const announcedTrip = useRef<number | null>(null);
@@ -1712,15 +1907,15 @@ export default function RealmsApp({
           placing={placing}
           moving={moving}
           placementKind={placementKind}
-          lampMode={placing && placingLamp}
+          decorMode={placing ? placingDecor : null}
           now={now}
           covered={!!panel}
           onPlace={(x, y) => {
-            if (placingLamp) {
-              if (run({ type: 'placeLamp', x, y })) {
+            if (placingDecor) {
+              if (run({ type: 'placeDecor', kind: placingDecor, x, y })) {
                 setPlacing(false);
-                setPlacingLamp(false);
-                setMessage(tr('Lampă aprinsă!', 'Lamp lit!'));
+                setPlacingDecor(null);
+                setMessage(tr('Decorație pusă!', 'Decoration placed!'));
               }
               return;
             }
@@ -1731,9 +1926,9 @@ export default function RealmsApp({
             }
           }}
           onMove={(id, x, y) => {
-            if (id.startsWith('lamp:')) {
-              if (run({ type: 'moveLamp', index: Number(id.slice(5)), x, y }))
-                setMessage(tr('Lampă mutată!', 'Lamp moved!'));
+            if (id.startsWith('decor:')) {
+              if (run({ type: 'moveDecor', index: Number(id.slice(6)), x, y }))
+                setMessage(tr('Decorație mutată!', 'Decoration moved!'));
               return;
             }
             if (run({ type: 'move', id, x, y })) setMessage(tr('Clădire mutată!', 'Building moved!'));
@@ -1993,18 +2188,7 @@ export default function RealmsApp({
                   ))}
                 </div>
                 {storyReady ? (
-                  <button
-                    className="realm-button"
-                    onClick={() => {
-                      if (run({ type: 'claimQuestEgg', questId: story.id }))
-                        setMessage(
-                          tr(
-                            `Premiu luat: +${story.gold} aur, +${story.food} hrană!`,
-                            `Reward claimed: +${story.gold} gold, +${story.food} food!`,
-                          ),
-                        );
-                    }}
-                  >
+                  <button className="realm-button" onClick={claimStory}>
                     <Icon name={storyEgg(story) ? 'egg' : 'star'} scale={1} /> {tr('Ia premiul', 'Claim')}{' '}
                     <span>→</span>
                   </button>
@@ -2044,8 +2228,8 @@ export default function RealmsApp({
           <div className="realm-placement">
             <div>
               <strong>
-                {placingLamp
-                  ? tr('Pune lampa', 'Place the lamp')
+                {placingDecor
+                  ? `${tr('Pune', 'Place')}: ${ITEMS[placingDecor].name[lang]}`
                   : moving
                     ? tr('Mută clădirea', 'Move building')
                     : `${tr('Amplasează', 'Place')}: ${UTILITY_BUILDINGS[placementKind].name[lang]}`}
@@ -2068,7 +2252,11 @@ export default function RealmsApp({
             </button>
           </div>
         ) : (
-          <nav className={`realm-nav ${navOpen ? '' : 'collapsed'}`} aria-label={tr('Meniu principal', 'Main menu')}>
+          <nav
+            className={`realm-nav ${navOpen ? '' : 'collapsed'}${navCount > 5 ? ' two-rows' : ''}`}
+            aria-label={tr('Meniu principal', 'Main menu')}
+            style={{ '--nav-cols': navCount <= 5 ? navCount : Math.ceil(navCount / 2) } as CSSProperties}
+          >
             <button
               className="realm-nav-toggle"
               onClick={toggleNav}
@@ -2221,6 +2409,79 @@ export default function RealmsApp({
         {message && (
           <div className="realm-toast" role="status">
             {message}
+          </div>
+        )}
+        {next && !tour && !panel && !placing && !heroVision && !save.battle && !visit && !offline &&
+          (nextCollapsed && !nextPeek ? (
+            <button
+              type="button"
+              className={`realm-next collapsed${nudge ? ' nudge' : ''}`}
+              onClick={() => collapseNext(false)}
+              aria-label={`${tr('Arată ce faci acum', 'Show what to do now')}: ${next.text[lang]}`}
+            >
+              <span className="realm-next-icon" aria-hidden="true">
+                {next.icon}
+              </span>
+              <span className="realm-next-open" aria-hidden="true">
+                ›
+              </span>
+            </button>
+          ) : (
+            <div className={`realm-next${next.waiting ? ' waiting' : ''}${nudge ? ' nudge' : ''}`}>
+              <button
+                type="button"
+                className="realm-next-main"
+                onClick={() => doNext(next)}
+                aria-label={`${tr('Ce faci acum', 'What to do now')}: ${next.text[lang]}`}
+              >
+                <span className="realm-next-icon" aria-hidden="true">
+                  {next.icon}
+                </span>
+                <span className="realm-next-body">
+                  <small>{next.waiting ? tr('ÎN AȘTEPTARE', 'WAITING') : tr('CE FACI ACUM', 'WHAT NOW')}</small>
+                  <strong>{next.text[lang]}</strong>
+                  <em>{next.why[lang]}</em>
+                </span>
+                {next.go && <span className="realm-next-go" aria-hidden="true">→</span>}
+              </button>
+              <button
+                type="button"
+                className="realm-next-hide"
+                onClick={() => collapseNext(true)}
+                aria-label={tr('Ascunde', 'Hide')}
+                title={tr('Ascunde', 'Hide')}
+              >
+                ‹
+              </button>
+            </div>
+          ))}
+        {readyNow && !tour && !heroVision && !save.battle && (
+          <div className="realm-ready-pop" role="alert" key={readyNow.key}>
+            <span className="realm-ready-icon" aria-hidden="true">
+              <Icon name={readyNow.icon} scale={3} />
+            </span>
+            <div>
+              <small>{tr('GATA!', 'READY!')}</small>
+              <strong>{readyNow.title}</strong>
+              {ready.length > 1 && (
+                <em>
+                  {tr(`+${ready.length - 1} alte lucruri sunt gata`, `+${ready.length - 1} more things are ready`)}
+                </em>
+              )}
+            </div>
+            <button
+              className="realm-button"
+              onClick={() => {
+                setReady([]);
+                if (readyNow.go === 'dino') setDinoRealm(null);
+                setPanel(readyNow.go);
+              }}
+            >
+              {readyNow.go ? tr('Vezi', 'Open') : 'OK'}
+            </button>
+            <button className="realm-ready-x" onClick={() => setReady([])} aria-label={tr('Închide', 'Close')}>
+              ×
+            </button>
           </div>
         )}
 
@@ -2389,7 +2650,7 @@ export default function RealmsApp({
                 run={run}
                 visit={visitRealm}
                 openWorkshop={() => setPanel('workshop')}
-                placeLamp={startLampPlacement}
+                placeDecor={startDecorPlacement}
               />
             )}
             {panel === 'farm' && (
@@ -2409,7 +2670,7 @@ export default function RealmsApp({
                 lang={lang}
                 run={run}
                 place={startPlacement}
-                placeLamp={startLampPlacement}
+                placeDecor={startDecorPlacement}
                 open={(kind) => setPanel(kind === 'portal' ? 'expedition' : kind)}
               />
             )}
@@ -2582,6 +2843,29 @@ export default function RealmsApp({
               </button>
             </div>
           )}
+        {moment && !heroVision && (
+          <Window
+            title={moment.kind === 'evolve' ? tr('Evoluție', 'Evolution') : tr('Un pui nou', 'A new hatchling')}
+            eyebrow="DINO REALMS"
+            close={() => setMoment(null)}
+          >
+            {moment.kind === 'evolve' ? (
+              <EvolveMoment dino={moment.dino} from={moment.from} lang={lang} close={() => setMoment(null)} />
+            ) : (
+              <HatchMoment dino={moment.dino} lang={lang} close={() => setMoment(null)} />
+            )}
+          </Window>
+        )}
+        {trip && (
+          <TripReturn
+            key={trip.key}
+            dino={trip.dino}
+            gold={trip.gold}
+            food={trip.food}
+            lang={lang}
+            close={() => setTrip(null)}
+          />
+        )}
         {heroVision && (
           <Window
             title={tr('Un erou se trezește', 'A hero awakens')}
@@ -2618,7 +2902,7 @@ export default function RealmsApp({
               track('tour_step', { step: i, kind: tour });
               if (tour !== 'fresh') return;
               try {
-                localStorage.setItem(TOUR_STEP_KEY, String(i));
+                localStorage.setItem(tourStepKey, String(i));
               } catch {
                 /* Optional: a reload then starts the guide over. */
               }
@@ -2686,8 +2970,30 @@ export default function RealmsApp({
                       until: () => saveRef.current.dinos.some((x) => x.level > 1),
                       title: ['Primul tău dinozaur!', 'Your first dinosaur!'],
                       body: [
-                        'Dinozaurii cresc cu hrană. Apasă „Hrănește” ca să urce un nivel.',
-                        'Dinosaurs grow on food. Tap "Feed" to raise a level.',
+                        'Dinozaurii cresc cu hrană: fiecare masă îi dă +1 nivel. Apasă „Hrănește”.',
+                        'Dinosaurs grow on food: every meal gives +1 level. Tap "Feed".',
+                      ],
+                    },
+                    {
+                      target: '.dino-feed-main',
+                      prepare: () => setPanel('dino'),
+                      wait: true,
+                      click: true,
+                      stay: true,
+                      until: () => saveRef.current.dinos.some((x) => x.level >= 4),
+                      title: ['Încă puțin!', 'A little more!'],
+                      body: [
+                        'A crescut! Mai hrănește-l de câteva ori, până la nivelul 4. Fiecare nivel costă puțin mai multă hrană (vezi prețul pe buton).',
+                        'It grew! Feed it a few more times, up to level 4. Each level costs a little more food (the price is on the button).',
+                      ],
+                    },
+                    {
+                      target: '.dino-evo',
+                      prepare: () => setPanel('dino'),
+                      title: ['Bebeluș → Juvenil → Adult', 'Baby → Juvenile → Adult'],
+                      body: [
+                        'Bebeluș: nivelurile 1–9. La nivelul 9 butonul devine „Evoluează” și se face Juvenil (10–24): abia atunci poate pleca în expediții. Adult (25–50): forma cea mai puternică, pentru arenă și bossi.',
+                        'Baby: levels 1–9. At level 9 the button turns into "Evolve" and it becomes a Juvenile (10–24): only then can it go on expeditions. Adult (25–50): its strongest form, for the arena and bosses.',
                       ],
                     },
                     {
@@ -2735,6 +3041,8 @@ export default function RealmsApp({
                       ],
                     },
                     {
+                      // The open story card would cover the island on a phone.
+                      prepare: () => setStoryOpen(false),
                       until: () => tourBuilt('farm'),
                       rewind: { when: () => !placingRef.current, by: 2 },
                       title: ['Alege un loc pe insulă', 'Pick a spot on the island'],
@@ -2756,11 +3064,111 @@ export default function RealmsApp({
                       ],
                     },
                     {
-                      title: ['Aventura continuă!', 'Your adventure continues!'],
+                      target: '.realm-quest .realm-button',
+                      prepare: () => {
+                        setPanel(null);
+                        setStoryOpen(true);
+                      },
+                      wait: true,
+                      click: true,
+                      until: () => saveRef.current.questEggs.includes('c1-farm'),
+                      title: ['Premiu: un ou nou!', 'Reward: a new egg!'],
                       body: [
-                        `Ospățul e gata ${feastAt ? `la ${feastAt}` : 'în 8 ore'}: revino atunci să-l recoltezi. Până atunci te conduce „Povestea ta”, iar steluța „Zilnic” are în fiecare zi roata, misiuni și comori.`,
-                        `Your Feast is ready ${feastAt ? `at ${feastAt}` : 'in 8 hours'}: come back then to harvest it. Until then "Your story" leads the way, and the "Daily" star has the wheel, missions and treasures every day.`,
+                        'Ferma e gata, așa că ai un premiu: aur, hrană și un ou nou de dinozaur. Apasă „Ia premiul”.',
+                        'The farm is done, so a reward is waiting: gold, food and a new dinosaur egg. Tap "Claim".',
                       ],
+                    },
+                    {
+                      target: '.hatch-shelf .realm-button',
+                      prepare: () => setPanel('hatchery'),
+                      wait: true,
+                      click: true,
+                      until: () =>
+                        saveRef.current.dinos.length > 1 || saveRef.current.eggs.some((e) => e.hatchAt !== null),
+                      title: ['Oul e în Incubator', 'The egg is in the Hatchery'],
+                      body: [
+                        'Ouăle primite ajung pe raftul Incubatorului și nu eclozează singure. Apasă „Incubează” ca să-l pui la cald.',
+                        'Eggs you receive wait on the Hatchery shelf and never hatch by themselves. Tap "Incubate" to keep it warm.',
+                      ],
+                    },
+                    {
+                      target: '.hatch-nest.warming',
+                      title: ['Se încălzește…', 'Warming up…'],
+                      body: [
+                        'Oul are nevoie de 20 de minute. Când e gata primești o notificare: revino aici și apasă „Eclozează”.',
+                        'This egg needs 20 minutes. You get a notice when it is ready: come back here and tap "Hatch".',
+                      ],
+                    },
+                    {
+                      target: '.dino-feed-main',
+                      prepare: () => {
+                        setSelectedDino(saveRef.current.dinos[0]?.id ?? null);
+                        setDinoRealm(null);
+                        setPanel('dino');
+                      },
+                      wait: true,
+                      click: true,
+                      stay: true,
+                      // Also moves on when the food runs out, so the guide never sticks on a greyed-out button.
+                      until: () => {
+                        const d = saveRef.current.dinos[0];
+                        return !d || d.stage !== 'baby' || saveRef.current.food < feedCost(d.level);
+                      },
+                      title: ['Fă-l juvenil!', 'Make it a juvenile!'],
+                      body: [
+                        'Hrănește-l până la nivelul 9, apoi butonul devine „Evoluează”. Apasă-l și privește-l cum crește!',
+                        'Feed it up to level 9, then the button turns into "Evolve". Tap it and watch it grow!',
+                      ],
+                    },
+                    {
+                      target: '.dino-evo li.current:nth-child(2)',
+                      prepare: () => setPanel('dino'),
+                      title: ['E juvenil!', 'It is a juvenile!'],
+                      body: [
+                        `${firstDino?.nickname ?? 'Dinozaurul tău'} arată deja altfel și e mai puternic. Acum poate pleca în expediții: urmează Portalul și prima lui aventură (prima etapă durează un minut).`,
+                        `${firstDino?.nickname ?? 'Your dinosaur'} already looks different and is stronger. It can now go on expeditions: next come the Portal and its first adventure (the first stage takes one minute).`,
+                      ],
+                    },
+                    {
+                      prepare: () => setPanel(null),
+                      title: ['Înainte să pleci', 'Before you go'],
+                      body: [
+                        `Ce crește cât ești plecat: Ospățul ${feastAt ? `(gata la ${feastAt})` : '(8 ore)'}${warmEgg ? ` și oul nou (gata la ${clockAt(warmEgg.hatchAt!)})` : ''}. Cere un anunț dacă vrei să știi când e gata. De acum, butonul „Ce faci acum” de deasupra meniului de jos îți arată mereu următorul pas și de ce: apasă-l oricând nu știi ce să faci.`,
+                        `Growing while you are away: the Feast ${feastAt ? `(ready at ${feastAt})` : '(8 hours)'}${warmEgg ? ` and the new egg (ready at ${clockAt(warmEgg.hatchAt!)})` : ''}. Ask for a notice if you want to know when. From now on, the "What now" button above the bottom menu always shows the next step and why: tap it whenever you are not sure.`,
+                      ],
+                      extra: (
+                        <>
+                          {feastPlot && (
+                            <ReminderButton
+                              id={`plot-${save.plots.indexOf(feastPlot)}-${feastPlot.readyAt}`}
+                              at={feastPlot.readyAt}
+                              label={tr('Ospățul', 'Feast')}
+                              title={tr('Ospățul e gata! 🦖', 'Your Feast is ready! 🦖')}
+                              body={tr('Vino să-l recoltezi la fermă.', 'Come and harvest it at the farm.')}
+                              lang={lang}
+                            />
+                          )}
+                          {warmEgg && (
+                            <ReminderButton
+                              id={`egg-${warmEgg.id}`}
+                              at={warmEgg.hatchAt!}
+                              label={tr('Oul', 'Egg')}
+                              title={tr('Oul e gata de eclozat! 🥚', 'Your egg is ready to hatch! 🥚')}
+                              body={tr(
+                                'Intră în Incubator și apasă „Eclozează”.',
+                                'Open the Hatchery and tap "Hatch".',
+                              )}
+                              lang={lang}
+                            />
+                          )}
+                          <small className="pk-note">
+                            {tr(
+                              'Un singur anunț pentru fiecare, nimic zilnic.',
+                              'One notice for each, nothing daily.',
+                            )}
+                          </small>
+                        </>
+                      ),
                     },
                   ] satisfies TourStep[])
                 : ([
@@ -2827,6 +3235,7 @@ function Nav({
   fresh = false,
   hub = false,
   seen,
+  newLabel = 'NOU',
 }: {
   icon: IconName;
   label: string;
@@ -2838,6 +3247,7 @@ function Nav({
   /** The central, always-visible button (the worlds). */
   hub?: boolean;
   seen?: () => void;
+  newLabel?: string;
 }) {
   return (
     <button
@@ -2853,7 +3263,7 @@ function Nav({
         <Icon name={icon} scale={2} />
       </span>
       <strong>{label}</strong>
-      {fresh && <em className="realm-nav-new">NOU</em>}
+      {fresh && <em className="realm-nav-new">{newLabel}</em>}
     </button>
   );
 }

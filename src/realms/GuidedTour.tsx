@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from './ui/Icon';
 import './guided-tour.css';
 
@@ -14,8 +14,12 @@ export type TourStep = {
   target?: string | string[];
   title: readonly [string, string];
   body: readonly [string, string];
+  /** Shown under the text (buttons the player may use there). */
+  extra?: ReactNode;
   prepare?: () => void;
   click?: boolean;
+  /** With `click`: pressing the target does not move on, only `until` does (a button pressed several times). */
+  stay?: boolean;
   wait?: boolean;
   until?: () => boolean;
   /** Goes back `by` steps when `when()` holds (the player cancelled what the step waits for). */
@@ -123,7 +127,7 @@ export function GuidedTour({
 
   // A click step moves on when the player presses the real button (which still does its own job).
   useEffect(() => {
-    if (paused || !ready || !step.click) return;
+    if (paused || !ready || !step.click || step.stay) return;
     const press = (e: MouseEvent) => {
       const goal = visible(targets(stepRef.current)[0]);
       if (goal && e.target instanceof Node && goal.contains(e.target)) window.setTimeout(() => nextRef.current(), 0);
@@ -279,6 +283,7 @@ export function GuidedTour({
         ) : (
           <>
             <p aria-live="polite">{step.body[lang]}</p>
+            {step.extra && <div className="tour-extra">{step.extra}</div>}
             <footer>
               <span
                 className="tour-progress"

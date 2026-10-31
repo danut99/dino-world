@@ -411,6 +411,12 @@
       0 0 28px #fff1b8;
   }
 }
+@keyframes daily-prize-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
 
 @media (max-height: 500px) {
   .realms-app .daily-head p {
@@ -507,7 +513,40 @@
     overflow-y: auto;
   }
   .realms-app .daily-wheel-frame {
-    width: min(100cqw, 100cqh, 360px);
+    /* Room for the rim's shadow and the pointer, which the card would otherwise cut. */
+    width: min(calc(100cqw - 20px), calc(100cqh - 20px), 340px);
+  }
+  .realms-app .daily-wheel-card {
+    padding: 10px 8px 8px;
+  }
+  .realms-app .daily-pointer {
+    top: -8px;
+  }
+  /* Today: one compact row of icons and counts; the names stay in the tooltips. */
+  .realms-app .daily-today {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .realms-app .daily-today > strong {
+    display: none;
+  }
+  .realms-app .daily-today button {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 3px;
+    padding: 4px 2px;
+    font-size: 12px;
+  }
+  .realms-app .daily-today .daily-today-label {
+    display: none;
+  }
+  .realms-app .daily-result {
+    min-height: 40px;
+  }
+  .realms-app .daily-result-prize {
+    padding: 4px 14px;
+    font-size: 17px;
+    animation: daily-prize-in 0.4s cubic-bezier(0.2, 1.4, 0.4, 1);
   }
   .realms-app .daily-quest,
   .realms-app .daily-bonus {

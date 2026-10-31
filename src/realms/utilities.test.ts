@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advance, command, farmYield, newSave, parseSave, type Save } from './game';
+import { advance, command, decorCount, farmYield, newSave, parseSave, tripSpeed, type Save } from './game';
 import { ELEMENTS } from './game';
 import { REGIONS } from './content';
 const now = 1_800_000_000_000;
@@ -145,10 +145,34 @@ describe('reference utility systems', () => {
     let s = withHero(built());
     s.inventory.lamp = 6;
     const base = advance(s, now + 3_600_000).storedGold;
-    for (let i = 0; i < 5; i++) s = command(s, { type: 'placeLamp' }, now);
-    expect(() => command(s, { type: 'placeLamp' }, now)).toThrow('maxLevel');
-    expect(s).toMatchObject({ lamps: 5, inventory: { lamp: 1 } });
+    for (let i = 0; i < 5; i++) s = command(s, { type: 'placeDecor', kind: 'lamp' }, now);
+    expect(() => command(s, { type: 'placeDecor', kind: 'lamp' }, now)).toThrow('maxLevel');
+    expect(decorCount(s, 'lamp')).toBe(5);
+    expect(s.inventory.lamp).toBe(1);
     expect(advance(s, now + 3_600_000).storedGold).toBeCloseTo(base * 1.25);
+    expect(parseSave(JSON.stringify(s))).toEqual(s);
+  });
+  it('moves lamps from saves made before decorations into the decor list', () => {
+    let s = withHero(built());
+    s.inventory.lamp = 1;
+    s = command(s, { type: 'placeDecor', kind: 'lamp' }, now);
+    const { x, y } = s.decor[0];
+    const old = { ...s, decor: undefined, lamps: 2, lampSpots: [{ x, y }] };
+    const loaded = parseSave(JSON.stringify(old));
+    expect(decorCount(loaded, 'lamp')).toBe(2);
+    expect(loaded.decor[0]).toEqual({ kind: 'lamp', x, y });
+    expect(loaded).not.toHaveProperty('lamps');
+    expect(loaded).not.toHaveProperty('lampSpots');
+  });
+  it('makes harvests bigger with scarecrows and trips shorter with signposts', () => {
+    let s = withHero(built());
+    s.inventory.scarecrow = 2;
+    s.inventory.signpost = 2;
+    for (const kind of ['scarecrow', 'scarecrow', 'signpost', 'signpost'] as const)
+      s = command(s, { type: 'placeDecor', kind }, now);
+    expect(farmYield(1, 'feast', decorCount(s, 'scarecrow'))).toBe(Math.round(350 * 1.1));
+    expect(tripSpeed(s)).toBeCloseTo(0.9);
+    expect(() => command(s, { type: 'placeDecor', kind: 'signpost' }, now)).toThrow('materials');
     expect(parseSave(JSON.stringify(s))).toEqual(s);
   });
 });
@@ -190,6 +214,16 @@ describe('farm levels, plots and crops', () => {
     s = command(s, { type: 'harvest', plot: 0 }, now + 3_600_000);
     expect(s.food).toBe(460);
     expect(() => command(s, { type: 'plant', crop: 'feast' }, now)).not.toThrow();
+  });
+  it('picks a growing crop early for 70% of the food grown so far and frees the plot', () => {
+    let s = command(farm(), { type: 'plant', crop: 'feast' }, now);
+    const food = s.food;
+    s = command(s, { type: 'harvestEarly', plot: 0 }, now + 4 * 3_600_000);
+    expect(s.food).toBe(food + Math.floor(350 * 0.5 * 0.7));
+    expect(s.plots[0]).toBeNull();
+    expect(() => command(s, { type: 'harvestEarly', plot: 0 }, now)).toThrow('timer');
+    s = command(s, { type: 'plant', crop: 'ferns', plot: 0 }, now);
+    expect(() => command(s, { type: 'harvestEarly', plot: 0 }, now + 300_000)).toThrow('timer');
   });
   it('multiplies every harvest with the farm level', () => {
     expect([1, 2, 3, 4, 5].map((level) => farmYield(level, 'feast'))).toEqual([350, 438, 525, 700, 875]);

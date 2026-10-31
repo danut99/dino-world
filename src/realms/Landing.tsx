@@ -3,8 +3,9 @@ import { Window } from './RealmsApp';
 import { AccountPanel } from './AccountPanel';
 import { DinosaurArt } from './DinosaurArt';
 import { PLAYABLE_DINOSAURS } from './playableDinosaurs';
-import type { RealmId, Stage } from './game';
+import { ELEMENTS, SPECIES_NAMES, type RealmId, type Species, type Stage } from './game';
 import { loadAnimation, loadSpriteImage, type Clip } from './animation';
+import { useClipSequence } from './useClipSequence';
 import './landing.css';
 
 /** What each age plays, over and over: a few steps between moves (babies have no fight moves drawn). */
@@ -77,6 +78,77 @@ function Showcase({ lang }: { lang: number }) {
 /** The first family of an element that has every age drawn, for the feature cards. */
 const familyOf = (element: RealmId) => PLAYABLE_DINOSAURS.find((d) => d.element === element)?.species ?? 'trex';
 
+/** The adult the moves section shows off. */
+const FEATURED = { species: 'ignasaur', element: 'fire' } as const;
+const MOVES: { clip: Clip; name: [string, string]; text: [string, string] }[] = [
+  {
+    clip: 'walk',
+    name: ['Explorează', 'Explore'],
+    text: ['Cutreieră insula și pleacă în expediții.', 'Roams your island and sets out on expeditions.'],
+  },
+  {
+    clip: 'attack',
+    name: ['Atacă', 'Attack'],
+    text: ['Lovește adversarii în arenă și în dueluri.', 'Strikes rivals in the arena and in duels.'],
+  },
+  {
+    clip: 'defend',
+    name: ['Apără', 'Defend'],
+    text: ['Blochează loviturile ca să-și apere echipa.', 'Blocks blows to keep its team standing.'],
+  },
+  {
+    clip: 'ultimate',
+    name: ['Lovitura supremă', 'Ultimate'],
+    text: ['Doar adulții o au: cea mai puternică mișcare.', 'Only adults have it: their mightiest move.'],
+  },
+];
+
+/** One move on a loop: walking without end, or the move, a breath of idle, and again. */
+function MoveCard({ move, lang }: { move: (typeof MOVES)[number]; lang: number }) {
+  const { clip } = useClipSequence(
+    FEATURED.species,
+    FEATURED.element,
+    'adult',
+    move.clip === 'walk' ? ['walk'] : [move.clip, 'idle'],
+    { repeat: true },
+  );
+  return (
+    <article className={`move-card move-${move.clip}`}>
+      <span className="move-card-stage" aria-hidden="true">
+        <span className="move-card-dino">
+          <DinosaurArt species={FEATURED.species} element={FEATURED.element} stage="adult" animation={clip} />
+        </span>
+      </span>
+      <h3>{move.name[lang]}</h3>
+      <p>{move.text[lang]}</p>
+    </article>
+  );
+}
+
+/** The moves section: one adult dinosaur, each of its moves in its own card. */
+function Moves({ lang }: { lang: number }) {
+  const tr = (ro: string, en: string) => (lang ? en : ro);
+  return (
+    <section className="landing-moves-section" aria-labelledby="moves-title">
+      <header>
+        <span className="landing-kicker">{tr('În luptă', 'In battle')}</span>
+        <h2 id="moves-title">{tr('Fiecare dinozaur are mișcările lui', 'Every dinosaur has its own moves')}</h2>
+        <p>
+          {tr(
+            `${SPECIES_NAMES[FEATURED.species]}, adult de foc: așa arată când explorează, atacă, se apără și dezlănțuie lovitura supremă.`,
+            `${SPECIES_NAMES[FEATURED.species]}, a fire adult: here it is exploring, attacking, defending and unleashing its ultimate.`,
+          )}
+        </p>
+      </header>
+      <div className="move-cards">
+        {MOVES.map((m) => (
+          <MoveCard key={m.clip} move={m} lang={lang} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /**
  * The page a signed-out visitor lands on: what the game is, in a few seconds, over the real home island; the
  * account form opens in a window from the calls to action.
@@ -98,9 +170,11 @@ export function Landing({
 }) {
   const tr = (ro: string, en: string) => (lang ? en : ro);
   const [auth, setAuth] = useState<null | 'signin' | 'signup'>(null);
-  const features: { art: ReactNode; title: string; text: string }[] = [
+  const features: { species: Species; element: RealmId; stage: Stage; title: string; text: string }[] = [
     {
-      art: <DinosaurArt species="trex" element="fire" stage="baby" />,
+      species: 'trex',
+      element: 'fire',
+      stage: 'baby',
       title: tr('Eclozează și crește', 'Hatch & raise'),
       text: tr(
         'Un ou de foc devine pui, juvenil, apoi adult. Hrănește-l, antrenează-l, alege-i puterile.',
@@ -108,7 +182,9 @@ export function Landing({
       ),
     },
     {
-      art: <DinosaurArt species={familyOf('ice')} element="ice" stage="juvenile" />,
+      species: familyOf('ice'),
+      element: 'ice',
+      stage: 'juvenile',
       title: tr('10 lumi elementale', '10 elemental worlds'),
       text: tr(
         'Foc, apă, gheață, fulger, întuneric, lumină… fiecare lume aduce familii noi de dinozauri.',
@@ -116,7 +192,9 @@ export function Landing({
       ),
     },
     {
-      art: <DinosaurArt species="boss" element="fire" stage="adult" />,
+      species: 'boss',
+      element: 'fire',
+      stage: 'adult',
       title: tr('Expediții și boși', 'Expeditions & bosses'),
       text: tr(
         'Trimite echipe de până la 3 în expediții, urcă ligile arenei și învinge boșii elementali.',
@@ -124,7 +202,9 @@ export function Landing({
       ),
     },
     {
-      art: <DinosaurArt species={familyOf('lightning')} element="lightning" stage="adult" />,
+      species: familyOf('lightning'),
+      element: 'lightning',
+      stage: 'adult',
       title: tr('Dueluri și ligi', 'Duels & leagues'),
       text: tr(
         'Provoacă-ți prietenii. Primii 3 din fiecare ligă câștigă diamante și ouă rare în fiecare săptămână.',
@@ -189,14 +269,36 @@ export function Landing({
         <Showcase lang={lang} />
       </section>
 
-      <section className="landing-features" aria-label={tr('Ce faci în joc', 'What you do')}>
-        {features.map((f) => (
-          <article key={f.title}>
-            <span className="landing-feature-art">{f.art}</span>
-            <h2>{f.title}</h2>
-            <p>{f.text}</p>
-          </article>
-        ))}
+      <Moves lang={lang} />
+
+      <section className="landing-moves-section" aria-labelledby="features-title">
+        <header>
+          <span className="landing-kicker">{tr('În joc', 'In the game')}</span>
+          <h2 id="features-title">{tr('Ce te așteaptă', 'What awaits you')}</h2>
+          <p>
+            {tr(
+              'De la primul ou până la boss-ul ultimei lumi, câteva minute pe zi.',
+              "From your first egg to the last world's boss, a few minutes a day.",
+            )}
+          </p>
+        </header>
+        <div className="move-cards">
+          {features.map((f) => (
+            <article
+              key={f.title}
+              className={`move-card feature-card stage-${f.stage}`}
+              style={{ '--el': ELEMENTS.find((e) => e.id === f.element)!.color } as React.CSSProperties}
+            >
+              <span className="move-card-stage" aria-hidden="true">
+                <span className="move-card-dino">
+                  <DinosaurArt species={f.species} element={f.element} stage={f.stage} />
+                </span>
+              </span>
+              <h3>{f.title}</h3>
+              <p>{f.text}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <footer className="landing-footer">

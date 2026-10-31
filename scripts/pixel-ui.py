@@ -456,6 +456,24 @@ def _():
     return Icon().part('rune', lambda d: d.polygon([(8, 0), (10, 6), (15, 8), (10, 10), (8, 15), (6, 10), (1, 8), (6, 6)], fill=1))
 
 
+# --- decorații (la final, ca pozițiile celorlalte iconițe să nu se schimbe)
+@icon('scarecrow')
+def _():
+    return (Icon()
+            .part('wood', lambda d: (d.rectangle((7, 9, 8, 15), fill=1), d.rectangle((1, 6, 14, 7), fill=1)))
+            .part('ember', lambda d: d.rectangle((5, 6, 10, 11), fill=1))
+            .part('bone', lambda d: d.ellipse((5, 1, 10, 6), fill=1))
+            .part('amber', lambda d: (d.rectangle((3, 0, 12, 1), fill=1), d.point([(0, 7), (15, 7)], fill=1))))
+
+
+@icon('signpost')
+def _():
+    return (Icon()
+            .part('wood', lambda d: d.rectangle((7, 1, 8, 15), fill=1))
+            .part('leather', lambda d: d.polygon([(4, 2), (12, 2), (14, 4), (12, 6), (4, 6)], fill=1))
+            .part('leather', lambda d: d.polygon([(11, 8), (3, 8), (1, 10), (3, 12), (11, 12)], fill=1)))
+
+
 def build_icons():
     names = list(ICONS)
     cols = 8

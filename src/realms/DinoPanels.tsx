@@ -2,15 +2,17 @@ import { ResourceHelp, RequirementLink } from './ResourceHelp';
 import { RarityBadge, rarityClass } from './Rarity';
 import { ARENA_BOSSES } from './arenaBosses';
 import { playableSpecies } from './playableDinosaurs';
-import { useEffect, useState, type CSSProperties } from 'react';
-import { Icon, elementIcon } from './ui/Icon';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { Icon, elementIcon, type IconName } from './ui/Icon';
+import { ReminderButton } from './ui/ReminderButton';
 import { Tabs, TabPanel } from './ui/Tabs';
 import { Pager } from './ui/Pager';
 import { usePager } from './ui/usePager';
 import { CompactCard } from './ui/CompactCard';
 import { DinosaurArt } from './DinosaurArt';
+import { MomentArt, SIGNATURE } from './DinoMoment';
 import { DEV_TOOLS } from './devTools';
-import { ConstructionStrip, CostChips, LampCard, UpgradeButton, affordable, underConstruction } from './PanelKit';
+import { ConstructionStrip, CostChips, DecorCard, UpgradeButton, affordable, underConstruction } from './PanelKit';
 import './dino-sheet.css';
 import { duration } from './FarmPanel';
 import { ITEMS } from './content';
@@ -57,6 +59,7 @@ import {
   type Stage,
 } from './game';
 import { rarityOf, gemsToFinish, ROLE_ICONS, ROLE_INFO, ROLE_NAMES, SPECIES_ROLE, type Rarity } from './game';
+import { DECOR, decorCount, type DecorKind } from './game';
 
 type Run = (c: Command) => boolean;
 const tr = (lang: number, ro: string, en: string) => (lang ? en : ro);
@@ -297,6 +300,14 @@ export function HatcheryPanel({
                       >
                         ⚡ {gemsToFinish(left)} 💎
                       </button>
+                      <ReminderButton
+                        compact
+                        id={`egg-${egg.id}`}
+                        at={egg.hatchAt!}
+                        title={tr(lang, 'Oul e gata de eclozat! 🥚', 'Your egg is ready to hatch! 🥚')}
+                        body={`${eggName(egg)}: ${tr(lang, 'intră în Incubator și apasă „Eclozează”.', 'open the Hatchery and tap "Hatch".')}`}
+                        lang={lang}
+                      />
                     </>
                   )}
                 </div>
@@ -391,7 +402,7 @@ export function HatcheryPanel({
             </div>
           ) : (
             <div className="pk-empty">
-              <Icon name="egg" scale={3} />
+              <EmptyHero save={save} icon="egg" scale={3} />
               <p className="pk-note">
                 {tr(
                   lang,
@@ -591,7 +602,7 @@ export function HabitatsPanel({
   run,
   visit,
   openWorkshop,
-  placeLamp,
+  placeDecor,
 }: {
   save: Save;
   now: number;
@@ -599,7 +610,7 @@ export function HabitatsPanel({
   run: Run;
   visit: (realm: RealmId) => void;
   openWorkshop: () => void;
-  placeLamp?: () => void;
+  placeDecor?: (kind: DecorKind) => void;
 }) {
   const [selected, select] = useState<RealmId>(
     () => ELEMENTS.find((e) => !save.habitats[e.id] && !worldLock(save, e.id))?.id ?? 'fire',
@@ -628,7 +639,8 @@ export function HabitatsPanel({
             {Math.round(goldRate(save, now))} {tr(lang, 'aur/oră', 'gold/hour')} ·{' '}
             {onTrip > 0 &&
               `${tr(lang, `${onTrip} în expediție (nu produc)`, `${onTrip} on expedition (not earning)`)} · `}
-            {tr(lang, 'max. 8h offline', '8h offline max')} · ☼ {save.lamps}/5 {tr(lang, 'lămpi', 'lamps')} ·{' '}
+            {tr(lang, 'max. 8h offline', '8h offline max')} · ☼ {decorCount(save, 'lamp')}/{DECOR.lamp.max}{' '}
+            {tr(lang, 'lămpi', 'lamps')} ·{' '}
             {ITEMS.habitatKit.icon} {save.inventory.habitatKit} {tr(lang, 'kituri', 'kits')}
           </small>
           <div className="pk-meter">
@@ -770,12 +782,43 @@ export function HabitatsPanel({
           )}
         </div>
       </section>
-      <LampCard save={save} lang={lang} run={run} place={placeLamp} openWorkshop={openWorkshop} />
+      <DecorCard kind="lamp" save={save} lang={lang} run={run} place={placeDecor} openWorkshop={openWorkshop} />
     </div>
   );
 }
 
 /* ============================== Dinosaurs ============================== */
+
+/** An empty screen keeps the champion company: it idles there, or the icon stands in before the first hatch. */
+function EmptyHero({ save, icon, scale }: { save: Save; icon: IconName; scale: 2 | 3 | 4 }) {
+  const hero = save.dinos.find((x) => x.id === save.champion);
+  if (!hero) return <Icon name={icon} scale={scale} />;
+  return (
+    <span className="pk-empty-hero">
+      <DinosaurArt species={hero.species} element={hero.element} stage={artStage(hero)} />
+    </span>
+  );
+}
+
+/** The sheet's dinosaur: it rests on idle and shows off (walk, attack or ultimate) each time it gains a level. */
+function LevelUpArt({ dino, stage, className }: { dino: Dino; stage: Stage; className?: string }) {
+  const [cheer, setCheer] = useState(0);
+  const last = useRef({ id: dino.id, level: dino.level });
+  useEffect(() => {
+    if (last.current.id === dino.id && dino.level > last.current.level) setCheer((n) => n + 1);
+    last.current = { id: dino.id, level: dino.level };
+  }, [dino.id, dino.level]);
+  return (
+    <MomentArt
+      species={dino.species}
+      element={dino.element}
+      stage={stage}
+      sequence={cheer ? [SIGNATURE[stage]] : []}
+      play={cheer}
+      className={className}
+    />
+  );
+}
 
 type DinoTab = 'stats' | 'grow' | 'habitat';
 export function DinoPanel({
@@ -878,7 +921,7 @@ export function DinoPanel({
       <div className={`fit-panel ${toolbar ? 'fit-body' : 'fit-single'}`}>
         {toolbar}
         <div className="pk-empty">
-          <Icon name="egg" scale={4} />
+          <EmptyHero save={save} icon="egg" scale={4} />
           <h3>
             {realm
               ? tr(lang, 'Habitatul e gol', 'The habitat is empty')
@@ -1001,12 +1044,7 @@ export function DinoPanel({
           {/* Sprites stand at 84% of their height, so the pedestal sits at the figure's 16% line. */}
           <span className="dino-sheet-figure">
             <span className="dino-sheet-pedestal" aria-hidden="true" />
-            <DinosaurArt
-              species={d.species}
-              element={d.element}
-              stage={artStage(d)}
-              className={rarityClass(d.rarity)}
-            />
+            <LevelUpArt dino={d} stage={artStage(d)} className={rarityClass(d.rarity)} />
           </span>
           <span className="dino-sheet-element">
             {el.symbol} {el.name[lang]}

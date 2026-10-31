@@ -83,6 +83,13 @@
   min-height: 24px;
   padding: 1px 6px;
 }
+.realms-app .farm-plot .farm-early {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 .realms-app .farm-crops {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

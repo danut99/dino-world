@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   acceptFriend,
   fetchAcceptHelp,
@@ -78,8 +78,13 @@ type Visit = (player: { user_id: string; name: string }, canHelp: boolean) => vo
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
-/** The top players by weekly friendly wins, dinosaurs, champion level or stars; this player's own place is pinned below. */
+/**
+ * `duels`: this week's league (prizes, your place, opponents your level, the table); `extra` sits under the league card.
+ * `top`: all-time records by dinosaurs, champion level or stars, with this player's own place pinned below.
+ */
 function LeaderboardView({
+  mode,
+  extra,
   lang,
   selfId,
   visit,
@@ -88,6 +93,8 @@ function LeaderboardView({
   level,
   beaten,
 }: {
+  mode: 'duels' | 'top';
+  extra?: ReactNode;
   lang: number;
   selfId: string;
   visit: (p: PlayerSummary) => void;
@@ -116,7 +123,7 @@ function LeaderboardView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selfId, league.id]);
   const daysLeft = Math.max(1, Math.ceil((weekStart(Date.now()) + 7 * 86_400_000 - Date.now()) / 86_400_000));
-  const [by, setBy] = useState<RankBy | 'wins'>('wins');
+  const [by, setBy] = useState<RankBy | 'wins'>(mode === 'duels' ? 'wins' : 'dinos');
   const [board, setBoard] = useState<Leaderboard | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -135,23 +142,22 @@ function LeaderboardView({
       active = false;
     };
   }, [by, selfId]);
-  const kinds: [RankBy | 'wins', string][] = [
-    ['wins', `⚔ ${tr('Victorii', 'Wins')}`],
+  const kinds: [RankBy, string][] = [
     ['dinos', `🦖 ${tr('Dinozauri', 'Dinosaurs')}`],
     ['level', `⬆ ${tr('Nivel', 'Level')}`],
     ['stars', `★ ${tr('Stele', 'Stars')}`],
   ];
   const score = (p: PlayerSummary) =>
-    by === 'dinos' ? `${p.dinos}` : by === 'level' ? `${tr('Nv.', 'Lv.')} ${p.level}` : `${p.stars} ★`;
+    by === 'dinos' ? `${p.dinos} 🦖` : by === 'level' ? `${tr('Nv.', 'Lv.')} ${p.level}` : `${p.stars} ★`;
   const duel = (p: { user_id: string; name: string }) =>
-    p.user_id === selfId ? null : (
+    p.user_id === selfId || mode === 'top' ? null : (
       <button
         className="realm-rank-duel"
         aria-label={tr(`Duel cu ${p.name}`, `Duel ${p.name}`)}
-        title={tr('Duel', 'Duel')}
+        title={tr('Atacă-i echipa de duel', 'Attack their duel team')}
         onClick={() => challenge(p)}
       >
-        ⚔
+        ⚔ {tr('Duel', 'Duel')}
       </button>
     );
   const row = (p: PlayerSummary, rank: number, label = score(p)) => {
@@ -173,15 +179,26 @@ function LeaderboardView({
   // Tied players share a place: each one ranks after everyone strictly ahead of them.
   const ranks = by === 'wins' ? [] : (board?.top.map((p, i, all) => all.findIndex((q) => q[by] === p[by]) + 1) ?? []);
   const weeklyRanks = weekly?.map((r, i, all) => all.findIndex((q) => q.wins === r.wins) + 1) ?? [];
+  const mine = weekly?.findIndex((r) => r.userId === selfId) ?? -1;
   return (
     <div className="realm-leaderboard">
-      <div className="pk-chips" role="group" aria-label={tr('Clasament după', 'Rank by')}>
-        {kinds.map(([id, label]) => (
-          <button key={id} className="pk-chip" aria-pressed={by === id} onClick={() => setBy(id)}>
-            {label}
-          </button>
-        ))}
-      </div>
+      {mode === 'top' && (
+        <>
+          <p className="realm-note">
+            {tr(
+              'Recordurile tuturor jucătorilor. Alege ce compari:',
+              'Records of every player. Pick what to compare:',
+            )}
+          </p>
+          <div className="pk-chips" role="group" aria-label={tr('Clasament după', 'Rank by')}>
+            {kinds.map(([id, label]) => (
+              <button key={id} className="pk-chip" aria-pressed={by === id} onClick={() => setBy(id)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
       {by === 'wins' ? (
         <>
           <div className="realm-league">
@@ -192,11 +209,22 @@ function LeaderboardView({
               <small>
                 {tr('nivel', 'level')} {league.min}–{league.max} ·{' '}
                 {tr(
-                  `încheiere în ${daysLeft} ${daysLeft === 1 ? 'zi' : 'zile'}`,
+                  `se încheie în ${daysLeft} ${daysLeft === 1 ? 'zi' : 'zile'}`,
                   `ends in ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'}`,
                 )}
               </small>
             </strong>
+            <p className="realm-league-me">
+              {weekly && mine >= 0
+                ? tr(
+                    `Locul tău: ${MEDALS[weeklyRanks[mine] - 1] ?? `#${weeklyRanks[mine]}`} · ${weekly[mine].wins} victorii săptămâna asta`,
+                    `Your place: ${MEDALS[weeklyRanks[mine] - 1] ?? `#${weeklyRanks[mine]}`} · ${weekly[mine].wins} wins this week`,
+                  )
+                : tr(
+                    'Încă n-ai victorii săptămâna asta: câștigă un duel ca să intri în clasament.',
+                    'No wins this week yet: win a duel to get on the table.',
+                  )}
+            </p>
             <ol className="realm-league-prizes" aria-label={tr('Premii', 'Prizes')}>
               {DUEL_SEASON_PRIZES.map((p, i) => (
                 <li key={i}>
@@ -207,23 +235,25 @@ function LeaderboardView({
                 </li>
               ))}
             </ol>
+            <small className="realm-league-rules">
+              {tr(
+                'Fiecare victorie în duel = 1 punct (cel mult unul pe zi pentru același adversar). Primii 3 iau premiile luni.',
+                'Every duel win = 1 point (at most one a day per opponent). The top 3 get the prizes on Monday.',
+              )}
+            </small>
           </div>
+          {extra}
           {suggested && suggested.length > 0 && (
             <section className="realm-suggested" aria-label={tr('Adversari pe măsura ta', 'Opponents your level')}>
-              <h4>{tr('Adversari pe măsura ta', 'Opponents your level')}</h4>
+              <h4>⚔ {tr('Adversari pe măsura ta', 'Opponents your level')}</h4>
               <ol>{suggested.map((p) => row(p, 0, `${tr('Nv.', 'Lv.')} ${p.level}`))}</ol>
             </section>
           )}
-          <p className="realm-note">
-            {tr(
-              'Victorii în duel de luni încoace, cel mult una pe zi pentru fiecare adversar.',
-              'Duel wins since Monday, at most one a day per opponent.',
-            )}
-          </p>
+          <h4 className="realm-section-title">🏆 {tr('Clasamentul ligii', 'League table')}</h4>
           {!weekly ? (
             <p className="realm-note">{tr('Se încarcă…', 'Loading…')}</p>
           ) : !weekly.length ? (
-            <p className="realm-note">{tr('Clasamentul nu s-a putut încărca.', 'The ranking could not load.')}</p>
+            <p className="realm-note">{tr('Încă nicio victorie în liga ta săptămâna asta. Fii primul!', 'No wins in your league this week yet. Be the first!')}</p>
           ) : (
             <ol>
               {weekly.map((r, i) => {
@@ -302,7 +332,7 @@ export function PlayersPanel({
 }) {
   const tr = (ro: string, en: string) => T(lang, ro, en);
   const [search, setSearch] = useState('');
-  const [view, setView] = useState<'friends' | 'players' | 'ranking'>('friends');
+  const [view, setView] = useState<'duels' | 'friends' | 'top'>('duels');
   const [players, setPlayers] = useState<PlayerSummary[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -312,7 +342,6 @@ export function PlayersPanel({
   const [ranking, setRanking] = useState<RankRow[] | null>(null);
   const [recent, setRecent] = useState<Defense[]>([]);
   const [pickDefense, setPickDefense] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   /** The friend whose extra actions (visit, remove) are unfolded. */
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const defense = save.defense.map((id) => save.dinos.find((d) => d.id === id)).filter((d): d is Dino => !!d);
@@ -419,39 +448,61 @@ export function PlayersPanel({
     </section>
   );
 
+  const revenge =
+    recent.length > 0 ? (
+      <section className="realm-duels-recent" aria-label={tr('Cine te-a atacat', 'Who attacked you')}>
+        <h3>🛡 {tr('Cine te-a atacat', 'Who attacked you')}</h3>
+        <ul>
+          {recent.slice(0, 3).map((r) => (
+            <li key={r.at} className={r.result === 'victory' ? 'lost' : r.result === 'defeat' ? 'won' : ''}>
+              <span>
+                <strong>{r.attackerName}</strong>
+                <small>
+                  {r.result === 'victory'
+                    ? tr('te-a învins', 'beat your team')
+                    : r.result === 'defeat'
+                      ? tr('a pierdut: echipa ta a rezistat!', 'lost: your team held!')
+                      : tr('egalitate', 'draw')}{' '}
+                  · {lastSeen(r.at, lang)}
+                </small>
+              </span>
+              <button
+                className="realm-button"
+                onClick={() => onChallenge({ user_id: r.attackerId, name: r.attackerName })}
+              >
+                ⚔ {tr('Revanșă', 'Revenge')}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ) : null;
+  const lostRecently = recent.filter((r) => r.result === 'victory').length;
+
   return (
     <div className="realm-players">
-      <div className="realm-players-top">
-        <Tabs
-          idBase="players"
-          label={tr('Jucători', 'Players')}
-          active={view}
-          onChange={(v) => {
-            setSettingsOpen(false);
-            setView(v);
-          }}
-          tabs={[
-            { id: 'friends', label: tr('Prieteni', 'Friends'), badge: incoming.length },
-            { id: 'ranking', label: `🏆 ${tr('Clasament', 'Leaderboard')}` },
-            { id: 'players', label: tr('Caută', 'Find') },
-          ]}
-        />
-        <button
-          className="realm-players-gear"
-          aria-pressed={settingsOpen}
-          aria-label={tr('Setări: ajutor de la prieteni', 'Settings: help from friends')}
-          title={tr('Setări', 'Settings')}
-          onClick={() => setSettingsOpen((v) => !v)}
-        >
-          ⚙
-        </button>
-      </div>
-      {!settingsOpen && view !== 'players' && defenseStrip}
-      {settingsOpen ? (
-        settings
-      ) : view === 'ranking' ? (
-        <TabPanel idBase="players" id="ranking">
+      <Tabs
+        idBase="players"
+        label={tr('Jucători', 'Players')}
+        active={view}
+        onChange={setView}
+        tabs={[
+          { id: 'duels', label: `⚔ ${tr('Dueluri', 'Duels')}`, badge: lostRecently || undefined },
+          { id: 'friends', label: `👥 ${tr('Prieteni', 'Friends')}`, badge: incoming.length },
+          { id: 'top', label: `🏆 ${tr('Top', 'Top')}` },
+        ]}
+      />
+      {view === 'duels' ? (
+        <TabPanel idBase="players" id="duels">
           <LeaderboardView
+            key="duels"
+            mode="duels"
+            extra={
+              <>
+                {defenseStrip}
+                {revenge}
+              </>
+            }
             lang={lang}
             selfId={selfId}
             weekly={ranking}
@@ -461,7 +512,21 @@ export function PlayersPanel({
             visit={(p) => onVisit(p, canHelp(friendOf(p.user_id)))}
           />
         </TabPanel>
-      ) : view === 'friends' ? (
+      ) : view === 'top' ? (
+        <TabPanel idBase="players" id="top">
+          <LeaderboardView
+            key="top"
+            mode="top"
+            lang={lang}
+            selfId={selfId}
+            weekly={ranking}
+            level={championLevel}
+            beaten={save.daily.duelRivals}
+            challenge={onChallenge}
+            visit={(p) => onVisit(p, canHelp(friendOf(p.user_id)))}
+          />
+        </TabPanel>
+      ) : (
         <TabPanel idBase="players" id="friends" className="realm-players">
           {incoming.length > 0 && (
             <section className="realm-friends realm-friends-requests" aria-label={tr('Cereri', 'Requests')}>
@@ -493,40 +558,13 @@ export function PlayersPanel({
               </ul>
             </section>
           )}
-          {recent.length > 0 && (
-            <section className="realm-duels-recent" aria-label={tr('Cine te-a atacat', 'Who attacked you')}>
-              <h3>⚔ {tr('Cine te-a atacat', 'Who attacked you')}</h3>
-              <ul>
-                {recent.slice(0, 3).map((r) => (
-                  <li key={r.at} className={r.result === 'victory' ? 'lost' : r.result === 'defeat' ? 'won' : ''}>
-                    <span>
-                      <strong>{r.attackerName}</strong>
-                      <small>
-                        {r.result === 'victory'
-                          ? tr('a câștigat contra apărării tale', 'beat your defense')
-                          : r.result === 'defeat'
-                            ? tr('a pierdut — apărarea ta a rezistat!', 'lost — your defense held!')
-                            : tr('egalitate', 'draw')}{' '}
-                        · {lastSeen(r.at, lang)}
-                      </small>
-                    </span>
-                    <button
-                      className="realm-button"
-                      onClick={() => onChallenge({ user_id: r.attackerId, name: r.attackerName })}
-                    >
-                      ⚔ <span className="realm-btn-label">{tr('Revanșă', 'Revenge')}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
           <section className="realm-friends" aria-label={tr('Prieteni', 'Friends')}>
+            <h3>👥 {tr('Prietenii tăi', 'Your friends')}</h3>
             {!others.length ? (
               <p className="realm-note">
                 {tr(
-                  'Încă n-ai prieteni. Caută jucători în tabul „Caută” și apasă +.',
-                  'No friends yet. Find players in the “Find” tab and press +.',
+                  'Încă n-ai prieteni. Caută jucători mai jos și apasă „+ Prieten”.',
+                  'No friends yet. Find players below and tap "+ Friend".',
                 )}
               </p>
             ) : (
@@ -540,22 +578,19 @@ export function PlayersPanel({
                       <span>
                         <strong>{f.name}</strong>
                         {friend ? (
-                          score && (
-                            <small className="realm-friend-score">
-                              ⚔ {tr('Tu', 'You')} {score.wins} – {score.losses}
-                              {score.draws > 0 && ` · ${score.draws} ${tr('egal', 'drawn')}`}
-                            </small>
-                          )
+                          <small className="realm-friend-score">
+                            {score
+                              ? tr(
+                                  `Victorii ${score.wins} · Înfrângeri ${score.losses}${score.draws ? ` · Egal ${score.draws}` : ''}`,
+                                  `Wins ${score.wins} · Losses ${score.losses}${score.draws ? ` · Draws ${score.draws}` : ''}`,
+                                )
+                              : tr('Încă nu v-ați luptat', 'No fights yet')}
+                          </small>
                         ) : (
-                          <small>{tr('Cerere trimisă', 'Request sent')}</small>
+                          <small>{tr('Cerere trimisă, așteptăm răspunsul', 'Request sent, waiting for an answer')}</small>
                         )}
                       </span>
-                      {open && friend && (
-                        <button className="realm-button secondary" onClick={() => onVisit(f, canHelp(f))}>
-                          {tr('Vizitează', 'Visit')}
-                        </button>
-                      )}
-                      {open && (
+                      {open ? (
                         <button
                           className="realm-button secondary"
                           disabled={busy}
@@ -566,16 +601,22 @@ export function PlayersPanel({
                         >
                           {friend ? tr('Elimină', 'Remove') : tr('Anulează', 'Cancel')}
                         </button>
-                      )}
-                      {friend && !open && (
-                        <button
-                          className="realm-button"
-                          title={tr('Luptă amicală cu echipa lui', 'Friendly fight against their team')}
-                          aria-label={tr(`Provoacă-l pe ${f.name} la luptă`, `Challenge ${f.name} to a fight`)}
-                          onClick={() => onChallenge(f)}
-                        >
-                          ⚔ <span className="realm-btn-label">{tr('Provoacă', 'Challenge')}</span>
-                        </button>
+                      ) : (
+                        friend && (
+                          <>
+                            <button className="realm-button secondary" onClick={() => onVisit(f, canHelp(f))}>
+                              {tr('Vizitează', 'Visit')}
+                            </button>
+                            <button
+                              className="realm-button"
+                              title={tr('Luptă amicală cu echipa lui', 'Friendly fight against their team')}
+                              aria-label={tr(`Provoacă-l pe ${f.name} la luptă`, `Challenge ${f.name} to a fight`)}
+                              onClick={() => onChallenge(f)}
+                            >
+                              ⚔ {tr('Luptă', 'Fight')}
+                            </button>
+                          </>
+                        )
                       )}
                       <button
                         className="realm-button secondary realm-friend-more"
@@ -583,7 +624,7 @@ export function PlayersPanel({
                         aria-label={tr(`Mai multe: ${f.name}`, `More: ${f.name}`)}
                         onClick={() => setMenuFor(open ? null : f.user_id)}
                       >
-                        {open ? '×' : '...'}
+                        {open ? '×' : '⋮'}
                       </button>
                     </li>
                   );
@@ -591,9 +632,8 @@ export function PlayersPanel({
               </ul>
             )}
           </section>
-        </TabPanel>
-      ) : (
-        <TabPanel idBase="players" id="players" className="realm-players">
+          <section className="realm-friends-find" aria-label={tr('Adaugă prieteni', 'Add friends')}>
+            <h3>➕ {tr('Adaugă prieteni', 'Add friends')}</h3>
           <label className="realm-players-search">
             <input
               type="search"
@@ -620,7 +660,10 @@ export function PlayersPanel({
             </p>
           ) : (
             <ul>
-              {players.map((p) => {
+              {players
+                .filter((p) => p.user_id !== selfId && !friendOf(p.user_id))
+                .slice(0, search ? 30 : 8)
+                .map((p) => {
                 const self = p.user_id === selfId;
                 const friend = friendOf(p.user_id);
                 return (
@@ -641,23 +684,12 @@ export function PlayersPanel({
                     </button>
                     {!self && !friend && (
                       <button
-                        className="realm-player-add"
+                        className="realm-button realm-player-add-text"
                         disabled={busy}
                         aria-label={tr(`Adaugă prieten: ${p.name}`, `Add friend: ${p.name}`)}
-                        title={tr('Adaugă prieten', 'Add friend')}
                         onClick={() => act(() => requestFriend(selfId, p.user_id))}
                       >
-                        +
-                      </button>
-                    )}
-                    {!self && (
-                      <button
-                        className="realm-player-add realm-player-duel"
-                        aria-label={tr(`Duel cu ${p.name}`, `Duel ${p.name}`)}
-                        title={tr('Duel', 'Duel')}
-                        onClick={() => onChallenge(p)}
-                      >
-                        ⚔
+                        + {tr('Prieten', 'Friend')}
                       </button>
                     )}
                   </li>
@@ -665,6 +697,8 @@ export function PlayersPanel({
               })}
             </ul>
           )}
+          </section>
+          {settings}
         </TabPanel>
       )}
     </div>

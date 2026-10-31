@@ -84,7 +84,7 @@ describe('economy tables', () => {
   });
   it('makes crafting slower for better items', () => {
     const minutes = Object.fromEntries(RECIPES.map((r) => [r.id, r.seconds / 60]));
-    expect(minutes).toEqual({ provisions: 3, kit: 20, evolution: 30, lamp: 20 });
+    expect(minutes).toEqual({ provisions: 3, kit: 20, evolution: 30, lamp: 20, scarecrow: 20, signpost: 20 });
   });
   it('grows stats smoothly: 6% a level, 5% for adulthood, no cliff', () => {
     expect(stats(10, 'juvenile').hp).toBe(220);

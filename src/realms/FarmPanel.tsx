@@ -3,9 +3,19 @@ import { useState } from 'react';
 import { CROPS, FARM_LEVELS, type CropId } from './content';
 import { Tabs, TabPanel } from './ui/Tabs';
 import { Icon } from './ui/Icon';
+import { ReminderButton } from './ui/ReminderButton';
 import { ConstructionStrip, CostChips, UpgradeButton, underConstruction } from './PanelKit';
 import './farm-layout.css';
-import { farmReadyFood, farmYield, gemsToFinish, type Command, type Save } from './game';
+import {
+  decorCount,
+  EARLY_HARVEST,
+  earlyHarvestFood,
+  farmReadyFood,
+  farmYield,
+  gemsToFinish,
+  type Command,
+  type Save,
+} from './game';
 
 export const duration = (seconds: number) =>
   seconds >= 3600
@@ -37,6 +47,7 @@ export function FarmPanel({
   const [picked, setPicked] = useState<number | null>(null);
   const [cropId, setCropId] = useState<CropId>(CROPS[0].id);
   const [tab, setTab] = useState<'field' | 'upgrade'>('field');
+  const scarecrows = decorCount(save, 'scarecrow');
   if (!save.buildings.some((b) => b.kind === 'farm'))
     return (
       <div className="fit-panel fit-single">
@@ -160,12 +171,30 @@ export function FarmPanel({
                   >
                     ⚡ {gemsToFinish(left)} 💎
                   </button>
+                  <button
+                    className="realm-link farm-early"
+                    onClick={() => run({ type: 'harvestEarly', plot: i })}
+                    title={tr(
+                      `Culege acum: ${Math.round(EARLY_HARVEST * 100)}% din hrana crescută până acum, iar stratul se eliberează.`,
+                      `Pick it now: ${Math.round(EARLY_HARVEST * 100)}% of the food grown so far, and the plot is free again.`,
+                    )}
+                  >
+                    {tr('Culege acum', 'Pick now')} · +{earlyHarvestFood(save, p, now)}
+                  </button>
+                  <ReminderButton
+                    compact
+                    id={`plot-${i}-${p.readyAt}`}
+                    at={p.readyAt}
+                    title={tr('Recolta e gata! 🦖', 'Your crop is ready! 🦖')}
+                    body={`${c.name[lang]}: ${tr('vino s-o culegi.', 'come and harvest it.')}`}
+                    lang={lang}
+                  />
                 </div>
               ) : (
                 <button key={i} className="farm-plot ready" onClick={() => run({ type: 'harvest', plot: i })}>
                   <span>{c.icon}</span>
                   <strong>{c.name[lang]}</strong>
-                  <small className="pk-num">❧ +{farmYield(save.farmLevel, p.crop)}</small>
+                  <small className="pk-num">❧ +{farmYield(save.farmLevel, p.crop, scarecrows)}</small>
                 </button>
               );
             })}
@@ -202,7 +231,7 @@ export function FarmPanel({
                     ) : (
                       <>
                         <small className="pk-num farm-crop-food">
-                          +{fmt(farmYield(save.farmLevel, c.id))} {tr('hrană', 'food')}
+                          +{fmt(farmYield(save.farmLevel, c.id, scarecrows))} {tr('hrană', 'food')}
                         </small>
                         <small className="pk-num">
                           ⏱ {duration(c.seconds)} · {when[c.id]}
@@ -219,7 +248,7 @@ export function FarmPanel({
               <b>
                 {crop.icon} {crop.name[lang]}
               </b>{' '}
-              · ❧ <b className="pk-num">+{farmYield(save.farmLevel, crop.id)}</b> · ⏱{' '}
+              · ❧ <b className="pk-num">+{farmYield(save.farmLevel, crop.id, scarecrows)}</b> · ⏱{' '}
               <b className="pk-num">{duration(crop.seconds)}</b> ·{' '}
               {crop.cost ? (
                 <>
@@ -288,8 +317,8 @@ export function FarmPanel({
                       ❧ <b className="pk-num">×{next.yield}</b> {tr('hrană per recoltă', 'food per harvest')}
                     </li>
                     <li>
-                      {best.icon} {best.name[lang]}: +{fmt(farmYield(save.farmLevel, best.id))} →{' '}
-                      <b className="pk-num">+{fmt(farmYield(save.farmLevel + 1, best.id))}</b> {tr('hrană', 'food')}
+                      {best.icon} {best.name[lang]}: +{fmt(farmYield(save.farmLevel, best.id, scarecrows))} →{' '}
+                      <b className="pk-num">+{fmt(farmYield(save.farmLevel + 1, best.id, scarecrows))}</b> {tr('hrană', 'food')}
                     </li>
                   </ul>
                 </div>

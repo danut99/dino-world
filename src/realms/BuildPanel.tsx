@@ -2,9 +2,9 @@ import { ResourceHelp } from './ResourceHelp';
 import { useEffect, useState } from 'react';
 import { BuildingSprite } from './BuildingSprite';
 import { UTILITY_BUILDINGS, type UtilityKind } from './content';
-import type { Command, Save } from './game';
+import { DECOR_KINDS, type Command, type DecorKind, type Save } from './game';
 import { Icon, type IconName } from './ui/Icon';
-import { LampCard } from './PanelKit';
+import { DecorCard } from './PanelKit';
 import './build-panel.css';
 
 const icons: Record<UtilityKind, IconName> = {
@@ -15,13 +15,13 @@ const icons: Record<UtilityKind, IconName> = {
   portal: 'expedition',
   arena: 'arena',
 };
-/** The build menu: every utility building on the left, the chosen one on the right, and the island lamps below. */
+/** The build menu: every utility building on the left, the chosen one on the right, and the decorations below. */
 export function BuildPanel({
   save,
   lang,
   open,
   place,
-  placeLamp,
+  placeDecor,
   run,
   initialKind = 'farm',
 }: {
@@ -29,7 +29,7 @@ export function BuildPanel({
   lang: number;
   open: (kind: UtilityKind) => void;
   place: (id: string | null, kind: UtilityKind) => void;
-  placeLamp?: () => void;
+  placeDecor?: (kind: DecorKind) => void;
   run: (c: Command) => boolean;
   initialKind?: UtilityKind;
 }) {
@@ -111,13 +111,19 @@ export function BuildPanel({
           </div>
         </section>
       </div>
-      <LampCard
-        save={save}
-        lang={lang}
-        run={run}
-        place={placeLamp}
-        openWorkshop={save.buildings.some((b) => b.kind === 'workshop') ? () => open('workshop') : undefined}
-      />
+      <div className="build-decor">
+        {DECOR_KINDS.map((k) => (
+          <DecorCard
+            key={k}
+            kind={k}
+            save={save}
+            lang={lang}
+            run={run}
+            place={placeDecor}
+            openWorkshop={save.buildings.some((b) => b.kind === 'workshop') ? () => open('workshop') : undefined}
+          />
+        ))}
+      </div>
     </div>
   );
 }

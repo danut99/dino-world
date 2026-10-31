@@ -58,6 +58,7 @@ export type DuelOutcome = { paid: boolean; again: boolean; count: number };
 import { weekId, weekStart } from './daily';
 import { arenaFoes, arenaTier, foeHasUltimate, roundCap, teamReward } from './arenaTeams';
 import { DinosaurArt } from './DinosaurArt';
+import { MomentArt, SIGNATURE } from './DinoMoment';
 import { loadAnimation, loadBossAnimation, loadSpriteImage, type Clip } from './animation';
 import {
   entrance,
@@ -1818,7 +1819,16 @@ export function BattleScreen({
                   className={a.hp === 0 ? 'fallen' : ''}
                   title={`${m.nickname} · ${a.hp}/${a.maxHp}`}
                 >
-                  <DinosaurArt species={m.species} element={m.element} stage={m.stage} paused frame={0} />
+                  {a.hp > 0 ? (
+                    <MomentArt
+                      species={m.species}
+                      element={m.element}
+                      stage={m.stage}
+                      sequence={battle.result === 'victory' ? [SIGNATURE[m.stage]] : []}
+                    />
+                  ) : (
+                    <DinosaurArt species={m.species} element={m.element} stage={m.stage} paused frame={0} />
+                  )}
                   <i style={{ width: `${(a.hp / a.maxHp) * 100}%` }} />
                 </span>
               );

@@ -35,8 +35,8 @@ describe('guided discovery', () => {
     expect(nextStoryStep(s)).toBeUndefined();
   });
   it('speeds up the first region without reducing its one-time rewards', () => {
-    expect(REGIONS[0].minutes.reduce((a, b) => a + b, 0)).toBe(51);
-    expect(stageMs('training', 1)).toBe(3 * 60_000);
+    expect(REGIONS[0].minutes.reduce((a, b) => a + b, 0)).toBe(24);
+    expect(stageMs('training', 1)).toBe(2 * 60_000);
     expect(stageReward('training', 1)).toMatchObject({ gold: 25, food: 10 });
   });
   it('reaches the first expedition from a new save with earned resources, no dev commands or egg purchase', () => {

@@ -104,6 +104,38 @@
 .realms-app .build-state.owned {
   color: #c6e6a5;
 }
+.realms-app .build-decor {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.realms-app .build-decor .pk-lamp {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 6px;
+  padding: 4px 6px;
+}
+.realms-app .build-decor .pk-lamp > .realm-button {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+.realms-app .build-decor .pk-head-text {
+  min-width: 0;
+}
+.realms-app .build-decor .pk-head-text > strong {
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: normal;
+}
+.realms-app .build-decor .pk-head-text > small {
+  display: none;
+}
+.realms-app .build-decor .pk-head-text > .decor-short {
+  display: block;
+  font-size: 12px;
+  color: var(--px-bone-2);
+}
 .realms-app .build-details {
   display: grid;
   gap: 6px;
@@ -195,5 +227,30 @@
   }
   .realms-app .build-picker button .px-icon {
     display: none;
+  }
+  .realms-app .build-decor {
+    gap: 4px;
+  }
+  .realms-app .build-decor .pk-lamp {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 3px 4px;
+    padding: 3px 4px;
+  }
+  .realms-app .build-decor .pk-lamp > .pk-lamp-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .realms-app .build-decor .pk-lamp-icon .px-icon {
+    scale: 0.75;
+  }
+  .realms-app .build-decor .decor-name,
+  .realms-app .build-decor .decor-effect,
+  .realms-app .build-decor .decor-btn-text {
+    display: none;
+  }
+  .realms-app .build-decor .pk-lamp > .realm-button {
+    min-height: 28px;
+    padding: 0 4px 3px;
+    font-size: 12px;
   }
 }

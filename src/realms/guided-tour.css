@@ -182,6 +182,11 @@
   min-width: 32px;
   padding: 0 6px 4px;
 }
+.tour-extra {
+  display: grid;
+  gap: 6px;
+  margin: -4px 0 12px;
+}
 .tour-cue {
   flex: none;
   max-width: 62%;

@@ -2,13 +2,14 @@ import { ITEMS, type ItemId } from './content';
 import {
   buildTime,
   constructionLeft,
+  DECOR,
+  decorCount,
   gemsToFinish,
-  LAMP_BONUS,
-  MAX_LAMPS,
   nextUpgrade,
   targetName,
   type BuildTarget,
   type Command,
+  type DecorKind,
   type RealmId,
   type Save,
 } from './game';
@@ -69,58 +70,87 @@ export const affordable = (save: Save, gold = 0, materials: Partial<Record<ItemI
   save.food >= food &&
   (Object.entries(materials) as [ItemId, number][]).every(([id, n]) => save.inventory[id] >= n);
 
-/** Ornamental lamps: each one placed on the island adds LAMP_BONUS to habitat gold, up to MAX_LAMPS. */
-export function LampCard({
+const DECOR_TEXT: Record<
+  DecorKind,
+  { plural: [string, string]; effect: (pct: number) => [string, string]; short: (pct: number) => [string, string] }
+> = {
+  lamp: {
+    plural: ['Lămpi', 'Lamps'],
+    effect: (p) => [`+${p}% aur`, `+${p}% gold`],
+    short: (p) => [`+${p}% aur`, `+${p}% gold`],
+  },
+  scarecrow: {
+    plural: ['Sperietori', 'Scarecrows'],
+    effect: (p) => [`+${p}% recoltă`, `+${p}% harvest`],
+    short: (p) => [`+${p}% hrană`, `+${p}% food`],
+  },
+  signpost: {
+    plural: ['Indicatoare', 'Signposts'],
+    effect: (p) => [`−${p}% timp de drum`, `−${p}% trip time`],
+    short: (p) => [`−${p}% drum`, `−${p}% trips`],
+  },
+};
+
+/** A decoration kind: how many stand on the island, what they give, and a button to place the next one. */
+export function DecorCard({
+  kind,
   save,
   lang,
   run,
   openWorkshop,
   place,
 }: {
+  kind: DecorKind;
   save: Save;
   lang: number;
   run: (c: Command) => boolean;
   openWorkshop?: () => void;
-  place?: () => void;
+  place?: (kind: DecorKind) => void;
 }) {
   const tr = (ro: string, en: string) => (lang ? en : ro);
-  const full = save.lamps >= MAX_LAMPS,
-    have = save.inventory.lamp;
+  const { bonus, max } = DECOR[kind],
+    text = DECOR_TEXT[kind],
+    placed = decorCount(save, kind),
+    full = placed >= max,
+    have = save.inventory[kind],
+    each = text.effect(Math.round(bonus * 100))[lang];
   return (
-    <div className="pk-lamp">
+    <div className="pk-lamp" title={`${text.plural[lang]}: ${each}`}>
       <span className="pk-lamp-icon">
-        <Icon name="lamp" scale={2} />
+        <Icon name={kind} scale={2} />
       </span>
       <div className="pk-head-text">
         <strong>
-          {tr('Lămpi', 'Lamps')} {save.lamps}/{MAX_LAMPS} · +{Math.round(save.lamps * LAMP_BONUS * 100)}%{' '}
-          {tr('aur', 'gold')}
+          <span className="decor-name">{text.plural[lang]} </span>
+          {placed}/{max}
+          <span className="decor-effect"> · {text.effect(Math.round(placed * bonus * 100))[lang]}</span>
         </strong>
+        <small className="decor-short">
+          {text.short(Math.round(bonus * 100))[lang]} {tr('fiecare', 'each')}
+        </small>
         <small>
           {full
-            ? tr('Toate lămpile sunt aprinse.', 'Every lamp is lit.')
+            ? tr('Toate sunt pe insulă.', 'All of them are on the island.')
             : have > 0
-              ? tr(
-                  `${have} în inventar · +${LAMP_BONUS * 100}% aur fiecare`,
-                  `${have} in your inventory · +${LAMP_BONUS * 100}% gold each`,
-                )
-              : tr(
-                  'Nicio lampă în inventar · se fac în Atelier',
-                  'No lamps in your inventory · craft them in the Workshop',
-                )}
+              ? tr(`${have} în inventar · ${each} fiecare`, `${have} in your inventory · ${each} each`)
+              : tr(`Niciuna în inventar · ${each} fiecare`, `None in your inventory · ${each} each`)}
         </small>
       </div>
       {!full && have === 0 && openWorkshop ? (
-        <button className="realm-button secondary sm" onClick={openWorkshop}>
-          {tr('Atelier', 'Workshop')} →
+        <button
+          className="realm-button secondary sm"
+          onClick={openWorkshop}
+          aria-label={tr('Fă-le în Atelier', 'Craft them in the Workshop')}
+        >
+          ⚒ <span className="decor-btn-text">{tr('Atelier', 'Workshop')}</span>
         </button>
       ) : (
         <button
           className="realm-button sm"
           disabled={full || have < 1}
-          onClick={() => (place ? place() : run({ type: 'placeLamp' }))}
+          onClick={() => (place ? place(kind) : run({ type: 'placeDecor', kind }))}
         >
-          {tr('Pune lampă', 'Place lamp')}
+          {tr('Pune', 'Place')}
         </button>
       )}
     </div>

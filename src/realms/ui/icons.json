@@ -1,6 +1,6 @@
 {
  "cols": 8,
- "rows": 6,
+ "rows": 7,
  "cell": 16,
  "icons": {
   "gold": [
@@ -194,6 +194,14 @@
   "el-arcane": [
    7,
    5
+  ],
+  "scarecrow": [
+   0,
+   6
+  ],
+  "signpost": [
+   1,
+   6
   ]
  }
 }

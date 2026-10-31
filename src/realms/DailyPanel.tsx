@@ -196,9 +196,9 @@ export function DailyPanel({
         {today.map((t) => {
           const done = t.have >= t.of;
           return (
-            <button key={t.id} className={done ? 'done' : ''} onClick={t.go}>
+            <button key={t.id} className={done ? 'done' : ''} onClick={t.go} title={t.label} aria-label={`${t.label} ${Math.min(t.have, t.of)}/${t.of}`}>
               <span aria-hidden="true">{done ? '✓' : t.icon}</span>
-              {t.label}
+              <span className="daily-today-label">{t.label}</span>
               <b>
                 {Math.min(t.have, t.of)}/{t.of}
               </b>

@@ -381,3 +381,35 @@
     -webkit-line-clamp: 1;
   }
 }
+
+/* "Remind me once" beside a running timer (see ReminderButton). */
+.realms-app .reminder-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 2px 10px;
+  border: 2px solid #f6d77a99;
+  border-radius: 4px;
+  background: #2a201ad9;
+  color: #fff1b8;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.realms-app .reminder-button:hover {
+  border-color: #f6d77a;
+}
+.realms-app .reminder-button.compact {
+  min-width: 32px;
+  padding: 0;
+  font-size: 15px;
+}
+.realms-app .reminder-note {
+  font-size: 12px;
+  color: #f6d77a;
+}
+.realms-app .reminder-note.off {
+  color: var(--ui-text-soft, #cdbfa8);
+}

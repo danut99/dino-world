@@ -49,6 +49,8 @@ export const ITEMS = {
   habitatKit: { name: ['Kit de habitat', 'Habitat kit'], icon: '⌂', color: '#b8c58e' },
   evolutionCrystal: { name: ['Cristal de evoluție', 'Evolution crystal'], icon: '✧', color: '#bca4ed' },
   lamp: { name: ['Lampă ornamentală', 'Ornamental lamp'], icon: '☼', color: '#e2bf76' },
+  scarecrow: { name: ['Sperietoare', 'Scarecrow'], icon: '¥', color: '#d9b45a' },
+  signpost: { name: ['Indicator', 'Signpost'], icon: '➚', color: '#bf905e' },
   provisions: { name: ['Provizii de expediție', 'Expedition supplies'], icon: '◈', color: '#dfbc78' },
 } as const;
 export type ItemId = keyof typeof ITEMS;
@@ -64,6 +66,11 @@ export const ITEM_USE: Partial<Record<ItemId, readonly [string, string]>> = {
     'Evolves a juvenile into an adult, or gives +1 level.',
   ],
   lamp: ['Se pune pe insulă: lumile tale dau mai mult aur.', 'Goes on your island: your worlds give more gold.'],
+  scarecrow: ['Se pune pe insulă: ferma dă recolte mai mari.', 'Goes on your island: your farm gives bigger harvests.'],
+  signpost: [
+    'Se pune pe insulă: expedițiile și patrulele durează mai puțin.',
+    'Goes on your island: expeditions and patrols take less time.',
+  ],
 };
 export type Inventory = Record<ItemId, number>;
 export const initialInventory = (): Inventory => ({
@@ -74,6 +81,8 @@ export const initialInventory = (): Inventory => ({
   habitatKit: 0,
   evolutionCrystal: 0,
   lamp: 0,
+  scarecrow: 0,
+  signpost: 0,
   provisions: 0,
 });
 /**
@@ -140,6 +149,22 @@ export const RECIPES = [
     output: 'lamp',
     quantity: 1,
   },
+  {
+    id: 'scarecrow',
+    name: ['Sperietoare', 'Scarecrow'],
+    cost: { wood: 20, fiber: 10 },
+    seconds: 20 * 60,
+    output: 'scarecrow',
+    quantity: 1,
+  },
+  {
+    id: 'signpost',
+    name: ['Indicator', 'Signpost'],
+    cost: { wood: 25, stone: 10 },
+    seconds: 20 * 60,
+    output: 'signpost',
+    quantity: 1,
+  },
 ] satisfies {
   id: string;
   name: string[];
@@ -189,7 +214,8 @@ export const REGIONS: readonly Region[] = [
     name: ['Pasul de jar', 'Ember pass'],
     element: 'fire',
     materials: ['wood', 'stone'],
-    minutes: [1, 3, 7, 15, 25],
+    // Short on purpose: the whole first region fits in a first session (about 24 minutes).
+    minutes: [1, 2, 4, 7, 10],
     x: 78,
     y: 23,
   },

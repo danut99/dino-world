@@ -317,50 +317,130 @@
   cursor: not-allowed;
 }
 
-/* features */
-.landing-features {
+/* moves: one adult dinosaur, each move looping in its own card */
+.landing-moves-section {
+  display: grid;
+  gap: 22px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+  box-sizing: border-box;
+}
+.landing-moves-section > header {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+.landing-moves-section h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1.15;
+  color: #fff7e6;
+}
+.landing-moves-section > header p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #cbbd9f;
+}
+.move-cards {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 0 24px 48px;
-  box-sizing: border-box;
 }
-.landing-features article {
+.move-card {
   display: grid;
   align-content: start;
-  gap: 8px;
-  padding: 18px;
+  gap: 6px;
+  padding: 12px 12px 18px;
+  text-align: center;
   background: #1c1522e6;
   border: 1px solid #ffffff1a;
   border-radius: 16px;
   backdrop-filter: blur(6px);
+  transition:
+    translate 0.2s ease,
+    border-color 0.2s ease;
 }
-.landing-feature-art {
+.move-card:hover {
+  translate: 0 -3px;
+  border-color: #f0902f66;
+}
+.move-card-stage {
+  position: relative;
   display: grid;
-  place-items: center;
-  width: 84px;
-  height: 84px;
-  background: radial-gradient(circle, #ffffff12, #ffffff00 70%);
-  border-radius: 50%;
+  place-items: end center;
+  height: 210px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 80%, #f0902f2e 0%, #f0902f00 65%), #120d18;
+  border-radius: 12px;
 }
-.landing-feature-art > * {
+.move-card-stage::after {
+  content: '';
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  width: 55%;
+  height: 22px;
+  translate: -50% 0;
+  background: radial-gradient(ellipse, #00000099 0%, #00000000 70%);
+}
+.move-card-dino {
+  position: relative;
+  z-index: 1;
+  width: 190px;
+  height: 190px;
+}
+.move-card-dino > * {
   width: 100%;
   height: 100%;
   max-width: none;
 }
-.landing-features h2 {
-  margin: 4px 0 0;
+.move-card.move-ultimate {
+  border-color: #f0902f55;
+}
+.move-card.move-ultimate .move-card-stage {
+  background: radial-gradient(ellipse at 50% 75%, #f6b54a55 0%, #f0902f00 70%), #120d18;
+}
+.move-card h3 {
+  margin: 0;
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 19px;
   color: #fff7e6;
 }
-.landing-features p {
+.move-card p {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.45;
   color: #cbbd9f;
+}
+@media (prefers-reduced-motion: reduce) {
+  .move-card {
+    transition: none;
+  }
+}
+
+/* features: the same cards as the moves, each tinted by its world */
+.feature-card .move-card-stage {
+  background:
+    radial-gradient(ellipse at 50% 80%, color-mix(in srgb, var(--el) 30%, transparent) 0%, transparent 65%),
+    #120d18;
+}
+.feature-card:hover {
+  border-color: color-mix(in srgb, var(--el) 45%, transparent);
+}
+.feature-card.stage-baby .move-card-dino {
+  width: 120px;
+  height: 120px;
+}
+.feature-card.stage-juvenile .move-card-dino {
+  width: 160px;
+  height: 160px;
 }
 
 /* footer */
@@ -381,7 +461,7 @@
 }
 
 @media (max-width: 960px) {
-  .landing-features {
+  .move-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -428,6 +508,29 @@
     padding: 6px 8px;
     font-size: 12px;
   }
+  .landing-moves-section {
+    padding: 20px 16px 32px;
+  }
+  .landing-moves-section h2 {
+    font-size: 24px;
+  }
+  .move-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .move-card-stage {
+    height: 140px;
+  }
+  .move-card-dino {
+    width: 130px;
+    height: 130px;
+  }
+  .move-card h3 {
+    font-size: 16px;
+  }
+  .move-card p {
+    font-size: 13px;
+  }
   .landing-copy {
     justify-items: center;
     gap: 14px;
@@ -440,19 +543,13 @@
   .landing-ghost {
     flex: 1 1 100%;
   }
-  .landing-features {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 0 16px 32px;
+  .feature-card.stage-baby .move-card-dino {
+    width: 90px;
+    height: 90px;
   }
-  .landing-features article {
-    grid-template-columns: 64px minmax(0, 1fr);
-    column-gap: 14px;
-    padding: 14px;
-  }
-  .landing-feature-art {
-    grid-row: span 2;
-    width: 64px;
-    height: 64px;
+  .feature-card.stage-juvenile .move-card-dino {
+    width: 115px;
+    height: 115px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

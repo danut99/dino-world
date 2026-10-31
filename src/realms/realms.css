@@ -3279,6 +3279,20 @@ button.realm-quest-top:focus-visible {
 .realm-rank-row.self .realm-rank {
   background: #3a2e27;
   border-color: #9be38f;
+  opacity: 1;
+}
+/* A friend: name and record on top, the actions on one row below. */
+.realm-friends:not(.realm-friends-requests) .realm-friend {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+.realm-friends:not(.realm-friends-requests) .realm-friend > span {
+  grid-column: 1 / -1;
+}
+.realm-friends:not(.realm-friends-requests) .realm-friend > .realm-friend-more {
+  grid-column: 3;
 }
 .realm-rank-score {
   font-family: var(--font-display);
@@ -3471,8 +3485,11 @@ button.realm-quest-top:focus-visible {
 }
 .realm-rank-duel {
   flex: none;
-  width: 48px;
-  font-size: 18px;
+  min-width: 48px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
   color: #fff1b8;
   background: #3a5a32;
   border: 1px solid #9be38f88;
@@ -3534,6 +3551,51 @@ button.realm-quest-top:focus-visible {
   font-size: 10px;
   color: #cdbfa8;
 }
+.realm-league-me {
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: #fff1b8;
+  background: #3a2e27;
+  border-left: 3px solid #9be38f;
+}
+.realm-league-rules {
+  font-size: 11px;
+  line-height: 1.35;
+  color: #cdbfa8;
+}
+.realm-section-title {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #fff1b8;
+}
+/* Add friends: search plus a short list of players, each with "+ Friend". */
+.realm-friends-find {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #a3938055;
+}
+.realm-friends-find h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #fff1b8;
+}
+.realm-friends-find ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.realm-player-row .realm-player-add-text {
+  flex: none;
+  align-self: center;
+  min-height: 40px;
+  padding-inline: 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
 .realm-suggested {
   display: grid;
   gap: 6px;
@@ -3579,7 +3641,8 @@ button.realm-quest-top:focus-visible {
     height: 38px;
   }
   .realm-rank-duel {
-    width: 44px;
+    min-width: 44px;
+    padding: 0 8px;
   }
 }
 /* Tabs with the settings gear at their end. */
@@ -3637,13 +3700,12 @@ button.realm-quest-top:focus-visible {
     height: 28px;
     font-size: 14px;
   }
-  .realm-btn-label {
-    display: none;
-  }
   .realm-friend .realm-button,
   .realm-duels-recent .realm-button {
     min-width: 44px;
-    padding-inline: 10px;
+    padding-inline: 8px;
+    font-size: 13px;
+    white-space: nowrap;
   }
   .realm-friend > span strong {
     white-space: normal;

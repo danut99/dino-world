@@ -1379,3 +1379,353 @@ main.realms-app .gameplay-expedition .expedition-detail .expedition-tab {
     height: 36px;
   }
 }
+
+/* Phones: the bottom bar is a plain tab bar, always open, with every button named under its icon. */
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) and (max-width: 1050px) {
+  main.realms-app .realm-nav,
+  main.realms-app .realm-nav:not(.collapsed) {
+    display: grid;
+    grid-template-columns: repeat(var(--nav-cols, 4), minmax(0, 1fr));
+    width: min(440px, calc(var(--nav-cols, 4) * 96px + 8px), calc(100% - 16px));
+    max-width: calc(100% - 16px);
+    gap: 4px;
+    padding: 4px;
+    overflow: visible;
+  }
+  main.realms-app .realm-nav > button,
+  main.realms-app .realm-nav:not(.collapsed) > button,
+  main.realms-app .realm-nav > .realm-collect {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    height: 56px;
+    margin: 0;
+    padding: 4px 2px 3px;
+    gap: 2px;
+  }
+  main.realms-app .realm-nav > button.realm-nav-toggle,
+  main.realms-app .realm-nav:not(.collapsed) > button.realm-nav-toggle {
+    display: none;
+  }
+  main.realms-app .realm-nav > button > span svg,
+  main.realms-app .realm-nav > button > span .px-icon {
+    flex: none;
+  }
+  main.realms-app .realm-nav > button > strong,
+  main.realms-app .realm-nav .realm-collect strong {
+    flex: none;
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  main.realms-app .realm-nav .realm-collect > div {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    text-align: center;
+  }
+  main.realms-app .realm-nav .realm-collect small {
+    display: none;
+  }
+  main.realms-app .realm-nav .realm-nav-new {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    translate: none;
+    padding: 0 3px;
+    font-size: 9px;
+    line-height: 14px;
+  }
+  main.realms-app .realm-camera,
+  main.realms-app:has(.realm-nav:not(.collapsed)) .realm-camera {
+    bottom: calc(max(10px, env(safe-area-inset-bottom)) + 84px);
+  }
+  main.realms-app:has(.realm-nav.two-rows) .realm-camera {
+    bottom: calc(max(10px, env(safe-area-inset-bottom)) + 144px);
+  }
+  /* "What now" is a one-line strip near the top, under the story button, clear of the bottom menu. */
+  main.realms-app .realm-next {
+    top: calc(max(10px, env(safe-area-inset-top)) + 116px);
+    bottom: auto;
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    width: auto;
+    translate: none;
+  }
+  main.realms-app .realm-next-main {
+    gap: 8px;
+    padding: 4px 2px 4px 4px;
+  }
+  main.realms-app .realm-next.collapsed {
+    right: auto;
+    padding: 2px 8px 2px 2px;
+  }
+  main.realms-app .realm-next-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 15px;
+  }
+  main.realms-app .realm-next-body small,
+  main.realms-app .realm-next-body em {
+    display: none;
+  }
+  main.realms-app .realm-next-body strong {
+    font-size: 13px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -webkit-line-clamp: 1;
+  }
+  main.realms-app .realm-next-go {
+    display: none;
+  }
+}
+
+/* "What now": the one thing to do this moment and why (see nextAction.ts). */
+.realms-app .realm-next {
+  position: fixed;
+  z-index: 6;
+  left: 50%;
+  bottom: 100px;
+  translate: -50% 0;
+  display: flex;
+  align-items: stretch;
+  width: min(440px, calc(100% - 24px));
+  box-sizing: border-box;
+  padding: 0;
+  color: #fff4d6;
+  text-align: left;
+  font: inherit;
+  background: linear-gradient(180deg, #3d3020f2, #2a201af2);
+  border: 2px solid #f6d77a;
+  border-radius: 6px;
+  box-shadow:
+    0 4px 0 #1a1412,
+    0 8px 18px #0008;
+}
+.realms-app .realm-next-main {
+  display: grid;
+  flex: 1;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 4px 6px 8px;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.realms-app .realm-next-hide {
+  flex: none;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 6px 0 2px;
+  padding: 0 0 3px;
+  font: 700 22px/1 var(--font-display, inherit);
+  color: #f6d77a;
+  background: #1a141299;
+  border: 1px solid #f6d77a55;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.realms-app .realm-next-hide:hover {
+  background: #f6d77a33;
+}
+.realms-app .realm-next.collapsed {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: auto;
+  padding: 3px 8px 3px 3px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.realms-app .realm-next-open {
+  font: 700 20px/1 var(--font-display, inherit);
+  color: #f6d77a;
+}
+.realms-app .realm-next.waiting {
+  border-color: #cdbfa888;
+}
+.realms-app .realm-next.waiting .realm-next-main {
+  cursor: default;
+}
+.realms-app .realm-next-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  font-size: 20px;
+  background: #1a141299;
+  border-radius: 50%;
+}
+.realms-app .realm-next-body {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+.realms-app .realm-next-body small {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #f6d77a;
+}
+.realms-app .realm-next.waiting .realm-next-body small {
+  color: #cdbfa8;
+}
+.realms-app .realm-next-body strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.realms-app .realm-next-body em {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 11.5px;
+  font-style: normal;
+  line-height: 1.25;
+  color: #e6d9bd;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.realms-app .realm-next-go {
+  font-size: 20px;
+  color: #f6d77a;
+}
+.realms-app .realm-next.nudge {
+  animation: realm-next-nudge 0.9s ease-in-out infinite alternate;
+}
+@keyframes realm-next-nudge {
+  to {
+    box-shadow:
+      0 4px 0 #1a1412,
+      0 0 0 4px #f6d77a66,
+      0 0 24px #f6d77a;
+    scale: 1.03;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .realms-app .realm-next.nudge {
+    animation: none;
+    box-shadow: 0 0 0 4px #f6d77a;
+  }
+}
+
+/* "Ready!": a large notice at the top when an egg, a build, a trip, a crop or a job finishes. */
+.realms-app .realm-ready-pop {
+  position: fixed;
+  z-index: 80;
+  top: calc(max(10px, env(safe-area-inset-top)) + 54px);
+  left: 50%;
+  translate: -50% 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: min(460px, calc(100% - 20px));
+  box-sizing: border-box;
+  padding: 12px 40px 12px 12px;
+  color: #fff4d6;
+  background: linear-gradient(180deg, #4a3a22, #2f2520);
+  border: 3px solid #f6d77a;
+  box-shadow:
+    0 0 0 3px #1b1411,
+    0 0 28px #f6d77a88,
+    0 14px 30px #000a;
+  animation: realm-ready-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.realms-app .realm-ready-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  background: #1b141199;
+  border: 2px solid #f6d77a88;
+  animation: realm-ready-glow 1s ease-in-out infinite alternate;
+}
+.realms-app .realm-ready-pop > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.realms-app .realm-ready-pop small {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #9be38f;
+}
+.realms-app .realm-ready-pop strong {
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1.2;
+  text-shadow: 2px 2px 0 #1b1411;
+}
+.realms-app .realm-ready-pop em {
+  font-style: normal;
+  font-size: 12px;
+  color: #cdbfa8;
+}
+.realms-app .realm-ready-pop > .realm-button {
+  min-height: 40px;
+  padding-inline: 14px;
+  white-space: nowrap;
+}
+.realms-app .realm-ready-x {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #cdbfa8;
+  font-size: 20px;
+  cursor: pointer;
+}
+@keyframes realm-ready-in {
+  from {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.85);
+  }
+}
+@keyframes realm-ready-glow {
+  to {
+    box-shadow: 0 0 16px #f6d77a;
+  }
+}
+@media (max-width: 420px) {
+  .realms-app .realm-ready-pop {
+    gap: 8px;
+    padding: 10px 34px 10px 10px;
+  }
+  .realms-app .realm-ready-icon {
+    width: 44px;
+    height: 44px;
+  }
+  .realms-app .realm-ready-icon .px-icon {
+    transform: scale(0.75);
+  }
+  .realms-app .realm-ready-pop strong {
+    font-size: 15px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .realms-app .realm-ready-pop,
+  .realms-app .realm-ready-icon {
+    animation: none;
+  }
+}

@@ -1,0 +1,147 @@
+/* Dinosaur moments: evolution and hatching windows, and the trip-return banner. */
+.realms-app .dino-moment {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 4px 8px 8px;
+  text-align: center;
+}
+.realms-app .dino-moment h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--px-bone-0);
+}
+.realms-app .dino-moment p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--px-bone-2);
+}
+.realms-app .dino-moment-stage {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  width: min(320px, 80vw);
+  height: 240px;
+  background: radial-gradient(ellipse at 50% 85%, color-mix(in srgb, var(--el) 35%, transparent) 0%, transparent 65%);
+}
+.realms-app .dino-moment-glow {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  width: 60%;
+  height: 34px;
+  translate: -50% 0;
+  background: radial-gradient(ellipse, #00000088 0%, transparent 70%);
+}
+.realms-app .dino-moment-art {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  transition:
+    width 0.35s ease,
+    height 0.35s ease;
+}
+.realms-app .dino-moment-art > * {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+.realms-app .dino-moment-stage.stage-baby .dino-moment-art {
+  width: 120px;
+  height: 120px;
+}
+.realms-app .dino-moment-stage.stage-juvenile .dino-moment-art {
+  width: 180px;
+  height: 180px;
+}
+.realms-app .dino-moment-stage.stage-adult .dino-moment-art {
+  width: 230px;
+  height: 230px;
+  filter: drop-shadow(0 0 16px color-mix(in srgb, var(--el) 60%, transparent));
+}
+.realms-app .dino-moment-flash {
+  position: absolute;
+  inset: 5% 10%;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(circle, #fffbe8 0%, color-mix(in srgb, var(--el) 60%, transparent) 40%, transparent 70%);
+  opacity: 0;
+  animation: dino-moment-flash 0.8s ease-out;
+}
+@keyframes dino-moment-flash {
+  20% {
+    opacity: 1;
+    scale: 1.1;
+  }
+  to {
+    opacity: 0;
+    scale: 1.5;
+  }
+}
+
+.realms-app .dino-trip {
+  position: fixed;
+  left: 50%;
+  bottom: max(86px, calc(env(safe-area-inset-bottom) + 76px));
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  padding: 6px 16px 6px 6px;
+  font: inherit;
+  text-align: left;
+  color: var(--px-bone-1);
+  cursor: pointer;
+  translate: -50% 0;
+  background: var(--px-ui-5);
+  border: 2px solid var(--px-outline);
+  box-shadow:
+    inset 0 0 0 2px var(--px-stone-4),
+    0 6px 18px #0008;
+  animation: dino-trip-in 0.35s ease-out;
+}
+.realms-app .dino-trip-art {
+  width: 72px;
+  height: 72px;
+  flex: none;
+  animation: dino-trip-walk 1.4s ease-out;
+}
+.realms-app .dino-trip-art > * {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+.realms-app .dino-trip-text {
+  display: grid;
+  min-width: 0;
+}
+.realms-app .dino-trip-text strong {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--px-bone-0);
+}
+.realms-app .dino-trip-text small {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--px-amber-0);
+}
+@keyframes dino-trip-in {
+  from {
+    opacity: 0;
+    translate: -50% 20px;
+  }
+}
+@keyframes dino-trip-walk {
+  from {
+    transform: translateX(-120px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .realms-app .dino-moment-flash,
+  .realms-app .dino-trip,
+  .realms-app .dino-trip-art {
+    animation: none;
+  }
+}

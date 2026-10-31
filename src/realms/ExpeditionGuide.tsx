@@ -31,6 +31,7 @@ import { TeamPicker } from './TeamPicker';
 import { Tabs, TabPanel } from './ui/Tabs';
 import { CompactCard } from './ui/CompactCard';
 import { Icon, elementIcon } from './ui/Icon';
+import { ReminderButton } from './ui/ReminderButton';
 import { ConstructionStrip, CostChips, UpgradeButton, underConstruction } from './PanelKit';
 
 export function tripTime(ms: number) {
@@ -644,15 +645,25 @@ function ActiveTab({
               {tr('Colectează', 'Claim')}
             </button>
           ) : (
-            <button
-              type="button"
-              className="realm-gem-finish"
-              disabled={save.gems < cost}
-              title={tr('Adu echipa înapoi acum cu diamante', 'Bring the team back now with diamonds')}
-              onClick={() => run({ type: 'gemFinish', target: 'expedition', id: x.id })}
-            >
-              ⚡ {cost} 💎
-            </button>
+            <>
+              <button
+                type="button"
+                className="realm-gem-finish"
+                disabled={save.gems < cost}
+                title={tr('Adu echipa înapoi acum cu diamante', 'Bring the team back now with diamonds')}
+                onClick={() => run({ type: 'gemFinish', target: 'expedition', id: x.id })}
+              >
+                ⚡ {cost} 💎
+              </button>
+              <ReminderButton
+                compact
+                id={`trip-${x.id}`}
+                at={x.endsAt}
+                title={tr('Echipa s-a întors! 🦖', 'Your team is back! 🦖')}
+                body={`${region.name[lang]}: ${tr('vino să iei prăzile.', 'come and claim the loot.')}`}
+                lang={lang}
+              />
+            </>
           )
         }
       />

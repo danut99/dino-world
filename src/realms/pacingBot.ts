@@ -48,6 +48,7 @@ import {
   residents,
   starTotal,
   dinoStats,
+  decorCount,
   storyChapter,
   WORLD_UNLOCK,
   worldLock,
@@ -417,7 +418,7 @@ export function runBot(options: BotOptions): BotResult {
       [
         'lamp',
         () =>
-          s.lamps + s.inventory.lamp + queued('lamp') < 5 &&
+          decorCount(s, 'lamp') + s.inventory.lamp + queued('lamp') < 5 &&
           s.inventory.crystal >= 6 + (need.crystal ?? 0) + 16 &&
           s.inventory.stone >= 20 + (need.stone ?? 0),
       ],
@@ -443,7 +444,7 @@ export function runBot(options: BotOptions): BotResult {
       });
       if (!pick || !run({ type: 'craft', recipeId: pick[0] })) break;
     }
-    if (s.inventory.lamp > 0) run({ type: 'placeLamp' });
+    if (s.inventory.lamp > 0) run({ type: 'placeDecor', kind: 'lamp' });
   }
 
   // ---- farm ---------------------------------------------------------------------------------------------------

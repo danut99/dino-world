@@ -254,7 +254,8 @@ describe('Dino Realms first playable path', () => {
       { team: ['ignis', 'ignis'] },
       { eggs: [{ id: 'e', species: 'trex', element: 'void', seconds: 300, hatchAt: null }] },
       { habitats: { fire: 9 } },
-      { lamps: 6 },
+      { decor: Array.from({ length: 6 }, (_, i) => ({ kind: 'lamp', x: 10 + i, y: 10 })) },
+      { decor: [{ kind: 'statue', x: 10, y: 10 }] },
       { portalLevel: 1 },
       { discovered: ['dragon_fire'] },
       {
@@ -289,7 +290,7 @@ describe('Dino Realms first playable path', () => {
     for (const key of [
       'gems',
       'boostUntil',
-      'lamps',
+      'decor',
       'legend',
       'discovered',
       'collectionMilestones',
@@ -312,7 +313,7 @@ describe('Dino Realms first playable path', () => {
     expect(loaded).toMatchObject({
       gems: 0,
       boostUntil: 0,
-      lamps: 0,
+      decor: [],
       legend: fresh.legend,
       discovered: [],
       collectionMilestones: 0,
@@ -331,7 +332,7 @@ describe('Dino Realms first playable path', () => {
     for (const change of [
       { gems: '5' },
       { gems: -1 },
-      { lamps: 1.5 },
+      { decor: [{ kind: 'lamp', x: 1.5, y: 10 }] },
       { legend: { week: 'monday', trials: 0 } },
       { legend: { week: fresh.legend.week, trials: LEGEND_TRIAL.perWeek + 1 } },
       { discovered: 'trex_fire' },
