@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   advance,
   BOOST_CAP,
+  CATCH,
+  catchGold,
   command,
   feedCost,
   friendCollect,
@@ -64,6 +66,24 @@ describe('things to do while waiting', () => {
     expect(treasureReady(s, at + 60_000)).toBe(false);
     expect(() => command(s, { type: 'treasure' }, at + 60_000)).toThrow('treasure');
     expect(treasureReady(s, at + TREASURE.everyMs)).toBe(true);
+  });
+});
+describe('Food Catch', () => {
+  it('pays the first games of the day, a diamond once for a high score, and refuses impossible scores', () => {
+    let s = juvenile();
+    const gold = s.gold,
+      gems = s.gems,
+      t = now + 60_000;
+    s = command(s, { type: 'catchReward', score: 0 }, t);
+    expect(s.gold).toBe(gold);
+    s = command(s, { type: 'catchReward', score: CATCH.gemScore }, t);
+    expect(s.gems).toBe(gems + 1);
+    for (let i = 0; i < CATCH.perDay + 1; i++) s = command(s, { type: 'catchReward', score: CATCH.gemScore }, t);
+    expect(s.gems).toBe(gems + 1);
+    expect(s.daily.catchGames).toBe(CATCH.perDay);
+    expect(s.gold).toBe(gold + CATCH.perDay * catchGold(CATCH.gemScore));
+    expect(() => command(s, { type: 'catchReward', score: CATCH.maxScore + 1 }, t)).toThrow('catch');
+    expect(parseSave(JSON.stringify(s)).daily).toMatchObject({ catchGames: CATCH.perDay, catchGem: 1 });
   });
 });
 describe('friendlyBattle', () => {

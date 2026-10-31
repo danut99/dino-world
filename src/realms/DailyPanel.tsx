@@ -13,7 +13,8 @@ import {
   type DailyReward,
 } from './daily';
 import { ITEMS, type ItemId } from './content';
-import { DUEL, GEMS, PET, storyLevel, TRAINING, TREASURE, type Command, type Save } from './game';
+import { CATCH, DUEL, GEMS, PET, storyLevel, TRAINING, TREASURE, type Command, type Save } from './game';
+import { FoodCatch } from './FoodCatch';
 import { useReducedMotion } from './useMotion';
 import { Icon, type IconName } from './ui/Icon';
 import { Tabs, tabPanelId } from './ui/Tabs';
@@ -103,6 +104,7 @@ export function DailyPanel({
   const prizes = wheelPrizes(save);
   const won = daily.spin !== null && !spinning ? prizes[daily.spin] : null;
   const [odds, setOdds] = useState(false);
+  const [playing, setPlaying] = useState(false);
   // Phones show one section at a time (see daily.css); wide screens show both side by side.
   const [view, setView] = useState<'quests' | 'wheel'>(() => (daily.spin === null ? 'wheel' : 'quests'));
   const readyQuests = quests.filter(
@@ -131,6 +133,18 @@ export function DailyPanel({
       of: quests.length + 1,
       go: () => setView('quests'),
     },
+    ...(save.dinos.length
+      ? [
+          {
+            id: 'catch',
+            icon: '🍖',
+            label: tr('Minijoc', 'Minigame'),
+            have: daily.catchGames,
+            of: CATCH.perDay,
+            go: () => (daily.catchGames < CATCH.perDay ? setPlaying(true) : setView('quests')),
+          },
+        ]
+      : []),
     {
       id: 'treasure',
       icon: '💎',
@@ -227,6 +241,33 @@ export function DailyPanel({
           id={tabPanelId('daily', 'quests')}
           aria-label={tr('Misiuni zilnice', 'Daily missions')}
         >
+          {save.dinos.length > 0 && (
+            <article className={`daily-quest daily-game ${daily.catchGames >= CATCH.perDay ? 'claimed' : 'ready'}`}>
+              <span className="daily-quest-icon">
+                <Icon name="food" scale={2} />
+              </span>
+              <div className="daily-quest-body">
+                <div className="daily-quest-title">
+                  <strong>{tr('Minijoc: Prinde mâncarea', 'Minigame: Food Catch')}</strong>
+                  <span>
+                    {daily.catchGames}/{CATCH.perDay}
+                  </span>
+                </div>
+                <p className="daily-game-text">
+                  {tr(
+                    `Prinde mâncare și aur, ferește-te de pietre · ${CATCH.seconds}s. Până la ${CATCH.maxGold} aur`,
+                    `Catch food and gold, dodge rocks · ${CATCH.seconds}s. Up to ${CATCH.maxGold} gold`,
+                  )}
+                  {!daily.catchGem && tr(` · 💎 la ${CATCH.gemScore} pct.`, ` · 💎 at ${CATCH.gemScore} pts.`)}
+                </p>
+              </div>
+              <div className="daily-quest-actions">
+                <button className="realm-button" disabled={daily.catchGames >= CATCH.perDay} onClick={() => setPlaying(true)}>
+                  {daily.catchGames >= CATCH.perDay ? tr('Mâine', 'Tomorrow') : <>{tr('Joacă', 'Play')} ▶</>}
+                </button>
+              </div>
+            </article>
+          )}
           {quests.map((id) => {
             const quest = DAILY_QUESTS[id];
             const claimed = daily.claimed.includes(id);
@@ -397,6 +438,16 @@ export function DailyPanel({
           </div>
         </section>
       </div>
+      {playing && (
+        <FoodCatch
+          save={save}
+          lang={lang}
+          gamesLeft={Math.max(0, CATCH.perDay - daily.catchGames)}
+          gemWon={!!daily.catchGem}
+          close={() => setPlaying(false)}
+          reward={(score) => run({ type: 'catchReward', score })}
+        />
+      )}
     </div>
   );
 }

@@ -1290,6 +1290,8 @@ export type Command =
   | { type: 'duelReward'; result: 'victory' | 'defeat' | 'draw'; rival: string }
   /** Last week's duel season prize for a place (1 to 3) in the player's league. */
   | { type: 'duelSeason'; week: string; rank: number }
+  /** A Food Catch game ended with `score`: the first CATCH.perDay games of the day pay gold, a high score a diamond once a day. */
+  | { type: 'catchReward'; score: number }
   /** Wakes a resting dinosaur (the champion when none is given), or with `team` every resting team member. */
   | { type: 'gemRest'; dinoId?: string; team?: boolean }
   | { type: 'gemSpin' };
@@ -1431,6 +1433,9 @@ export const PET = { perDay: 5, food: 10 };
 export const TRAINING = { minutes: 30, perDay: 3 };
 export const TREASURE = { perDay: 4, everyMs: 2 * 3_600_000 };
 export const DUEL = { rewards: 5, gold: 120, food: 60 };
+/** Food Catch, the daily minigame: gold per point for the first games of the day, capped, and a diamond once a day for a high score. */
+export const CATCH = { perDay: 3, seconds: 45, goldPerPoint: 3, maxGold: 300, gemScore: 90, maxScore: 1000 };
+export const catchGold = (score: number) => Math.min(CATCH.maxGold, score * CATCH.goldPerPoint);
 /** Duels are ranked in leagues by the champion's level, so newcomers meet players of their own strength. */
 export const DUEL_LEAGUES = [
   { id: 'bronze', name: ['Liga de Bronz', 'Bronze League'], icon: '🥉', min: 0, max: 19 },
@@ -2356,6 +2361,17 @@ export function command(save: Save, c: Command, now: number): Save {
       s.daily.duelRivals.push(c.rival);
       s.gold += DUEL.gold;
       s.food += DUEL.food;
+      break;
+    }
+    case 'catchReward': {
+      require(Number.isInteger(c.score) && c.score >= 0 && c.score <= CATCH.maxScore, 'catch');
+      if (!c.score || s.daily.catchGames >= CATCH.perDay) break;
+      s.daily.catchGames++;
+      s.gold += catchGold(c.score);
+      if (c.score >= CATCH.gemScore && !s.daily.catchGem) {
+        s.daily.catchGem = 1;
+        s.gems += 1;
+      }
       break;
     }
     case 'duelSeason': {
